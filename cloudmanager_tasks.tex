@@ -1,0 +1,141 @@
+% CloudManager v1.0 — Répartition des tâches (MVP 90 jours)
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2cm]{geometry}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\setlist{noitemsep, topsep=3pt}
+
+\title{CloudManager v1.0 — Plan de Répartition des Tâches (MVP 90 jours)}
+\author{Manil (Full\-Stack) \& Wassim (Full\-Stack)}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section*{Objectif}
+Livrer un MVP en 90 jours ouvrés avec: authentification complète (2FA, RBAC, audit), ticketing complet, système de notifications, gestion clients (KYC minimal), catalogue produits, commandes, facturation (devis/factures PDF), reporting de base (tableaux/CSV), et documentation.
+
+\section*{Rôles et responsabilités}
+\begin{itemize}
+  \item \textbf{Manil} (Lead Backend/DevOps): Auth/RBAC/2FA, Audit, Ticketing complet, Settings, Notifications, sécurité, API, intégration e\-mail, packaging et déploiement.
+  \item \textbf{Wassim} (Lead Frontend/Business): UI/UX React, Customer Manager, Product Catalogue, Order Manager, Invoice, Reporting, intégration API, maquettes et validations métier.
+\end{itemize}
+
+\section*{Lots et charge (90 jours au total)}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{8.7cm}|>{\raggedright\arraybackslash}p{2.2cm}|}
+\hline
+\textbf{Lot} & \textbf{Tâches clés} & \textbf{Responsable} \\ \hline
+Infrastructure (15 j) & FastAPI+React, PostgreSQL (migrations), Auth (email+mdp+2FA), RBAC, audit connexions/actions, structure projet, déploiement simple & Manil \\ \hline
+Customer Manager (12 j) & Profils, validation comptes, KYC minimal, notes/docs, activation 2FA, historique sécurité, recherche/listes & Wassim \\ \hline
+Ticket Manager (20 j) & Statuts complets (ouvert, répondu, attente, on\-hold, en cours, résolu, fermé), assignation groupes/agents, transferts, tags, notes privées, pièces jointes, modèles de réponses, mail\-to\-ticket, KPI de base & Manil \\ \hline
+Product Catalogue (8 j) & Catalogue public, catégories, création compte, demande de devis & Wassim \\ \hline
+Order Manager (8 j) & Workflow simple: demande $\to$ validation $\to$ en cours $\to$ livrée/annulée, notifications e\-mail & Wassim \\ \hline
+Reporting (7 j) & Tableaux (tickets/clients/commandes), filtres, export CSV & Wassim \\ \hline
+Invoice (10 j) & Devis PDF, conversion commande, facture PDF, statuts manuels, taxes simples (TVA/TAP) & Wassim \\ \hline
+Settings (10 j) & Rôles/permissions, catégories tickets, groupes support, fermeture auto après X jours, groupes de notifications et modèles & Manil \\ \hline
+\end{longtable}
+
+\section*{Détail des fonctionnalités par développeur}
+\subsection*{Manil}
+\begin{itemize}
+  \item \textbf{Authentification, Sécurité et RBAC}
+  \begin{itemize}
+    \item Inscription/connexion email+mot de passe (hash Argon2), réinitialisation par e\-mail.
+    \item 2FA TOTP (QR Code, codes de secours), option SMS (abstraction fournisseur).
+    \item Sessions et appareils: journal, invalidation, durée d'expiration configurable.
+    \item RBAC: rôles (client, corporate, admin) + permissions par action (lecture/écriture/export, transfert ticket, gestion modèles, etc.).
+    \item Audit trail: connexions, changements de rôles, paramètres, opérations sensibles.
+    \item Sécurité API: JWT access/refresh, CORS, rate limiting, validation Pydantic, sanitisation PJ.
+  \end{itemize}
+  \item \textbf{Ticket Manager (backend)}
+  \begin{itemize}
+    \item Modèle de données: tickets, messages, pièces jointes, tags, états.
+    \item Cycle complet d'états (ouvert, répondu, attente, on\-hold, en cours, résolu, fermé) + re\-ouverture.
+    \item Assignation groupes/agents, transfert, watchers, notes privées (visibilité admin).
+    \item Canned replies/modèles, variables (client, service, ticket), snippets.
+    \item Mail\-to\-ticket: récupération IMAP/webhook, association par Message\-ID, antispam simple.
+    \item KPI de base: premier délai de réponse, délai de résolution, files par priorité/groupe.
+    \item Exports: PDF d'un ticket (optionnel), CSV des listes.
+  \end{itemize}
+  \item \textbf{Settings et Notifications}
+  \begin{itemize}
+    \item Paramètres: catégories tickets, groupes support, fermeture auto après X jours, gabarits notification.
+    \item Groupes de notifications: ciblage client/catégorie/général, envoi asynchrone.
+    \item Moteur de templates e\-mail (Jinja2): variables, prévisualisation, historique d'envoi, rebonds de base.
+  \end{itemize}
+  \item \textbf{Infrastructure}
+  \begin{itemize}
+    \item Schéma PostgreSQL, migrations Alembic, indexations clés.
+    \item Organisation du dépôt (monorepo front/back), scripts de démarrage, configuration .env.
+    \item Packaging et déploiement simple (Docker Compose ou service systemd), sauvegardes DB.
+  \end{itemize}
+\end{itemize}
+
+\subsection*{Wassim}
+\begin{itemize}
+  \item \textbf{Frontend (React)}
+  \begin{itemize}
+    \item Architecture UI: routing protégé, layouts par rôle, theming, composants réutilisables (Shadcn/UI).
+    \item Gestion d'état (React Query/Zustand), formulaires typés (React Hook Form + Zod/Pydantic types).
+    \item Upload sécurisé (affichage aperçu), toasts, pagination, filtres, recherche.
+  \end{itemize}
+  \item \textbf{Customer Manager}
+  \begin{itemize}
+    \item Profils clients, multi\-utilisateurs par client, validation KYC minimal (upload docs, statut, motif).
+    \item Activation 2FA côté client (TOTP), affichage activités de sécurité et sessions.
+    \item Fiche client (notes internes, documents, historiques tickets/commandes/factures).
+  \end{itemize}
+  \item \textbf{Product Catalogue}
+  \begin{itemize}
+    \item Pages publiques catalogue, catégories, fiche produit/service.
+    \item Création compte depuis le catalogue; demandes de devis/services (workflow simple).
+    \item Backoffice simple: CRUD produits, catégories, statut visibilité.
+  \end{itemize}
+  \item \textbf{Order Manager}
+  \begin{itemize}
+    \item Workflow demande $\to$ validation $\to$ en cours $\to$ livrée/annulée, commentaires, notifications.
+    \item Liens contextuels vers client, tickets associés, devis/factures.
+  \end{itemize}
+  \item \textbf{Invoice et Reporting}
+  \begin{itemize}
+    \item Génération Devis/Factures PDF (modèle, numérotation), envoi e\-mail.
+    \item Vues reporting: tableaux filtrables (tickets, clients, commandes), export CSV.
+  \end{itemize}
+  \item \textbf{Qualité et UX}
+  \begin{itemize}
+    \item Maquettes rapides, accessibilité de base, responsive.
+    \item Guide utilisateur (captures, procédures), onboarding minimal.
+  \end{itemize}
+\end{itemize}
+
+\section*{Jalons (bi\-hebdomadaires)}
+\begin{itemize}
+  \item \textbf{J2} (Jour 10): Socle opérationnel (auth, DB, déploiement).
+  \item \textbf{J4} (Jour 20): Customer Manager livré, Ticketing (création/suivi) démarré.
+  \item \textbf{J6} (Jour 30): Ticketing avancé (notes privées, modèles, mail\-to\-ticket), Catalogue prêt.
+  \item \textbf{J8} (Jour 40): Orders + Invoices + Reporting (CSV) livrés.
+  \item \textbf{J10\,--\,J12} (Jour 50\,--\,90): Stabilisation, sécurité, documentation (OpenAPI, guides), UAT, corrections et préparation production.
+\end{itemize}
+
+\section*{Plan de travail (simplifié)}
+\begin{itemize}
+  \item Semaine 1--2: Socle (Auth/RBAC/2FA, DB, déploiement) — Manil; Base UI (auth, layouts) — Wassim.
+  \item Semaine 3--4: Customer Manager — Wassim; Ticketing (création/suivi, états) — Manil.
+  \item Semaine 5--6: Ticketing avancé (assignation, notes, tags, modèles, mail\-to\-ticket) — Manil; Catalogue — Wassim.
+  \item Semaine 7--8: Orders — Wassim; Invoices — Wassim; Reporting (CSV) — Wassim.
+  \item Semaine 9--10: Settings/Notifications — Manil; Durcissement sécurité et perf — Tous.
+  \item Semaine 11--12: UAT, corrections, documentation, préparation prod — Tous.
+\end{itemize}
+
+\section*{Livrables}
+\begin{itemize}
+  \item Code source (frontend/back), schéma DB et migrations, spécification OpenAPI.
+  \item PDFs (devis/factures), scripts de déploiement, jeux de données de test.
+  \item Guides utilisateurs (Client, Corporate, DSI) et procédures d'exploitation.
+\end{itemize}
+
+\end{document}
+
+

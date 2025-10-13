@@ -1,0 +1,255 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{colortbl}
+
+\geometry{margin=2.5cm}
+
+% Define colors
+\definecolor{primary}{RGB}{31,42,68}
+\definecolor{secondary}{RGB}{45,139,214}
+\definecolor{lightgray}{RGB}{248,249,250}
+
+% Header and Footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\color{primary}\textbf{CloudManager v1.0 - Plan de Travail}}
+\fancyhead[R]{\color{secondary}\thepage}
+\fancyfoot[C]{\color{gray}\small Confidentiel - AT DSI - 2025}
+\renewcommand{\headrulewidth}{2pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{secondary}\leaders\hrule height \headrulewidth\hfill}}
+
+\begin{document}
+
+% Title Page
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+
+    {\Huge\bfseries\color{primary}CloudManager / HostingManager v1.0\par}
+    \vspace{1cm}
+    {\Large\color{secondary}Plan de Développement - Répartition des Tâches\par}
+    \vspace{1.5cm}
+
+    \begin{tikzpicture}
+        \fill[primary] (0,0) circle (0.1cm);
+        \draw[primary, line width=2pt] (0,0) -- (8,0);
+    \end{tikzpicture}
+
+    \vspace{2cm}
+
+    {\large
+    \begin{tabular}{rl}
+        \textbf{Client:} & Algérie Télécom - DSI \\
+        \textbf{Durée totale:} & 105 jours (90 jours développement + 15 jours tests) \\
+        \textbf{Équipe:} & 2 développeurs (Manil / Wassim) \\
+        \textbf{Date:} & 30 Septembre 2025 \\
+        \textbf{Référence:} & CM-AT-2025-WP-001 \\
+    \end{tabular}
+    }
+
+    \vfill
+
+    {\large\color{primary}\textbf{Document Confidentiel}\par}
+
+\end{titlepage}
+
+\section{Vue d'Ensemble}
+
+\subsection{Objectif}
+Développement d'une plateforme complète de gestion Cloud \& Hosting avec trois interfaces: Client, Corporate et Admin.
+
+\vspace{0.3cm}
+\noindent\colorbox{lightgray}{\parbox{\dimexpr\textwidth-2\fboxsep}{
+\textbf{Note importante:} Ce plan concerne le développement du \textbf{MVP (Minimum Viable Product)}. La plateforme contiendra les fonctionnalités essentielles et opérationnelles, mais peut ne pas inclure toutes les fonctionnalités avancées. Des évolutions et améliorations pourront être ajoutées dans les phases ultérieures selon les besoins.
+}}
+
+\subsection{Calendrier}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Développement:} 90 jours (2 développeurs en parallèle)
+    \item \textbf{Tests \& Documentation:} 15 jours (commun)
+    \item \textbf{Total:} 105 jours calendaires
+\end{itemize}
+
+\subsection{Pile Technologique}
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\rowcolor{lightgray}
+\textbf{Couche} & \textbf{Technologies} \\
+\hline
+Interface utilisateur & React 18, TypeScript, TailwindCSS \\
+\hline
+Serveur & FastAPI (Python 3.11+), PostgreSQL, Redis \\
+\hline
+Authentification & JWT + OAuth2, 2FA (TOTP/SMS) \\
+\hline
+Notifications & Courriel (SendGrid/SES), SMS (Twilio) \\
+\hline
+\end{tabularx}
+\end{table}
+
+\newpage
+\section{Répartition des Modules}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|c|c|}
+\hline
+\rowcolor{lightgray}
+\textbf{Module} & \textbf{Description} & \textbf{Dév} & \textbf{Durée} \\
+\hline
+Infrastructure & Architecture, Auth 2FA, RBAC, BDD & Manil & 15j \\
+\hline
+Gestion Tickets & Système tickets complet, courriel vers ticket & Manil & 20j \\
+\hline
+Catalogue Produits & Catalogue public, demandes devis & Manil & 8j \\
+\hline
+Rapports & Tableaux de bord, indicateurs, exports & Manil & 7j \\
+\hline
+Gestion Clients & Gestion clients, validation, profils & Wassim & 12j \\
+\hline
+Gestion Commandes & Flux de travail commandes & Wassim & 8j \\
+\hline
+Gestion Facturation & Devis/Factures PDF & Wassim & 10j \\
+\hline
+Paramètres & RBAC, notifications, configuration & Wassim & 10j \\
+\hline
+\multicolumn{3}{|l|}{\textbf{Tests et Documentation (commun)}} & \textbf{15j} \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{Planification MANIL (50 jours)}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|c|l|X|}
+\hline
+\rowcolor{lightgray}
+\textbf{Jours} & \textbf{Module} & \textbf{Livrables Clés} \\
+\hline
+1-15 & Infrastructure & FastAPI + React, PostgreSQL + Redis, Auth 2FA (TOTP/SMS), RBAC complet, Piste d'audit \\
+\hline
+16-35 & Gestion Tickets & Cycle complet tickets (7 statuts), Assignation/transferts, Pièces jointes, Courriel vers ticket, Indicateurs/SLA \\
+\hline
+36-43 & Catalogue Produits & Liste produits publique, Demandes devis, Interface corporate CRUD \\
+\hline
+44-50 & Rapports & Tableaux de bord (tickets/clients/commandes), Export CSV/PDF \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{Planification WASSIM (55 jours)}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|c|l|X|}
+\hline
+\rowcolor{lightgray}
+\textbf{Jours} & \textbf{Module} & \textbf{Livrables Clés} \\
+\hline
+16-27 & Gestion Clients & Profils clients, Validation comptes, Configuration 2FA, Historique sécurité \\
+\hline
+28-35 & Gestion Commandes & Flux demande → livrée, Validation commerciale/technique \\
+\hline
+36-45 & Gestion Facturation & Génération PDF devis/factures, Conversion flux de travail, Calcul taxes \\
+\hline
+46-55 & Paramètres & Gestion rôles/permissions, Modèles notifications, Configuration système \\
+\hline
+\end{tabularx}
+\end{table}
+
+\vspace{0.5cm}
+\textit{Note: Wassim commence après l'infrastructure (jour 16)}
+
+\newpage
+\section{Phase Tests et Documentation (15 jours)}
+
+\textbf{Jours 91-105 - Manil et Wassim}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|c|X|}
+\hline
+\rowcolor{lightgray}
+\textbf{Jours} & \textbf{Activités} \\
+\hline
+91-95 & Tests d'intégration de bout en bout, tests sécurité/performance, corrections de bogues \\
+\hline
+96-101 & Documentation technique (API, architecture, déploiement), guides utilisateurs (Client/Commercial/DSI) \\
+\hline
+102-103 & Préparation formation: vidéos tutoriels, supports, environnement de démonstration \\
+\hline
+104-105 & Déploiement en production, migration des données, livraison officielle \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{Points de Validation DSI}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|c|l|X|}
+\hline
+\rowcolor{lightgray}
+\textbf{Jour} & \textbf{Jalon} & \textbf{Validation} \\
+\hline
+15 & Infrastructure complète & Architecture, Auth 2FA, RBAC \\
+\hline
+35 & Mi-parcours & Tickets + Clients + Commandes fonctionnels \\
+\hline
+55 & Fin développement & Tous modules MVP complétés \\
+\hline
+90 & Pré-production & Application complète en environnement de test \\
+\hline
+105 & Livraison & Production + Formation + Documentation \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{Synchronisation}
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Réunion quotidienne:} 15 min chaque matin
+    \item \textbf{Revue hebdomadaire:} 1h chaque vendredi avec DSI
+    \item \textbf{Démonstration bi-hebdomadaire:} Présentation des fonctionnalités
+\end{itemize}
+
+\section{Livrables Finaux}
+
+\begin{itemize}[leftmargin=*]
+    \item Code source complet (dépôt Git)
+    \item Documentation technique (architecture, API, déploiement)
+    \item Guides utilisateurs (Client, Commercial, Administrateur DSI)
+    \item Formation (3 sessions de 4h + vidéos)
+    \item 90 jours de support technique et garantie
+\end{itemize}
+
+\vfill
+
+\begin{center}
+\begin{tikzpicture}
+    \fill[primary] (0,0) circle (0.1cm);
+    \draw[primary, line width=2pt] (0,0) -- (12,0);
+\end{tikzpicture}
+
+\vspace{1cm}
+
+{\large\textbf{Document Confidentiel}}
+
+{\small CloudManager v1.0 - Algérie Télécom DSI}
+
+{\small 30 Septembre 2025 - Référence: CM-AT-2025-WP-001}
+\end{center}
+
+\end{document}

@@ -1,0 +1,54 @@
+"""
+Authentication database models.
+Uses SQLAlchemy 2.0 async syntax.
+"""
+import uuid
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, String, Enum as SQLEnum
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.config.database import Base
+from app.modules.auth.schemas import UserRole
+
+
+class User(Base):
+    """User database model."""
+
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    email: Mapped[str] = mapped_column(
+        String(255), nullable=False, unique=True, index=True
+    )
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    full_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[UserRole] = mapped_column(
+        SQLEnum(UserRole, name="user_role"),
+        default=UserRole.CLIENT,
+        nullable=False,
+    )
+
+    # Status flags
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_2fa_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    totp_secret: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # Audit fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    def __repr__(self) -> str:
+        return f"<User {self.email} ({self.role})>"

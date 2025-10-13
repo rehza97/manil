@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CloudManager / HostingManager v1.0 - Offre de Prix</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        background: #f8f9fa;
+        padding: 20px;
+        direction: ltr;
+      }
+
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        background: white;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #1f2a44 0%, #2d8bd6 100%);
+        color: white;
+        padding: 40px;
+        text-align: center;
+        position: relative;
+      }
+
+      .header::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="18" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="82" cy="40" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="78" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="90" cy="82" r="1.5" fill="rgba(255,255,255,0.1)"/></svg>');
+      }
+
+      .header-content {
+        position: relative;
+        z-index: 1;
+      }
+
+      .header h1 {
+        font-size: 2.3em;
+        margin-bottom: 8px;
+        font-weight: 700;
+      }
+
+      .header .subtitle {
+        font-size: 1.1em;
+        opacity: 0.95;
+        margin-bottom: 16px;
+      }
+
+      .project-badge {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 8px 20px;
+        border-radius: 25px;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+      }
+
+      .content {
+        padding: 40px;
+      }
+
+      .section {
+        margin-bottom: 40px;
+      }
+
+      .section h2 {
+        color: #1f2a44;
+        font-size: 1.7em;
+        margin-bottom: 18px;
+        padding-bottom: 10px;
+        border-bottom: 3px solid #e9ecef;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .project-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 30px;
+        margin-bottom: 30px;
+      }
+
+      .info-card {
+        background: #f8f9fa;
+        padding: 22px;
+        border-radius: 10px;
+        border-left: 4px solid #2d8bd6;
+      }
+
+      .info-card h3 {
+        color: #1f2a44;
+        margin-bottom: 12px;
+        font-size: 1.25em;
+      }
+
+      .info-item {
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .info-label {
+        font-weight: 600;
+        color: #555;
+      }
+
+      .info-value {
+        color: #333;
+        font-weight: 500;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 18px;
+        border-radius: 10px;
+        border: 2px solid #edf2f7;
+        transition: all 0.3s ease;
+      }
+
+      .card:hover {
+        border-color: #2d8bd6;
+        transform: translateY(-2px);
+      }
+
+      .card h4 {
+        color: #1f2a44;
+        margin-bottom: 10px;
+        font-size: 1.1em;
+      }
+
+      .card ul {
+        list-style: none;
+      }
+
+      .card li {
+        padding: 6px 0 6px 20px;
+        position: relative;
+      }
+
+      .card li::before {
+        content: "•";
+        position: absolute;
+        left: 0;
+        color: #2d8bd6;
+        font-weight: 700;
+      }
+
+      .features-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+      }
+
+      .features-table th {
+        background: linear-gradient(135deg, #1f2a44 0%, #2d8bd6 100%);
+        color: white;
+        padding: 14px;
+        text-align: left;
+        font-weight: 600;
+      }
+
+      .features-table td {
+        padding: 14px;
+        border-bottom: 1px solid #eef2f4;
+        text-align: left;
+      }
+
+      .features-table tr:nth-child(even) {
+        background: #f8f9fa;
+      }
+
+      .features-table tr:hover {
+        background: #e9f3fe;
+      }
+
+      .price-cell {
+        font-weight: 700;
+        color: #1f2a44;
+        text-align: right;
+      }
+
+      .duration-cell {
+        color: #666;
+        font-style: italic;
+        text-align: center;
+      }
+
+      .timeline {
+        position: relative;
+        padding-left: 30px;
+      }
+
+      .timeline::before {
+        content: "";
+        position: absolute;
+        left: 15px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #2d8bd6;
+      }
+
+      .timeline-item {
+        position: relative;
+        margin-bottom: 26px;
+        background: #f8f9fa;
+        padding: 18px;
+        border-radius: 10px;
+        margin-left: 20px;
+      }
+
+      .timeline-item::before {
+        content: "";
+        position: absolute;
+        left: -35px;
+        top: 22px;
+        width: 12px;
+        height: 12px;
+        background: #2d8bd6;
+        border-radius: 50%;
+        border: 3px solid white;
+      }
+
+      .timeline-day {
+        font-weight: 700;
+        color: #1f2a44;
+        font-size: 1.15em;
+        margin-bottom: 8px;
+      }
+
+      .total-price {
+        background: linear-gradient(135deg, #1f2a44 0%, #2d8bd6 100%);
+        color: white;
+        padding: 26px;
+        border-radius: 14px;
+        text-align: center;
+        margin: 26px 0;
+        box-shadow: 0 8px 25px rgba(45, 139, 214, 0.25);
+      }
+
+      .total-price h3 {
+        font-size: 2.2em;
+        margin-bottom: 6px;
+      }
+
+      .included-list,
+      .optional-list {
+        list-style: none;
+        padding: 0;
+      }
+
+      .investment-total {
+        color: #1f2a44;
+        font-weight: 700;
+        font-size: 1.25em;
+      }
+
+      .centered {
+        text-align: center;
+      }
+
+      .warning-box {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 8px;
+      }
+
+      .info-box {
+        background: #d1ecf1;
+        border-left: 4px solid #0c5460;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 8px;
+      }
+
+      .included-list li,
+      .optional-list li {
+        padding: 10px 0 10px 30px;
+        position: relative;
+        border-bottom: 1px solid #eee;
+      }
+
+      .included-list li::before {
+        content: "✓";
+        position: absolute;
+        left: 0;
+        color: #28a745;
+        font-weight: bold;
+        font-size: 1.1em;
+      }
+
+      .optional-list li::before {
+        content: "+";
+        position: absolute;
+        left: 0;
+        color: #ffc107;
+        font-weight: bold;
+        font-size: 1.1em;
+      }
+
+      .print-btn {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        left: auto;
+        background: #2d8bd6;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(45, 139, 214, 0.3);
+        transition: all 0.3s ease;
+        z-index: 1000;
+      }
+
+      .print-btn:hover {
+        background: #1f6fb4;
+        transform: translateY(-2px);
+      }
+
+      @media print {
+        body {
+          background: white;
+          padding: 0;
+        }
+        .container {
+          box-shadow: none;
+          border-radius: 0;
+        }
+        .print-btn {
+          display: none;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          margin: 0;
+          border-radius: 0;
+        }
+        .header {
+          padding: 30px 20px;
+        }
+        .content {
+          padding: 20px;
+        }
+        .print-btn {
+          position: static;
+          margin: 20px auto;
+          display: block;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="header-content">
+          <h1>CloudManager / HostingManager v1.0</h1>
+          <p class="subtitle">
+            Plateforme 360° de gestion Cloud & Hosting: Clients • Commercial •
+            DSI
+          </p>
+          <div class="project-badge">Développement MVP - 12 semaines</div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="project-info">
+          <div class="info-card">
+            <h3>Détails du Projet</h3>
+            <div class="info-item">
+              <span class="info-label">Vision:</span>
+              <span class="info-value"
+                >Plateforme globale de gestion des services d'hébergement</span
+              >
+            </div>
+            <div class="info-item">
+              <span class="info-label">Accès:</span>
+              <span class="info-value">Public (2FA), VPN</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Livraison:</span>
+              <span class="info-value">Par phases selon priorités DSI</span>
+            </div>
+          </div>
+
+          <div class="info-card">
+            <h3>Investissement</h3>
+            <div class="info-item">
+              <span class="info-label">Prix total:</span>
+              <span class="info-value investment-total">4,350,000 DZD</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Paiement:</span>
+              <span class="info-value"
+                >30% début / 40% jalon / 30% livraison</span
+              >
+            </div>
+            <div class="info-item">
+              <span class="info-label">Garantie:</span>
+              <span class="info-value">90 jours de support correctif</span>
+            </div>
+          </div>
+
+          <div class="info-card">
+            <h3>Technologies</h3>
+            <div class="info-item">
+              <span class="info-label">Front:</span
+              ><span class="info-value">React 18, TailwindCSS</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Backend:</span
+              ><span class="info-value"
+                >FastAPI (Python 3.11+), Auth complète (2FA, RBAC, Audit)</span
+              >
+            </div>
+            <div class="info-item">
+              <span class="info-label">Base de données:</span
+              ><span class="info-value">PostgreSQL 15+</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Messaging:</span
+              ><span class="info-value"
+                >Notifications complètes Email (modèles), SMS optionnel</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Architecture & Dashboards</h2>
+          <div class="grid">
+            <div class="card">
+              <h4>User Dashboard (Public)</h4>
+              <ul>
+                <li>Connexion email/mot de passe</li>
+                <li>Profil et sécurité de base</li>
+                <li>Liste des services souscrits</li>
+                <li>Ticketing: création, suivi, pièces jointes</li>
+                <li>Consultation catalogue et demandes de devis</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h4>Corporate Dashboard</h4>
+              <ul>
+                <li>Gestion clients et validation comptes (KYC)</li>
+                <li>Catalogue produits/services et devis</li>
+                <li>Suivi tickets/commercial et relances</li>
+                <li>Gestion commandes et workflow</li>
+                <!-- <li>Accès ou via VPN</li> -->
+              </ul>
+            </div>
+            <div class="card">
+              <h4>Admin Dashboard (DSI)</h4>
+              <ul>
+                <li>Paramètres de base, rôles simples</li>
+                <li>Suivi d'activité minimal (journal connexions)</li>
+                <li>Sans inventaire ni intégrations techniques</li>
+                <!-- <li>Accès ou via VPN</li> -->
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Modules MVP (Junior)</h2>
+          <table class="features-table">
+            <thead>
+              <tr>
+                <th style="width: 5%">#</th>
+                <th style="width: 20%">Module</th>
+                <th style="width: 45%">Description & Fonctionnalités</th>
+                <th style="width: 15%">Durée</th>
+                <th style="width: 15%">Prix (DZD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>0</td>
+                <td><strong>Infrastructure & Socle (complet)</strong></td>
+                <td>
+                  FastAPI + React, PostgreSQL, Auth complète (email/mot de passe
+                  + 2FA), RBAC, audit connexions/actions, structure projet,
+                  déploiement simple
+                </td>
+                <td class="duration-cell">15 jours</td>
+                <td class="price-cell">150,00</td>
+              </tr>
+              <tr>
+                <td>1</td>
+                <td><strong>Customer Manager (MVP + Auth)</strong></td>
+                <td>
+                  Profils clients, validation comptes, KYC minimal,
+                  notes/documents de base, activation 2FA, historique sécurité
+                  (connexions/échecs)
+                </td>
+                <td class="duration-cell">12 jours</td>
+                <td class="price-cell">200,00</td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td><strong>Ticket Manager (complet)</strong></td>
+                <td>
+                  Cycle complet (ouvert, répondu, attente-réponse, on-hold,
+                  en-cours, résolu, fermé), assignation groupes/agents,
+                  transferts, tags, notes privées, pièces jointes, modèles de
+                  réponses, notifications, mail-to-ticket, KPIs/SLA de base
+                </td>
+                <td class="duration-cell">20 jours</td>
+                <td class="price-cell">300,00</td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td><strong>Product Catalogue (MVP)</strong></td>
+                <td>
+                  Liste produits publique, création compte, demande de devis
+                </td>
+                <td class="duration-cell">8 jours</td>
+                <td class="price-cell">150,00</td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td><strong>Order Manager (MVP)</strong></td>
+                <td>
+                  Workflow simple: demande → validation → en cours →
+                  livrée/annulée
+                </td>
+                <td class="duration-cell">8 jours</td>
+                <td class="price-cell">100,00</td>
+              </tr>
+              <tr>
+                <td>5</td>
+                <td><strong>Reporting (base)</strong></td>
+                <td>
+                  Tableaux simples (tickets, clients, commandes), export CSV
+                </td>
+                <td class="duration-cell">7 jours</td>
+                <td class="price-cell">100,00</td>
+              </tr>
+              <tr>
+                <td>6</td>
+                <td><strong>Invoice (MVP)</strong></td>
+                <td>
+                  Devis PDF, conversion commande, facture PDF, statuts manuels
+                </td>
+                <td class="duration-cell">10 jours</td>
+                <td class="price-cell">200,00</td>
+              </tr>
+              <tr>
+                <td>7</td>
+                <td><strong>Settings (RBAC & notifications)</strong></td>
+                <td>
+                  RBAC (rôles/permissions), catégories tickets, groupes support,
+                  fermeture auto après X jours, groupes de notifications et
+                  modèles
+                </td>
+                <td class="duration-cell">10 jours</td>
+                <td class="price-cell">200,00</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="total-price">
+            <h3>0 DZD</h3>
+            <p>Investissement Total MVP (Junior)</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Calendrier de Développement (MVP)</h2>
+          <div class="timeline">
+            <div class="timeline-item">
+              <div class="timeline-day">Semaines 1-2: Infrastructure</div>
+              <p>
+                <strong>Socle technique complet:</strong> Architecture FastAPI +
+                React, Base PostgreSQL avec schémas, Auth 2FA (TOTP/SMS), API
+                Gateway, Redis, Structure multi-tenant, environnements
+                dev/staging/prod
+              </p>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-day">
+                Semaines 3-5: Gestion Clients & Tickets
+              </div>
+              <p>
+                <strong>Customer Manager:</strong> Portail client (profile, 2FA,
+                historique), Corporate (validation KYC, catégories,
+                notifications, fiches complètes)<br />
+                <strong>Ticket Manager:</strong> Système complet tickets
+                (statuts, priorités, assignations, mail-to-ticket, FAQ, KPI,
+                export PDF)
+              </p>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-day">
+                Semaines 6-8: Commercial & Commandes
+              </div>
+              <p>
+                <strong>Product Catalogue:</strong> Interface publique, panier,
+                demandes devis/services<br />
+                <strong>Order Manager:</strong> Workflow commercial/technique,
+                statuts, suivi<br />
+                <strong>Setting Manager:</strong> Rôles, permissions, règles
+                automatiques, audit
+              </p>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-day">
+                Semaines 9-11: Facturation & Infrastructure
+              </div>
+              <p>
+                <strong>Invoice Manager:</strong> Devis, factures, bons
+                commande, taxes, export<br />
+                <strong>Reporting Manager:</strong> Dashboards KPI, graphiques
+                temps réel, SLA<br />
+              </p>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-day">
+                Semaines 11-12: Intégration & Stabilisation
+              </div>
+              <p>Assemblage final, corrections, préparation démo MVP</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Inclus dans le MVP</h2>
+          <ul class="included-list">
+            <li>
+              <strong>Trois tableaux de bord complets:</strong> User Dashboard
+              (public avec 2FA), Corporate Dashboard (VPN), Admin Dashboard DSI
+              (VPN)
+            </li>
+            <li>
+              <strong>Sécurité de niveau entreprise:</strong> Authentification
+              2FA (TOTP/SMS), système de rôles et permissions granulaires, audit
+              trail complet des actions, protection CSRF/XSS, rate limiting
+            </li>
+            <li>
+              <strong>Système de messaging complet:</strong> Email/SMS pour
+              notifications tickets, Mail-to-ticket automatique, notifications
+              ciblées par catégorie client
+            </li>
+            <li>
+              <strong>Base de données optimisée:</strong> PostgreSQL avec
+              indexes optimisés, Redis pour cache et sessions, migrations
+              versionnées
+            </li>
+            <!-- <li>
+              <strong>API Gateway prête:</strong> Structure pour intégrations
+              futures (cPanel, DNS, VPS, Cloud), Webhooks system, Rate limiting
+              et monitoring
+            </li> -->
+            <li>
+              <strong>Documentation complète:</strong> Documentation technique
+              (architecture, API, déploiement), guides utilisateurs (Client,
+              Commercial, DSI), procédures d'exploitation
+            </li>
+            <li>
+              <strong>Formation incluse:</strong> Formation DSI
+              (administration), formation Commercial (gestion clients/tickets),
+              formation support technique
+            </li>
+            <li>
+              <strong>Support post-livraison:</strong> 90 jours de garantie et
+              corrections bugs, support technique pendant la période de garantie
+            </li>
+          </ul>
+        </div>
+
+        <div class="section">
+          <h2>Technologies & Stack Technique</h2>
+          <table class="features-table">
+            <thead>
+              <tr>
+                <th>Couche</th>
+                <th>Technologies</th>
+                <th>Justification</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Frontend</strong></td>
+                <td>React 18, TypeScript, TailwindCSS, Shadcn/UI</td>
+                <td>
+                  Productivité élevée, composants réutilisables, UI moderne
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Backend</strong></td>
+                <td>FastAPI (Python 3.11+), Pydantic, SQLAlchemy, Alembic</td>
+                <td>
+                  Performance élevée, validation automatique, ORM robuste,
+                  migrations versionnées
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Base de données</strong></td>
+                <td>PostgreSQL 15+, pgvector (futur IA)</td>
+                <td>
+                  Fiabilité entreprise, ACID compliance, support JSON,
+                  extensions avancées
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Cache & Sessions</strong></td>
+                <td>Redis 7+</td>
+                <td>Performance mémoire, pub/sub, sessions distribuées</td>
+              </tr>
+              <tr>
+                <td><strong>Authentification</strong></td>
+                <td>JWT + OAuth2, pyotp (TOTP), Twilio/Infobip (SMS)</td>
+                <td>Standard industrie, 2FA sécurisé, scaling horizontal</td>
+              </tr>
+              <tr>
+                <td><strong>File Storage</strong></td>
+                <td>MinIO (S3-compatible) ou AWS S3</td>
+                <td>
+                  Stockage distribué, compatibilité cloud, haute disponibilité
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Email/SMS</strong></td>
+                <td>SendGrid/AWS SES, Twilio/Infobip</td>
+                <td>Délivrabilité garantie, templates, tracking</td>
+              </tr>
+              <tr>
+                <td><strong>Monitoring</strong></td>
+                <td>Sentry (errors), Logging structuré (JSON)</td>
+                <td>Détection proactive, debugging efficace</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section">
+          <h2>Architecture Système</h2>
+          <div class="card">
+            <h4>Architecture Microservices (Préparation Phase 2)</h4>
+            <ul>
+              <li>
+                <strong>API Gateway:</strong> Point d'entrée unique, rate
+                limiting, authentification centralisée
+              </li>
+              <li>
+                <strong>Auth Service:</strong> Gestion authentification 2FA,
+                JWT, sessions
+              </li>
+              <li>
+                <strong>Core Services:</strong> Customer, Ticket, Product,
+                Order, Invoice, Reporting
+              </li>
+              <li>
+                <strong>Integration Layer:</strong> Hosting APIs (cPanel, DNS,
+                VPS), Payment Gateway (NGBSS)
+              </li>
+              <li>
+                <strong>Notification Service:</strong> Email/SMS asynchrone,
+                mail-to-ticket
+              </li>
+              <li>
+                <strong>File Service:</strong> Upload/download sécurisé,
+                stockage distribué
+              </li>
+              <li>
+                <strong>Database Layer:</strong> PostgreSQL (principal), Redis
+                (cache/sessions)
+              </li>
+            </ul>
+          </div>
+
+          <div style="margin-top: 20px" class="info-box">
+            <strong>📊 Architecture évolutive:</strong> Le système est conçu dès
+            le départ pour supporter une architecture microservices complète. Le
+            MVP livre une architecture modulaire monolithique bien structurée,
+            Phase 2 permettra la séparation progressive en microservices
+            indépendants selon besoins de scaling.
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Livrables MVP</h2>
+          <div class="grid">
+            <div class="card">
+              <h4>Code Source</h4>
+              <ul>
+                <li>Repository Git complet (frontend + backend)</li>
+                <li>Code commenté et documenté</li>
+                <li>Tests unitaires et d'intégration</li>
+                <li>Scripts de déploiement automatisés</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h4>Documentation Technique</h4>
+              <ul>
+                <li>Architecture système détaillée</li>
+                <li>Documentation API (Swagger/OpenAPI)</li>
+                <li>Guide de déploiement</li>
+                <li>Schéma base de données</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h4>Documentation Utilisateur</h4>
+              <ul>
+                <li>Guide utilisateur Client</li>
+                <li>Guide Commercial/Corporate</li>
+                <li>Guide Administrateur DSI</li>
+                <li>FAQ et troubleshooting</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h4>Formation & Support</h4>
+              <ul>
+                <li>3 sessions formation (Client/Corporate/DSI)</li>
+                <li>Vidéos tutoriels</li>
+                <li>90 jours support technique</li>
+                <li>Hotline développeur (email/tel)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Évolution & Roadmap Future</h2>
+          <div class="timeline">
+            <div class="timeline-item">
+              <div class="timeline-day">MVP - v1.0 (12 semaines)</div>
+              <p>
+                <strong>Plateforme complète fonctionnelle:</strong> Tous les
+                modules opérationnels, 3 dashboards, gestion
+                clients/tickets/commandes/factures, inventaire, fondations
+                Hosting & Payment
+              </p>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-day">Phase 2 - v2.0 (8-10 semaines)</div>
+              <p>
+                <strong>Automatisation complète:</strong> Intégrations API
+                Hosting (cPanel, DNS, VPN, VPS, Storage, Cloud), Paiement en
+                ligne NGBSS/CIB, Orchestration services, Provisioning
+                automatique
+              </p>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-day">Phase 3 - v3.0 (6-8 semaines)</div>
+              <p>
+                <strong>Intelligence & Scaling:</strong> IA prédictive,
+                Analytics avancée, Apps Mobile (Flutter), Architecture
+                microservices, Haute disponibilité, Monitoring avancé
+              </p>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-day">Phase 4 - v4.0+ (continu)</div>
+              <p>
+                <strong>Évolutions continues:</strong> Nouvelles intégrations,
+                fonctionnalités client, optimisations performance, conformité
+                réglementaire, innovations technologiques
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="section centered">
+          <div class="warning-box" style="text-align: left">
+            <h4 style="margin-bottom: 10px">📋 Notes Importantes</h4>
+            <ul style="margin-left: 20px; margin-top: 10px">
+              <li>
+                <strong>Délais:</strong> 12 semaines pour le MVP (selon
+                disponibilité équipe DSI pour validations)
+              </li>
+              <li>
+                <strong>Prérequis:</strong> Infrastructure serveur fournie par
+                DSI (dev/staging/prod), accès VPN pour développement
+              </li>
+              <li>
+                <strong>Intégrations:</strong> APIs Hosting et NGBSS nécessitent
+                documentation technique et environnements de test
+              </li>
+              <li>
+                <strong>Formation:</strong> Présence équipes DSI/Commercial
+                requise (3 sessions de 4h chacune)
+              </li>
+              <li>
+                <strong>Maintenance:</strong> Après période de garantie, contrat
+                de maintenance évolutif disponible
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Contact & Informations</h2>
+          <div class="grid">
+            <div class="card">
+              <h4>Développeur Principal</h4>
+              <p>
+                <strong>Tebib Fethallah</strong><br />
+                Expert Full-Stack Developer<br />
+                Python • FastAPI • React • Flutter (optionnel)<br />
+                System Design & Architecture
+              </p>
+            </div>
+            <div class="card">
+              <h4>Coordonnées</h4>
+              <p>
+                <strong>Téléphone:</strong> 0775032800<br />
+                <strong>Disponibilité:</strong> 9h – 20h<br />
+                <strong>Localisation:</strong> Tlemcen, Algérie<br />
+                <strong>Réponse:</strong> < 2h (jours ouvrables)
+              </p>
+            </div>
+            <div class="card">
+              <h4>Statut du Projet</h4>
+              <p>
+                <strong>Disponibilité:</strong> Immédiate<br />
+                <strong>Démarrage:</strong> Sous 5 jours<br />
+                <strong>Livraison:</strong> 12 semaines (MVP)<br />
+                <strong>Engagement:</strong> Dédié à 100%
+              </p>
+            </div>
+            <div class="card">
+              <h4>Prochaines Étapes</h4>
+              <p>
+                1. Validation offre par DSI<br />
+                2. Réunion kick-off (1h)<br />
+                3. Signature contrat<br />
+                4. Démarrage immédiat
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="section centered">
+          <div
+            class="total-price"
+            style="
+              background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            "
+          >
+            <h3 style="font-size: 1.8em; margin-bottom: 10px">
+              Offre Valide 30 Jours
+            </h3>
+            <p style="font-size: 1.1em">
+              Cette proposition tarifaire est valable jusqu'au 30 Octobre 2025
+            </p>
+            <p style="font-size: 0.95em; margin-top: 15px; opacity: 0.9">
+              Démarrage prioritaire garanti si signature avant le 15 Octobre
+              2025
+            </p>
+          </div>
+        </div>
+
+        <div
+          class="section centered"
+          style="
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #e9ecef;
+          "
+        >
+          <p style="color: #666; font-size: 0.95em; line-height: 1.8">
+            <strong>CloudManager v1.0</strong> - Proposition commerciale
+            confidentielle<br />
+            Préparée pour:
+            <strong
+              >Algérie Télécom - Direction des Systèmes d'Information</strong
+            ><br />
+            Date: <strong>30 Septembre 2025</strong><br />
+            Référence: <strong>CM-AT-2025-001</strong>
+          </p>
+        </div>
+      </div>
+    </div>
+
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        function parsePriceToIntDZD(text) {
+          if (!text) return 0;
+          const cleaned = (text + "")
+            .replace(/[^0-9.,]/g, "")
+            .replace(/\./g, "") // drop dot thousands
+            .replace(/,/g, ""); // drop comma thousands/decimals (we treat DZD as integer)
+          const val = parseInt(cleaned, 10);
+          return isNaN(val) ? 0 : val;
+        }
+
+        function formatDZD(value) {
+          try {
+            return new Intl.NumberFormat("fr-DZ").format(value) + " DZD";
+          } catch (e) {
+            return (value + "").replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " DZD";
+          }
+        }
+
+        // Sum module prices only (exclude the summary and tests rows)
+        const rows = document.querySelectorAll(".features-table tbody tr");
+        let devTotal = 0;
+        let testsPrice = 0;
+        rows.forEach((row) => {
+          const rowText = row.innerText || "";
+          const priceCell = row.querySelector(".price-cell");
+          if (!priceCell) return;
+          const price = parsePriceToIntDZD(priceCell.textContent);
+          if (/Tests,\s*Documentation/i.test(rowText)) {
+            testsPrice = price;
+            return;
+          }
+          if (/Total\s+MVP/i.test(rowText)) {
+            return; // skip the dev total display row
+          }
+          devTotal += price;
+        });
+
+        const grandTotal = devTotal + testsPrice;
+        const targetTotal = 150000; // Budget global souhaité
+
+        // Update the "Total MVP (Développement)" price cell
+        const devTotalCell = Array.from(rows)
+          .find((r) => /Total\s+MVP/i.test(r.innerText))
+          ?.querySelector(".price-cell");
+        if (devTotalCell)
+          devTotalCell.textContent = new Intl.NumberFormat("fr-DZ").format(
+            devTotal
+          );
+
+        // Calculate final total with discount to match targetTotal if lower
+        let finalTotal = grandTotal;
+        let discount = 0;
+
+        // Update top investment card
+        const investmentEl = document.querySelector(".investment-total");
+        if (investmentEl) investmentEl.textContent = formatDZD(finalTotal);
+
+        // Update bottom big total price
+        const totalPriceEl = document.querySelector(".total-price h3");
+        if (totalPriceEl) totalPriceEl.textContent = formatDZD(finalTotal);
+
+        const tableRows = document.querySelectorAll(".features-table tbody tr");
+        tableRows.forEach((row) => {
+          row.addEventListener("mouseenter", function () {
+            this.style.transform = "scale(1.01)";
+            this.style.transition = "all 0.2s ease";
+          });
+          row.addEventListener("mouseleave", function () {
+            this.style.transform = "scale(1)";
+          });
+        });
+
+        const timelineItems = document.querySelectorAll(".timeline-item");
+        timelineItems.forEach((item, index) => {
+          item.style.animationDelay = `${index * 0.15}s`;
+          item.style.opacity = "0";
+          item.style.animation = "fadeInUp 0.6s ease forwards";
+        });
+
+        const cards = document.querySelectorAll(".card");
+        cards.forEach((card, index) => {
+          card.style.animationDelay = `${index * 0.05}s`;
+          card.style.opacity = "0";
+          card.style.animation = "fadeIn 0.5s ease forwards";
+        });
+      });
+
+      const style = document.createElement("style");
+      style.textContent = `
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @media print {
+          .timeline-item, .card {
+            animation: none !important;
+            opacity: 1 !important;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    </script>
+  </body>
+</html>

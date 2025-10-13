@@ -1,0 +1,56 @@
+% CloudManager v1.0 — Working Plan (Team of Two)
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2cm]{geometry}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\setlist{noitemsep, topsep=3pt}
+
+\title{CloudManager v1.0 — Working Plan (Functions \& Features Only)}
+\author{Manil (Full\-Stack) \& Wassim (Full\-Stack)}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section*{Team \& Stack Split}
+\begin{itemize}
+  \item \textbf{Manil} — Backend\-leaning: FastAPI (Auth/RBAC/2FA, Ticket API, Settings, Notifications), DB schema/migrations, security, deployment.
+  \item \textbf{Wassim} — Frontend\-leaning: React UI (dashboards, forms, tables), Customer, Catalogue, Orders, Invoices, Reporting, API integration.
+  \item Stack: React 18 + TailwindCSS; FastAPI (Python 3.11+), PostgreSQL; Email notifications (+ SMS optional); PDFs for quotes/invoices.
+\end{itemize}
+
+\section*{Modules — Functions \& Features (with owner)}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{3.1cm}|>{\raggedright\arraybackslash}p{9.2cm}|>{\raggedright\arraybackslash}p{2.2cm}|}
+\hline
+\textbf{Module} & \textbf{Functions / Features (working scope)} & \textbf{Owner} \\ \hline
+Infrastructure (15d) & Project structure, env/config, DB migrations, Auth foundation (email+password), 2FA TOTP, JWT, RBAC roles/permissions, audit log (logins/actions), simple deployment & Manil \\ \hline
+Customer Manager (12d) & Profiles, account validation, minimal KYC (docs upload, status), multi\-users per customer, notes\&docs, security activity (sessions, 2FA activation) & Wassim \\ \hline
+Ticket Manager (20d) & Full lifecycle (open, answered, waiting, on\-hold, in\-progress, resolved, closed), priorities, categories, assign to groups/agents, transfers, tags, private notes, attachments, canned replies, mail\-to\-ticket, basic KPI/SLA, list filters, CSV export & Manil \\ \hline
+Product Catalogue (8d) & Public catalogue, categories, product/service page, account creation, request quote/service, simple backoffice (CRUD, visibility) & Wassim \\ \hline
+Order Manager (8d) & Workflow request\,$\to$\,validated\,$\to$\,in\-progress\,$\to$\,delivered/cancelled, comments, email notifications, links to client/tickets/quotes/invoices & Wassim \\ \hline
+Invoice (10d) & Quotes PDF, convert to order, invoices PDF, manual statuses (draft/issued/paid/cancelled), basic taxes (TVA/TAP), email sending & Wassim \\ \hline
+Reporting (7d) & Tables (tickets/clients/orders), date filters, basic aggregates, CSV export (no realtime charts) & Wassim \\ \hline
+Settings (10d) & Roles/permissions, ticket categories, support groups, auto\-close after X days, notification groups and templates & Manil \\ \hline
+\end{longtable}
+
+\section*{Deliverables}
+\begin{itemize}
+  \item Source code (front/back), DB schema/migrations, OpenAPI spec.
+  \item PDFs (quotes/invoices), seed data, deploy scripts, basic runbook.
+  \item Short user/admin guides.
+\end{itemize}
+
+\section*{Milestones (bi\-weekly)}
+\begin{itemize}
+  \item W2: Infrastructure, Auth/RBAC/2FA, DB ready; base UI auth.
+  \item W4: Customer (usable); Ticket (create/follow\-up) MVP.
+  \item W6: Ticket advanced (assign, notes, tags, templates, mail\-to\-ticket); Catalogue.
+  \item W8: Orders + Invoices + Reporting (CSV).
+  \item W10--W12: Hardening, UAT, docs, release.
+\end{itemize}
+
+\end{document}
+
+
+
