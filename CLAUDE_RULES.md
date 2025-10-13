@@ -13,6 +13,7 @@
 ## 🎯 Core Principles
 
 ### 1. **Modular Architecture - STRICTLY ENFORCED**
+
 - Each file MUST have a **single responsibility**
 - Maximum **150 lines** per file (excluding comments and imports)
 - If a file exceeds 150 lines, it MUST be split into smaller modules
@@ -20,6 +21,7 @@
 - Classes should not exceed **200 lines**
 
 ### 2. **Production-Grade Quality**
+
 - All code must be production-ready from day one
 - No placeholder code or "TODO" comments in committed code
 - Comprehensive error handling in every function
@@ -27,6 +29,7 @@
 - Performance optimization as a default practice
 
 ### 3. **Reusability**
+
 - Write code that can be reused across multiple projects
 - Abstract business logic from infrastructure code
 - Create generic utilities and helpers
@@ -137,6 +140,7 @@ cloudmanager/
 ## 🎨 Frontend Rules (React + Vite + TypeScript)
 
 ### Module Structure Pattern
+
 Each module MUST follow this structure:
 
 ```typescript
@@ -165,6 +169,7 @@ module/
 ### Component Rules
 
 #### 1. Component File Structure
+
 ```typescript
 // 1. Imports (grouped and sorted)
 import React from 'react';
@@ -201,6 +206,7 @@ ComponentName.displayName = 'ComponentName';
 ```
 
 #### 2. Component Best Practices
+
 - Use **functional components** with hooks (no class components)
 - One component per file
 - Extract complex JSX into separate components
@@ -209,6 +215,7 @@ ComponentName.displayName = 'ComponentName';
 - Always provide **TypeScript types** for props
 
 #### 3. Custom Hooks
+
 ```typescript
 // hooks/useFeature.ts
 import { useState, useEffect } from 'react';
@@ -228,6 +235,7 @@ export const useFeature = (id: string) => {
 ```
 
 **Hook Rules:**
+
 - Start with `use` prefix
 - Max 100 lines per hook
 - Return object with clear naming
@@ -235,6 +243,7 @@ export const useFeature = (id: string) => {
 - Clean up side effects
 
 #### 4. Service Layer (API Calls)
+
 ```typescript
 // services/customerService.ts
 import { apiClient } from '@/shared/api/client';
@@ -261,6 +270,7 @@ export const customerService = {
 ```
 
 **Service Rules:**
+
 - One service object per domain entity
 - Use async/await (no raw promises)
 - Proper TypeScript types for all methods
@@ -270,6 +280,7 @@ export const customerService = {
 ### State Management
 
 #### 1. Use React Query for Server State
+
 ```typescript
 // hooks/useCustomers.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -296,6 +307,7 @@ export const useCreateCustomer = () => {
 ```
 
 #### 2. Use Zustand for Client State
+
 ```typescript
 // shared/store/authStore.ts
 import { create } from 'zustand';
@@ -326,6 +338,7 @@ export const useAuthStore = create<AuthState>()(
 ### TypeScript Standards
 
 #### 1. Type Definitions
+
 ```typescript
 // types/customer.types.ts
 
@@ -368,6 +381,7 @@ export interface CustomerListResponse {
 ```
 
 **TypeScript Rules:**
+
 - **No `any` type** - always use proper types
 - Use `interface` for objects, `type` for unions
 - Export all types from `index.ts`
@@ -377,6 +391,7 @@ export interface CustomerListResponse {
 ### shadcn/ui Integration
 
 #### 1. Component Usage
+
 ```typescript
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
@@ -404,6 +419,7 @@ export const CustomerForm: React.FC = () => {
 ```
 
 #### 2. ALL Required Components
+
 You MUST install and use ALL components from `shadcn_components.txt`:
 
 ```bash
@@ -461,6 +477,7 @@ npm install @tanstack/react-table
 ### Form Handling
 
 #### Use React Hook Form + Zod
+
 ```typescript
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -521,6 +538,7 @@ export const router = createBrowserRouter([
 ## 🔧 Backend Rules (FastAPI + PostgreSQL)
 
 ### Module Structure Pattern
+
 Each module MUST follow this layered architecture:
 
 ```python
@@ -588,6 +606,7 @@ async def create_customer(
 ```
 
 **Router Rules:**
+
 - Max 150 lines per router file
 - One router per module
 - Use dependency injection
@@ -666,6 +685,7 @@ class CustomerService:
 ```
 
 **Service Rules:**
+
 - Max 150 lines per service file
 - Contains ALL business logic
 - No database queries (use repository)
@@ -749,6 +769,7 @@ class CustomerRepository:
 ```
 
 **Repository Rules:**
+
 - Max 150 lines per repository file
 - ONLY database operations
 - No business logic
@@ -808,6 +829,7 @@ class Customer(Base):
 ```
 
 **Model Rules:**
+
 - Max 150 lines per model file
 - Use `Mapped` type hints (SQLAlchemy 2.0)
 - Always include audit fields (created_at, updated_at, created_by)
@@ -871,6 +893,7 @@ class CustomerListResponse(BaseModel):
 ```
 
 **Schema Rules:**
+
 - Max 150 lines per schema file
 - Use Pydantic V2 syntax
 - Separate schemas for Create/Update/Response
@@ -1150,6 +1173,7 @@ async def health_check():
 ## 🔒 Security Rules
 
 ### 1. Authentication
+
 - Use JWT with access + refresh tokens
 - Access token: 30 minutes expiry
 - Refresh token: 7 days expiry
@@ -1157,18 +1181,21 @@ async def health_check():
 - Implement 2FA with TOTP (Google Authenticator)
 
 ### 2. Authorization
+
 - Implement RBAC (Role-Based Access Control)
 - Roles: admin, corporate, client
 - Granular permissions per resource
 - Check permissions at service layer
 
 ### 3. Password Security
+
 - Use bcrypt with 12 rounds minimum
 - Minimum 8 characters, must include uppercase, lowercase, number
 - Password reset with email verification
 - Track failed login attempts
 
 ### 4. Data Protection
+
 - Encrypt sensitive data at rest
 - Use HTTPS only in production
 - Sanitize all user inputs
@@ -1176,6 +1203,7 @@ async def health_check():
 - Rate limiting on all endpoints
 
 ### 5. Audit Trail
+
 - Log all authentication events
 - Log all data modifications
 - Include user ID, timestamp, action, resource
@@ -1186,25 +1214,30 @@ async def health_check():
 ## 📊 Database Rules
 
 ### 1. Naming Conventions
+
 - Tables: lowercase, plural (e.g., `customers`, `tickets`)
 - Columns: lowercase, snake_case (e.g., `created_at`, `first_name`)
 - Indexes: `idx_table_column` (e.g., `idx_customers_email`)
 - Foreign keys: `fk_table1_table2` (e.g., `fk_tickets_customers`)
 
 ### 2. Required Fields
+
 Every table MUST have:
+
 - `id` (UUID, primary key)
 - `created_at` (timestamp)
 - `updated_at` (timestamp)
 - `created_by` (user ID)
 
 ### 3. Indexes
+
 - Index all foreign keys
 - Index frequently searched columns
 - Index columns used in WHERE clauses
 - Use composite indexes wisely
 
 ### 4. Migrations
+
 - Use Alembic for migrations
 - Never edit existing migrations
 - Test migrations on staging first
@@ -1215,6 +1248,7 @@ Every table MUST have:
 ## 🧪 Testing Rules
 
 ### Frontend Testing
+
 ```typescript
 // Component test
 import { render, screen } from '@testing-library/react';
@@ -1245,6 +1279,7 @@ describe('CustomerForm', () => {
 ```
 
 ### Backend Testing
+
 ```python
 # Service test
 import pytest
@@ -1286,6 +1321,7 @@ async def test_create_duplicate_customer(db_session):
 ```
 
 ### Testing Requirements
+
 - Minimum 80% code coverage
 - Test all business logic
 - Test error cases
@@ -1298,6 +1334,7 @@ async def test_create_duplicate_customer(db_session):
 ## 📝 Documentation Rules
 
 ### 1. Code Documentation
+
 ```python
 def calculate_total(items: list[Item], tax_rate: float = 0.2) -> float:
     """
@@ -1326,6 +1363,7 @@ def calculate_total(items: list[Item], tax_rate: float = 0.2) -> float:
 ```
 
 ### 2. API Documentation
+
 - Use OpenAPI/Swagger
 - Document all endpoints
 - Include request/response examples
@@ -1333,7 +1371,9 @@ def calculate_total(items: list[Item], tax_rate: float = 0.2) -> float:
 - Specify authentication requirements
 
 ### 3. README Files
+
 Each module MUST have a README.md:
+
 ```markdown
 # Customer Module
 
@@ -1368,6 +1408,7 @@ customer = await service.create(CustomerCreate(...))
 ## 🚀 Performance Rules
 
 ### Frontend
+
 - Lazy load routes and components
 - Use React.memo for expensive components
 - Implement virtual scrolling for long lists
@@ -1376,6 +1417,7 @@ customer = await service.create(CustomerCreate(...))
 - Implement code splitting
 
 ### Backend
+
 - Use database connection pooling
 - Implement Redis caching for frequently accessed data
 - Use async/await for I/O operations
@@ -1384,6 +1426,7 @@ customer = await service.create(CustomerCreate(...))
 - Implement rate limiting
 
 ### Database
+
 - Optimize queries with EXPLAIN
 - Avoid N+1 queries
 - Use eager loading for relationships
@@ -1395,6 +1438,7 @@ customer = await service.create(CustomerCreate(...))
 ## 🐛 Error Handling Rules
 
 ### Frontend
+
 ```typescript
 export const ErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [hasError, setHasError] = React.useState(false);
@@ -1423,6 +1467,7 @@ export const ErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ childre
 ```
 
 ### Backend
+
 ```python
 # Global exception handler
 from fastapi import Request, status
@@ -1448,18 +1493,21 @@ async def global_exception_handler(request: Request, exc: Exception):
 ## 📦 Deployment Rules
 
 ### Environment Configuration
+
 - Use `.env` files for configuration
 - Never commit secrets to git
 - Different configs for dev/staging/prod
 - Use environment variables in production
 
 ### Docker
+
 - Multi-stage builds for optimization
 - Use slim base images
 - Implement health checks
 - Run as non-root user
 
 ### CI/CD
+
 - Run tests on every commit
 - Lint code before merge
 - Build Docker images
@@ -1471,6 +1519,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 ## 📋 Git Workflow Rules
 
 ### Branch Naming
+
 - `feature/module-name-description` - New features
 - `fix/module-name-bug-description` - Bug fixes
 - `refactor/module-name-description` - Refactoring
@@ -1478,6 +1527,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 - `test/module-name-description` - Tests
 
 ### Commit Messages
+
 ```
 type(scope): subject
 
@@ -1487,6 +1537,7 @@ footer (optional)
 ```
 
 Types:
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `refactor`: Code refactoring
@@ -1495,6 +1546,7 @@ Types:
 - `chore`: Maintenance
 
 Example:
+
 ```
 feat(customers): add customer creation endpoint
 
@@ -1507,6 +1559,7 @@ Closes #123
 ```
 
 ### Pull Request Rules
+
 - One feature per PR
 - Update documentation
 - Add tests
@@ -1521,6 +1574,7 @@ Closes #123
 Before committing ANY code, verify:
 
 ### General
+
 - [ ] File is under 150 lines (or properly justified)
 - [ ] Single responsibility principle followed
 - [ ] No code duplication
@@ -1530,6 +1584,7 @@ Before committing ANY code, verify:
 - [ ] Proper error handling
 
 ### Frontend
+
 - [ ] TypeScript types defined
 - [ ] No `any` types
 - [ ] Components are memoized if needed
@@ -1539,6 +1594,7 @@ Before committing ANY code, verify:
 - [ ] Accessibility attributes present
 
 ### Backend
+
 - [ ] Proper layering (router → service → repository)
 - [ ] All database queries in repository
 - [ ] All business logic in service
@@ -1548,6 +1604,7 @@ Before committing ANY code, verify:
 - [ ] Database transactions used
 
 ### Security
+
 - [ ] User input validated
 - [ ] SQL injection prevented
 - [ ] XSS prevented
@@ -1557,6 +1614,7 @@ Before committing ANY code, verify:
 - [ ] Audit trail logged
 
 ### Testing
+
 - [ ] Unit tests written
 - [ ] Tests pass locally
 - [ ] Edge cases covered
@@ -1564,6 +1622,7 @@ Before committing ANY code, verify:
 - [ ] Minimum 80% coverage
 
 ### Documentation
+
 - [ ] Code comments for complex logic
 - [ ] Docstrings for functions
 - [ ] API endpoint documented
@@ -1577,6 +1636,7 @@ Before committing ANY code, verify:
 When developing a new module, complete in this order:
 
 ### Backend (First)
+
 1. [ ] Create module folder structure
 2. [ ] Define Pydantic schemas (schemas.py)
 3. [ ] Create database models (models.py)
@@ -1586,9 +1646,10 @@ When developing a new module, complete in this order:
 7. [ ] Create API router (router.py)
 8. [ ] Write unit tests
 9. [ ] Update main.py to include router
-10. [ ] Test endpoints with Postman/curl
+1. [ ] Test endpoints with Postman/curl
 
 ### Frontend (Second)
+
 1. [ ] Create module folder structure
 2. [ ] Define TypeScript types (types/)
 3. [ ] Create API service (services/)
@@ -1598,7 +1659,7 @@ When developing a new module, complete in this order:
 7. [ ] Add routes to router
 8. [ ] Write component tests
 9. [ ] Test in browser
-10. [ ] Verify integration with backend
+1. [ ] Verify integration with backend
 
 ---
 
@@ -1620,6 +1681,7 @@ When developing a new module, complete in this order:
 ## 📚 Required Dependencies
 
 ### Frontend
+
 ```json
 {
   "dependencies": {
@@ -1653,6 +1715,7 @@ When developing a new module, complete in this order:
 ```
 
 ### Backend
+
 ```
 fastapi[all]==0.104.1
 uvicorn[standard]==0.24.0
@@ -1682,16 +1745,19 @@ httpx==0.25.1
 ## 🎓 Learning Resources
 
 ### React + TypeScript
+
 - [React Docs](https://react.dev)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
 - [React Query Docs](https://tanstack.com/query/latest)
 
 ### FastAPI
+
 - [FastAPI Docs](https://fastapi.tiangolo.com)
 - [SQLAlchemy 2.0 Docs](https://docs.sqlalchemy.org)
 - [Pydantic V2 Docs](https://docs.pydantic.dev)
 
 ### Architecture
+
 - [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
 - [Domain-Driven Design](https://martinfowler.com/bliki/DomainDrivenDesign.html)
 
@@ -1700,6 +1766,7 @@ httpx==0.25.1
 ## 🔄 Development Workflow
 
 ### Daily Routine
+
 1. Pull latest changes from main
 2. Create feature branch
 3. Write failing test
@@ -1712,6 +1779,7 @@ httpx==0.25.1
 10. Create pull request
 
 ### Code Review Focus
+
 - Architecture adherence
 - Code quality
 - Test coverage
@@ -1724,6 +1792,7 @@ httpx==0.25.1
 ## 📞 Support and Questions
 
 For questions about:
+
 - **Architecture**: Consult this document first
 - **Technical decisions**: Discuss with team lead
 - **Blockers**: Raise immediately in daily standup

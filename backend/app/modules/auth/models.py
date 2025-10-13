@@ -3,9 +3,9 @@ Authentication database models.
 Uses SQLAlchemy 2.0 async syntax.
 """
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, String, Enum as SQLEnum
+from sqlalchemy import Boolean, DateTime, String, Enum as SQLEnum, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.config.database import Base
@@ -32,7 +32,8 @@ class User(Base):
     )
 
     # Status flags
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False)
     is_2fa_enabled: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
@@ -40,15 +41,38 @@ class User(Base):
 
     # Audit fields
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
+        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
-    last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_by: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        default="system",
+        doc="ID of user who created this account (nullable for system/initial users)",
+    )
+    updated_by: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        doc="ID of user who last updated this account",
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True,
+        index=True,
+        doc="Soft delete timestamp (NULL if not deleted)",
+    )
+    deleted_by: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        doc="ID of user who deleted this account",
+    )
+    last_login_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True)
 
     def __repr__(self) -> str:
         return f"<User {self.email} ({self.role})>"

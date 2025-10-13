@@ -4,7 +4,7 @@ Handles user registration, login, and 2FA endpoints.
 """
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
@@ -50,6 +50,7 @@ async def register(
 @router.post("/login", response_model=LoginResponse)
 async def login(
     login_data: LoginRequest,
+    request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """
@@ -57,13 +58,14 @@ async def login(
 
     Args:
         login_data: Login credentials
+        request: FastAPI request for audit logging
         db: Database session
 
     Returns:
         Access token, refresh token, and user information
     """
     service = AuthService(db)
-    return await service.login(login_data.email, login_data.password)
+    return await service.login(login_data.email, login_data.password, request)
 
 
 @router.post("/refresh")

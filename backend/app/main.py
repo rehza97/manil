@@ -12,16 +12,18 @@ from fastapi.responses import JSONResponse
 from app.config.database import close_db, init_db
 from app.config.redis import init_redis, close_redis
 from app.config.settings import get_settings
+from app.core.logging import logger, log_exception
 from app.core.middleware import (
     CORSHeadersMiddleware,
     LoggingMiddleware,
     RateLimitMiddleware,
+    CSRFProtectionMiddleware,
 )
 
-# TODO: Import routers as modules are created
-# from app.modules.auth.router import router as auth_router
-# from app.modules.customers.router import router as customers_router
-# from app.modules.tickets.router import router as tickets_router
+# Import routers
+from app.modules.auth.router import router as auth_router
+from app.modules.audit.router import router as audit_router
+from app.modules.customers.router import router as customers_router
 
 settings = get_settings()
 
@@ -33,28 +35,32 @@ async def lifespan(app: FastAPI):
     Handles startup and shutdown procedures.
     """
     # Startup
-    print(f"🚀 Starting {settings.APP_NAME} v{settings.APP_VERSION}")
-    print(f"📦 Environment: {settings.ENVIRONMENT}")
+    logger.info(f"🚀 Starting {settings.APP_NAME} v{settings.APP_VERSION}")
+    logger.info(f"📦 Environment: {settings.ENVIRONMENT}")
 
     # Initialize Redis
-    print("📦 Initializing Redis...")
+    logger.info("📦 Initializing Redis...")
     try:
         await init_redis()
+        logger.info("✅ Redis initialized successfully")
     except Exception as e:
-        print(f"⚠️  Redis initialization failed: {e}")
-        print("⚠️  Continuing without Redis cache")
+        logger.warning(f"⚠️  Redis initialization failed: {e}")
+        logger.warning("⚠️  Continuing without Redis cache")
 
     # Initialize database (only in development)
     if settings.ENVIRONMENT == "development" and settings.DEBUG:
-        print("🗄️  Initializing database...")
+        logger.info("🗄️  Initializing database...")
         await init_db()
+        logger.info("✅ Database initialized successfully")
 
+    logger.info("✅ Application startup complete")
     yield
 
     # Shutdown
-    print("🛑 Shutting down...")
+    logger.info("🛑 Shutting down application...")
     await close_redis()
     await close_db()
+    logger.info("✅ Application shutdown complete")
 
 
 # Create FastAPI application
@@ -83,6 +89,7 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 # Custom Middleware
 app.add_middleware(CORSHeadersMiddleware)
 app.add_middleware(LoggingMiddleware)
+app.add_middleware(CSRFProtectionMiddleware)
 if settings.RATE_LIMIT_ENABLED:
     app.add_middleware(RateLimitMiddleware)
 
@@ -100,15 +107,15 @@ async def global_exception_handler(request: Request, exc: Exception):
     Returns:
         JSON error response
     """
-    # TODO: Log to proper logging system
-    print(f"❌ Unhandled exception: {exc}")
+    request_id = getattr(request.state, "request_id", "unknown")
+    log_exception(exc, f"Unhandled exception in {request.method} {request.url.path} (request_id: {request_id})")
 
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "error": "Internal server error",
             "message": "An unexpected error occurred",
-            "request_id": getattr(request.state, "request_id", None),
+            "request_id": request_id,
         },
     )
 
@@ -145,7 +152,7 @@ async def root():
     }
 
 
-# TODO: Include routers as modules are created
-# app.include_router(auth_router, prefix="/api/v1", tags=["Authentication"])
-# app.include_router(customers_router, prefix="/api/v1", tags=["Customers"])
-# app.include_router(tickets_router, prefix="/api/v1", tags=["Tickets"])
+# Include routers
+app.include_router(auth_router, prefix="/api/v1")
+app.include_router(audit_router, prefix="/api/v1")
+app.include_router(customers_router, prefix="/api/v1")

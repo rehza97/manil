@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: cloudmanager-postgres
+    environment:
+      POSTGRES_DB: cloudmanager
+      POSTGRES_USER: cloudmanager
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cloudmanager_password}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - cloudmanager-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cloudmanager"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: cloudmanager-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - cloudmanager-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cloudmanager-backend
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://cloudmanager:${DB_PASSWORD:-cloudmanager_password}@postgres:5432/cloudmanager
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_password}@redis:6379/0
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-secret-key-change-in-production}
+      - DEBUG=${DEBUG:-False}
+    volumes:
+      - ./backend:/app
+      - storage_data:/app/storage
+      - logs_data:/app/logs
+    ports:
+      - "8000:8000"
+    networks:
+      - cloudmanager-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # Frontend (Optional - to be configured)
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: cloudmanager-frontend
+  #   ports:
+  #     - "5173:5173"
+  #   networks:
+  #     - cloudmanager-network
+  #   depends_on:
+  #     - backend
+  #   restart: unless-stopped
+
+# Volumes
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  storage_data:
+    driver: local
+  logs_data:
+    driver: local
+
+# Networks
+networks:
+  cloudmanager-network:
+    driver: bridge
