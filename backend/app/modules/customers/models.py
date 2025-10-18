@@ -84,6 +84,12 @@ class Customer(Base):
         index=True,
         doc="City",
     )
+    state: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        index=True,
+        doc="State/Province",
+    )
     country: Mapped[str | None] = mapped_column(
         String(100),
         nullable=True,

@@ -33,7 +33,8 @@ class CustomerRepository:
 
         Returns tuple of (customers_list, total_count).
         """
-        query = select(Customer)
+        # Exclude soft-deleted records
+        query = select(Customer).where(Customer.deleted_at.is_(None))
 
         # Apply filters
         if status:
@@ -65,14 +66,20 @@ class CustomerRepository:
         return customers, total
 
     async def get_by_id(self, customer_id: str) -> Optional[Customer]:
-        """Get customer by ID."""
-        query = select(Customer).where(Customer.id == customer_id)
+        """Get customer by ID (excluding soft-deleted)."""
+        query = select(Customer).where(
+            Customer.id == customer_id,
+            Customer.deleted_at.is_(None)
+        )
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
     async def get_by_email(self, email: str) -> Optional[Customer]:
-        """Get customer by email address."""
-        query = select(Customer).where(Customer.email == email)
+        """Get customer by email address (excluding soft-deleted)."""
+        query = select(Customer).where(
+            Customer.email == email,
+            Customer.deleted_at.is_(None)
+        )
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
@@ -87,30 +94,58 @@ class CustomerRepository:
         await self.db.refresh(customer)
         return customer
 
-    async def update(self, customer: Customer, customer_data: CustomerUpdate) -> Customer:
+    async def update(self, customer: Customer, customer_data: CustomerUpdate, updated_by: str) -> Customer:
         """Update existing customer."""
         update_data = customer_data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(customer, field, value)
 
+        # Track who made the update
+        customer.updated_by = updated_by
+
         await self.db.commit()
         await self.db.refresh(customer)
         return customer
 
-    async def delete(self, customer: Customer) -> None:
-        """Delete customer (hard delete)."""
-        await self.db.delete(customer)
+    async def delete(self, customer: Customer, deleted_by: str) -> None:
+        """Soft delete customer (sets deleted_at and deleted_by)."""
+        from datetime import datetime, timezone
+
+        customer.deleted_at = datetime.now(timezone.utc)
+        customer.deleted_by = deleted_by
+
         await self.db.commit()
 
-    async def count_by_status(self, status: CustomerStatus) -> int:
-        """Count customers by status."""
-        query = select(func.count()).where(Customer.status == status)
+    async def count_all(self) -> int:
+        """Count all customers (excluding soft-deleted)."""
+        query = select(func.count()).select_from(Customer).where(Customer.deleted_at.is_(None))
         result = await self.db.execute(query)
         return result.scalar() or 0
 
+    async def count_by_status(self, status: Optional[CustomerStatus] = None) -> int:
+        """Count customers by status (excluding soft-deleted)."""
+        query = select(func.count()).select_from(Customer).where(Customer.deleted_at.is_(None))
+        if status:
+            query = query.where(Customer.status == status)
+        result = await self.db.execute(query)
+        return result.scalar() or 0
+
+    async def get_statistics_grouped(self) -> dict[CustomerStatus, int]:
+        """Get customer counts grouped by status (optimized single query)."""
+        query = (
+            select(Customer.status, func.count(Customer.id).label('count'))
+            .where(Customer.deleted_at.is_(None))
+            .group_by(Customer.status)
+        )
+        result = await self.db.execute(query)
+        return {row.status: row.count for row in result}
+
     async def exists_by_email(self, email: str, exclude_id: Optional[str] = None) -> bool:
-        """Check if customer exists with given email."""
-        query = select(func.count()).where(Customer.email == email)
+        """Check if customer exists with given email (excluding soft-deleted)."""
+        query = select(func.count()).where(
+            Customer.email == email,
+            Customer.deleted_at.is_(None)
+        )
         if exclude_id:
             query = query.where(Customer.id != exclude_id)
         result = await self.db.execute(query)

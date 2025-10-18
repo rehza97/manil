@@ -24,6 +24,8 @@ from app.core.middleware import (
 from app.modules.auth.router import router as auth_router
 from app.modules.audit.router import router as audit_router
 from app.modules.customers.router import router as customers_router
+from app.modules.customers.kyc_router import router as kyc_router
+from app.modules.customers.notes_router import router as notes_router
 
 settings = get_settings()
 
@@ -156,3 +158,5 @@ async def root():
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(audit_router, prefix="/api/v1")
 app.include_router(customers_router, prefix="/api/v1")
+app.include_router(kyc_router, prefix="/api/v1")
+app.include_router(notes_router, prefix="/api/v1")

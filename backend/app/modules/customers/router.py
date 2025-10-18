@@ -5,13 +5,15 @@ from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_permission
+from app.core.permissions import Permission
 from app.modules.auth.models import User
 from app.modules.customers.schemas import (
     CustomerCreate,
     CustomerUpdate,
     CustomerResponse,
     CustomerListResponse,
+    CustomerStatistics,
     CustomerStatus,
     CustomerType,
 )
@@ -29,7 +31,7 @@ async def get_customers(
     customer_type: Optional[CustomerType] = Query(None, description="Filter by type"),
     search: Optional[str] = Query(None, description="Search in name, email, or company"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.CUSTOMERS_VIEW)),
 ):
     """Get all customers with pagination and optional filtering."""
     service = CustomerService(db)
@@ -42,10 +44,10 @@ async def get_customers(
     )
 
 
-@router.get("/statistics")
+@router.get("/statistics", response_model=CustomerStatistics)
 async def get_customer_statistics(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.CUSTOMERS_VIEW)),
 ):
     """Get customer statistics (counts by status)."""
     service = CustomerService(db)
@@ -56,7 +58,7 @@ async def get_customer_statistics(
 async def get_customer(
     customer_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.CUSTOMERS_VIEW)),
 ):
     """Get customer by ID."""
     service = CustomerService(db)
@@ -67,7 +69,7 @@ async def get_customer(
 async def create_customer(
     customer_data: CustomerCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.CUSTOMERS_CREATE)),
 ):
     """Create a new customer."""
     service = CustomerService(db)
@@ -79,41 +81,41 @@ async def update_customer(
     customer_id: str,
     customer_data: CustomerUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.CUSTOMERS_EDIT)),
 ):
     """Update an existing customer."""
     service = CustomerService(db)
-    return await service.update(customer_id, customer_data)
+    return await service.update(customer_id, customer_data, updated_by=current_user.id)
 
 
 @router.delete("/{customer_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_customer(
     customer_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.CUSTOMERS_DELETE)),
 ):
-    """Delete a customer."""
+    """Soft delete a customer."""
     service = CustomerService(db)
-    await service.delete(customer_id)
+    await service.delete(customer_id, deleted_by=current_user.id)
 
 
 @router.post("/{customer_id}/activate", response_model=CustomerResponse)
 async def activate_customer(
     customer_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.CUSTOMERS_ACTIVATE)),
 ):
     """Activate a customer account."""
     service = CustomerService(db)
-    return await service.activate(customer_id)
+    return await service.activate(customer_id, updated_by=current_user.id)
 
 
 @router.post("/{customer_id}/suspend", response_model=CustomerResponse)
 async def suspend_customer(
     customer_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.CUSTOMERS_SUSPEND)),
 ):
     """Suspend a customer account."""
     service = CustomerService(db)
-    return await service.suspend(customer_id)
+    return await service.suspend(customer_id, updated_by=current_user.id)

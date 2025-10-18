@@ -214,6 +214,7 @@ The application can be deployed to any static hosting service:
 - [Architecture Rules](.cursor/rules/01-frontend-architecture.mdc)
 - [Testing Standards](.cursor/rules/03-testing-standards.mdc)
 - [Documentation Standards](.cursor/rules/04-documentation-standards.mdc)
+- [UI/UX Design System](docs/ui-ux-design-system.md)
 
 ## License
 

@@ -4,7 +4,7 @@ Handles user registration, login, and 2FA endpoints.
 """
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status, Request
+from fastapi import APIRouter, Depends, status, Request, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
@@ -23,6 +23,7 @@ from app.modules.auth.schemas import (
     PasswordResetResponse,
 )
 from app.modules.auth.service import AuthService
+from app.modules.audit.schemas import AuditLogFilter
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -254,3 +255,57 @@ async def invalidate_all_sessions(
     session_manager = SessionManager()
     count = await session_manager.invalidate_all_user_sessions(user_id)
     return {"success": True, "count": count, "message": f"Invalidated {count} sessions"}
+
+
+@router.get("/security/login-history")
+async def get_login_history(
+    user_id: Annotated[str, Depends(get_current_user_id)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+):
+    """
+    Get login history for current user.
+
+    Args:
+        user_id: Current user ID
+        db: Database session
+        page: Page number
+        page_size: Items per page
+
+    Returns:
+        List of login attempts (successful and failed)
+    """
+    from app.modules.audit.service import AuditService
+    from app.modules.audit.models import AuditAction
+
+    service = AuditService(db)
+    filters = AuditLogFilter(user_id=user_id, action=AuditAction.LOGIN)
+    return await service.get_logs(page=page, page_size=page_size, filters=filters)
+
+
+@router.get("/security/activity")
+async def get_security_activity(
+    user_id: Annotated[str, Depends(get_current_user_id)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+):
+    """
+    Get all security-related activity for current user.
+
+    Args:
+        user_id: Current user ID
+        db: Database session
+        page: Page number
+        page_size: Items per page
+
+    Returns:
+        List of security events (login, 2FA, password changes, etc.)
+    """
+    from app.modules.audit.service import AuditService
+
+    service = AuditService(db)
+    return await service.get_user_activity(
+        user_id=user_id, page=page, page_size=page_size
+    )

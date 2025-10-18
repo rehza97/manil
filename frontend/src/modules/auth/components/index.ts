@@ -1,19 +1,17 @@
 /**
  * Auth Components Export
  *
- * Components will be added here as they are implemented:
- * - LoginForm
- * - RegisterForm
- * - ForgotPasswordForm
- * - ResetPasswordForm
- * - TwoFactorSetup
- * - TwoFactorVerify
- * - ProtectedRoute
- *
  * @module modules/auth/components
  */
 
-// Placeholder for future component exports
-// export { LoginForm } from "./LoginForm";
-// export { RegisterForm } from "./RegisterForm";
-// export { ProtectedRoute } from "./ProtectedRoute";
+export { AuthLayout } from "./AuthLayout";
+export { LoginForm } from "./LoginForm";
+export { RegisterForm } from "./RegisterForm";
+export { LoginPageContent } from "./LoginPageContent";
+export { RegisterPageContent } from "./RegisterPageContent";
+export { ForgotPasswordForm } from "./ForgotPasswordForm";
+export { ResetPasswordForm } from "./ResetPasswordForm";
+export { TwoFactorSetup } from "./TwoFactorSetup";
+export { TwoFactorVerify } from "./TwoFactorVerify";
+export { ProtectedRoute, withAuth, useAuth } from "./ProtectedRoute";
+export { RoleBasedRedirect } from "./RoleBasedRedirect";

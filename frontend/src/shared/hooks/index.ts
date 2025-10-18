@@ -1,9 +1,7 @@
 /**
- * Shared Custom Hooks
+ * Shared Hooks
  *
  * @module shared/hooks
  */
 
-export { useDebounce } from "./useDebounce";
-export { useLocalStorage } from "./useLocalStorage";
-export { useMediaQuery } from "./useMediaQuery";
+export * from "./useRoutePermissions";

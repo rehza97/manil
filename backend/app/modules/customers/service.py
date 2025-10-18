@@ -1,5 +1,6 @@
 """Customer service containing ALL business logic."""
 
+import logging
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,10 +10,13 @@ from app.modules.customers.schemas import (
     CustomerCreate,
     CustomerUpdate,
     CustomerListResponse,
+    CustomerStatistics,
     CustomerStatus,
     CustomerType,
 )
 from app.modules.customers.models import Customer
+
+logger = logging.getLogger(__name__)
 
 
 class CustomerService:
@@ -82,56 +86,87 @@ class CustomerService:
 
         return customer
 
-    async def update(self, customer_id: str, customer_data: CustomerUpdate) -> Customer:
+    async def update(self, customer_id: str, customer_data: CustomerUpdate, updated_by: str) -> Customer:
         """Update customer with validation."""
-        # Get existing customer
-        customer = await self.get_by_id(customer_id)
+        try:
+            # Get existing customer
+            customer = await self.get_by_id(customer_id)
 
-        # Validate email uniqueness if being updated
-        if customer_data.email and customer_data.email != customer.email:
-            exists = await self.repository.exists_by_email(
-                customer_data.email,
-                exclude_id=customer_id
-            )
-            if exists:
-                raise ConflictException(f"Customer with email {customer_data.email} already exists")
+            # Validate email uniqueness if being updated
+            if customer_data.email and customer_data.email != customer.email:
+                exists = await self.repository.exists_by_email(
+                    customer_data.email,
+                    exclude_id=customer_id
+                )
+                if exists:
+                    raise ConflictException(f"Customer with email {customer_data.email} already exists")
 
-        # Validate corporate requirements
-        updated_type = customer_data.customer_type or customer.customer_type
-        updated_company = customer_data.company_name if customer_data.company_name is not None else customer.company_name
-        if updated_type == CustomerType.CORPORATE and not updated_company:
-            raise ValidationException("Company name is required for corporate customers")
+            # Validate corporate requirements
+            updated_type = customer_data.customer_type or customer.customer_type
+            updated_company = customer_data.company_name if customer_data.company_name is not None else customer.company_name
+            if updated_type == CustomerType.CORPORATE and not updated_company:
+                raise ValidationException("Company name is required for corporate customers")
 
-        # Update customer
-        return await self.repository.update(customer, customer_data)
+            # Update customer
+            return await self.repository.update(customer, customer_data, updated_by)
+        except Exception as e:
+            logger.error(f"Failed to update customer {customer_id}: {e}", exc_info=True)
+            raise
 
-    async def delete(self, customer_id: str) -> None:
-        """Delete customer."""
-        customer = await self.get_by_id(customer_id)
-        await self.repository.delete(customer)
+    async def delete(self, customer_id: str, deleted_by: str) -> None:
+        """Soft delete customer."""
+        try:
+            customer = await self.get_by_id(customer_id)
+            await self.repository.delete(customer, deleted_by)
+            logger.info(f"Customer {customer_id} soft deleted by user {deleted_by}")
+        except Exception as e:
+            logger.error(f"Failed to delete customer {customer_id}: {e}", exc_info=True)
+            raise
 
-    async def activate(self, customer_id: str) -> Customer:
+    async def activate(self, customer_id: str, updated_by: str) -> Customer:
         """Activate customer account."""
-        customer = await self.get_by_id(customer_id)
-        update_data = CustomerUpdate(status=CustomerStatus.ACTIVE)
-        return await self.repository.update(customer, update_data)
+        try:
+            customer = await self.get_by_id(customer_id)
+            update_data = CustomerUpdate(status=CustomerStatus.ACTIVE)
+            result = await self.repository.update(customer, update_data, updated_by)
+            logger.info(f"Customer {customer_id} activated by user {updated_by}")
+            return result
+        except Exception as e:
+            logger.error(f"Failed to activate customer {customer_id}: {e}", exc_info=True)
+            raise
 
-    async def suspend(self, customer_id: str) -> Customer:
+    async def suspend(self, customer_id: str, updated_by: str) -> Customer:
         """Suspend customer account."""
-        customer = await self.get_by_id(customer_id)
-        update_data = CustomerUpdate(status=CustomerStatus.SUSPENDED)
-        return await self.repository.update(customer, update_data)
+        try:
+            customer = await self.get_by_id(customer_id)
+            update_data = CustomerUpdate(status=CustomerStatus.SUSPENDED)
+            result = await self.repository.update(customer, update_data, updated_by)
+            logger.info(f"Customer {customer_id} suspended by user {updated_by}")
+            return result
+        except Exception as e:
+            logger.error(f"Failed to suspend customer {customer_id}: {e}", exc_info=True)
+            raise
 
-    async def get_statistics(self) -> dict:
-        """Get customer statistics."""
-        total = await self.repository.count_by_status(None)
-        active = await self.repository.count_by_status(CustomerStatus.ACTIVE)
-        pending = await self.repository.count_by_status(CustomerStatus.PENDING)
-        suspended = await self.repository.count_by_status(CustomerStatus.SUSPENDED)
+    async def get_statistics(self) -> CustomerStatistics:
+        """Get customer statistics (optimized single query)."""
+        try:
+            # Get counts grouped by status in a single query
+            stats_by_status = await self.repository.get_statistics_grouped()
 
-        return {
-            "total": total,
-            "active": active,
-            "pending": pending,
-            "suspended": suspended,
-        }
+            # Extract counts with defaults
+            active = stats_by_status.get(CustomerStatus.ACTIVE, 0)
+            pending = stats_by_status.get(CustomerStatus.PENDING, 0)
+            suspended = stats_by_status.get(CustomerStatus.SUSPENDED, 0)
+            inactive = stats_by_status.get(CustomerStatus.INACTIVE, 0)
+            total = sum(stats_by_status.values())
+
+            return CustomerStatistics(
+                total=total,
+                active=active,
+                pending=pending,
+                suspended=suspended,
+                inactive=inactive,
+            )
+        except Exception as e:
+            logger.error(f"Failed to get customer statistics: {e}", exc_info=True)
+            raise

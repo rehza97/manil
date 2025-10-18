@@ -18,5 +18,8 @@ export * from "./hooks";
 // Export components
 export * from "./components";
 
+// Export pages
+export * from "./pages";
+
 // Export utilities
 export * from "./utils";

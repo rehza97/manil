@@ -72,6 +72,16 @@ class Settings(BaseSettings):
     STORAGE_PATH: str = "./storage"
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
 
+    # KYC Configuration
+    KYC_MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
+    KYC_ALLOWED_MIME_TYPES: List[str] = [
+        "image/jpeg",
+        "image/png",
+        "image/jpg",
+        "application/pdf",
+    ]
+    KYC_ALLOWED_EXTENSIONS: List[str] = [".jpg", ".jpeg", ".png", ".pdf"]
+
     # Rate Limiting
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_PER_MINUTE: int = 60

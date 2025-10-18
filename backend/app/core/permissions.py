@@ -14,6 +14,16 @@ class Permission(str, Enum):
     CUSTOMERS_CREATE = "customers:create"
     CUSTOMERS_EDIT = "customers:edit"
     CUSTOMERS_DELETE = "customers:delete"
+    CUSTOMERS_ACTIVATE = "customers:activate"
+    CUSTOMERS_SUSPEND = "customers:suspend"
+
+    # KYC permissions
+    KYC_VIEW = "kyc:view"
+    KYC_UPLOAD = "kyc:upload"
+    KYC_EDIT = "kyc:edit"
+    KYC_DELETE = "kyc:delete"
+    KYC_VERIFY = "kyc:verify"
+    KYC_DOWNLOAD = "kyc:download"
 
     # Ticket permissions
     TICKETS_VIEW = "tickets:view"
@@ -74,6 +84,14 @@ ROLE_PERMISSIONS: dict[str, Set[Permission]] = {
         Permission.CUSTOMERS_CREATE,
         Permission.CUSTOMERS_EDIT,
         Permission.CUSTOMERS_DELETE,
+        Permission.CUSTOMERS_ACTIVATE,
+        Permission.CUSTOMERS_SUSPEND,
+        Permission.KYC_VIEW,
+        Permission.KYC_UPLOAD,
+        Permission.KYC_EDIT,
+        Permission.KYC_DELETE,
+        Permission.KYC_VERIFY,
+        Permission.KYC_DOWNLOAD,
         Permission.TICKETS_VIEW,
         Permission.TICKETS_CREATE,
         Permission.TICKETS_REPLY,
@@ -114,6 +132,14 @@ ROLE_PERMISSIONS: dict[str, Set[Permission]] = {
         Permission.CUSTOMERS_VIEW,
         Permission.CUSTOMERS_CREATE,
         Permission.CUSTOMERS_EDIT,
+        Permission.CUSTOMERS_ACTIVATE,
+        Permission.CUSTOMERS_SUSPEND,
+        Permission.KYC_VIEW,
+        Permission.KYC_UPLOAD,
+        Permission.KYC_EDIT,
+        Permission.KYC_DELETE,
+        Permission.KYC_VERIFY,
+        Permission.KYC_DOWNLOAD,
         Permission.TICKETS_VIEW,
         Permission.TICKETS_CREATE,
         Permission.TICKETS_REPLY,
@@ -138,6 +164,9 @@ ROLE_PERMISSIONS: dict[str, Set[Permission]] = {
     },
     "client": {
         # Client can only view their own data and create tickets/orders
+        Permission.KYC_VIEW,
+        Permission.KYC_UPLOAD,
+        Permission.KYC_DOWNLOAD,
         Permission.TICKETS_VIEW,
         Permission.TICKETS_CREATE,
         Permission.TICKETS_REPLY,

@@ -5,3 +5,4 @@
  */
 
 export { apiClient, handleApiError } from "./client";
+export * from "./dashboard";

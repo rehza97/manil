@@ -27,12 +27,17 @@ class CustomerBase(BaseModel):
 
     name: str = Field(..., min_length=2, max_length=255, description="Customer full name")
     email: EmailStr = Field(..., description="Customer email address")
-    phone: str = Field(..., pattern=r"^\+?[1-9]\d{1,14}$", description="Customer phone number (E.164 format)")
+    phone: str = Field(
+        ...,
+        pattern=r"^\+?[\d\s\-\(\)]{7,20}$",
+        description="Customer phone number (international format, 7-20 characters)"
+    )
     customer_type: CustomerType = Field(default=CustomerType.INDIVIDUAL, description="Type of customer")
     company_name: Optional[str] = Field(None, max_length=255, description="Company name for corporate customers")
     tax_id: Optional[str] = Field(None, max_length=50, description="Tax identification number")
     address: Optional[str] = Field(None, max_length=500, description="Customer address")
     city: Optional[str] = Field(None, max_length=100, description="City")
+    state: Optional[str] = Field(None, max_length=100, description="State/Province")
     country: Optional[str] = Field(None, max_length=100, description="Country")
     postal_code: Optional[str] = Field(None, max_length=20, description="Postal code")
 
@@ -48,12 +53,13 @@ class CustomerUpdate(BaseModel):
 
     name: Optional[str] = Field(None, min_length=2, max_length=255)
     email: Optional[EmailStr] = None
-    phone: Optional[str] = Field(None, pattern=r"^\+?[1-9]\d{1,14}$")
+    phone: Optional[str] = Field(None, pattern=r"^\+?[\d\s\-\(\)]{7,20}$")
     customer_type: Optional[CustomerType] = None
     company_name: Optional[str] = Field(None, max_length=255)
     tax_id: Optional[str] = Field(None, max_length=50)
     address: Optional[str] = Field(None, max_length=500)
     city: Optional[str] = Field(None, max_length=100)
+    state: Optional[str] = Field(None, max_length=100)
     country: Optional[str] = Field(None, max_length=100)
     postal_code: Optional[str] = Field(None, max_length=20)
     status: Optional[CustomerStatus] = None
@@ -89,3 +95,13 @@ class CustomerSearchParams(BaseModel):
     customer_type: Optional[CustomerType] = Field(None, description="Filter by type")
     skip: int = Field(0, ge=0, description="Number of records to skip")
     limit: int = Field(100, ge=1, le=1000, description="Maximum number of records to return")
+
+
+class CustomerStatistics(BaseModel):
+    """Schema for customer statistics."""
+
+    total: int = Field(..., description="Total number of customers")
+    active: int = Field(..., description="Number of active customers")
+    pending: int = Field(..., description="Number of pending customers")
+    suspended: int = Field(..., description="Number of suspended customers")
+    inactive: int = Field(0, description="Number of inactive customers")
