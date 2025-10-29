@@ -82,14 +82,14 @@ class CustomerNote(Base):
     # Audit Fields
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.utcnow(),
         nullable=False,
         doc="When note was created",
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.utcnow(),
+        onupdate=lambda: datetime.utcnow(),
         nullable=False,
         doc="Last update timestamp",
     )

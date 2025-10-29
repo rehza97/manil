@@ -12,6 +12,7 @@
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { Toaster } from "@/shared/components/ui/sonner";
 
 /**
  * Create Query Client instance with default configuration
@@ -48,6 +49,9 @@ export const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
       {/* Add ThemeProvider here when implemented */}
       {/* Add AuthProvider here when implemented */}
       {children}
+
+      {/* Toast notifications */}
+      <Toaster />
 
       {/* React Query Devtools - only in development */}
       {process.env.NODE_ENV === "development" && (

@@ -102,7 +102,7 @@ export const corporateCustomersApi = {
     page: number;
     limit: number;
   }> => {
-    const response = await apiClient.get("/corporate/customers", { params });
+    const response = await apiClient.get("/customers", { params });
     return response.data;
   },
 
@@ -110,7 +110,7 @@ export const corporateCustomersApi = {
    * Get customer by ID
    */
   getCustomer: async (customerId: string): Promise<Customer> => {
-    const response = await apiClient.get(`/corporate/customers/${customerId}`);
+    const response = await apiClient.get(`/customers/${customerId}`);
     return response.data;
   },
 
@@ -118,7 +118,7 @@ export const corporateCustomersApi = {
    * Create new customer
    */
   createCustomer: async (data: CreateCustomerData): Promise<Customer> => {
-    const response = await apiClient.post("/corporate/customers", data);
+    const response = await apiClient.post("/customers", data);
     return response.data;
   },
 
@@ -130,7 +130,7 @@ export const corporateCustomersApi = {
     data: UpdateCustomerData
   ): Promise<Customer> => {
     const response = await apiClient.put(
-      `/corporate/customers/${customerId}`,
+      `/customers/${customerId}`,
       data
     );
     return response.data;
@@ -140,7 +140,7 @@ export const corporateCustomersApi = {
    * Delete customer
    */
   deleteCustomer: async (customerId: string): Promise<void> => {
-    await apiClient.delete(`/corporate/customers/${customerId}`);
+    await apiClient.delete(`/customers/${customerId}`);
   },
 
   /**

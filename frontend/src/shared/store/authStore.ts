@@ -16,9 +16,12 @@ import { persist } from "zustand/middleware";
 export interface User {
   id: string;
   email: string;
-  name: string;
+  full_name: string;
   role: "admin" | "corporate" | "client";
-  isActive: boolean;
+  is_active: boolean;
+  is_2fa_enabled: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 /**

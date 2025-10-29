@@ -30,6 +30,17 @@ export const apiClient: AxiosInstance = axios.create({
 });
 
 /**
+ * Create a separate client for non-API endpoints (like /health)
+ */
+export const baseClient: AxiosInstance = axios.create({
+  baseURL: "http://localhost:8000",
+  timeout: 30000,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+/**
  * Request interceptor
  * Adds authentication token to requests
  */

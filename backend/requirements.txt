@@ -7,6 +7,7 @@ python-multipart==0.0.6
 sqlalchemy[asyncio]==2.0.23
 alembic==1.12.1
 asyncpg==0.29.0
+psycopg2-binary==2.9.9
 
 # Validation
 pydantic[email]==2.5.0
@@ -15,6 +16,7 @@ pydantic-settings==2.1.0
 # Authentication & Security
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
 pyotp==2.9.0
 qrcode==7.4.2
 
@@ -39,3 +41,7 @@ httpx==0.25.1
 black==23.11.0
 flake8==6.1.0
 mypy==1.7.0
+
+# Additional dependencies for Docker and production
+requests==2.31.0
+python-dotenv==1.0.0

@@ -20,11 +20,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Create users table with authentication and audit fields."""
-    # Create user role enum
-    op.execute("""
-        CREATE TYPE user_role AS ENUM ('admin', 'corporate', 'client');
-    """)
-
     # Create users table
     op.create_table(
         'users',
@@ -35,12 +30,7 @@ def upgrade() -> None:
         sa.Column('email', sa.String(length=255), nullable=False),
         sa.Column('password_hash', sa.String(length=255), nullable=False),
         sa.Column('full_name', sa.String(length=255), nullable=False),
-        sa.Column(
-            'role',
-            sa.Enum('admin', 'corporate', 'client', name='user_role'),
-            nullable=False,
-            server_default='client'
-        ),
+        sa.Column('role', sa.String(length=20), nullable=False, server_default='client'),
 
         # Status flags
         sa.Column('is_active', sa.Boolean(),

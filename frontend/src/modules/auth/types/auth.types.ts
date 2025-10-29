@@ -14,10 +14,10 @@ import { AuditFields } from "@/shared/types";
 export interface User extends AuditFields {
   id: string;
   email: string;
-  name: string;
+  full_name: string;
   role: UserRole;
-  isActive: boolean;
-  has2FA: boolean;
+  is_active: boolean;
+  is_2fa_enabled: boolean;
 }
 
 /**
@@ -57,7 +57,9 @@ export interface AuthTokens {
  */
 export interface AuthResponse {
   user: User;
-  tokens: AuthTokens;
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
 }
 
 /**

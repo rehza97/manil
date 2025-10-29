@@ -63,7 +63,7 @@ export const ProtectedRoute = ({
   }
 
   // Check if user account is active
-  if (!user.isActive) {
+  if (!user.is_active) {
     return (
       <Navigate
         to="/account-disabled"

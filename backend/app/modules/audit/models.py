@@ -101,12 +101,12 @@ class AuditLog(Base):
 
     # Audit fields
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True
+        DateTime, default=lambda: datetime.utcnow(), nullable=False, index=True
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.utcnow(),
+        onupdate=lambda: datetime.utcnow(),
         nullable=False,
     )
     created_by: Mapped[str | None] = mapped_column(

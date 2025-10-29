@@ -104,7 +104,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
                 # Check if limit exceeded
                 if current_requests > settings.RATE_LIMIT_PER_MINUTE:
-                    logger.warning(f"Rate limit exceeded for IP: {client_ip} ({current_requests} requests)")
+                    logger.warning(
+                        f"Rate limit exceeded for IP: {client_ip} ({current_requests} requests)")
                     raise HTTPException(
                         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                         detail="Rate limit exceeded. Please try again later.",
@@ -113,8 +114,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
                 # Add rate limit headers to response
                 response = await call_next(request)
-                response.headers["X-RateLimit-Limit"] = str(settings.RATE_LIMIT_PER_MINUTE)
-                response.headers["X-RateLimit-Remaining"] = str(max(0, settings.RATE_LIMIT_PER_MINUTE - current_requests))
+                response.headers["X-RateLimit-Limit"] = str(
+                    settings.RATE_LIMIT_PER_MINUTE)
+                response.headers["X-RateLimit-Remaining"] = str(
+                    max(0, settings.RATE_LIMIT_PER_MINUTE - current_requests))
                 return response
             else:
                 # Redis not available, skip rate limiting
@@ -156,10 +159,11 @@ class CORSHeadersMiddleware(BaseHTTPMiddleware):
             "max-age=31536000; includeSubDomains"
         )
         # Content Security Policy for XSS protection
+        # Allow Swagger UI CDN resources for documentation
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
-            "style-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
             "img-src 'self' data: https:; "
             "font-src 'self' data:; "
             "connect-src 'self'"
@@ -178,7 +182,8 @@ class CSRFProtectionMiddleware(BaseHTTPMiddleware):
     PROTECTED_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
     # Paths that are excluded from CSRF protection (e.g., login, public APIs)
-    EXCLUDED_PATHS = {"/auth/login", "/auth/register", "/health", "/docs", "/openapi.json"}
+    EXCLUDED_PATHS = {"/auth/login", "/auth/register",
+                      "/health", "/docs", "/openapi.json"}
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """

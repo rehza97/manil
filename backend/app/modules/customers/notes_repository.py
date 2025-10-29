@@ -95,7 +95,7 @@ class CustomerNoteRepository:
 
     async def delete(self, note: CustomerNote, deleted_by: str) -> None:
         """Soft delete note."""
-        note.deleted_at = datetime.now(timezone.utc)
+        note.deleted_at = datetime.utcnow()
         note.deleted_by = deleted_by
         await self.db.commit()
 
@@ -184,6 +184,6 @@ class CustomerDocumentRepository:
 
     async def delete(self, document: CustomerDocument, deleted_by: str) -> None:
         """Soft delete document."""
-        document.deleted_at = datetime.now(timezone.utc)
+        document.deleted_at = datetime.utcnow()
         document.deleted_by = deleted_by
         await self.db.commit()

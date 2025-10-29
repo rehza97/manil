@@ -19,49 +19,18 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Create KYC documents table and related enums."""
 
-    # Create enum types
-    op.execute("""
-        CREATE TYPE kyc_document_type_enum AS ENUM (
-            'national_id',
-            'passport',
-            'driver_license',
-            'business_registration',
-            'tax_certificate',
-            'proof_of_address',
-            'other'
-        )
-    """)
-
-    op.execute("""
-        CREATE TYPE kyc_status_enum AS ENUM (
-            'pending',
-            'under_review',
-            'approved',
-            'rejected',
-            'expired'
-        )
-    """)
-
-    # Create kyc_documents table
+    # Create kyc_documents table (enums will be created automatically)
     op.create_table(
         'kyc_documents',
         sa.Column('id', sa.String(36), primary_key=True),
         sa.Column('customer_id', sa.String(36), nullable=False),
-        sa.Column('document_type', sa.Enum(
-            'national_id', 'passport', 'driver_license',
-            'business_registration', 'tax_certificate',
-            'proof_of_address', 'other',
-            name='kyc_document_type_enum'
-        ), nullable=False),
+        sa.Column('document_type', sa.String(50), nullable=False),
         sa.Column('document_number', sa.String(100), nullable=True),
         sa.Column('file_path', sa.String(500), nullable=False),
         sa.Column('file_name', sa.String(255), nullable=False),
         sa.Column('file_size', sa.Integer(), nullable=False),
         sa.Column('mime_type', sa.String(100), nullable=False),
-        sa.Column('status', sa.Enum(
-            'pending', 'under_review', 'approved', 'rejected', 'expired',
-            name='kyc_status_enum'
-        ), nullable=False, server_default='pending'),
+        sa.Column('status', sa.String(20), nullable=False, server_default='pending'),
         sa.Column('verified_at', sa.DateTime(), nullable=True),
         sa.Column('verified_by', sa.String(36), nullable=True),
         sa.Column('rejection_reason', sa.Text(), nullable=True),

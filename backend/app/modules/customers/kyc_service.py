@@ -105,7 +105,7 @@ class KYCService:
 
         # Validate expiry date if provided
         if document_data.expires_at:
-            if document_data.expires_at <= datetime.now(timezone.utc):
+            if document_data.expires_at <= datetime.utcnow():
                 raise ValidationException(
                     "Document expiry date must be in the future"
                 )
@@ -260,7 +260,8 @@ class KYCService:
         file_path = self.storage.get_file_path(document.file_path)
 
         if not file_path.exists():
-            raise NotFoundException(f"Document file not found: {document.file_path}")
+            raise NotFoundException(
+                f"Document file not found: {document.file_path}")
 
         return str(file_path), document.file_name, document.mime_type
 
@@ -300,7 +301,8 @@ class KYCService:
 
         # Find missing documents
         uploaded_types = {doc.document_type for doc in documents}
-        missing_docs = [doc_type for doc_type in required_docs if doc_type not in uploaded_types]
+        missing_docs = [
+            doc_type for doc_type in required_docs if doc_type not in uploaded_types]
 
         # Determine overall KYC status
         if not documents:

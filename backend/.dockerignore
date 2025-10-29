@@ -60,5 +60,9 @@ docs/
 # CI/CD
 .github/
 
-# Alembic (migrations handled separately)
-alembic.ini
+# Scripts (except docker-entrypoint.sh)
+scripts/
+
+# Alembic config (use container defaults)
+# Keep migrations folder but exclude alembic.ini
+# alembic.ini is included in the image

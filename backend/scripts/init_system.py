@@ -12,6 +12,10 @@ Usage:
     python -m scripts.init_system
 """
 
+from app.config.settings import get_settings
+from app.config.redis import get_redis
+from app.core.schema_validator import validate_schema, check_migrations_applied
+from app.core.init_db import initialize_database
 import asyncio
 import sys
 import os
@@ -20,10 +24,6 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.core.init_db import initialize_database
-from app.core.schema_validator import validate_schema, check_migrations_applied
-from app.config.redis import get_redis
-from app.config.settings import get_settings
 
 settings = get_settings()
 
@@ -107,7 +107,7 @@ def display_completion_message(success: bool):
         print("   4. Start the application: uvicorn app.main:app")
         print("\n🔐 Default Admin Credentials:")
         print("   Email: admin@cloudmanager.dz")
-        print("   Password: Admin@123456")
+        print("   Password: Admin123")
         print("   ⚠️  CHANGE THIS PASSWORD IMMEDIATELY!\n")
     else:
         print("  ❌ System Initialization Failed")

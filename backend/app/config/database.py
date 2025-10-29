@@ -68,6 +68,10 @@ async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+    # Initialize database with admin user
+    from app.core.init_db import initialize_database
+    await initialize_database()
+
 
 async def close_db() -> None:
     """Close database connections."""

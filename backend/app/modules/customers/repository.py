@@ -57,7 +57,8 @@ class CustomerRepository:
         total = total_result.scalar() or 0
 
         # Apply pagination
-        query = query.offset(skip).limit(limit).order_by(Customer.created_at.desc())
+        query = query.offset(skip).limit(
+            limit).order_by(Customer.created_at.desc())
 
         # Execute query
         result = await self.db.execute(query)
@@ -111,20 +112,22 @@ class CustomerRepository:
         """Soft delete customer (sets deleted_at and deleted_by)."""
         from datetime import datetime, timezone
 
-        customer.deleted_at = datetime.now(timezone.utc)
+        customer.deleted_at = datetime.utcnow()
         customer.deleted_by = deleted_by
 
         await self.db.commit()
 
     async def count_all(self) -> int:
         """Count all customers (excluding soft-deleted)."""
-        query = select(func.count()).select_from(Customer).where(Customer.deleted_at.is_(None))
+        query = select(func.count()).select_from(
+            Customer).where(Customer.deleted_at.is_(None))
         result = await self.db.execute(query)
         return result.scalar() or 0
 
     async def count_by_status(self, status: Optional[CustomerStatus] = None) -> int:
         """Count customers by status (excluding soft-deleted)."""
-        query = select(func.count()).select_from(Customer).where(Customer.deleted_at.is_(None))
+        query = select(func.count()).select_from(
+            Customer).where(Customer.deleted_at.is_(None))
         if status:
             query = query.where(Customer.status == status)
         result = await self.db.execute(query)

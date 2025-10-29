@@ -34,8 +34,9 @@ export const useLogin = () => {
     mutationFn: (credentials: LoginCredentials) =>
       authService.login(credentials),
     onSuccess: (data) => {
-      setAuth(data.user, data.tokens.accessToken);
-      navigate("/dashboard");
+      setAuth(data.user, data.access_token);
+      // Let RoleBasedRedirect handle the routing based on user role
+      navigate("/redirect");
     },
   });
 };
@@ -50,8 +51,9 @@ export const useRegister = () => {
   return useMutation({
     mutationFn: (data: RegisterData) => authService.register(data),
     onSuccess: (data) => {
-      setAuth(data.user, data.tokens.accessToken);
-      navigate("/dashboard");
+      setAuth(data.user, data.access_token);
+      // Let RoleBasedRedirect handle the routing based on user role
+      navigate("/redirect");
     },
   });
 };

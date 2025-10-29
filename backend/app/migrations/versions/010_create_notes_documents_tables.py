@@ -20,25 +20,12 @@ depends_on = None
 def upgrade() -> None:
     """Create customer notes and documents tables."""
 
-    # Create enums
-    note_type_enum = sa.Enum(
-        'general', 'call', 'meeting', 'email', 'issue', 'followup', 'internal',
-        name='note_type_enum'
-    )
-    note_type_enum.create(op.get_bind())
-
-    document_category_enum = sa.Enum(
-        'contract', 'invoice', 'proposal', 'agreement', 'correspondence', 'report', 'other',
-        name='document_category_enum'
-    )
-    document_category_enum.create(op.get_bind())
-
     # Create customer_notes table
     op.create_table(
         'customer_notes',
         sa.Column('id', sa.String(36), primary_key=True),
         sa.Column('customer_id', sa.String(36), sa.ForeignKey('customers.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('note_type', note_type_enum, nullable=False, server_default='general'),
+        sa.Column('note_type', sa.String(20), nullable=False, server_default='general'),
         sa.Column('title', sa.String(255), nullable=False),
         sa.Column('content', sa.Text, nullable=False),
         sa.Column('is_pinned', sa.Boolean, nullable=False, server_default='false'),
@@ -55,7 +42,7 @@ def upgrade() -> None:
         'customer_documents',
         sa.Column('id', sa.String(36), primary_key=True),
         sa.Column('customer_id', sa.String(36), sa.ForeignKey('customers.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('category', document_category_enum, nullable=False, server_default='other'),
+        sa.Column('category', sa.String(30), nullable=False, server_default='other'),
         sa.Column('title', sa.String(255), nullable=False),
         sa.Column('description', sa.Text, nullable=True),
         sa.Column('file_path', sa.String(500), nullable=False),

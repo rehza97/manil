@@ -104,7 +104,7 @@ class KYCRepository:
         """Verify or reject a KYC document."""
         document.status = status
         document.verified_by = verified_by
-        document.verified_at = datetime.now(timezone.utc)
+        document.verified_at = datetime.utcnow()
         document.rejection_reason = rejection_reason
         if notes:
             document.notes = notes
@@ -116,7 +116,7 @@ class KYCRepository:
 
     async def delete(self, document: KYCDocument, deleted_by: str) -> None:
         """Soft delete KYC document."""
-        document.deleted_at = datetime.now(timezone.utc)
+        document.deleted_at = datetime.utcnow()
         document.deleted_by = deleted_by
         await self.db.commit()
 
@@ -141,7 +141,7 @@ class KYCRepository:
 
     async def get_expired_documents(self) -> list[KYCDocument]:
         """Get all expired documents that need status update."""
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
         query = select(KYCDocument).where(
             and_(
                 KYCDocument.expires_at < now,

@@ -31,7 +31,8 @@ async def check_database_exists(database_name: str) -> bool:
         True if database exists, False otherwise
     """
     # Parse database URL to get connection details
-    db_url = settings.DATABASE_URL.replace('postgresql+asyncpg://', 'postgresql://')
+    db_url = settings.DATABASE_URL.replace(
+        'postgresql+asyncpg://', 'postgresql://')
     parts = db_url.split('/')
     base_url = '/'.join(parts[:-1]) + '/postgres'
 
@@ -58,7 +59,8 @@ async def create_database(database_name: str) -> bool:
     Returns:
         True if database was created or already exists, False on error
     """
-    db_url = settings.DATABASE_URL.replace('postgresql+asyncpg://', 'postgresql://')
+    db_url = settings.DATABASE_URL.replace(
+        'postgresql+asyncpg://', 'postgresql://')
     parts = db_url.split('/')
     base_url = '/'.join(parts[:-1]) + '/postgres'
 
@@ -124,7 +126,16 @@ async def create_admin_user(db: AsyncSession) -> Optional[User]:
     """
     try:
         admin_email = "admin@cloudmanager.dz"
-        admin_password = "Admin@123456"  # Should be changed on first login
+        admin_password = "Admin123"  # Should be changed on first login
+
+        # Check if admin already exists
+        existing_admin = await db.execute(
+            text("SELECT id FROM users WHERE email = :email"),
+            {"email": admin_email}
+        )
+        if existing_admin.scalar():
+            print(f"✅ Admin user already exists: {admin_email}")
+            return None
 
         admin = User(
             email=admin_email,
@@ -132,7 +143,8 @@ async def create_admin_user(db: AsyncSession) -> Optional[User]:
             full_name="System Administrator",
             role=UserRole.ADMIN,
             is_active=True,
-            is_verified=True,
+            created_by=None,  # No creator for system admin
+            updated_by=None,
         )
 
         db.add(admin)

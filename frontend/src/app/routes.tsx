@@ -33,6 +33,16 @@ import {
   SecurityPage,
   LoginHistoryPage,
 } from "@/modules/dashboard";
+import {
+  UserManagementPage,
+  CustomerManagementPage,
+  AuditLogsPage,
+  ActivityLogsPage,
+  SystemOverviewPage,
+  SystemSettingsPage,
+  RoleManagementPage,
+  ReportsPage,
+} from "@/modules/admin";
 
 // Placeholder components for modules not yet implemented
 const ModulePlaceholder = ({ module }: { module: string }) => {
@@ -390,7 +400,7 @@ export const routes = [
       // System Overview
       {
         path: "overview",
-        element: <ModulePlaceholder module="System Overview" />,
+        element: <SystemOverviewPage />,
       },
       {
         path: "overview/health",
@@ -407,7 +417,7 @@ export const routes = [
       // User Management
       {
         path: "users",
-        element: <ModulePlaceholder module="User Management" />,
+        element: <UserManagementPage />,
       },
       {
         path: "users/new",
@@ -432,7 +442,7 @@ export const routes = [
       // Role & Permission Management
       {
         path: "roles",
-        element: <ModulePlaceholder module="Role Management" />,
+        element: <RoleManagementPage />,
       },
       {
         path: "roles/new",
@@ -453,7 +463,7 @@ export const routes = [
       // System Settings
       {
         path: "settings",
-        element: <ModulePlaceholder module="System Settings" />,
+        element: <SystemSettingsPage />,
       },
       {
         path: "settings/general",
@@ -482,11 +492,11 @@ export const routes = [
       // Activity & Audit Logs
       {
         path: "logs",
-        element: <ModulePlaceholder module="Activity Logs" />,
+        element: <ActivityLogsPage />,
       },
       {
         path: "logs/audit",
-        element: <ModulePlaceholder module="Audit Logs" />,
+        element: <AuditLogsPage />,
       },
       {
         path: "logs/security",
@@ -500,10 +510,23 @@ export const routes = [
         path: "logs/users/:id",
         element: <ModulePlaceholder module="User Activity Logs" />,
       },
+      // Customer Management (Admin)
+      {
+        path: "customers",
+        element: <CustomerManagementPage />,
+      },
+      {
+        path: "customers/:id",
+        element: <ModulePlaceholder module="Customer Details (Admin)" />,
+      },
+      {
+        path: "customers/:id/kyc",
+        element: <ModulePlaceholder module="Customer KYC Management" />,
+      },
       // System Reports
       {
         path: "reports",
-        element: <ModulePlaceholder module="System Reports" />,
+        element: <ReportsPage />,
       },
       {
         path: "reports/users",

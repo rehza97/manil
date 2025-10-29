@@ -51,6 +51,7 @@ export const LoginForm = () => {
           value={formData.email}
           onChange={handleInputChange("email")}
           disabled={loginMutation.isPending}
+          autoComplete="email"
           required
         />
       </div>
@@ -68,6 +69,7 @@ export const LoginForm = () => {
             value={formData.password}
             onChange={handleInputChange("password")}
             disabled={loginMutation.isPending}
+            autoComplete="current-password"
             required
           />
           <button

@@ -4,8 +4,10 @@ Uses Pydantic Settings for environment variable loading.
 """
 from functools import lru_cache
 from typing import List
+import os
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
 
 
 class Settings(BaseSettings):
@@ -43,8 +45,22 @@ class Settings(BaseSettings):
     # Security Configuration
     BCRYPT_ROUNDS: int = 12
     CORS_ORIGINS: List[str] = [
-        "http://localhost:5173", "http://localhost:3000"]
+        "http://localhost:5173", "http://localhost:3000", "http://localhost:80"]
     CORS_ALLOW_CREDENTIALS: bool = True
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v):
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        env_parse_none_str="",
+    )
 
     # Email Configuration
     EMAIL_PROVIDER: str = "sendgrid"

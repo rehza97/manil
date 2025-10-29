@@ -103,3 +103,7 @@ class PasswordResetResponse(BaseModel):
 
     message: str = Field(..., description="Status message")
     email: str = Field(..., description="User email")
+
+
+# Rebuild models to resolve forward references
+LoginResponse.model_rebuild()

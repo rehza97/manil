@@ -1,19 +1,21 @@
-from app.modules.customers.models import Customer
-from app.modules.audit.models import AuditLog
-from app.modules.auth.models import User
-from app.config.settings import get_settings
-from app.config.database import Base
 from logging.config import fileConfig
 import sys
 from pathlib import Path
+
+# Add parent directory to path FIRST
+sys.path.insert(0, str(Path(__file__).parents[2]))
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
 
-# Add parent directory to path
-sys.path.append(str(Path(__file__).parents[2]))
+# Now import app modules
+from app.modules.customers.models import Customer
+from app.modules.audit.models import AuditLog
+from app.modules.auth.models import User
+from app.config.settings import get_settings
+from app.config.database import Base
 
 # Import Base and all models
 

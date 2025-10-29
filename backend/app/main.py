@@ -26,6 +26,7 @@ from app.modules.audit.router import router as audit_router
 from app.modules.customers.router import router as customers_router
 from app.modules.customers.kyc_router import router as kyc_router
 from app.modules.customers.notes_router import router as notes_router
+from app.modules.system.router import router as system_router
 
 settings = get_settings()
 
@@ -91,7 +92,8 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 # Custom Middleware
 app.add_middleware(CORSHeadersMiddleware)
 app.add_middleware(LoggingMiddleware)
-app.add_middleware(CSRFProtectionMiddleware)
+# CSRF Protection disabled for development
+# app.add_middleware(CSRFProtectionMiddleware)
 if settings.RATE_LIMIT_ENABLED:
     app.add_middleware(RateLimitMiddleware)
 
@@ -110,7 +112,8 @@ async def global_exception_handler(request: Request, exc: Exception):
         JSON error response
     """
     request_id = getattr(request.state, "request_id", "unknown")
-    log_exception(exc, f"Unhandled exception in {request.method} {request.url.path} (request_id: {request_id})")
+    log_exception(
+        exc, f"Unhandled exception in {request.method} {request.url.path} (request_id: {request_id})")
 
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -160,3 +163,4 @@ app.include_router(audit_router, prefix="/api/v1")
 app.include_router(customers_router, prefix="/api/v1")
 app.include_router(kyc_router, prefix="/api/v1")
 app.include_router(notes_router, prefix="/api/v1")
+app.include_router(system_router, prefix="/api/v1")
