@@ -176,3 +176,82 @@ class EmailService:
         """)
 
         return await self.send_email([to], subject, html_body)
+
+    async def send_ticket_reply(
+        self, to: str, ticket_id: str, subject: str, reply_author: str, is_internal: bool = False
+    ) -> bool:
+        """
+        Send ticket reply notification.
+
+        Args:
+            to: Recipient email address
+            ticket_id: Ticket ID
+            subject: Ticket subject
+            reply_author: Name of person who replied
+            is_internal: Whether the reply is internal
+
+        Returns:
+            True if email sent successfully
+        """
+        template = templates.ticket_reply_template(ticket_id, subject, reply_author, is_internal)
+        return await self.send_email(
+            [to], template["subject"], template["html"], template.get("text")
+        )
+
+    async def send_ticket_status_change(
+        self, to: str, ticket_id: str, subject: str, old_status: str, new_status: str
+    ) -> bool:
+        """
+        Send ticket status change notification.
+
+        Args:
+            to: Recipient email address
+            ticket_id: Ticket ID
+            subject: Ticket subject
+            old_status: Previous status
+            new_status: New status
+
+        Returns:
+            True if email sent successfully
+        """
+        template = templates.ticket_status_change_template(ticket_id, subject, old_status, new_status)
+        return await self.send_email(
+            [to], template["subject"], template["html"], template.get("text")
+        )
+
+    async def send_ticket_assigned(
+        self, to: str, ticket_id: str, subject: str, assigned_to: str
+    ) -> bool:
+        """
+        Send ticket assignment notification.
+
+        Args:
+            to: Recipient email address
+            ticket_id: Ticket ID
+            subject: Ticket subject
+            assigned_to: Name of assigned agent
+
+        Returns:
+            True if email sent successfully
+        """
+        template = templates.ticket_assigned_template(ticket_id, subject, assigned_to)
+        return await self.send_email(
+            [to], template["subject"], template["html"], template.get("text")
+        )
+
+    async def send_ticket_closed(self, to: str, ticket_id: str, subject: str) -> bool:
+        """
+        Send ticket closed notification.
+
+        Args:
+            to: Recipient email address
+            ticket_id: Ticket ID
+            subject: Ticket subject
+
+        Returns:
+            True if email sent successfully
+        """
+        template = templates.ticket_closed_template(ticket_id, subject)
+        return await self.send_email(
+            [to], template["subject"], template["html"], template.get("text")
+        )

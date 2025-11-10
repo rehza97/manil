@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, timezone
 from sqlalchemy import String, DateTime, Enum as SQLEnum, Text, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.config.database import Base
 from app.modules.customers.schemas import CustomerStatus, CustomerType
@@ -137,6 +137,9 @@ class Customer(Base):
         nullable=True,
         doc="ID of user who deleted this customer",
     )
+
+    # Relationships
+    tickets = relationship("Ticket", back_populates="customer")
 
     def __repr__(self) -> str:
         """String representation of Customer model."""

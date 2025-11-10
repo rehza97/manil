@@ -208,3 +208,120 @@ def invoice_sent_template(invoice_id: str, amount: float) -> Dict[str, str]:
         "html": get_base_template(content),
         "text": f"Invoice {invoice_id}: {amount:,.2f} DZD",
     }
+
+
+def ticket_reply_template(ticket_id: str, subject: str, reply_author: str, is_internal: bool = False) -> Dict[str, str]:
+    """
+    Ticket reply notification email.
+
+    Args:
+        ticket_id: Ticket ID
+        subject: Ticket subject
+        reply_author: Name of person who replied
+        is_internal: Whether the reply is internal (staff-only)
+
+    Returns:
+        Dict with subject and HTML body
+    """
+    internal_note = "<p><em>This is an internal note and not visible to the customer.</em></p>" if is_internal else ""
+
+    content = f"""
+        <h2>New Reply on Ticket {ticket_id}</h2>
+        <p>Your support ticket has received a new reply.</p>
+        <p><strong>Ticket ID:</strong> {ticket_id}</p>
+        <p><strong>Subject:</strong> {subject}</p>
+        <p><strong>Replied by:</strong> {reply_author}</p>
+        {internal_note}
+        <a href="https://cloudmanager.dz/tickets/{ticket_id}" class="button">View Ticket</a>
+    """
+
+    return {
+        "subject": f"Re: {subject} (Ticket {ticket_id})",
+        "html": get_base_template(content),
+        "text": f"New reply on ticket {ticket_id}: {subject}",
+    }
+
+
+def ticket_status_change_template(ticket_id: str, subject: str, old_status: str, new_status: str) -> Dict[str, str]:
+    """
+    Ticket status change notification email.
+
+    Args:
+        ticket_id: Ticket ID
+        subject: Ticket subject
+        old_status: Previous status
+        new_status: New status
+
+    Returns:
+        Dict with subject and HTML body
+    """
+    content = f"""
+        <h2>Ticket Status Changed</h2>
+        <p>Your support ticket status has been updated.</p>
+        <p><strong>Ticket ID:</strong> {ticket_id}</p>
+        <p><strong>Subject:</strong> {subject}</p>
+        <p><strong>Previous Status:</strong> {old_status.replace('_', ' ').title()}</p>
+        <p><strong>New Status:</strong> {new_status.replace('_', ' ').title()}</p>
+        <a href="https://cloudmanager.dz/tickets/{ticket_id}" class="button">View Ticket</a>
+    """
+
+    return {
+        "subject": f"Ticket {ticket_id} - Status Updated to {new_status.replace('_', ' ').title()}",
+        "html": get_base_template(content),
+        "text": f"Ticket {ticket_id} status changed to {new_status.replace('_', ' ').title()}",
+    }
+
+
+def ticket_assigned_template(ticket_id: str, subject: str, assigned_to: str) -> Dict[str, str]:
+    """
+    Ticket assignment notification email.
+
+    Args:
+        ticket_id: Ticket ID
+        subject: Ticket subject
+        assigned_to: Name of assigned agent
+
+    Returns:
+        Dict with subject and HTML body
+    """
+    content = f"""
+        <h2>Ticket Assigned to You</h2>
+        <p>A support ticket has been assigned to you.</p>
+        <p><strong>Ticket ID:</strong> {ticket_id}</p>
+        <p><strong>Subject:</strong> {subject}</p>
+        <p><strong>Assigned to:</strong> {assigned_to}</p>
+        <a href="https://cloudmanager.dz/tickets/{ticket_id}" class="button">View Ticket</a>
+    """
+
+    return {
+        "subject": f"Ticket {ticket_id} Assigned to You",
+        "html": get_base_template(content),
+        "text": f"Ticket {ticket_id} assigned to {assigned_to}",
+    }
+
+
+def ticket_closed_template(ticket_id: str, subject: str) -> Dict[str, str]:
+    """
+    Ticket closed notification email.
+
+    Args:
+        ticket_id: Ticket ID
+        subject: Ticket subject
+
+    Returns:
+        Dict with subject and HTML body
+    """
+    content = f"""
+        <h2>Ticket Closed</h2>
+        <p>Your support ticket has been closed.</p>
+        <p><strong>Ticket ID:</strong> {ticket_id}</p>
+        <p><strong>Subject:</strong> {subject}</p>
+        <p>If you need further assistance, please feel free to open a new ticket.</p>
+        <a href="https://cloudmanager.dz/tickets" class="button">View All Tickets</a>
+    """
+
+    return {
+        "subject": f"Ticket {ticket_id} - Closed",
+        "html": get_base_template(content),
+        "text": f"Ticket {ticket_id} has been closed",
+    }

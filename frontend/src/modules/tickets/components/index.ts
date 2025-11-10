@@ -1,1 +1,3 @@
-// Ticket components will be added here
+export { TicketList } from "./TicketList";
+export { TicketForm } from "./TicketForm";
+export { TicketDetail } from "./TicketDetail";
