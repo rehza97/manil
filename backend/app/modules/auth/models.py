@@ -52,7 +52,7 @@ class User(Base):
     created_by: Mapped[str | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
-        default="system",
+        default=None,
         doc="ID of user who created this account (nullable for system/initial users)",
     )
     updated_by: Mapped[str | None] = mapped_column(

@@ -300,7 +300,7 @@ async def delete_response_template(
     summary="Filter tickets by priority",
 )
 async def filter_tickets_by_priority(
-    priority: str = Query(..., regex="^(low|medium|high|urgent)$"),
+    priority: str = Query(..., pattern="^(low|medium|high|urgent)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),

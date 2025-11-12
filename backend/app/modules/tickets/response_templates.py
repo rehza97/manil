@@ -122,7 +122,7 @@ class TicketCategoryCreate(BaseModel):
 
     name: str = Field(..., min_length=3, max_length=100)
     description: Optional[str] = Field(None, max_length=500)
-    color: Optional[str] = Field(None, regex="^#[0-9A-Fa-f]{6}$")  # Hex color
+    color: Optional[str] = Field(None, pattern="^#[0-9A-Fa-f]{6}$")  # Hex color
 
 
 class TicketCategoryUpdate(BaseModel):
@@ -130,7 +130,7 @@ class TicketCategoryUpdate(BaseModel):
 
     name: Optional[str] = Field(None, min_length=3, max_length=100)
     description: Optional[str] = Field(None, max_length=500)
-    color: Optional[str] = Field(None, regex="^#[0-9A-Fa-f]{6}$")
+    color: Optional[str] = Field(None, pattern="^#[0-9A-Fa-f]{6}$")
     is_active: Optional[bool] = None
 
 

@@ -133,3 +133,76 @@ class TicketListResponse(BaseModel):
 
     data: list[TicketResponse]
     pagination: PaginationMetadata
+
+
+class TagCreate(BaseModel):
+    """Schema for creating a tag."""
+
+    name: str = Field(..., min_length=1, max_length=100)
+    description: Optional[str] = Field(None, max_length=500)
+    color: str = Field("#3B82F6", pattern=r"^#[0-9A-F]{6}$")
+
+
+class TagUpdate(BaseModel):
+    """Schema for updating a tag."""
+
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = Field(None, max_length=500)
+    color: Optional[str] = Field(None, pattern=r"^#[0-9A-F]{6}$")
+
+
+class TagResponse(BaseModel):
+    """Schema for tag response."""
+
+    id: str
+    name: str
+    description: Optional[str]
+    color: str
+    usage_count: int
+    created_at: datetime
+    updated_at: datetime
+    created_by: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TicketTagAssignment(BaseModel):
+    """Schema for assigning tags to a ticket."""
+
+    tag_ids: list[str] = Field(..., min_length=1)
+
+
+class WatcherNotificationPreferences(BaseModel):
+    """Schema for watcher notification preferences."""
+
+    notify_on_reply: bool = True
+    notify_on_status_change: bool = True
+    notify_on_assignment: bool = True
+
+
+class WatcherCreate(BaseModel):
+    """Schema for adding a watcher to a ticket."""
+
+    user_id: str = Field(..., min_length=1)
+    preferences: Optional[WatcherNotificationPreferences] = None
+
+
+class WatcherResponse(BaseModel):
+    """Schema for watcher response."""
+
+    id: str
+    ticket_id: str
+    user_id: str
+    notify_on_reply: bool
+    notify_on_status_change: bool
+    notify_on_assignment: bool
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TicketWatcherList(BaseModel):
+    """Schema for ticket watcher list response."""
+
+    data: list[WatcherResponse]
+    total_count: int

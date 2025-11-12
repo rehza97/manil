@@ -175,3 +175,17 @@ def require_any_permission(permissions: list[Permission]):
         return current_user
 
     return permission_checker
+
+
+def require_admin(user):
+    """
+    Check if user is an admin.
+
+    Args:
+        user: User object to check
+
+    Raises:
+        ForbiddenException: If user is not an admin
+    """
+    if user.role.value != "admin":
+        raise ForbiddenException("Admin access required")

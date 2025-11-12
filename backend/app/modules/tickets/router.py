@@ -20,8 +20,28 @@ from app.modules.tickets.schemas import (
     TicketReplyResponse,
     PaginationMetadata,
 )
+from app.modules.tickets.routes.email_routes import router as email_router
+from app.modules.tickets.routes.tag_routes import router as tag_router
+from app.modules.tickets.routes.ticket_tag_routes import router as ticket_tag_router
+from app.modules.tickets.routes.watcher_routes import router as watcher_router
+from app.modules.tickets.routes.sla_routes import router as sla_router
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
+
+# Include email routes as sub-router
+router.include_router(email_router, prefix="/email", tags=["email"])
+
+# Include tag management routes
+router.include_router(tag_router, tags=["tags"])
+
+# Include ticket tag assignment routes
+router.include_router(ticket_tag_router, tags=["ticket-tags"])
+
+# Include watcher routes
+router.include_router(watcher_router, tags=["watchers"])
+
+# Include SLA and metrics routes
+router.include_router(sla_router, tags=["sla-metrics"])
 
 
 @router.post(

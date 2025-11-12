@@ -43,6 +43,19 @@ import {
   RoleManagementPage,
   ReportsPage,
 } from "@/modules/admin";
+import {
+  TemplateListPage,
+  TemplateCreatePage,
+  TemplateEditPage,
+  TemplateDetailPage,
+} from "@/modules/tickets/pages";
+import {
+  OrdersListPage,
+  OrderDetailPage,
+  OrderCreatePage,
+  OrderEditPage,
+  OrderStatusPage,
+} from "@/modules/orders/pages";
 
 // Placeholder components for modules not yet implemented
 const ModulePlaceholder = ({ module }: { module: string }) => {
@@ -165,11 +178,23 @@ export const routes = [
       // Orders
       {
         path: "orders",
-        element: <ModulePlaceholder module="My Orders" />,
+        element: <OrdersListPage />,
       },
       {
-        path: "orders/:id",
-        element: <ModulePlaceholder module="Order Details" />,
+        path: "orders/:orderId",
+        element: <OrderDetailPage />,
+      },
+      {
+        path: "orders/create",
+        element: <OrderCreatePage />,
+      },
+      {
+        path: "orders/:orderId/edit",
+        element: <OrderEditPage />,
+      },
+      {
+        path: "orders/:orderId/status",
+        element: <OrderStatusPage />,
       },
       // Invoices
       {
@@ -283,23 +308,23 @@ export const routes = [
       // Order Management
       {
         path: "orders",
-        element: <ModulePlaceholder module="Order Management" />,
+        element: <OrdersListPage />,
       },
       {
-        path: "orders/:id",
-        element: <ModulePlaceholder module="Order Details" />,
+        path: "orders/create",
+        element: <OrderCreatePage />,
       },
       {
-        path: "orders/:id/process",
-        element: <ModulePlaceholder module="Process Order" />,
+        path: "orders/:orderId",
+        element: <OrderDetailPage />,
       },
       {
-        path: "orders/:id/approve",
-        element: <ModulePlaceholder module="Approve Order" />,
+        path: "orders/:orderId/edit",
+        element: <OrderEditPage />,
       },
       {
-        path: "orders/:id/deliver",
-        element: <ModulePlaceholder module="Mark Delivered" />,
+        path: "orders/:orderId/status",
+        element: <OrderStatusPage />,
       },
       // Quote Management
       {
@@ -558,12 +583,25 @@ export const routes = [
         element: <ModulePlaceholder module="Ticket Categories" />,
       },
       {
-        path: "support/templates",
-        element: <ModulePlaceholder module="Response Templates" />,
-      },
-      {
         path: "support/automation",
         element: <ModulePlaceholder module="Automation Rules" />,
+      },
+      // Ticket Templates
+      {
+        path: "tickets/templates",
+        element: <TemplateListPage />,
+      },
+      {
+        path: "tickets/templates/create",
+        element: <TemplateCreatePage />,
+      },
+      {
+        path: "tickets/templates/:id",
+        element: <TemplateDetailPage />,
+      },
+      {
+        path: "tickets/templates/:id/edit",
+        element: <TemplateEditPage />,
       },
       // System Maintenance
       {
@@ -649,6 +687,10 @@ export const routePermissions = {
   "/dashboard/tickets": ["client"],
   "/dashboard/catalog": ["client"],
   "/dashboard/orders": ["client"],
+  "/dashboard/orders/create": ["client"],
+  "/dashboard/orders/:orderId": ["client"],
+  "/dashboard/orders/:orderId/edit": ["client"],
+  "/dashboard/orders/:orderId/status": ["client"],
   "/dashboard/invoices": ["client"],
   "/dashboard/settings": ["client"],
 
@@ -658,6 +700,10 @@ export const routePermissions = {
   "/corporate/tickets": ["corporate", "admin"],
   "/corporate/products": ["corporate", "admin"],
   "/corporate/orders": ["corporate", "admin"],
+  "/corporate/orders/create": ["corporate", "admin"],
+  "/corporate/orders/:orderId": ["corporate", "admin"],
+  "/corporate/orders/:orderId/edit": ["corporate", "admin"],
+  "/corporate/orders/:orderId/status": ["corporate", "admin"],
   "/corporate/quotes": ["corporate", "admin"],
   "/corporate/invoices": ["corporate", "admin"],
   "/corporate/reports": ["corporate", "admin"],
@@ -672,6 +718,10 @@ export const routePermissions = {
   "/admin/logs": ["admin"],
   "/admin/reports": ["admin"],
   "/admin/support": ["admin"],
+  "/admin/tickets/templates": ["admin"],
+  "/admin/tickets/templates/create": ["admin"],
+  "/admin/tickets/templates/:id": ["admin"],
+  "/admin/tickets/templates/:id/edit": ["admin"],
   "/admin/maintenance": ["admin"],
 } as const;
 
@@ -716,8 +766,11 @@ export const moduleRoutes = {
     "/admin/support",
     "/admin/support/groups",
     "/admin/support/categories",
-    "/admin/support/templates",
     "/admin/support/automation",
+    "/admin/tickets/templates",
+    "/admin/tickets/templates/create",
+    "/admin/tickets/templates/:id",
+    "/admin/tickets/templates/:id/edit",
   ],
 
   // Module 3: Product Catalogue
@@ -735,12 +788,15 @@ export const moduleRoutes = {
   // Module 4: Order Manager
   orders: [
     "/dashboard/orders",
-    "/dashboard/orders/:id",
+    "/dashboard/orders/:orderId",
+    "/dashboard/orders/create",
+    "/dashboard/orders/:orderId/edit",
+    "/dashboard/orders/:orderId/status",
     "/corporate/orders",
-    "/corporate/orders/:id",
-    "/corporate/orders/:id/process",
-    "/corporate/orders/:id/approve",
-    "/corporate/orders/:id/deliver",
+    "/corporate/orders/create",
+    "/corporate/orders/:orderId",
+    "/corporate/orders/:orderId/edit",
+    "/corporate/orders/:orderId/status",
   ],
 
   // Module 5: Reporting
