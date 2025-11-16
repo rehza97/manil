@@ -5,7 +5,7 @@ Endpoints for order CRUD and status management.
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.config.database import get_db
+from app.config.database import get_sync_db
 from app.core.exceptions import NotFoundException, BadRequestException
 from app.modules.orders.schemas import (
     OrderCreate,
@@ -29,7 +29,7 @@ router = APIRouter(prefix="/orders", tags=["orders"])
 @router.post("", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 def create_order(
     order_data: OrderCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
     # current_user would be injected by auth dependency in production
 ):
     """
@@ -65,7 +65,7 @@ def list_orders(
     page_size: int = Query(20, ge=1, le=100),
     customer_id: str | None = Query(None),
     status: OrderStatus | None = Query(None),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ):
     """
     List orders with filtering and pagination.
@@ -101,7 +101,7 @@ def list_orders(
 @router.get("/{order_id}", response_model=OrderResponse)
 def get_order(
     order_id: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ):
     """Get order by ID."""
     try:
@@ -115,7 +115,7 @@ def get_order(
 def update_order(
     order_id: str,
     order_data: OrderUpdate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
     # current_user would be injected by auth dependency
 ):
     """
@@ -145,7 +145,7 @@ def update_order(
 def update_order_status(
     order_id: str,
     status_data: OrderStatusUpdate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
     # current_user would be injected by auth dependency
 ):
     """
@@ -184,7 +184,7 @@ def update_order_status(
 @router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_order(
     order_id: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
     # current_user would be injected by auth dependency
 ):
     """
@@ -210,7 +210,7 @@ def delete_order(
 @router.get("/{order_id}/timeline", response_model=OrderTimelineListResponse)
 def get_order_timeline(
     order_id: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ):
     """
     Get timeline of status changes for an order.
@@ -241,7 +241,7 @@ def get_customer_orders(
     customer_id: str,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ):
     """Get all orders for a specific customer."""
     skip = (page - 1) * page_size

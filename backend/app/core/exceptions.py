@@ -45,6 +45,18 @@ class ConflictException(CloudManagerException):
         super().__init__(detail=detail, status_code=status.HTTP_409_CONFLICT)
 
 
+class BadRequestException(CloudManagerException):
+    """
+    Exception raised when the request is invalid or cannot be processed.
+
+    Args:
+        detail: Description of the bad request
+    """
+
+    def __init__(self, detail: str = "Bad request"):
+        super().__init__(detail=detail, status_code=status.HTTP_400_BAD_REQUEST)
+
+
 class UnauthorizedException(CloudManagerException):
     """
     Exception raised when authentication fails.

@@ -134,15 +134,15 @@ export function OrderList() {
             </div>
             <div>
               <label className="mb-2 block text-sm font-medium">Status</label>
-              <Select value={statusFilter} onValueChange={(val) => {
-                setStatusFilter(val as OrderStatus | "");
+              <Select value={statusFilter || "all"} onValueChange={(val) => {
+                setStatusFilter(val === "all" ? "" : (val as OrderStatus | ""));
                 setPage(1);
               }}>
                 <SelectTrigger>
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All statuses</SelectItem>
+                  <SelectItem value="all">All statuses</SelectItem>
                   <SelectItem value="request">Request</SelectItem>
                   <SelectItem value="validated">Validated</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>

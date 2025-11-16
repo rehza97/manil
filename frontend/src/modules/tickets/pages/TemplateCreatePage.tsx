@@ -12,7 +12,7 @@ import {
   BreadcrumbList,
   BreadcrumbSeparator,
 } from '@/shared/components/ui/breadcrumb';
-import { ResponseTemplate } from '../types/template.types';
+import type { ResponseTemplate } from '../types/template.types';
 import { TemplateForm } from '../components/TemplateForm';
 
 export const TemplateCreatePage: React.FC = () => {

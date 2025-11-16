@@ -6,7 +6,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { templateService } from '../services/templateService';
-import {
+import type {
   ResponseTemplate,
   CreateTemplateRequest,
   UpdateTemplateRequest,

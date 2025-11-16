@@ -50,10 +50,8 @@ import {
   useTemplates,
   useDeleteTemplate,
 } from '../hooks/useTemplates';
-import {
-  TemplateCategory,
-  TemplateFilters,
-} from '../types/template.types';
+import { TemplateCategory } from '../types/template.types';
+import type { TemplateFilters } from '../types/template.types';
 import { toast } from 'sonner';
 
 interface TemplateListProps {

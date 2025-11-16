@@ -4,7 +4,7 @@
  */
 
 import { apiClient } from '@/shared/api';
-import {
+import type {
   ResponseTemplate,
   TemplateListResponse,
   CreateTemplateRequest,
@@ -13,8 +13,8 @@ import {
   TemplatePreviewResponse,
   TemplateFilters,
   TemplateVariableReference,
-  ALL_VARIABLES,
 } from '../types/template.types';
+import { ALL_VARIABLES } from '../types/template.types';
 
 export const templateService = {
   /**

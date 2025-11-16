@@ -37,13 +37,8 @@ import {
   useValidateTemplate,
   useTemplateVariables,
 } from '../hooks/useTemplates';
-import {
-  ResponseTemplate,
-  TemplateCategory,
-  SYSTEM_VARIABLES,
-  CUSTOM_VARIABLES,
-  SAMPLE_VARIABLES,
-} from '../types/template.types';
+import type { ResponseTemplate } from '../types/template.types';
+import { TemplateCategory, SYSTEM_VARIABLES, CUSTOM_VARIABLES, SAMPLE_VARIABLES } from '../types/template.types';
 
 interface TemplateFormProps {
   template?: ResponseTemplate;

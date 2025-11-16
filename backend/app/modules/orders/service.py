@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import Optional, Tuple
 from decimal import Decimal
 
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc
 
@@ -69,13 +70,29 @@ class OrderService:
         return subtotal, tax, total_discount, total
 
     @staticmethod
+    def _ensure_sync_session(db: Session | AsyncSession) -> Session:
+        """
+        Accept either a sync Session or an AsyncSession and return a sync Session.
+        This lets service code use the traditional ORM query API.
+        """
+        if hasattr(db, "query"):
+            return db  # already a sync Session
+        # AsyncSession has a .sync_session attribute
+        sync_session = getattr(db, "sync_session", None)
+        if sync_session is None:
+            raise RuntimeError("Database session is neither sync Session nor AsyncSession with sync_session.")
+        return sync_session
+
+    @staticmethod
     def create_order(
-        db: Session,
+        db: Session | AsyncSession,
         data: OrderCreate,
         created_by_user_id: str,
     ) -> Order:
         """Create a new order."""
         try:
+            # normalize session
+            db = OrderService._ensure_sync_session(db)
             # Create order
             order = Order(
                 id=str(uuid.uuid4()),
@@ -150,8 +167,9 @@ class OrderService:
             raise
 
     @staticmethod
-    def get_order(db: Session, order_id: str) -> Order:
+    def get_order(db: Session | AsyncSession, order_id: str) -> Order:
         """Get order by ID."""
+        db = OrderService._ensure_sync_session(db)
         order = db.query(Order).filter(
             and_(Order.id == order_id, Order.deleted_at.is_(None))
         ).first()
@@ -163,13 +181,14 @@ class OrderService:
 
     @staticmethod
     def list_orders(
-        db: Session,
+        db: Session | AsyncSession,
         skip: int = 0,
         limit: int = 20,
         customer_id: Optional[str] = None,
         status: Optional[OrderStatus] = None,
     ) -> Tuple[list[Order], int]:
         """List orders with filtering."""
+        db = OrderService._ensure_sync_session(db)
         query = db.query(Order).filter(Order.deleted_at.is_(None))
 
         if customer_id:
@@ -185,12 +204,13 @@ class OrderService:
 
     @staticmethod
     def update_order(
-        db: Session,
+        db: Session | AsyncSession,
         order_id: str,
         data: OrderUpdate,
         updated_by_user_id: str,
     ) -> Order:
         """Update order details."""
+        db = OrderService._ensure_sync_session(db)
         order = OrderService.get_order(db, order_id)
 
         try:
@@ -221,13 +241,14 @@ class OrderService:
 
     @staticmethod
     def update_order_status(
-        db: Session,
+        db: Session | AsyncSession,
         order_id: str,
         new_status: OrderStatus,
         notes: Optional[str] = None,
         performed_by_user_id: Optional[str] = None,
     ) -> Order:
         """Update order status with validation."""
+        db = OrderService._ensure_sync_session(db)
         order = OrderService.get_order(db, order_id)
 
         # Validate status transition
@@ -276,8 +297,9 @@ class OrderService:
             raise
 
     @staticmethod
-    def delete_order(db: Session, order_id: str, deleted_by_user_id: str) -> None:
+    def delete_order(db: Session | AsyncSession, order_id: str, deleted_by_user_id: str) -> None:
         """Soft delete an order."""
+        db = OrderService._ensure_sync_session(db)
         order = OrderService.get_order(db, order_id)
 
         try:
@@ -306,10 +328,11 @@ class OrderService:
 
     @staticmethod
     def get_order_timeline(
-        db: Session,
+        db: Session | AsyncSession,
         order_id: str,
     ) -> Tuple[list[OrderTimeline], int]:
         """Get timeline for an order."""
+        db = OrderService._ensure_sync_session(db)
         timeline = db.query(OrderTimeline).filter(
             OrderTimeline.order_id == order_id
         ).order_by(desc(OrderTimeline.created_at)).all()
