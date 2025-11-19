@@ -347,6 +347,12 @@ EMAIL_FROM=noreply@cloudmanager.com
 # SMS
 TWILIO_ACCOUNT_SID=your-sid
 TWILIO_AUTH_TOKEN=your-token
+
+# cPanel / WHM
+CPANEL_HOST=cpanel.example.com
+CPANEL_USERNAME=root
+WHM_API_TOKEN=change-me
+CPANEL_SSL_VERIFY=true
 ```
 
 ## 📊 API Documentation

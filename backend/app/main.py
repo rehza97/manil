@@ -29,6 +29,7 @@ from app.modules.customers.notes_router import router as notes_router
 from app.modules.tickets.router import router as tickets_router
 from app.modules.products.routes import router as products_router
 from app.modules.orders.routes import router as orders_router
+from app.modules.quotes.routes import router as quotes_router
 from app.modules.reports.routes import router as reports_router
 from app.modules.system.router import router as system_router
 
@@ -170,5 +171,6 @@ app.include_router(notes_router, prefix="/api/v1")
 app.include_router(tickets_router, prefix="/api/v1")
 app.include_router(products_router, prefix="/api/v1")
 app.include_router(orders_router, prefix="/api/v1")
+app.include_router(quotes_router)  # Quotes router already has /api/v1/quotes prefix
 app.include_router(reports_router)  # Reports router already has /api/v1/reports prefix
 app.include_router(system_router, prefix="/api/v1")

@@ -63,6 +63,12 @@ services:
       - JWT_ALGORITHM=HS256
       - ACCESS_TOKEN_EXPIRE_MINUTES=30
       - REFRESH_TOKEN_EXPIRE_DAYS=7
+      # cPanel/WHM Integration (external service; does not run in Docker)
+      # Point these to your cPanel/WHM server to enable API calls from the backend.
+      - CPANEL_HOST=${CPANEL_HOST:-cpanel.example.com}       # e.g., host.yourdomain.com or IP
+      - CPANEL_USERNAME=${CPANEL_USERNAME:-root}             # WHM user (usually root for WHM API)
+      - WHM_API_TOKEN=${WHM_API_TOKEN:-change-me}            # Create in WHM: Development -> Manage API Tokens
+      - CPANEL_SSL_VERIFY=${CPANEL_SSL_VERIFY:-true}         # set to false only for lab/self-signed
       # Application Configuration
       - DEBUG=${DEBUG:-True}
       - ENVIRONMENT=${ENVIRONMENT:-development}
@@ -114,6 +120,10 @@ services:
       retries: 3
       start_period: 40s
     restart: unless-stopped
+
+# NOTE: cPanel/WHM cannot be containerized. Run it on a separate VM/host
+# (AlmaLinux/Rocky/CloudLinux), then set CPANEL_* env vars above and allow
+# outbound access from the backend to ports 2087 (WHM) and 2083 (cPanel).
 
 # Volumes
 volumes:

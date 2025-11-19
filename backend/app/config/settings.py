@@ -106,6 +106,12 @@ class Settings(BaseSettings):
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100
 
+    # cPanel / WHM Integration
+    CPANEL_HOST: str | None = None  # e.g., host.yourdomain.com or IP
+    CPANEL_USERNAME: str | None = None  # usually 'root' for WHM API
+    WHM_API_TOKEN: str | None = None  # create in WHM -> Manage API Tokens
+    CPANEL_SSL_VERIFY: bool = True
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
