@@ -325,3 +325,87 @@ def ticket_closed_template(ticket_id: str, subject: str) -> Dict[str, str]:
         "html": get_base_template(content),
         "text": f"Ticket {ticket_id} has been closed",
     }
+
+
+def quote_sent_template(
+    quote_number: str,
+    customer_name: str,
+    title: str,
+    total_amount: float,
+    valid_until: str,
+) -> Dict[str, str]:
+    """
+    Quote sent notification email.
+
+    Args:
+        quote_number: Quote number
+        customer_name: Customer name
+        title: Quote title
+        total_amount: Quote total amount
+        valid_until: Quote expiration date
+
+    Returns:
+        Dict with subject and HTML body
+    """
+    content = f"""
+        <h2>New Quote Available</h2>
+        <p>Dear {customer_name},</p>
+        <p>We are pleased to provide you with the following quote:</p>
+        <div style="background: white; padding: 15px; margin: 20px 0; border-left: 4px solid #2563eb;">
+            <p><strong>Quote Number:</strong> {quote_number}</p>
+            <p><strong>Title:</strong> {title}</p>
+            <p><strong>Total Amount:</strong> {total_amount:,.2f} DZD</p>
+            <p><strong>Valid Until:</strong> {valid_until}</p>
+        </div>
+        <p>Please find the detailed quote attached to this email.</p>
+        <p>If you have any questions or would like to proceed, please don't hesitate to contact us.</p>
+        <a href="https://cloudmanager.dz/quotes/{quote_number}" class="button">View Quote</a>
+    """
+
+    return {
+        "subject": f"Quote {quote_number} - {title}",
+        "html": get_base_template(content),
+        "text": f"New quote {quote_number}: {title}. Total: {total_amount:,.2f} DZD. Valid until: {valid_until}",
+    }
+
+
+def invoice_sent_template_with_attachment(
+    invoice_number: str,
+    customer_name: str,
+    title: str,
+    total_amount: float,
+    due_date: str,
+) -> Dict[str, str]:
+    """
+    Invoice sent notification email with attachment.
+
+    Args:
+        invoice_number: Invoice number
+        customer_name: Customer name
+        title: Invoice title
+        total_amount: Invoice total amount
+        due_date: Payment due date
+
+    Returns:
+        Dict with subject and HTML body
+    """
+    content = f"""
+        <h2>New Invoice</h2>
+        <p>Dear {customer_name},</p>
+        <p>You have received a new invoice from CloudManager:</p>
+        <div style="background: white; padding: 15px; margin: 20px 0; border-left: 4px solid #2563eb;">
+            <p><strong>Invoice Number:</strong> {invoice_number}</p>
+            <p><strong>Title:</strong> {title}</p>
+            <p><strong>Total Amount:</strong> {total_amount:,.2f} DZD</p>
+            <p><strong>Due Date:</strong> {due_date}</p>
+        </div>
+        <p>Please find the detailed invoice attached to this email.</p>
+        <p>We appreciate your business and look forward to serving you.</p>
+        <a href="https://cloudmanager.dz/invoices/{invoice_number}" class="button">View & Pay Invoice</a>
+    """
+
+    return {
+        "subject": f"Invoice {invoice_number} - {title}",
+        "html": get_base_template(content),
+        "text": f"New invoice {invoice_number}: {title}. Amount: {total_amount:,.2f} DZD. Due: {due_date}",
+    }

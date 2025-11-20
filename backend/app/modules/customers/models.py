@@ -141,6 +141,7 @@ class Customer(Base):
     # Relationships
     tickets = relationship("Ticket", back_populates="customer")
     quotes = relationship("Quote", back_populates="customer")
+    invoices = relationship("Invoice", back_populates="customer")
 
     def __repr__(self) -> str:
         """String representation of Customer model."""

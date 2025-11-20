@@ -7,12 +7,16 @@ from datetime import datetime, timezone
 from typing import List
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException
 from app.modules.quotes.repository import QuoteRepository
 from app.modules.quotes.models import Quote, QuoteItem, QuoteStatus
 from app.modules.quotes.schemas import QuoteApprovalRequest, QuoteVersionRequest, QuoteSendRequest
 from app.modules.quotes.service import QuoteService
+from app.modules.quotes.pdf_service import QuotePDFService
+from app.modules.customers.models import Customer
+from app.infrastructure.email.service import EmailService
 
 
 class QuoteWorkflowService:
@@ -120,12 +124,65 @@ class QuoteWorkflowService:
             new_value=QuoteStatus.SENT.value
         )
 
-        # TODO: Send email if requested
+        # Send email if requested
         if send_data.send_email:
-            pass  # Implement email sending
+            await self._send_quote_email(quote)
 
         await self.repository.commit()
         return quote
+
+    async def _send_quote_email(self, quote: Quote) -> bool:
+        """
+        Send quote by email with PDF attachment.
+
+        Args:
+            quote: Quote instance with items loaded
+
+        Returns:
+            True if email sent successfully
+        """
+        # Get customer data
+        customer_query = select(Customer).where(Customer.id == quote.customer_id)
+        result = await self.db.execute(customer_query)
+        customer = result.scalar_one_or_none()
+
+        if not customer or not customer.email:
+            raise BadRequestException("Customer email not found")
+
+        # Generate PDF
+        pdf_service = QuotePDFService()
+        customer_data = {
+            'name': customer.name,
+            'email': customer.email,
+            'phone': customer.phone or 'N/A',
+            'address': customer.address or 'N/A',
+            'city': customer.city or 'N/A',
+        }
+        pdf_path = pdf_service.generate_quote_pdf(quote, customer_data)
+
+        # Send email with attachment
+        email_service = EmailService()
+        valid_until = quote.valid_until.strftime('%d/%m/%Y')
+
+        success = await email_service.send_quote_email(
+            to=customer.email,
+            quote_number=quote.quote_number,
+            customer_name=customer.name,
+            title=quote.title,
+            total_amount=float(quote.total_amount),
+            valid_until=valid_until,
+            pdf_path=pdf_path,
+        )
+
+        if success:
+            await self.repository.add_timeline_event(
+                quote_id=quote.id,
+                event_type="email_sent",
+                event_description=f"Quote emailed to {customer.email}",
+                created_by_id="system"
+            )
+
+        return success
 
     async def accept_quote(self, quote_id: str, accepted_by_id: str) -> Quote:
         """Customer accepts a quote."""

@@ -255,3 +255,79 @@ class EmailService:
         return await self.send_email(
             [to], template["subject"], template["html"], template.get("text")
         )
+
+    async def send_quote_email(
+        self,
+        to: str,
+        quote_number: str,
+        customer_name: str,
+        title: str,
+        total_amount: float,
+        valid_until: str,
+        pdf_path: str,
+    ) -> bool:
+        """
+        Send quote by email with PDF attachment.
+
+        Args:
+            to: Recipient email address
+            quote_number: Quote number
+            customer_name: Customer name
+            title: Quote title
+            total_amount: Quote total amount
+            valid_until: Quote expiration date
+            pdf_path: Path to the PDF file
+
+        Returns:
+            True if email sent successfully
+        """
+        template = templates.quote_sent_template(
+            quote_number, customer_name, title, total_amount, valid_until
+        )
+        attachments = [{"path": pdf_path, "filename": f"Quote_{quote_number}.pdf"}]
+
+        return await self.provider.send_email(
+            [to],
+            template["subject"],
+            template["html"],
+            template.get("text"),
+            attachments=attachments,
+        )
+
+    async def send_invoice_email(
+        self,
+        to: str,
+        invoice_number: str,
+        customer_name: str,
+        title: str,
+        total_amount: float,
+        due_date: str,
+        pdf_path: str,
+    ) -> bool:
+        """
+        Send invoice by email with PDF attachment.
+
+        Args:
+            to: Recipient email address
+            invoice_number: Invoice number
+            customer_name: Customer name
+            title: Invoice title
+            total_amount: Invoice total amount
+            due_date: Payment due date
+            pdf_path: Path to the PDF file
+
+        Returns:
+            True if email sent successfully
+        """
+        template = templates.invoice_sent_template_with_attachment(
+            invoice_number, customer_name, title, total_amount, due_date
+        )
+        attachments = [{"path": pdf_path, "filename": f"Invoice_{invoice_number}.pdf"}]
+
+        return await self.provider.send_email(
+            [to],
+            template["subject"],
+            template["html"],
+            template.get("text"),
+            attachments=attachments,
+        )
