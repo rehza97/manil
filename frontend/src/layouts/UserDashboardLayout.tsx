@@ -26,7 +26,7 @@ import {
   User,
   Shield,
 } from "lucide-react";
-import { useAuth } from "@/modules/auth";
+import { useAuth, RoleGuard } from "@/modules/auth";
 
 const UserDashboardLayout: React.FC = () => {
   const location = useLocation();
@@ -66,7 +66,8 @@ const UserDashboardLayout: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <RoleGuard allowedRole="client" layoutName="Client Portal">
+      <div className="min-h-screen bg-slate-50">
       {/* Top Navigation */}
       <nav className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -182,6 +183,7 @@ const UserDashboardLayout: React.FC = () => {
         </div>
       </div>
     </div>
+    </RoleGuard>
   );
 };
 

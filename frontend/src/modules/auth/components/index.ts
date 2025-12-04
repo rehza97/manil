@@ -15,3 +15,4 @@ export { TwoFactorSetup } from "./TwoFactorSetup";
 export { TwoFactorVerify } from "./TwoFactorVerify";
 export { ProtectedRoute, withAuth, useAuth } from "./ProtectedRoute";
 export { RoleBasedRedirect } from "./RoleBasedRedirect";
+export { RoleGuard, withRoleGuard } from "./RoleGuard";

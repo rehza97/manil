@@ -10,6 +10,8 @@ from typing import List, Tuple, Optional
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.price_validator import validate_invoice_prices, PriceValidationError
+from app.core.logging import logger
 from app.modules.invoices.models import Invoice, InvoiceItem, InvoiceTimeline, InvoiceStatus, PaymentMethod
 from app.modules.invoices.repository import InvoiceRepository
 from app.modules.invoices.schemas import (
@@ -61,11 +63,38 @@ class InvoiceService:
         return invoice
 
     async def create(self, invoice_data: InvoiceCreate, created_by_id: str) -> Invoice:
-        """Create a new invoice."""
+        """Create a new invoice with price validation.
+
+        Security:
+        - Validates all item prices against product catalog
+        - Prevents client-side price manipulation
+        - Validates discount and tax rates
+        """
+        # SECURITY: Validate prices against product catalog
+        try:
+            items_dict = [item.model_dump() for item in invoice_data.items]
+            validated_items = await validate_invoice_prices(
+                self.db,
+                items_dict,
+                discount_amount=invoice_data.discount_amount,
+                tax_rate=invoice_data.tax_rate
+            )
+            logger.info(f"Price validation passed for invoice with {len(validated_items)} items")
+        except PriceValidationError as e:
+            logger.error(f"Price validation failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Price validation failed: {str(e)}"
+            )
+
+        # Update invoice_data items with validated prices
+        for idx, validated_item in enumerate(validated_items):
+            invoice_data.items[idx].unit_price = Decimal(str(validated_item['unit_price']))
+
         # Generate invoice number
         invoice_number = await self._generate_invoice_number()
 
-        # Calculate totals
+        # Calculate totals (using validated prices)
         subtotal, tax_amount, total = self._calculate_totals(
             invoice_data.items,
             invoice_data.tax_rate,

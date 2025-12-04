@@ -1,9 +1,14 @@
 /**
  * KYC Service
- * Handles all KYC document operations including upload, verification, and retrieval.
+ *
+ * Wrapper around centralized customersApi KYC methods
+ * Handles all KYC document operations including upload, verification, and retrieval
+ * Uses centralized API client from @/shared/api
+ *
+ * @module modules/customers/services/kycService
  */
 
-import { apiClient } from "@/shared/api";
+import { customersApi } from "@/shared/api";
 import type {
   KYCDocument,
   KYCDocumentUpload,
@@ -12,25 +17,23 @@ import type {
   CustomerKYCStatus,
 } from "../types/kyc.types";
 
+/**
+ * KYC service - uses centralized customersApi KYC methods
+ * Provides module-specific interface with helper functions
+ */
 export const kycService = {
   /**
    * Get customer's KYC status and all documents
    */
   async getCustomerKYCStatus(customerId: string): Promise<CustomerKYCStatus> {
-    const response = await apiClient.get<CustomerKYCStatus>(
-      `/customers/${customerId}/kyc/status`
-    );
-    return response.data;
+    return await customersApi.getKYCStatus(customerId);
   },
 
   /**
    * Get all KYC documents for a customer
    */
   async getDocuments(customerId: string): Promise<KYCDocument[]> {
-    const response = await apiClient.get<KYCDocument[]>(
-      `/customers/${customerId}/kyc/documents`
-    );
-    return response.data;
+    return await customersApi.getKYCDocuments(customerId);
   },
 
   /**
@@ -40,10 +43,7 @@ export const kycService = {
     customerId: string,
     documentId: string
   ): Promise<KYCDocument> {
-    const response = await apiClient.get<KYCDocument>(
-      `/customers/${customerId}/kyc/documents/${documentId}`
-    );
-    return response.data;
+    return await customersApi.getKYCDocument(customerId, documentId);
   },
 
   /**
@@ -68,16 +68,7 @@ export const kycService = {
       formData.append("notes", documentData.notes);
     }
 
-    const response = await apiClient.post<KYCDocument>(
-      `/customers/${customerId}/kyc/documents`,
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
-    return response.data;
+    return await customersApi.uploadKYCDocument(customerId, formData);
   },
 
   /**
@@ -88,20 +79,17 @@ export const kycService = {
     documentId: string,
     data: KYCDocumentUpdate
   ): Promise<KYCDocument> {
-    const response = await apiClient.put<KYCDocument>(
-      `/customers/${customerId}/kyc/documents/${documentId}`,
-      data
-    );
-    return response.data;
+    return await customersApi.updateKYCDocument(customerId, documentId, {
+      document_type: data.documentType,
+      notes: data.notes,
+    });
   },
 
   /**
    * Delete a KYC document
    */
   async deleteDocument(customerId: string, documentId: string): Promise<void> {
-    await apiClient.delete(
-      `/customers/${customerId}/kyc/documents/${documentId}`
-    );
+    await customersApi.deleteKYCDocument(customerId, documentId);
   },
 
   /**
@@ -112,11 +100,11 @@ export const kycService = {
     documentId: string,
     action: KYCVerificationAction
   ): Promise<KYCDocument> {
-    const response = await apiClient.post<KYCDocument>(
-      `/customers/${customerId}/kyc/documents/${documentId}/verify`,
-      action
-    );
-    return response.data;
+    return await customersApi.verifyKYCDocument(customerId, documentId, {
+      status: action.status,
+      notes: action.notes,
+      rejection_reason: action.rejectionReason,
+    });
   },
 
   /**
@@ -126,13 +114,7 @@ export const kycService = {
     customerId: string,
     documentId: string
   ): Promise<Blob> {
-    const response = await apiClient.get(
-      `/customers/${customerId}/kyc/documents/${documentId}/download`,
-      {
-        responseType: "blob",
-      }
-    );
-    return response.data;
+    return await customersApi.downloadKYCDocument(customerId, documentId);
   },
 
   /**

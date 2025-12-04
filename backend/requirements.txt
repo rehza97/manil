@@ -19,6 +19,7 @@ passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 pyotp==2.9.0
 qrcode==7.4.2
+slowapi==0.1.9
 
 # Cache & Background Tasks
 redis==5.0.1

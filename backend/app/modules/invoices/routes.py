@@ -11,7 +11,9 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_permission, require_role
+from app.core.permissions import Permission
+from app.core.exceptions import ForbiddenException
 from app.modules.auth.models import User
 from app.modules.invoices.models import InvoiceStatus
 from app.modules.invoices.service import InvoiceService
@@ -44,10 +46,25 @@ async def get_invoices(
     quote_id: Optional[str] = None,
     overdue_only: bool = False,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permission(Permission.INVOICES_VIEW))
 ):
-    """Get all invoices with pagination and filters."""
+    """Get all invoices with pagination and filters.
+
+    Security:
+    - Requires INVOICES_VIEW permission
+    - Clients can only view their own invoices
+    - Admin/corporate can view all invoices
+    """
     service = InvoiceService(db)
+
+    # SECURITY: Role-based filtering
+    if current_user.role.value == "client":
+        # Clients can only see their own invoices
+        if not hasattr(current_user, 'customer_id'):
+            raise ForbiddenException("Client account not properly configured")
+        customer_id = str(current_user.customer_id)
+    # Admin and corporate can see all invoices (no filtering override)
+
     invoices, total = await service.get_all(
         skip=skip,
         limit=limit,
@@ -70,20 +87,40 @@ async def get_invoices(
 async def get_invoice(
     invoice_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permission(Permission.INVOICES_VIEW))
 ):
-    """Get invoice by ID."""
+    """Get invoice by ID.
+
+    Security:
+    - Requires INVOICES_VIEW permission
+    - Clients can only view their own invoices
+    - Admin/corporate can view all invoices
+    """
     service = InvoiceService(db)
-    return await service.get_by_id(invoice_id)
+    invoice = await service.get_by_id(invoice_id)
+
+    # SECURITY: Check ownership for client role
+    if current_user.role.value == "client":
+        if not hasattr(current_user, 'customer_id'):
+            raise ForbiddenException("Client account not properly configured")
+        if str(invoice.customer_id) != str(current_user.customer_id):
+            raise ForbiddenException("You can only view your own invoices")
+
+    return invoice
 
 
 @router.post("", response_model=InvoiceResponse, status_code=status.HTTP_201_CREATED)
 async def create_invoice(
     invoice_data: InvoiceCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Create a new invoice."""
+    """Create a new invoice.
+
+    Security:
+    - Requires admin or corporate role (billing staff only)
+    - Prices will be validated against product catalog
+    """
     service = InvoiceService(db)
     return await service.create(invoice_data, created_by_id=current_user.id)
 
@@ -93,10 +130,22 @@ async def update_invoice(
     invoice_id: str,
     invoice_data: InvoiceUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Update an existing invoice."""
+    """Update an existing invoice.
+
+    Security:
+    - Requires admin or corporate role (billing staff only)
+    - Cannot update paid invoices
+    """
     service = InvoiceService(db)
+    invoice = await service.get_by_id(invoice_id)
+
+    # SECURITY: Cannot update paid invoices
+    if invoice.status == InvoiceStatus.PAID:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Cannot update paid invoices")
+
     return await service.update(invoice_id, invoice_data)
 
 
@@ -104,10 +153,22 @@ async def update_invoice(
 async def delete_invoice(
     invoice_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role(["admin"]))
 ):
-    """Delete an invoice (soft delete)."""
+    """Delete an invoice (soft delete).
+
+    Security:
+    - Requires admin role only
+    - Cannot delete paid invoices
+    """
     service = InvoiceService(db)
+    invoice = await service.get_by_id(invoice_id)
+
+    # SECURITY: Cannot delete paid invoices
+    if invoice.status == InvoiceStatus.PAID:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Cannot delete paid invoices")
+
     await service.delete(invoice_id)
 
 
@@ -119,9 +180,13 @@ async def delete_invoice(
 async def issue_invoice(
     invoice_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Issue a draft invoice."""
+    """Issue a draft invoice.
+
+    Security:
+    - Requires admin or corporate role (billing staff only)
+    """
     service = InvoiceWorkflowService(db)
     return await service.issue_invoice(invoice_id, issued_by_id=current_user.id)
 
@@ -130,9 +195,13 @@ async def issue_invoice(
 async def send_invoice(
     invoice_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Send invoice to customer."""
+    """Send invoice to customer.
+
+    Security:
+    - Requires admin or corporate role (billing staff only)
+    """
     service = InvoiceWorkflowService(db)
     return await service.send_invoice(invoice_id, sent_by_id=current_user.id)
 
@@ -142,9 +211,15 @@ async def record_payment(
     invoice_id: str,
     payment_data: InvoicePaymentRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role(["admin"]))
 ):
-    """Record a payment for an invoice."""
+    """Record a payment for an invoice.
+
+    Security:
+    - Requires admin role ONLY (most sensitive financial operation)
+    - Payment verification will be performed
+    - Payment is recorded with idempotency to prevent duplicates
+    """
     service = InvoiceWorkflowService(db)
     return await service.record_payment(invoice_id, payment_data, recorded_by_id=current_user.id)
 
@@ -153,9 +228,13 @@ async def record_payment(
 async def cancel_invoice(
     invoice_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Cancel an invoice."""
+    """Cancel an invoice.
+
+    Security:
+    - Requires admin or corporate role
+    """
     service = InvoiceWorkflowService(db)
     return await service.cancel_invoice(invoice_id, cancelled_by_id=current_user.id)
 
@@ -168,9 +247,13 @@ async def cancel_invoice(
 async def convert_quote_to_invoice(
     conversion_data: InvoiceConvertFromQuoteRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Convert an accepted quote to an invoice."""
+    """Convert an accepted quote to an invoice.
+
+    Security:
+    - Requires admin or corporate role (billing staff only)
+    """
     service = InvoiceWorkflowService(db)
     return await service.convert_quote_to_invoice(conversion_data, created_by_id=current_user.id)
 
@@ -183,11 +266,24 @@ async def convert_quote_to_invoice(
 async def get_invoice_timeline(
     invoice_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permission(Permission.INVOICES_VIEW))
 ):
-    """Get invoice timeline/history."""
+    """Get invoice timeline/history.
+
+    Security:
+    - Requires INVOICES_VIEW permission
+    - Clients can only view their own invoice timeline
+    """
     service = InvoiceService(db)
     invoice = await service.get_by_id(invoice_id)
+
+    # SECURITY: Check ownership for client role
+    if current_user.role.value == "client":
+        if not hasattr(current_user, 'customer_id'):
+            raise ForbiddenException("Client account not properly configured")
+        if str(invoice.customer_id) != str(current_user.customer_id):
+            raise ForbiddenException("You can only view your own invoice timeline")
+
     return invoice.timeline_events
 
 
@@ -200,12 +296,26 @@ async def generate_invoice_pdf(
     invoice_id: str,
     include_qr: bool = Query(True, description="Include QR code for payment"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permission(Permission.INVOICES_VIEW))
 ):
-    """Generate and download invoice PDF with payment details."""
+    """Generate and download invoice PDF with payment details.
+
+    Security:
+    - Requires INVOICES_VIEW permission
+    - Clients can only download their own invoices
+    - Filename is sanitized to prevent path traversal
+    """
+    import re
     # Get invoice with items and customer
     service = InvoiceService(db)
     invoice = await service.get_by_id(invoice_id)
+
+    # SECURITY: Check ownership for client role
+    if current_user.role.value == "client":
+        if not hasattr(current_user, 'customer_id'):
+            raise ForbiddenException("Client account not properly configured")
+        if str(invoice.customer_id) != str(current_user.customer_id):
+            raise ForbiddenException("You can only download your own invoices")
 
     # Get customer data
     customer_data = {
@@ -220,11 +330,18 @@ async def generate_invoice_pdf(
     pdf_service = InvoicePDFService()
     pdf_path = pdf_service.generate_invoice_pdf(invoice, customer_data, include_qr=include_qr)
 
+    # SECURITY: Sanitize filename to prevent path traversal
+    safe_invoice_number = re.sub(r'[^a-zA-Z0-9_-]', '', invoice.invoice_number)
+
     # Return as file download
     return FileResponse(
         path=pdf_path,
-        filename=f"invoice_{invoice.invoice_number}.pdf",
-        media_type="application/pdf"
+        filename=f"invoice_{safe_invoice_number}.pdf",
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=invoice_{safe_invoice_number}.pdf",
+            "X-Content-Type-Options": "nosniff"
+        }
     )
 
 
@@ -236,11 +353,25 @@ async def generate_invoice_pdf(
 async def get_invoice_statistics(
     customer_id: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permission(Permission.INVOICES_VIEW))
 ):
-    """Get invoice statistics."""
+    """Get invoice statistics.
+
+    Security:
+    - Requires INVOICES_VIEW permission
+    - Clients can only see their own statistics
+    - Admin/corporate can see all or filter by customer_id
+    """
     from app.modules.invoices.repository import InvoiceRepository
     from decimal import Decimal
+
+    # SECURITY: Role-based filtering
+    if current_user.role.value == "client":
+        # Clients can only see their own statistics
+        if not hasattr(current_user, 'customer_id'):
+            raise ForbiddenException("Client account not properly configured")
+        customer_id = str(current_user.customer_id)
+    # Admin and corporate can see all statistics or filter by customer_id
 
     repository = InvoiceRepository(db)
     stats = await repository.get_statistics(customer_id)
@@ -265,9 +396,14 @@ async def get_invoice_statistics(
 @router.post("/update-overdue")
 async def update_overdue_invoices(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role(["admin"]))
 ):
-    """Update status of overdue invoices (admin only)."""
+    """Update status of overdue invoices.
+
+    Security:
+    - Requires admin role only
+    - Should ideally be a scheduled background job
+    """
     service = InvoiceWorkflowService(db)
     count = await service.update_overdue_invoices()
     return {"message": f"Updated {count} overdue invoices"}

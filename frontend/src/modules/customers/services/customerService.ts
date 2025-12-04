@@ -1,4 +1,13 @@
-import { apiClient } from "@/shared/api";
+/**
+ * Customer Service
+ *
+ * Wrapper around centralized customersApi for module-specific functionality
+ * Uses centralized API client from @/shared/api
+ *
+ * @module modules/customers/services/customerService
+ */
+
+import { customersApi } from "@/shared/api";
 import type {
   Customer,
   CreateCustomerDTO,
@@ -9,6 +18,10 @@ import type {
   CustomerType,
 } from "../types";
 
+/**
+ * Customer service - uses centralized customersApi
+ * Provides module-specific interface aligned with component needs
+ */
 export const customerService = {
   /**
    * Get all customers with pagination and filters
@@ -22,72 +35,66 @@ export const customerService = {
       search?: string;
     }
   ): Promise<CustomerListResponse> {
-    const response = await apiClient.get<CustomerListResponse>("/customers", {
-      params: {
-        skip: (page - 1) * pageSize,
-        limit: pageSize,
-        ...filters,
-      },
+    const response = await customersApi.getCustomers({
+      skip: (page - 1) * pageSize,
+      limit: pageSize,
+      customer_type: filters?.customerType,
+      status: filters?.status,
+      search: filters?.search,
     });
-    return response.data;
+    return response as CustomerListResponse;
   },
 
   /**
    * Get customer by ID
    */
   async getById(id: string): Promise<Customer> {
-    const response = await apiClient.get<Customer>(`/customers/${id}`);
-    return response.data;
+    return await customersApi.getCustomer(id);
   },
 
   /**
    * Create new customer
    */
   async create(data: CreateCustomerDTO): Promise<Customer> {
-    const response = await apiClient.post<Customer>("/customers", data);
-    return response.data;
+    return await customersApi.createCustomer(data);
   },
 
   /**
    * Update existing customer
    */
   async update(id: string, data: UpdateCustomerDTO): Promise<Customer> {
-    const response = await apiClient.put<Customer>(`/customers/${id}`, data);
-    return response.data;
+    return await customersApi.updateCustomer(id, data);
   },
 
   /**
    * Delete customer
    */
   async delete(id: string): Promise<void> {
-    await apiClient.delete(`/customers/${id}`);
+    await customersApi.deleteCustomer(id);
   },
 
   /**
    * Activate customer account
    */
   async activate(id: string): Promise<Customer> {
-    const response = await apiClient.post<Customer>(
-      `/customers/${id}/activate`
-    );
-    return response.data;
+    await customersApi.activateCustomer(id);
+    // Refetch customer to get updated status
+    return await customersApi.getCustomer(id);
   },
 
   /**
    * Suspend customer account
    */
   async suspend(id: string): Promise<Customer> {
-    const response = await apiClient.post<Customer>(`/customers/${id}/suspend`);
-    return response.data;
+    await customersApi.suspendCustomer(id);
+    // Refetch customer to get updated status
+    return await customersApi.getCustomer(id);
   },
 
   /**
    * Get customer statistics
    */
   async getStatistics(): Promise<CustomerStatistics> {
-    const response = await apiClient.get<CustomerStatistics>(
-      "/customers/statistics"
-    );
-    return response.data;
+    return await customersApi.getStatistics();
   },
 };

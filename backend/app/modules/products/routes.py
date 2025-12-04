@@ -3,7 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
+from app.core.dependencies import require_role
 from app.core.exceptions import NotFoundException, ConflictException
+from app.modules.auth.models import User
 from app.modules.products.service import CategoryService, ProductService
 from app.modules.products.schemas import (
     ProductCategoryResponse,
@@ -72,8 +74,13 @@ def list_products(
 def create_product(
     product_data: ProductCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Create a new product."""
+    """Create a new product.
+
+    Security:
+    - Requires admin or corporate role
+    """
     try:
         product = ProductService.create_product(db, product_data)
         return ProductDetailResponse.model_validate(product)
@@ -88,8 +95,13 @@ def update_product(
     product_id: str,
     product_data: ProductUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Update an existing product."""
+    """Update an existing product.
+
+    Security:
+    - Requires admin or corporate role
+    """
     try:
         product = ProductService.update_product(db, product_id, product_data)
         return ProductDetailResponse.model_validate(product)
@@ -103,8 +115,13 @@ def update_product(
 def delete_product(
     product_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Delete a product."""
+    """Delete a product.
+
+    Security:
+    - Requires admin or corporate role
+    """
     try:
         ProductService.delete_product(db, product_id)
     except NotFoundException as e:
@@ -176,8 +193,13 @@ def add_product_image(
     product_id: str,
     image_data: ProductImageCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Add an image to a product."""
+    """Add an image to a product.
+
+    Security:
+    - Requires admin or corporate role
+    """
     try:
         image = ProductService.add_product_image(db, product_id, image_data)
         return ProductImageResponse.model_validate(image)
@@ -191,8 +213,13 @@ def update_product_image(
     image_id: str,
     image_data: ProductImageCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Update a product image."""
+    """Update a product image.
+
+    Security:
+    - Requires admin or corporate role
+    """
     try:
         image = ProductService.update_product_image(db, product_id, image_id, image_data)
         return ProductImageResponse.model_validate(image)
@@ -205,8 +232,13 @@ def delete_product_image(
     product_id: str,
     image_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Delete a product image."""
+    """Delete a product image.
+
+    Security:
+    - Requires admin or corporate role
+    """
     try:
         ProductService.delete_product_image(db, product_id, image_id)
     except NotFoundException as e:
@@ -223,8 +255,13 @@ def add_product_variant(
     product_id: str,
     variant_data: ProductVariantCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Add a variant to a product."""
+    """Add a variant to a product.
+
+    Security:
+    - Requires admin or corporate role
+    """
     try:
         variant = ProductService.add_product_variant(db, product_id, variant_data)
         return ProductVariantResponse.model_validate(variant)
@@ -240,8 +277,13 @@ def update_product_variant(
     variant_id: str,
     variant_data: ProductVariantCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Update a product variant."""
+    """Update a product variant.
+
+    Security:
+    - Requires admin or corporate role
+    """
     try:
         variant = ProductService.update_product_variant(db, product_id, variant_id, variant_data)
         return ProductVariantResponse.model_validate(variant)
@@ -256,8 +298,13 @@ def delete_product_variant(
     product_id: str,
     variant_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Delete a product variant."""
+    """Delete a product variant.
+
+    Security:
+    - Requires admin or corporate role
+    """
     try:
         ProductService.delete_product_variant(db, product_id, variant_id)
     except NotFoundException as e:
@@ -273,8 +320,13 @@ def delete_product_variant(
 def create_category(
     category_data: ProductCategoryCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Create a new product category."""
+    """Create a new product category.
+
+    Security:
+    - Requires admin or corporate role
+    """
     try:
         category = CategoryService.create_category(db, category_data)
         return ProductCategoryResponse.model_validate(category)
@@ -315,8 +367,13 @@ def update_category(
     category_id: str,
     category_data: ProductCategoryUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Update a product category."""
+    """Update a product category.
+
+    Security:
+    - Requires admin or corporate role
+    """
     try:
         category = CategoryService.update_category(db, category_id, category_data)
         return ProductCategoryResponse.model_validate(category)
@@ -330,8 +387,13 @@ def update_category(
 def delete_category(
     category_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Delete a product category."""
+    """Delete a product category.
+
+    Security:
+    - Requires admin or corporate role
+    """
     try:
         CategoryService.delete_category(db, category_id)
     except NotFoundException as e:

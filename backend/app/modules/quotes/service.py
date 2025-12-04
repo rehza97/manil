@@ -11,6 +11,8 @@ from typing import List, Optional, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundException, BadRequestException, ConflictException, ForbiddenException
+from app.core.price_validator import validate_quote_prices, PriceValidationError
+from app.core.logging import logger
 from app.modules.quotes.repository import QuoteRepository
 from app.modules.quotes.models import Quote, QuoteItem, QuoteStatus
 from app.modules.quotes.schemas import (
@@ -55,11 +57,43 @@ class QuoteService:
         return quote
 
     async def create(self, quote_data: QuoteCreate, created_by_id: str) -> Quote:
-        """Create a new quote."""
+        """Create a new quote with price validation.
+
+        Security:
+        - Validates all item prices against product catalog
+        - Allows custom pricing for quotes (flagged for approval if >10% difference)
+        - Validates discount and tax rates
+        """
+        # SECURITY: Validate prices against product catalog
+        try:
+            items_dict = [item.model_dump() for item in quote_data.items]
+            validated_items = await validate_quote_prices(
+                self.db,
+                items_dict,
+                discount_amount=quote_data.discount_amount,
+                tax_rate=quote_data.tax_rate,
+                allow_custom_pricing=True  # Quotes allow custom pricing with approval
+            )
+            logger.info(f"Price validation passed for quote with {len(validated_items)} items")
+
+            # Check if any items require approval due to custom pricing
+            requires_approval = any(item.get('requires_approval', False) for item in validated_items)
+            if requires_approval:
+                quote_data.approval_required = True
+                logger.warning("Quote requires approval due to custom pricing")
+
+        except PriceValidationError as e:
+            logger.error(f"Price validation failed: {str(e)}")
+            raise BadRequestException(f"Price validation failed: {str(e)}")
+
+        # Update quote_data items with validated prices
+        for idx, validated_item in enumerate(validated_items):
+            quote_data.items[idx].unit_price = Decimal(str(validated_item['unit_price']))
+
         # Generate quote number
         quote_number = await self._generate_quote_number()
 
-        # Calculate totals
+        # Calculate totals (using validated prices)
         subtotal, tax_amount, total = self._calculate_totals(
             quote_data.items,
             quote_data.tax_rate,

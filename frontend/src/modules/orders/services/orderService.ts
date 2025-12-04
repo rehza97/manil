@@ -1,8 +1,13 @@
 /**
- * Order service for API calls
+ * Order Service
+ *
+ * Wrapper around centralized ordersApi for module-specific functionality
+ * Uses centralized API client from @/shared/api
+ *
+ * @module modules/orders/services/orderService
  */
 
-import { apiClient } from "@/shared/api";
+import { ordersApi } from "@/shared/api";
 import type {
   Order,
   CreateOrderDTO,
@@ -13,6 +18,10 @@ import type {
   OrderStatus,
 } from "../types";
 
+/**
+ * Order service - uses centralized ordersApi
+ * Provides module-specific interface aligned with component needs
+ */
 export const orderService = {
   /**
    * List all orders with optional filtering
@@ -25,34 +34,34 @@ export const orderService = {
       status?: OrderStatus;
     }
   ): Promise<OrderListResponse> {
-    const response = await apiClient.get<OrderListResponse>("/orders", {
-      params: { page, page_size: pageSize, ...filters },
+    // Use centralized API
+    const response = await ordersApi.getOrders({
+      skip: (page - 1) * pageSize,
+      limit: pageSize,
+      ...filters,
     });
-    return response.data;
+    return response as OrderListResponse;
   },
 
   /**
    * Get single order by ID
    */
   async getById(id: string): Promise<Order> {
-    const response = await apiClient.get<Order>(`/orders/${id}`);
-    return response.data;
+    return await ordersApi.getOrder(id);
   },
 
   /**
    * Create a new order
    */
   async create(data: CreateOrderDTO): Promise<Order> {
-    const response = await apiClient.post<Order>("/orders", data);
-    return response.data;
+    return await ordersApi.createOrder(data);
   },
 
   /**
    * Update order details (notes, delivery info)
    */
   async update(id: string, data: UpdateOrderDTO): Promise<Order> {
-    const response = await apiClient.put<Order>(`/orders/${id}`, data);
-    return response.data;
+    return await ordersApi.updateOrder(id, data);
   },
 
   /**
@@ -62,28 +71,22 @@ export const orderService = {
     id: string,
     data: UpdateOrderStatusDTO
   ): Promise<Order> {
-    const response = await apiClient.post<Order>(
-      `/orders/${id}/status`,
-      data
-    );
-    return response.data;
+    return await ordersApi.updateOrderStatus(id, data.status);
   },
 
   /**
    * Delete order (soft delete)
    */
   async delete(id: string): Promise<void> {
-    await apiClient.delete(`/orders/${id}`);
+    await ordersApi.deleteOrder(id);
   },
 
   /**
    * Get order timeline (status change history)
    */
   async getTimeline(orderId: string): Promise<OrderTimelineListResponse> {
-    const response = await apiClient.get<OrderTimelineListResponse>(
-      `/orders/${orderId}/timeline`
-    );
-    return response.data;
+    const response = await ordersApi.getOrderTimeline(orderId);
+    return response as OrderTimelineListResponse;
   },
 
   /**
@@ -94,12 +97,7 @@ export const orderService = {
     page = 1,
     pageSize = 20
   ): Promise<OrderListResponse> {
-    const response = await apiClient.get<OrderListResponse>(
-      `/orders/customer/${customerId}`,
-      {
-        params: { page, page_size: pageSize },
-      }
-    );
-    return response.data;
+    const response = await ordersApi.getCustomerOrders(customerId);
+    return response as OrderListResponse;
   },
 };

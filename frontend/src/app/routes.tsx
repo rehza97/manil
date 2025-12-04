@@ -230,6 +230,23 @@ export const routes = [
         index: true,
         element: <CorporateDashboardPage />,
       },
+      // Profile & Security
+      {
+        path: "profile",
+        element: <ProfilePage />,
+      },
+      {
+        path: "profile/edit",
+        element: <ProfileEditPage />,
+      },
+      {
+        path: "security",
+        element: <SecurityPage />,
+      },
+      {
+        path: "security/login-history",
+        element: <LoginHistoryPage />,
+      },
       // Customer Management
       {
         path: "customers",
@@ -421,6 +438,23 @@ export const routes = [
       {
         index: true,
         element: <AdminDashboardPage />,
+      },
+      // Profile & Security
+      {
+        path: "profile",
+        element: <ProfilePage />,
+      },
+      {
+        path: "profile/edit",
+        element: <ProfileEditPage />,
+      },
+      {
+        path: "security",
+        element: <SecurityPage />,
+      },
+      {
+        path: "security/login-history",
+        element: <LoginHistoryPage />,
       },
       // System Overview
       {

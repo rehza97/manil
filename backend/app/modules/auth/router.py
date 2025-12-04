@@ -9,6 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
 from app.core.dependencies import get_current_user_id
+from app.core.rate_limiter import (
+    login_rate_limit,
+    password_reset_rate_limit,
+    two_fa_rate_limit,
+    registration_rate_limit,
+    token_refresh_rate_limit,
+)
 from app.modules.auth.session import SessionManager, SessionData
 from app.modules.auth.schemas import (
     UserCreate,
@@ -29,15 +36,22 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@registration_rate_limit
 async def register(
     user_data: UserCreate,
+    request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """
     Register a new user.
 
+    Security:
+    - Rate limited: 3 attempts per hour per IP
+    - Prevents mass account creation
+
     Args:
         user_data: User registration data
+        request: FastAPI request for rate limiting
         db: Database session
 
     Returns:
@@ -49,6 +63,7 @@ async def register(
 
 
 @router.post("/login", response_model=LoginResponse)
+@login_rate_limit
 async def login(
     login_data: LoginRequest,
     request: Request,
@@ -57,9 +72,14 @@ async def login(
     """
     Login with email and password.
 
+    Security:
+    - Rate limited: 5 attempts per 5 minutes per IP
+    - Prevents brute force attacks
+    - Failed attempts are logged for security monitoring
+
     Args:
         login_data: Login credentials
-        request: FastAPI request for audit logging
+        request: FastAPI request for audit logging and rate limiting
         db: Database session
 
     Returns:
@@ -70,15 +90,22 @@ async def login(
 
 
 @router.post("/refresh")
+@token_refresh_rate_limit
 async def refresh_token(
     token_data: RefreshTokenRequest,
+    request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """
     Refresh access token using refresh token.
 
+    Security:
+    - Rate limited: 10 attempts per minute per IP
+    - Prevents token refresh abuse
+
     Args:
         token_data: Refresh token
+        request: FastAPI request for rate limiting
         db: Database session
 
     Returns:
@@ -108,16 +135,23 @@ async def enable_2fa(
 
 
 @router.post("/2fa/verify")
+@two_fa_rate_limit
 async def verify_2fa(
     code_data: Verify2FARequest,
+    request: Request,
     user_id: Annotated[str, Depends(get_current_user_id)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """
     Verify 2FA code.
 
+    Security:
+    - Rate limited: 5 attempts per 5 minutes per IP
+    - Prevents brute force 2FA code guessing
+
     Args:
         code_data: TOTP code
+        request: FastAPI request for rate limiting
         user_id: Current user ID
         db: Database session
 
@@ -152,15 +186,22 @@ async def disable_2fa(
 
 
 @router.post("/password-reset/request", response_model=PasswordResetResponse)
+@password_reset_rate_limit
 async def request_password_reset(
     reset_data: PasswordResetRequest,
+    request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """
     Request password reset token.
 
+    Security:
+    - Rate limited: 3 attempts per 15 minutes per IP
+    - Prevents email bombing and account enumeration attempts
+
     Args:
         reset_data: Password reset request with email
+        request: FastAPI request for rate limiting
         db: Database session
 
     Returns:

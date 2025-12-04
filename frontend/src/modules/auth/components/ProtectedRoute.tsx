@@ -37,29 +37,27 @@ export const ProtectedRoute = ({
   }
 
   // Check role-based access if required
+  // STRICT ROLE ENFORCEMENT - Each role can ONLY access their own routes
   if (requiredRole && user.role !== requiredRole) {
-    // Define role hierarchy for access control
-    const roleHierarchy = {
-      admin: ["admin", "corporate", "client"],
-      corporate: ["corporate", "client"],
-      client: ["client"],
+    // Redirect to user's appropriate dashboard
+    const roleDashboards = {
+      admin: "/admin",
+      corporate: "/corporate",
+      client: "/dashboard",
     };
 
-    const userRoles = roleHierarchy[user.role] || [];
+    const userDashboard = roleDashboards[user.role] || "/unauthorized";
 
-    if (!userRoles.includes(requiredRole)) {
-      return (
-        <Navigate
-          to="/unauthorized"
-          state={{
-            from: location.pathname,
-            requiredRole,
-            userRole: user.role,
-          }}
-          replace
-        />
-      );
-    }
+    return (
+      <Navigate
+        to={userDashboard}
+        state={{
+          from: location.pathname,
+          message: "You don't have permission to access that area.",
+        }}
+        replace
+      />
+    );
   }
 
   // Check if user account is active
@@ -93,17 +91,10 @@ export const withAuth = <P extends object>(
 export const useAuth = () => {
   const { user, isAuthenticated } = useAuthStore();
 
+  // STRICT role checking - user must have exact role
   const hasRole = (role: "admin" | "corporate" | "client"): boolean => {
     if (!user) return false;
-
-    const roleHierarchy = {
-      admin: ["admin", "corporate", "client"],
-      corporate: ["corporate", "client"],
-      client: ["client"],
-    };
-
-    const userRoles = roleHierarchy[user.role] || [];
-    return userRoles.includes(role);
+    return user.role === role;
   };
 
   const hasPermission = (permission: string): boolean => {

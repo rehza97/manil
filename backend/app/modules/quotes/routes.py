@@ -11,7 +11,9 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_permission, require_role
+from app.core.permissions import Permission
+from app.core.exceptions import ForbiddenException
 from app.modules.auth.models import User
 from app.modules.quotes.models import QuoteStatus
 from app.modules.quotes.service import QuoteService
@@ -43,10 +45,25 @@ async def get_quotes(
     customer_id: Optional[str] = None,
     status: Optional[QuoteStatus] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permission(Permission.QUOTES_VIEW))
 ):
-    """Get all quotes with pagination and filters."""
+    """Get all quotes with pagination and filters.
+
+    Security:
+    - Requires QUOTES_VIEW permission
+    - Clients can only view their own quotes
+    - Admin/corporate can view all quotes
+    """
     service = QuoteService(db)
+
+    # SECURITY: Role-based filtering
+    if current_user.role.value == "client":
+        # Clients can only see their own quotes
+        if not hasattr(current_user, 'customer_id'):
+            raise ForbiddenException("Client account not properly configured")
+        customer_id = str(current_user.customer_id)
+    # Admin and corporate can see all quotes (no filtering override)
+
     quotes, total = await service.get_all(
         skip=skip,
         limit=limit,
@@ -70,20 +87,40 @@ async def get_quotes(
 async def get_quote(
     quote_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permission(Permission.QUOTES_VIEW))
 ):
-    """Get quote by ID."""
+    """Get quote by ID.
+
+    Security:
+    - Requires QUOTES_VIEW permission
+    - Clients can only view their own quotes
+    - Admin/corporate can view all quotes
+    """
     service = QuoteService(db)
-    return await service.get_by_id(quote_id)
+    quote = await service.get_by_id(quote_id)
+
+    # SECURITY: Check ownership for client role
+    if current_user.role.value == "client":
+        if not hasattr(current_user, 'customer_id'):
+            raise ForbiddenException("Client account not properly configured")
+        if str(quote.customer_id) != str(current_user.customer_id):
+            raise ForbiddenException("You can only view your own quotes")
+
+    return quote
 
 
 @router.post("", response_model=QuoteResponse, status_code=status.HTTP_201_CREATED)
 async def create_quote(
     quote_data: QuoteCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Create a new quote."""
+    """Create a new quote.
+
+    Security:
+    - Requires admin or corporate role (sales staff only)
+    - Prices will be validated against product catalog
+    """
     service = QuoteService(db)
     return await service.create(quote_data, created_by_id=current_user.id)
 
@@ -93,10 +130,22 @@ async def update_quote(
     quote_id: str,
     quote_data: QuoteUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Update a quote."""
+    """Update a quote.
+
+    Security:
+    - Requires admin or corporate role (sales staff only)
+    - Cannot update accepted quotes
+    """
     service = QuoteService(db)
+    quote = await service.get_by_id(quote_id)
+
+    # SECURITY: Cannot update accepted quotes
+    if quote.status == QuoteStatus.ACCEPTED:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Cannot update accepted quotes")
+
     return await service.update(quote_id, quote_data, updated_by_id=current_user.id)
 
 
@@ -104,10 +153,22 @@ async def update_quote(
 async def delete_quote(
     quote_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role(["admin"]))
 ):
-    """Delete a quote."""
+    """Delete a quote (soft delete).
+
+    Security:
+    - Requires admin role only
+    - Cannot delete accepted quotes
+    """
     service = QuoteService(db)
+    quote = await service.get_by_id(quote_id)
+
+    # SECURITY: Cannot delete accepted quotes
+    if quote.status == QuoteStatus.ACCEPTED:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Cannot delete accepted quotes")
+
     await service.delete(quote_id)
 
 
@@ -119,9 +180,13 @@ async def delete_quote(
 async def submit_for_approval(
     quote_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Submit quote for approval."""
+    """Submit quote for approval.
+
+    Security:
+    - Requires admin or corporate role
+    """
     service = QuoteWorkflowService(db)
     return await service.submit_for_approval(quote_id, submitted_by_id=current_user.id)
 
@@ -131,9 +196,13 @@ async def approve_quote(
     quote_id: str,
     approval_data: QuoteApprovalRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Approve or reject a quote."""
+    """Approve or reject a quote.
+
+    Security:
+    - Requires admin or corporate role (manager level)
+    """
     service = QuoteWorkflowService(db)
     return await service.approve_quote(quote_id, approval_data, approved_by_id=current_user.id)
 
@@ -143,9 +212,13 @@ async def send_quote(
     quote_id: str,
     send_data: QuoteSendRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Send quote to customer."""
+    """Send quote to customer.
+
+    Security:
+    - Requires admin or corporate role
+    """
     service = QuoteWorkflowService(db)
     return await service.send_quote(quote_id, send_data, sent_by_id=current_user.id)
 
@@ -155,10 +228,25 @@ async def accept_quote(
     quote_id: str,
     accept_data: QuoteAcceptRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permission(Permission.QUOTES_VIEW))
 ):
-    """Customer accepts a quote."""
+    """Customer accepts a quote.
+
+    Security:
+    - Requires QUOTES_VIEW permission
+    - Clients can only accept their own quotes
+    - Admin/corporate can accept on behalf of customer
+    """
     service = QuoteWorkflowService(db)
+    quote = await QuoteService(db).get_by_id(quote_id)
+
+    # SECURITY: Check ownership for client role
+    if current_user.role.value == "client":
+        if not hasattr(current_user, 'customer_id'):
+            raise ForbiddenException("Client account not properly configured")
+        if str(quote.customer_id) != str(current_user.customer_id):
+            raise ForbiddenException("You can only accept your own quotes")
+
     return await service.accept_quote(quote_id, accepted_by_id=current_user.id)
 
 
@@ -166,10 +254,25 @@ async def accept_quote(
 async def decline_quote(
     quote_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permission(Permission.QUOTES_VIEW))
 ):
-    """Customer declines a quote."""
+    """Customer declines a quote.
+
+    Security:
+    - Requires QUOTES_VIEW permission
+    - Clients can only decline their own quotes
+    - Admin/corporate can decline on behalf of customer
+    """
     service = QuoteWorkflowService(db)
+    quote = await QuoteService(db).get_by_id(quote_id)
+
+    # SECURITY: Check ownership for client role
+    if current_user.role.value == "client":
+        if not hasattr(current_user, 'customer_id'):
+            raise ForbiddenException("Client account not properly configured")
+        if str(quote.customer_id) != str(current_user.customer_id):
+            raise ForbiddenException("You can only decline your own quotes")
+
     return await service.decline_quote(quote_id, declined_by_id=current_user.id)
 
 
@@ -182,9 +285,13 @@ async def create_new_version(
     quote_id: str,
     version_data: QuoteVersionRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
-    """Create a new version of a quote."""
+    """Create a new version of a quote.
+
+    Security:
+    - Requires admin or corporate role
+    """
     service = QuoteWorkflowService(db)
     return await service.create_new_version(quote_id, version_data, created_by_id=current_user.id)
 
@@ -193,10 +300,26 @@ async def create_new_version(
 async def get_quote_versions(
     quote_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permission(Permission.QUOTES_VIEW))
 ):
-    """Get all versions of a quote."""
+    """Get all versions of a quote.
+
+    Security:
+    - Requires QUOTES_VIEW permission
+    - Clients can only view versions of their own quotes
+    """
     service = QuoteWorkflowService(db)
+
+    # Get the main quote to check ownership
+    quote = await QuoteService(db).get_by_id(quote_id)
+
+    # SECURITY: Check ownership for client role
+    if current_user.role.value == "client":
+        if not hasattr(current_user, 'customer_id'):
+            raise ForbiddenException("Client account not properly configured")
+        if str(quote.customer_id) != str(current_user.customer_id):
+            raise ForbiddenException("You can only view your own quote versions")
+
     return await service.get_quote_versions(quote_id)
 
 
@@ -208,11 +331,24 @@ async def get_quote_versions(
 async def get_quote_timeline(
     quote_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permission(Permission.QUOTES_VIEW))
 ):
-    """Get quote timeline/history."""
+    """Get quote timeline/history.
+
+    Security:
+    - Requires QUOTES_VIEW permission
+    - Clients can only view their own quote timeline
+    """
     service = QuoteService(db)
     quote = await service.get_by_id(quote_id)
+
+    # SECURITY: Check ownership for client role
+    if current_user.role.value == "client":
+        if not hasattr(current_user, 'customer_id'):
+            raise ForbiddenException("Client account not properly configured")
+        if str(quote.customer_id) != str(current_user.customer_id):
+            raise ForbiddenException("You can only view your own quote timeline")
+
     return quote.timeline_events
 
 
@@ -224,12 +360,26 @@ async def get_quote_timeline(
 async def generate_quote_pdf(
     quote_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permission(Permission.QUOTES_VIEW))
 ):
-    """Generate and download quote PDF."""
+    """Generate and download quote PDF.
+
+    Security:
+    - Requires QUOTES_VIEW permission
+    - Clients can only download their own quotes
+    - Filename is sanitized to prevent path traversal
+    """
+    import re
     # Get quote with items and customer
     service = QuoteService(db)
     quote = await service.get_by_id(quote_id)
+
+    # SECURITY: Check ownership for client role
+    if current_user.role.value == "client":
+        if not hasattr(current_user, 'customer_id'):
+            raise ForbiddenException("Client account not properly configured")
+        if str(quote.customer_id) != str(current_user.customer_id):
+            raise ForbiddenException("You can only download your own quotes")
 
     # Get customer data
     customer_data = {
@@ -244,11 +394,18 @@ async def generate_quote_pdf(
     pdf_service = QuotePDFService()
     pdf_path = pdf_service.generate_quote_pdf(quote, customer_data)
 
+    # SECURITY: Sanitize filename to prevent path traversal
+    safe_quote_number = re.sub(r'[^a-zA-Z0-9_-]', '', quote.quote_number)
+
     # Return as file download
     return FileResponse(
         path=pdf_path,
-        filename=f"quote_{quote.quote_number}_v{quote.version}.pdf",
-        media_type="application/pdf"
+        filename=f"quote_{safe_quote_number}_v{quote.version}.pdf",
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=quote_{safe_quote_number}_v{quote.version}.pdf",
+            "X-Content-Type-Options": "nosniff"
+        }
     )
 
 
@@ -259,9 +416,14 @@ async def generate_quote_pdf(
 @router.post("/expire-old-quotes")
 async def expire_old_quotes(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role(["admin"]))
 ):
-    """Expire old quotes (admin only)."""
+    """Expire old quotes.
+
+    Security:
+    - Requires admin role only
+    - Should ideally be a scheduled background job
+    """
     service = QuoteWorkflowService(db)
     count = await service.expire_old_quotes()
     return {"message": f"Expired {count} quotes"}

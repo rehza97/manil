@@ -75,6 +75,11 @@ class AuthService:
         """
         Authenticate user and generate tokens.
 
+        Security:
+        - Account lockout after 5 failed attempts for 30 minutes
+        - Failed attempts reset on successful login
+        - Locked accounts cannot login until lockout expires
+
         Args:
             email: User email
             password: User password
@@ -84,8 +89,10 @@ class AuthService:
             Login response with tokens
 
         Raises:
-            UnauthorizedException: If credentials are invalid
+            UnauthorizedException: If credentials are invalid or account is locked
         """
+        from datetime import timedelta
+
         # Get user by email
         user = await self.repository.get_by_email(email)
         if not user:
@@ -101,13 +108,70 @@ class AuthService:
             )
             raise UnauthorizedException("Invalid email or password")
 
+        # SECURITY: Check if account is locked
+        if user.locked_until:
+            if datetime.utcnow() < user.locked_until:
+                # Account is still locked
+                time_remaining = user.locked_until - datetime.utcnow()
+                minutes_remaining = int(time_remaining.total_seconds() / 60) + 1
+
+                await self.audit_service.log_action(
+                    action=AuditAction.LOGIN_FAILED,
+                    resource_type="auth",
+                    description=f"Login attempt for locked account: {email}",
+                    user_id=user.id,
+                    user_email=email,
+                    user_role=user.role,
+                    request=request,
+                    success=False,
+                    error_message=f"Account locked for {minutes_remaining} more minutes",
+                )
+
+                raise UnauthorizedException(
+                    f"Account is temporarily locked due to multiple failed login attempts. "
+                    f"Please try again in {minutes_remaining} minutes."
+                )
+            else:
+                # Lockout expired, reset counters
+                user.locked_until = None
+                user.failed_login_attempts = 0
+                await self.db.commit()
+
         # Verify password
         if not verify_password(password, user.password_hash):
-            # Log failed login attempt
+            # SECURITY: Increment failed attempts and lock if threshold reached
+            user.failed_login_attempts += 1
+            user.last_failed_login = datetime.utcnow()
+
+            if user.failed_login_attempts >= 5:
+                # Lock account for 30 minutes
+                user.locked_until = datetime.utcnow() + timedelta(minutes=30)
+
+                await self.db.commit()
+
+                await self.audit_service.log_action(
+                    action=AuditAction.LOGIN_FAILED,
+                    resource_type="auth",
+                    description=f"Account locked due to {user.failed_login_attempts} failed attempts: {email}",
+                    user_id=user.id,
+                    user_email=email,
+                    user_role=user.role,
+                    request=request,
+                    success=False,
+                    error_message="Account locked - too many failed attempts",
+                )
+
+                raise UnauthorizedException(
+                    "Account has been locked due to multiple failed login attempts. "
+                    "Please try again in 30 minutes or contact support."
+                )
+
+            await self.db.commit()
+
             await self.audit_service.log_action(
                 action=AuditAction.LOGIN_FAILED,
                 resource_type="auth",
-                description=f"Failed login attempt for {email} - invalid password",
+                description=f"Failed login attempt for {email} - invalid password (attempt {user.failed_login_attempts}/5)",
                 user_id=user.id,
                 user_email=email,
                 user_role=user.role,
@@ -115,6 +179,7 @@ class AuthService:
                 success=False,
                 error_message="Invalid password",
             )
+
             raise UnauthorizedException("Invalid email or password")
 
         # Check if user is active
@@ -131,6 +196,11 @@ class AuthService:
                 error_message="Account is inactive",
             )
             raise UnauthorizedException("Account is inactive")
+
+        # SECURITY: Reset failed login attempts on successful login
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        user.last_failed_login = None
 
         # Generate tokens
         access_token = create_access_token(data={"sub": user.id})

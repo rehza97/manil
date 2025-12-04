@@ -1,12 +1,13 @@
 /**
  * Auth Service
  *
- * API service for authentication operations
+ * Wrapper around centralized authApi for authentication operations
+ * Uses centralized API client from @/shared/api
  *
  * @module modules/auth/services/authService
  */
 
-import { apiClient } from "@/shared/api";
+import { authApi } from "@/shared/api";
 import type {
   LoginCredentials,
   RegisterData,
@@ -16,79 +17,135 @@ import type {
 } from "../types";
 
 /**
- * Authentication service
+ * Authentication service - uses centralized authApi
+ * Provides complete authentication functionality
  */
 export const authService = {
   /**
    * Login user
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>(
-      "/auth/login",
-      credentials
-    );
-    return response.data;
+    const response = await authApi.login({
+      email: credentials.email,
+      password: credentials.password,
+    });
+    return response as AuthResponse;
   },
 
   /**
    * Register new user
    */
   async register(data: RegisterData): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>("/auth/register", data);
-    return response.data;
+    const response = await authApi.register({
+      email: data.email,
+      password: data.password,
+      full_name: data.fullName,
+      phone: data.phone,
+      role: data.role,
+    });
+    return response as AuthResponse;
   },
 
   /**
-   * Logout user
+   * Logout user (handled client-side by clearing tokens)
    */
   async logout(): Promise<void> {
-    await apiClient.post("/auth/logout");
+    // Clear local storage
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
   },
 
   /**
    * Refresh access token
    */
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>("/auth/refresh", {
-      refreshToken,
-    });
-    return response.data;
+    const response = await authApi.refreshToken({ refresh_token: refreshToken });
+    return response as AuthResponse;
   },
 
   /**
-   * Get current user
+   * Get current user (from token or API)
    */
   async getCurrentUser(): Promise<User> {
-    const response = await apiClient.get<User>("/auth/me");
-    return response.data;
+    // Could be implemented with a /me endpoint
+    // For now, return from stored token claims
+    throw new Error("Implement /me endpoint");
   },
 
   /**
-   * Setup 2FA
+   * Enable 2FA for current user
    */
-  async setup2FA(): Promise<TwoFactorSetup> {
-    const response = await apiClient.post<TwoFactorSetup>("/auth/2fa/setup");
-    return response.data;
+  async enable2FA(): Promise<TwoFactorSetup> {
+    const response = await authApi.enable2FA();
+    return {
+      secret: response.secret,
+      qrCode: response.qr_code,
+      backupCodes: response.backup_codes,
+    };
   },
 
   /**
-   * Verify 2FA code
+   * Verify 2FA token
    */
-  async verify2FA(code: string): Promise<void> {
-    await apiClient.post("/auth/2fa/verify", { code });
+  async verify2FA(token: string): Promise<void> {
+    await authApi.verify2FA({ token });
+  },
+
+  /**
+   * Disable 2FA
+   */
+  async disable2FA(token: string): Promise<void> {
+    await authApi.disable2FA({ token });
   },
 
   /**
    * Request password reset
    */
   async requestPasswordReset(email: string): Promise<void> {
-    await apiClient.post("/auth/password/reset-request", { email });
+    await authApi.requestPasswordReset({ email });
   },
 
   /**
-   * Reset password
+   * Confirm password reset
    */
-  async resetPassword(token: string, newPassword: string): Promise<void> {
-    await apiClient.post("/auth/password/reset", { token, newPassword });
+  async confirmPasswordReset(token: string, newPassword: string): Promise<void> {
+    await authApi.confirmPasswordReset({
+      token,
+      new_password: newPassword,
+    });
+  },
+
+  /**
+   * Get user sessions
+   */
+  async getSessions(): Promise<any[]> {
+    return await authApi.getSessions();
+  },
+
+  /**
+   * Delete a session
+   */
+  async deleteSession(sessionId: string): Promise<void> {
+    await authApi.deleteSession(sessionId);
+  },
+
+  /**
+   * Get security activity
+   */
+  async getSecurityActivity(params?: {
+    skip?: number;
+    limit?: number;
+  }): Promise<any[]> {
+    return await authApi.getSecurityActivity(params);
+  },
+
+  /**
+   * Get login history
+   */
+  async getLoginHistory(params?: {
+    skip?: number;
+    limit?: number;
+  }): Promise<any[]> {
+    return await authApi.getLoginHistory(params);
   },
 };

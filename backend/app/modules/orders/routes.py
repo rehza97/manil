@@ -4,9 +4,13 @@ Endpoints for order CRUD and status management.
 """
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config.database import get_sync_db
-from app.core.exceptions import NotFoundException, BadRequestException
+from app.config.database import get_sync_db, get_db
+from app.core.dependencies import get_current_active_user, require_permission, require_role
+from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException
+from app.core.permissions import Permission
+from app.modules.auth.models import User
 from app.modules.orders.schemas import (
     OrderCreate,
     OrderUpdate,
@@ -30,10 +34,15 @@ router = APIRouter(prefix="/orders", tags=["orders"])
 def create_order(
     order_data: OrderCreate,
     db: Session = Depends(get_sync_db),
-    # current_user would be injected by auth dependency in production
+    current_user: User = Depends(require_permission(Permission.ORDERS_CREATE)),
 ):
     """
-    Create a new order.
+    Create a new order. Requires ORDERS_CREATE permission.
+
+    **Security:**
+    - Requires authentication (valid JWT token)
+    - Requires ORDERS_CREATE permission
+    - Clients can only create orders for themselves
 
     **Request body:**
     - customer_id: Customer ID
@@ -47,14 +56,19 @@ def create_order(
     - Returns created order with calculated totals
     """
     try:
-        # In production, use current_user.id
-        created_by_user_id = "system_user"
+        # Security: Clients can only create orders for their own customer account
+        if current_user.role.value == "client":
+            # Verify customer_id matches user's customer account
+            if not hasattr(current_user, 'customer_id') or order_data.customer_id != str(current_user.customer_id):
+                raise ForbiddenException("You can only create orders for your own account")
 
-        order = OrderService.create_order(db, order_data, created_by_user_id)
+        order = OrderService.create_order(db, order_data, str(current_user.id))
         return OrderResponse.model_validate(order)
 
     except NotFoundException as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except ForbiddenException as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -66,20 +80,41 @@ def list_orders(
     customer_id: str | None = Query(None),
     status: OrderStatus | None = Query(None),
     db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_permission(Permission.ORDERS_VIEW)),
 ):
     """
-    List orders with filtering and pagination.
+    List orders with filtering and pagination. Requires ORDERS_VIEW permission.
+
+    **Security:**
+    - Requires authentication (valid JWT token)
+    - Requires ORDERS_VIEW permission
+    - Clients can only view their own orders
+    - Corporate/Admin can view all orders
 
     **Query parameters:**
     - page: Page number (default 1)
     - page_size: Records per page (default 20, max 100)
-    - customer_id: Filter by customer (optional)
+    - customer_id: Filter by customer (optional, admin/corporate only)
     - status: Filter by status (optional)
 
     **Response:**
     - Returns paginated list of orders
     """
     skip = (page - 1) * page_size
+
+    # Security: Clients can only view their own orders
+    if current_user.role.value == "client":
+        if hasattr(current_user, 'customer_id'):
+            customer_id = str(current_user.customer_id)
+        else:
+            # Client has no customer_id, return empty list
+            return OrderListResponse(
+                data=[],
+                total=0,
+                page=page,
+                page_size=page_size,
+                total_pages=0,
+            )
 
     orders, total = OrderService.list_orders(
         db,
@@ -102,13 +137,30 @@ def list_orders(
 def get_order(
     order_id: str,
     db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_permission(Permission.ORDERS_VIEW)),
 ):
-    """Get order by ID."""
+    """
+    Get order by ID. Requires ORDERS_VIEW permission.
+
+    **Security:**
+    - Requires authentication (valid JWT token)
+    - Requires ORDERS_VIEW permission
+    - Clients can only view their own orders
+    - Corporate/Admin can view all orders
+    """
     try:
         order = OrderService.get_order(db, order_id)
+
+        # Security: Clients can only view their own orders
+        if current_user.role.value == "client":
+            if not hasattr(current_user, 'customer_id') or str(order.customer_id) != str(current_user.customer_id):
+                raise ForbiddenException("You can only view your own orders")
+
         return OrderResponse.model_validate(order)
     except NotFoundException as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except ForbiddenException as e:
+        raise HTTPException(status_code=403, detail=str(e))
 
 
 @router.put("/{order_id}", response_model=OrderResponse)
@@ -116,22 +168,35 @@ def update_order(
     order_id: str,
     order_data: OrderUpdate,
     db: Session = Depends(get_sync_db),
-    # current_user would be injected by auth dependency
+    current_user: User = Depends(require_permission(Permission.ORDERS_EDIT)),
 ):
     """
-    Update order details (notes, delivery info).
+    Update order details (notes, delivery info). Requires ORDERS_EDIT permission.
 
-    Does not change order status - use /orders/{order_id}/status for that.
+    **Security:**
+    - Requires authentication (valid JWT token)
+    - Requires ORDERS_EDIT permission
+    - Clients can only update their own orders
+    - Corporate/Admin can update all orders
+
+    **Note:** Does not change order status - use /orders/{order_id}/status for that.
     """
     try:
-        # In production, use current_user.id
-        updated_by_user_id = "system_user"
+        # Get order first to check ownership
+        order = OrderService.get_order(db, order_id)
 
-        order = OrderService.update_order(db, order_id, order_data, updated_by_user_id)
+        # Security: Clients can only update their own orders
+        if current_user.role.value == "client":
+            if not hasattr(current_user, 'customer_id') or str(order.customer_id) != str(current_user.customer_id):
+                raise ForbiddenException("You can only update your own orders")
+
+        order = OrderService.update_order(db, order_id, order_data, str(current_user.id))
         return OrderResponse.model_validate(order)
 
     except NotFoundException as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except ForbiddenException as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -146,12 +211,17 @@ def update_order_status(
     order_id: str,
     status_data: OrderStatusUpdate,
     db: Session = Depends(get_sync_db),
-    # current_user would be injected by auth dependency
+    current_user: User = Depends(require_role(["admin", "corporate"])),
 ):
     """
-    Update order status with validation.
+    Update order status with validation. Requires admin or corporate role.
 
-    Valid transitions:
+    **Security:**
+    - Requires authentication (valid JWT token)
+    - Requires admin OR corporate role (clients cannot change status)
+    - Status changes are logged with user attribution
+
+    **Valid transitions:**
     - REQUEST → VALIDATED or CANCELLED
     - VALIDATED → IN_PROGRESS or CANCELLED
     - IN_PROGRESS → DELIVERED or CANCELLED
@@ -163,15 +233,12 @@ def update_order_status(
     - notes: Optional notes for the status change
     """
     try:
-        # In production, use current_user.id
-        performed_by_user_id = "system_user"
-
         order = OrderService.update_order_status(
             db,
             order_id,
             status_data.status,
             status_data.notes,
-            performed_by_user_id,
+            str(current_user.id),
         )
         return OrderResponse.model_validate(order)
 
@@ -185,21 +252,34 @@ def update_order_status(
 def delete_order(
     order_id: str,
     db: Session = Depends(get_sync_db),
-    # current_user would be injected by auth dependency
+    current_user: User = Depends(require_permission(Permission.ORDERS_DELETE)),
 ):
     """
-    Delete (soft delete) an order.
+    Delete (soft delete) an order. Requires ORDERS_DELETE permission.
 
-    This soft deletes the order and marks it as CANCELLED.
+    **Security:**
+    - Requires authentication (valid JWT token)
+    - Requires ORDERS_DELETE permission
+    - Clients can only delete their own orders
+    - Corporate/Admin can delete all orders
+
+    **Note:** This soft deletes the order and marks it as CANCELLED.
     """
     try:
-        # In production, use current_user.id
-        deleted_by_user_id = "system_user"
+        # Get order first to check ownership
+        order = OrderService.get_order(db, order_id)
 
-        OrderService.delete_order(db, order_id, deleted_by_user_id)
+        # Security: Clients can only delete their own orders
+        if current_user.role.value == "client":
+            if not hasattr(current_user, 'customer_id') or str(order.customer_id) != str(current_user.customer_id):
+                raise ForbiddenException("You can only delete your own orders")
+
+        OrderService.delete_order(db, order_id, str(current_user.id))
 
     except NotFoundException as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except ForbiddenException as e:
+        raise HTTPException(status_code=403, detail=str(e))
 
 
 # ============================================================================
@@ -211,13 +291,29 @@ def delete_order(
 def get_order_timeline(
     order_id: str,
     db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_permission(Permission.ORDERS_VIEW)),
 ):
     """
-    Get timeline of status changes for an order.
+    Get timeline of status changes for an order. Requires ORDERS_VIEW permission.
 
+    **Security:**
+    - Requires authentication (valid JWT token)
+    - Requires ORDERS_VIEW permission
+    - Clients can only view timeline of their own orders
+    - Corporate/Admin can view all order timelines
+
+    **Response:**
     Shows all state transitions and who performed them.
     """
     try:
+        # Get order first to check ownership
+        order = OrderService.get_order(db, order_id)
+
+        # Security: Clients can only view timeline of their own orders
+        if current_user.role.value == "client":
+            if not hasattr(current_user, 'customer_id') or str(order.customer_id) != str(current_user.customer_id):
+                raise ForbiddenException("You can only view timeline of your own orders")
+
         timeline, total = OrderService.get_order_timeline(db, order_id)
 
         from app.modules.orders.schemas import OrderTimelineEntry
@@ -229,6 +325,8 @@ def get_order_timeline(
 
     except NotFoundException as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except ForbiddenException as e:
+        raise HTTPException(status_code=403, detail=str(e))
 
 
 # ============================================================================
@@ -242,21 +340,40 @@ def get_customer_orders(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_permission(Permission.ORDERS_VIEW)),
 ):
-    """Get all orders for a specific customer."""
+    """
+    Get all orders for a specific customer. Requires ORDERS_VIEW permission.
+
+    **Security:**
+    - Requires authentication (valid JWT token)
+    - Requires ORDERS_VIEW permission
+    - Clients can only view their own orders
+    - Corporate/Admin can view any customer's orders
+    """
+    # Security: Clients can only view their own customer orders
+    if current_user.role.value == "client":
+        if not hasattr(current_user, 'customer_id') or str(customer_id) != str(current_user.customer_id):
+            raise ForbiddenException("You can only view your own orders")
+
     skip = (page - 1) * page_size
 
-    orders, total = OrderService.get_customer_orders(
-        db,
-        customer_id,
-        skip=skip,
-        limit=page_size,
-    )
+    try:
+        orders, total = OrderService.get_customer_orders(
+            db,
+            customer_id,
+            skip=skip,
+            limit=page_size,
+        )
 
-    return OrderListResponse(
-        data=[OrderResponse.model_validate(o) for o in orders],
-        total=total,
-        page=page,
-        page_size=page_size,
-        total_pages=(total + page_size - 1) // page_size,
-    )
+        return OrderListResponse(
+            data=[OrderResponse.model_validate(o) for o in orders],
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=(total + page_size - 1) // page_size,
+        )
+    except NotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ForbiddenException as e:
+        raise HTTPException(status_code=403, detail=str(e))

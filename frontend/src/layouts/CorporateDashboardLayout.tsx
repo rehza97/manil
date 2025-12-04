@@ -29,7 +29,7 @@ import {
   User,
   Building2,
 } from "lucide-react";
-import { useAuth } from "@/modules/auth";
+import { useAuth, RoleGuard } from "@/modules/auth";
 
 const CorporateDashboardLayout: React.FC = () => {
   const location = useLocation();
@@ -91,7 +91,8 @@ const CorporateDashboardLayout: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <RoleGuard allowedRole="corporate" layoutName="Corporate Portal">
+      <div className="min-h-screen bg-slate-50">
       {/* Top Navigation */}
       <nav className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -143,13 +144,13 @@ const CorporateDashboardLayout: React.FC = () => {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link to="/dashboard/profile">
+                    <Link to="/corporate/profile">
                       <User className="mr-2 h-4 w-4" />
                       <span>Profile</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/dashboard/settings">
+                    <Link to="/corporate/settings">
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Settings</span>
                     </Link>
@@ -210,6 +211,7 @@ const CorporateDashboardLayout: React.FC = () => {
         </div>
       </div>
     </div>
+    </RoleGuard>
   );
 };
 

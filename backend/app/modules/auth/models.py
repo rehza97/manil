@@ -39,6 +39,20 @@ class User(Base):
     )
     totp_secret: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
+    # Account lockout fields (SECURITY)
+    failed_login_attempts: Mapped[int] = mapped_column(
+        nullable=False, default=0,
+        doc="Number of consecutive failed login attempts"
+    )
+    locked_until: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, index=True,
+        doc="Account locked until this timestamp (NULL if not locked)"
+    )
+    last_failed_login: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True,
+        doc="Timestamp of last failed login attempt"
+    )
+
     # Audit fields
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.utcnow(), nullable=False

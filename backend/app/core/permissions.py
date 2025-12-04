@@ -55,6 +55,12 @@ class Permission(str, Enum):
     INVOICES_SEND = "invoices:send"
     INVOICES_DELETE = "invoices:delete"
 
+    # Quote permissions
+    QUOTES_VIEW = "quotes:view"
+    QUOTES_CREATE = "quotes:create"
+    QUOTES_EDIT = "quotes:edit"
+    QUOTES_DELETE = "quotes:delete"
+
     # Report permissions
     REPORTS_VIEW = "reports:view"
     REPORTS_EXPORT = "reports:export"
@@ -114,6 +120,10 @@ ROLE_PERMISSIONS: dict[str, Set[Permission]] = {
         Permission.INVOICES_APPROVE,
         Permission.INVOICES_SEND,
         Permission.INVOICES_DELETE,
+        Permission.QUOTES_VIEW,
+        Permission.QUOTES_CREATE,
+        Permission.QUOTES_EDIT,
+        Permission.QUOTES_DELETE,
         Permission.REPORTS_VIEW,
         Permission.REPORTS_EXPORT,
         Permission.SETTINGS_VIEW,
@@ -158,6 +168,9 @@ ROLE_PERMISSIONS: dict[str, Set[Permission]] = {
         Permission.INVOICES_EDIT,
         Permission.INVOICES_APPROVE,
         Permission.INVOICES_SEND,
+        Permission.QUOTES_VIEW,
+        Permission.QUOTES_CREATE,
+        Permission.QUOTES_EDIT,
         Permission.REPORTS_VIEW,
         Permission.REPORTS_EXPORT,
         Permission.SETTINGS_VIEW,
@@ -174,6 +187,7 @@ ROLE_PERMISSIONS: dict[str, Set[Permission]] = {
         Permission.ORDERS_VIEW,
         Permission.ORDERS_CREATE,
         Permission.INVOICES_VIEW,
+        Permission.QUOTES_VIEW,
     },
 }
 

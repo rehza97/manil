@@ -32,7 +32,7 @@ import {
   Activity,
   Key,
 } from "lucide-react";
-import { useAuth } from "@/modules/auth";
+import { useAuth, RoleGuard } from "@/modules/auth";
 
 const AdminDashboardLayout: React.FC = () => {
   const location = useLocation();
@@ -94,7 +94,8 @@ const AdminDashboardLayout: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <RoleGuard allowedRole="admin" layoutName="Admin Portal">
+      <div className="min-h-screen bg-slate-50">
       {/* Top Navigation */}
       <nav className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -146,13 +147,13 @@ const AdminDashboardLayout: React.FC = () => {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link to="/dashboard/profile">
+                    <Link to="/admin/profile">
                       <User className="mr-2 h-4 w-4" />
                       <span>Profile</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/dashboard/settings">
+                    <Link to="/admin/settings">
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Settings</span>
                     </Link>
@@ -213,6 +214,7 @@ const AdminDashboardLayout: React.FC = () => {
         </div>
       </div>
     </div>
+    </RoleGuard>
   );
 };
 
