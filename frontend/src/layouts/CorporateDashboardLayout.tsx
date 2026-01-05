@@ -28,12 +28,19 @@ import {
   LogOut,
   User,
   Building2,
+  Server,
+  Clock,
+  Activity,
+  Image,
+  Globe,
+  TrendingUp,
 } from "lucide-react";
-import { useAuth, RoleGuard } from "@/modules/auth";
+import { useAuth, RoleGuard, useLogout } from "@/modules/auth";
 
 const CorporateDashboardLayout: React.FC = () => {
   const location = useLocation();
   const { user, hasPermission } = useAuth();
+  const logoutMutation = useLogout();
 
   const navigation = [
     {
@@ -84,6 +91,64 @@ const CorporateDashboardLayout: React.FC = () => {
       current: location.pathname.startsWith("/corporate/reports"),
       permission: "report:read",
     },
+    {
+      name: "VPS Management",
+      icon: Server,
+      current: location.pathname.startsWith("/corporate/hosting"),
+      permission: "hosting:admin",
+      children: [
+        {
+          name: "Pending Requests",
+          href: "/corporate/hosting/requests",
+          icon: Clock,
+          current: location.pathname === "/corporate/hosting/requests",
+          permission: "hosting:approve",
+        },
+        {
+          name: "All Subscriptions",
+          href: "/corporate/hosting/subscriptions",
+          icon: Server,
+          current: location.pathname === "/corporate/hosting/subscriptions",
+          permission: "hosting:admin",
+        },
+        {
+          name: "Monitoring",
+          href: "/corporate/hosting/monitoring",
+          icon: Activity,
+          current: location.pathname === "/corporate/hosting/monitoring",
+          permission: "hosting:monitor",
+        },
+        {
+          name: "Custom Images",
+          href: "/corporate/hosting/custom-images",
+          icon: Image,
+          current: location.pathname === "/corporate/hosting/custom-images",
+          permission: "hosting:admin",
+        },
+      ],
+    },
+    {
+      name: "DNS Management",
+      icon: Globe,
+      current: location.pathname.startsWith("/corporate/dns"),
+      permission: "dns:read",
+      children: [
+        {
+          name: "Customer DNS Zones",
+          href: "/corporate/dns/zones",
+          icon: Globe,
+          current: location.pathname === "/corporate/dns/zones",
+          permission: "dns:read",
+        },
+        {
+          name: "DNS Overview",
+          href: "/corporate/dns/overview",
+          icon: TrendingUp,
+          current: location.pathname === "/corporate/dns/overview",
+          permission: "dns:read",
+        },
+      ],
+    },
   ];
 
   const filteredNavigation = navigation.filter(
@@ -128,7 +193,7 @@ const CorporateDashboardLayout: React.FC = () => {
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuContent className="w-56 bg-white" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">
@@ -156,9 +221,12 @@ const CorporateDashboardLayout: React.FC = () => {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => logoutMutation.mutate()}
+                    disabled={logoutMutation.isPending}
+                  >
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
+                    <span>{logoutMutation.isPending ? "Logging out..." : "Log out"}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -175,6 +243,59 @@ const CorporateDashboardLayout: React.FC = () => {
               <nav className="flex-1 px-2 pb-4 space-y-1">
                 {filteredNavigation.map((item) => {
                   const Icon = item.icon;
+                  // If item has children, render as a group
+                  if (item.children && item.children.length > 0) {
+                    const filteredChildren = item.children.filter(
+                      (child) => !child.permission || hasPermission(child.permission)
+                    );
+                    if (filteredChildren.length === 0) return null;
+                    
+                    return (
+                      <div key={item.name} className="space-y-1">
+                        <div
+                          className={`${
+                            item.current
+                              ? "bg-green-50 border-green-500 text-green-700"
+                              : "border-transparent text-slate-600"
+                          } group flex items-center px-2 py-2 text-sm font-medium rounded-md border-l-4`}
+                        >
+                          <Icon
+                            className={`${
+                              item.current ? "text-green-500" : "text-slate-400"
+                            } mr-3 h-5 w-5`}
+                          />
+                          {item.name}
+                        </div>
+                        <div className="ml-4 space-y-1">
+                          {filteredChildren.map((child) => {
+                            const ChildIcon = child.icon;
+                            return (
+                              <Link
+                                key={child.name}
+                                to={child.href || "#"}
+                                className={`${
+                                  child.current
+                                    ? "bg-green-50 border-green-500 text-green-700"
+                                    : "border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                } group flex items-center px-2 py-2 text-sm font-medium rounded-md border-l-4 transition-colors`}
+                              >
+                                <ChildIcon
+                                  className={`${
+                                    child.current ? "text-green-500" : "text-slate-400"
+                                  } mr-3 h-4 w-4`}
+                                />
+                                {child.name}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  // Regular item without children
+                  if (!item.href) return null;
+                  
                   return (
                     <Link
                       key={item.name}

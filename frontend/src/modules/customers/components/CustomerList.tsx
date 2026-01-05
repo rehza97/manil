@@ -153,10 +153,10 @@ export function CustomerList({ onEdit, onView, onCreate }: CustomerListProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value={CustomerType.INDIVIDUAL}>
+                <SelectItem value={CustomerType.individual}>
                   Individual
                 </SelectItem>
-                <SelectItem value={CustomerType.CORPORATE}>Corporate</SelectItem>
+                <SelectItem value={CustomerType.corporate}>Corporate</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -197,7 +197,7 @@ export function CustomerList({ onEdit, onView, onCreate }: CustomerListProps) {
                       <TableCell>{customer.email}</TableCell>
                       <TableCell>{customer.phone}</TableCell>
                       <TableCell>
-                        {customer.customerType === CustomerType.CORPORATE
+                        {customer.customerType === CustomerType.corporate
                           ? "Corporate"
                           : "Individual"}
                       </TableCell>

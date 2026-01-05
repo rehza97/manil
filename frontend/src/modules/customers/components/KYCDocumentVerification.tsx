@@ -3,11 +3,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { useVerifyKYCDocument } from "../hooks";
-import {
-  KYCDocument,
-  KYCStatus,
-  KYC_DOCUMENT_TYPE_LABELS,
-} from "../types/kyc.types";
+import type { KYCDocument } from "../types/kyc.types";
+import { KYCStatus, KYC_DOCUMENT_TYPE_LABELS } from "../types/kyc.types";
 import { KYCStatusBadge } from "./KYCStatusBadge";
 import { Button } from "@/shared/components/ui/button";
 import {

@@ -19,11 +19,42 @@ export const auditService = {
     const params = new URLSearchParams({
       page: page.toString(),
       limit: pageSize.toString(),
-      ...(filters as any),
     });
 
+    // Add filter parameters only if they are defined
+    if (filters) {
+      if (filters.action) {
+        params.append("action", filters.action);
+      }
+      if (filters.resource_type) {
+        params.append("resource_type", filters.resource_type);
+      }
+      if (filters.resource_id) {
+        params.append("resource_id", filters.resource_id);
+      }
+      if (filters.user_email) {
+        params.append("user_email", filters.user_email);
+      }
+      if (filters.user_id) {
+        params.append("user_id", filters.user_id);
+      }
+      if (filters.start_date) {
+        params.append("start_date", filters.start_date);
+      }
+      if (filters.end_date) {
+        params.append("end_date", filters.end_date);
+      }
+      // Handle success filter (boolean)
+      if (filters.success !== undefined && filters.success !== null) {
+        params.append("success", filters.success.toString());
+      }
+      // Ignore status filter - backend doesn't support it
+      // If status is passed, it will be ignored
+    }
+
+    const queryString = params.toString();
     const response = await apiClient.get<AuditLogListResponse>(
-      `/audit?${params.toString()}`
+      `/audit${queryString ? `?${queryString}` : ""}`
     );
     return response.data;
   },

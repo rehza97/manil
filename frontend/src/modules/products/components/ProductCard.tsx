@@ -1,6 +1,5 @@
 import React from "react";
-import Link from "next/link";
-import Image from "next/image";
+import { Link } from "react-router-dom";
 import type { Product } from "../types";
 import { PricingDisplay } from "./PricingDisplay";
 import { StockStatus } from "./StockStatus";
@@ -16,22 +15,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   showCategory = false,
   onClick,
 }) => {
-  const productUrl = `/products/${product.slug}`;
+  const productUrl = `/dashboard/catalog/${product.id}`;
 
   return (
-    <Link href={productUrl}>
+    <Link to={productUrl}>
       <div
         className="h-full rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-md cursor-pointer overflow-hidden"
         onClick={onClick}
       >
         {/* Product Image */}
         <div className="relative h-48 w-full overflow-hidden bg-gray-100">
-          {product.description && (
-            <Image
-              src={product.description}
+          {product.images && product.images.length > 0 && (
+            <img
+              src={product.images[0].url || product.images[0].image_url}
               alt={product.name}
-              fill
-              className="object-cover"
+              className="w-full h-full object-cover"
             />
           )}
           {product.is_featured && (

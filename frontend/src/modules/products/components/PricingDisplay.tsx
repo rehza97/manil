@@ -1,4 +1,5 @@
 import React from "react";
+import { formatCurrency } from "@/shared/utils/formatters";
 
 interface PricingDisplayProps {
   regularPrice: number;
@@ -18,23 +19,15 @@ export const PricingDisplay: React.FC<PricingDisplayProps> = ({
     ? Math.round(((regularPrice - salePrice) / regularPrice) * 100)
     : 0;
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-    }).format(price);
-  };
-
   return (
     <div className="flex flex-col gap-2">
       {hasSale ? (
         <div className="flex items-baseline gap-2">
           <span className="text-lg font-bold text-gray-900">
-            {formatPrice(salePrice!)}
+            {formatCurrency(salePrice!)}
           </span>
           <span className="text-sm line-through text-gray-500">
-            {formatPrice(regularPrice)}
+            {formatCurrency(regularPrice)}
           </span>
           {savingsPercentage > 0 && (
             <span className="text-xs font-semibold text-red-600">
@@ -44,12 +37,12 @@ export const PricingDisplay: React.FC<PricingDisplayProps> = ({
         </div>
       ) : (
         <span className="text-lg font-bold text-gray-900">
-          {formatPrice(regularPrice)}
+          {formatCurrency(regularPrice)}
         </span>
       )}
 
       {showCost && costPrice && (
-        <p className="text-xs text-gray-500">Cost: {formatPrice(costPrice)}</p>
+        <p className="text-xs text-gray-500">Cost: {formatCurrency(costPrice)}</p>
       )}
     </div>
   );

@@ -1,8 +1,9 @@
 """Product catalogue API routes."""
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from app.config.database import get_db
+from app.config.database import get_db, get_sync_db
 from app.core.dependencies import require_role
 from app.core.exceptions import NotFoundException, ConflictException
 from app.modules.auth.models import User
@@ -31,7 +32,7 @@ router = APIRouter(prefix="/products", tags=["products"])
 
 
 @router.get("", response_model=ProductListResponse)
-def list_products(
+async def list_products(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     category_id: str = Query(None),
@@ -42,12 +43,12 @@ def list_products(
     in_stock: bool = Query(None),
     sort_by: str = Query("created_at", pattern="^(name|price|created_at|rating|view_count)$"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """List products with filtering, searching, and sorting."""
     skip = (page - 1) * page_size
 
-    products, total = ProductService.list_products(
+    products, total = await ProductService.list_products(
         db,
         skip=skip,
         limit=page_size,
@@ -73,7 +74,7 @@ def list_products(
 @router.post("", response_model=ProductDetailResponse, status_code=status.HTTP_201_CREATED)
 def create_product(
     product_data: ProductCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
     current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
     """Create a new product.
@@ -90,61 +91,10 @@ def create_product(
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@router.put("/{product_id}", response_model=ProductDetailResponse)
-def update_product(
-    product_id: str,
-    product_data: ProductUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
-):
-    """Update an existing product.
-
-    Security:
-    - Requires admin or corporate role
-    """
-    try:
-        product = ProductService.update_product(db, product_id, product_data)
-        return ProductDetailResponse.model_validate(product)
-    except NotFoundException as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except ConflictException as e:
-        raise HTTPException(status_code=409, detail=str(e))
-
-
-@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_product(
-    product_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
-):
-    """Delete a product.
-
-    Security:
-    - Requires admin or corporate role
-    """
-    try:
-        ProductService.delete_product(db, product_id)
-    except NotFoundException as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-
-@router.get("/{product_id}", response_model=ProductDetailResponse)
-def get_product(
-    product_id: str,
-    db: Session = Depends(get_db),
-):
-    """Get detailed product information."""
-    try:
-        product = ProductService.get_product(db, product_id)
-        return ProductDetailResponse.model_validate(product)
-    except NotFoundException as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-
 @router.get("/by-slug/{slug}", response_model=ProductDetailResponse)
 def get_product_by_slug(
     slug: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ):
     """Get product by URL slug."""
     try:
@@ -158,7 +108,7 @@ def get_product_by_slug(
 def search_products(
     q: str = Query(..., min_length=1),
     limit: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ):
     """Full-text search for products."""
     products = ProductService.search_products(db, q, limit)
@@ -168,7 +118,7 @@ def search_products(
 @router.get("/featured/list", response_model=list[ProductResponse])
 def get_featured_products(
     limit: int = Query(10, ge=1, le=50),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ):
     """Get featured products."""
     products = ProductService.get_featured_products(db, limit)
@@ -177,7 +127,7 @@ def get_featured_products(
 
 @router.get("/statistics/overview", response_model=dict)
 def get_product_statistics(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ):
     """Get product catalogue statistics."""
     return ProductService.get_product_statistics(db)
@@ -192,7 +142,7 @@ def get_product_statistics(
 def add_product_image(
     product_id: str,
     image_data: ProductImageCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
     current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
     """Add an image to a product.
@@ -212,7 +162,7 @@ def update_product_image(
     product_id: str,
     image_id: str,
     image_data: ProductImageCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
     current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
     """Update a product image.
@@ -231,7 +181,7 @@ def update_product_image(
 def delete_product_image(
     product_id: str,
     image_id: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
     current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
     """Delete a product image.
@@ -254,7 +204,7 @@ def delete_product_image(
 def add_product_variant(
     product_id: str,
     variant_data: ProductVariantCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
     current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
     """Add a variant to a product.
@@ -276,7 +226,7 @@ def update_product_variant(
     product_id: str,
     variant_id: str,
     variant_data: ProductVariantCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
     current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
     """Update a product variant.
@@ -297,7 +247,7 @@ def update_product_variant(
 def delete_product_variant(
     product_id: str,
     variant_id: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
     current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
     """Delete a product variant.
@@ -319,7 +269,7 @@ def delete_product_variant(
 @router.post("/categories", response_model=ProductCategoryResponse, status_code=status.HTTP_201_CREATED)
 def create_category(
     category_data: ProductCategoryCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
     current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
     """Create a new product category.
@@ -334,13 +284,28 @@ def create_category(
         raise HTTPException(status_code=409, detail=str(e))
 
 
+@router.get("/categories", response_model=list[ProductCategoryResponse])
+def get_categories(
+    parent_only: bool = Query(False),
+    active_only: bool = Query(True),
+    db: Session = Depends(get_sync_db),
+):
+    """Get all product categories."""
+    categories = CategoryService.list_categories(
+        db,
+        parent_only=parent_only,
+        active_only=active_only,
+    )
+    return [ProductCategoryResponse.model_validate(c) for c in categories]
+
+
 @router.get("/categories/list", response_model=list[ProductCategoryResponse])
 def list_categories(
     parent_only: bool = Query(False),
     active_only: bool = Query(True),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ):
-    """List product categories."""
+    """List product categories (alias for /categories)."""
     categories = CategoryService.list_categories(
         db,
         parent_only=parent_only,
@@ -352,7 +317,7 @@ def list_categories(
 @router.get("/categories/{category_id}", response_model=ProductCategoryResponse)
 def get_category(
     category_id: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ):
     """Get a category by ID."""
     try:
@@ -366,7 +331,7 @@ def get_category(
 def update_category(
     category_id: str,
     category_data: ProductCategoryUpdate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
     current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
     """Update a product category.
@@ -386,7 +351,7 @@ def update_category(
 @router.delete("/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_category(
     category_id: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
     current_user: User = Depends(require_role(["admin", "corporate"]))
 ):
     """Delete a product category.
@@ -407,7 +372,7 @@ def get_category_products(
     page_size: int = Query(20, ge=1, le=100),
     sort_by: str = Query("created_at", pattern="^(name|price|created_at|rating|view_count)$"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$"),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ):
     """Get products in a specific category."""
     skip = (page - 1) * page_size
@@ -428,3 +393,59 @@ def get_category_products(
         page_size=page_size,
         total_pages=(total + page_size - 1) // page_size,
     )
+
+
+# ============================================================================
+# PRODUCT DETAIL ENDPOINTS (Must be after specific routes to avoid conflicts)
+# ============================================================================
+
+
+@router.get("/{product_id}", response_model=ProductDetailResponse)
+def get_product(
+    product_id: str,
+    db: Session = Depends(get_sync_db),
+):
+    """Get detailed product information."""
+    try:
+        product = ProductService.get_product(db, product_id)
+        return ProductDetailResponse.model_validate(product)
+    except NotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.put("/{product_id}", response_model=ProductDetailResponse)
+def update_product(
+    product_id: str,
+    product_data: ProductUpdate,
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_role(["admin", "corporate"]))
+):
+    """Update an existing product.
+
+    Security:
+    - Requires admin or corporate role
+    """
+    try:
+        product = ProductService.update_product(db, product_id, product_data)
+        return ProductDetailResponse.model_validate(product)
+    except NotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ConflictException as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+
+@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_product(
+    product_id: str,
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_role(["admin", "corporate"]))
+):
+    """Delete a product.
+
+    Security:
+    - Requires admin or corporate role
+    """
+    try:
+        ProductService.delete_product(db, product_id)
+    except NotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))

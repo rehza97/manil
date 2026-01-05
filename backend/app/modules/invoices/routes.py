@@ -34,6 +34,63 @@ router = APIRouter(prefix="/api/v1/invoices", tags=["invoices"])
 
 
 # ============================================================================
+# Helper Functions
+# ============================================================================
+
+async def get_customer_id_for_user(
+    db: AsyncSession,
+    current_user: User,
+    auto_create: bool = True
+) -> Optional[str]:
+    """
+    Get customer_id for a client user by finding customer by email.
+    Auto-creates customer if it doesn't exist (if auto_create=True).
+    
+    Returns None for non-client users or if customer not found and auto_create=False.
+    """
+    if current_user.role.value != "client":
+        return None
+    
+    from app.modules.customers.models import Customer
+    from sqlalchemy import select
+    
+    # Find customer by email
+    result = await db.execute(
+        select(Customer).where(
+            Customer.email == current_user.email,
+            Customer.deleted_at.is_(None)
+        )
+    )
+    customer = result.scalar_one_or_none()
+    
+    # Auto-create if doesn't exist
+    if not customer and auto_create:
+        from app.modules.customers.schemas import CustomerCreate, CustomerType
+        from app.modules.customers.service import CustomerService
+        
+        customer_service = CustomerService(db)
+        customer_data = CustomerCreate(
+            name=current_user.full_name,
+            email=current_user.email,
+            phone="+0000000000",  # Placeholder - should be updated by user
+            customer_type=CustomerType.INDIVIDUAL,
+        )
+        try:
+            customer = await customer_service.create(customer_data, created_by=current_user.id)
+        except Exception:
+            # If creation fails, try to fetch again
+            result = await db.execute(
+                select(Customer).where(
+                    Customer.email == current_user.email,
+                    Customer.deleted_at.is_(None)
+                )
+            )
+            customer = result.scalar_one_or_none()
+    
+    return str(customer.id) if customer else None
+
+
+# ============================================================================
 # Invoice CRUD Endpoints
 # ============================================================================
 
@@ -60,9 +117,9 @@ async def get_invoices(
     # SECURITY: Role-based filtering
     if current_user.role.value == "client":
         # Clients can only see their own invoices
-        if not hasattr(current_user, 'customer_id'):
-            raise ForbiddenException("Client account not properly configured")
-        customer_id = str(current_user.customer_id)
+        customer_id = await get_customer_id_for_user(db, current_user)
+        if not customer_id:
+            raise ForbiddenException("Client account not properly configured. Please contact support.")
     # Admin and corporate can see all invoices (no filtering override)
 
     invoices, total = await service.get_all(
@@ -101,9 +158,10 @@ async def get_invoice(
 
     # SECURITY: Check ownership for client role
     if current_user.role.value == "client":
-        if not hasattr(current_user, 'customer_id'):
-            raise ForbiddenException("Client account not properly configured")
-        if str(invoice.customer_id) != str(current_user.customer_id):
+        user_customer_id = await get_customer_id_for_user(db, current_user)
+        if not user_customer_id:
+            raise ForbiddenException("Client account not properly configured. Please contact support.")
+        if str(invoice.customer_id) != user_customer_id:
             raise ForbiddenException("You can only view your own invoices")
 
     return invoice
@@ -279,9 +337,10 @@ async def get_invoice_timeline(
 
     # SECURITY: Check ownership for client role
     if current_user.role.value == "client":
-        if not hasattr(current_user, 'customer_id'):
-            raise ForbiddenException("Client account not properly configured")
-        if str(invoice.customer_id) != str(current_user.customer_id):
+        user_customer_id = await get_customer_id_for_user(db, current_user)
+        if not user_customer_id:
+            raise ForbiddenException("Client account not properly configured. Please contact support.")
+        if str(invoice.customer_id) != user_customer_id:
             raise ForbiddenException("You can only view your own invoice timeline")
 
     return invoice.timeline_events
@@ -312,9 +371,10 @@ async def generate_invoice_pdf(
 
     # SECURITY: Check ownership for client role
     if current_user.role.value == "client":
-        if not hasattr(current_user, 'customer_id'):
-            raise ForbiddenException("Client account not properly configured")
-        if str(invoice.customer_id) != str(current_user.customer_id):
+        user_customer_id = await get_customer_id_for_user(db, current_user)
+        if not user_customer_id:
+            raise ForbiddenException("Client account not properly configured. Please contact support.")
+        if str(invoice.customer_id) != user_customer_id:
             raise ForbiddenException("You can only download your own invoices")
 
     # Get customer data
@@ -368,9 +428,9 @@ async def get_invoice_statistics(
     # SECURITY: Role-based filtering
     if current_user.role.value == "client":
         # Clients can only see their own statistics
-        if not hasattr(current_user, 'customer_id'):
-            raise ForbiddenException("Client account not properly configured")
-        customer_id = str(current_user.customer_id)
+        customer_id = await get_customer_id_for_user(db, current_user)
+        if not customer_id:
+            raise ForbiddenException("Client account not properly configured. Please contact support.")
     # Admin and corporate can see all statistics or filter by customer_id
 
     repository = InvoiceRepository(db)

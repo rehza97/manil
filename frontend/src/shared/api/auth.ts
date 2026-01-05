@@ -71,6 +71,16 @@ export interface PasswordResetConfirmRequest {
   new_password: string;
 }
 
+export interface UserUpdateRequest {
+  full_name?: string;
+  phone?: string;
+}
+
+export interface ChangePasswordRequest {
+  current_password: string;
+  new_password: string;
+}
+
 export interface RefreshTokenRequest {
   refresh_token: string;
 }
@@ -118,8 +128,8 @@ export const authApi = {
    * Register a new user
    * POST /api/v1/auth/register
    */
-  register: async (data: RegisterRequest): Promise<UserResponse> => {
-    const response: AxiosResponse<UserResponse> = await apiClient.post(
+  register: async (data: RegisterRequest): Promise<LoginResponse> => {
+    const response: AxiosResponse<LoginResponse> = await apiClient.post(
       "/auth/register",
       data
     );
@@ -241,13 +251,36 @@ export const authApi = {
    * GET /api/v1/auth/security/login-history
    */
   getLoginHistory: async (params?: {
-    skip?: number;
-    limit?: number;
+    page?: number;
+    page_size?: number;
   }): Promise<LoginHistory[]> => {
-    const response: AxiosResponse<LoginHistory[]> = await apiClient.get(
+    const response: AxiosResponse<{ data: LoginHistory[]; total: number; page: number; page_size: number }> = await apiClient.get(
       "/auth/security/login-history",
       { params }
     );
+    // Backend returns AuditLogListResponse with { data: [...], total, page, page_size }
+    // Extract data array from the response
+    return response.data.data || [];
+  },
+
+  /**
+   * Update current user's profile
+   * PUT /api/v1/auth/profile
+   */
+  updateProfile: async (data: UserUpdateRequest): Promise<UserResponse> => {
+    const response: AxiosResponse<UserResponse> = await apiClient.put(
+      "/auth/profile",
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Change current user's password
+   * PUT /api/v1/auth/change-password
+   */
+  changePassword: async (data: ChangePasswordRequest): Promise<{ message: string }> => {
+    const response = await apiClient.put("/auth/change-password", data);
     return response.data;
   },
 };

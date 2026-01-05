@@ -5,3 +5,7 @@ export { default as ProfilePage } from "./ProfilePage";
 export { default as ProfileEditPage } from "./ProfileEditPage";
 export { default as SecurityPage } from "./SecurityPage";
 export { default as LoginHistoryPage } from "./LoginHistoryPage";
+export { ServicesListPage } from "./ServicesListPage";
+export { ServiceDetailPage } from "./ServiceDetailPage";
+export { SettingsPage } from "./SettingsPage";
+export { NotificationSettingsPage } from "./NotificationSettingsPage";

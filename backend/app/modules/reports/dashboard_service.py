@@ -79,7 +79,7 @@ class DashboardService:
         )
 
     async def get_customer_dashboard(
-        self, customer_id: int, period: str = "month"
+        self, customer_id: str, period: str = "month"
     ) -> DashboardResponse:
         """
         Get customer dashboard with personal account overview
@@ -216,7 +216,7 @@ class DashboardService:
             total_revenue=float(total_revenue),
         )
 
-    async def _get_customer_metrics(self, customer_id: int) -> DashboardMetrics:
+    async def _get_customer_metrics(self, customer_id: str) -> DashboardMetrics:
         """Get metrics for a specific customer"""
 
         # Ticket metrics for this customer
@@ -353,7 +353,7 @@ class DashboardService:
         return activities[:limit]
 
     async def _get_customer_activity(
-        self, customer_id: int, limit: int = 10
+        self, customer_id: str, limit: int = 10
     ) -> List[RecentActivity]:
         """Get recent activity for a specific customer"""
         activities = []
@@ -378,6 +378,7 @@ class DashboardService:
                     description=ticket.description[:100] if ticket.description else None,
                     timestamp=ticket.created_at,
                     status=ticket.status,
+                    priority=ticket.priority,  # Include priority for tickets
                 )
             )
 
@@ -401,6 +402,7 @@ class DashboardService:
                     description=f"Total: {order.total_amount} DZD",
                     timestamp=order.created_at,
                     status=order.status,
+                    amount=float(order.total_amount),  # Include amount for orders
                 )
             )
 
@@ -442,7 +444,7 @@ class DashboardService:
         return trends
 
     async def _get_customer_trends(
-        self, customer_id: int, period: str = "month"
+        self, customer_id: str, period: str = "month"
     ) -> Dict[str, List[TrendData]]:
         """Get trend data for a specific customer"""
         # Calculate date range
@@ -554,7 +556,7 @@ class DashboardService:
         ]
 
     async def _get_customer_ticket_trends(
-        self, customer_id: int, start_date: datetime, end_date: datetime, days: int
+        self, customer_id: str, start_date: datetime, end_date: datetime, days: int
     ) -> List[TrendData]:
         """Get ticket trends for a specific customer"""
         query = select(
@@ -582,7 +584,7 @@ class DashboardService:
         ]
 
     async def _get_customer_order_trends(
-        self, customer_id: int, start_date: datetime, end_date: datetime, days: int
+        self, customer_id: str, start_date: datetime, end_date: datetime, days: int
     ) -> List[TrendData]:
         """Get order trends for a specific customer"""
         query = select(

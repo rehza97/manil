@@ -53,6 +53,8 @@ export const usePerformanceReport = (filters: ReportFilters = {}) => {
     queryKey: ["admin", "reports", "performance", filters],
     queryFn: () => reportService.getPerformanceReport(filters),
     staleTime: 1 * 60 * 1000, // 1 minute (most frequent for performance)
+    retry: 2, // Retry failed requests twice
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });
 };
 
@@ -60,25 +62,15 @@ export const useExportReport = () => {
   return useMutation({
     mutationFn: ({
       reportType,
+      format,
       filters,
     }: {
       reportType: string;
+      format: "csv" | "excel" | "pdf";
       filters: ReportFilters;
-    }) => reportService.exportReport(reportType, filters),
-    onSuccess: (blob, { reportType }) => {
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${reportType}_report_${
-        new Date().toISOString().split("T")[0]
-      }.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      toast.success("Report exported successfully");
+    }) => reportService.exportReport(reportType, format, filters),
+    onSuccess: (_, { format }) => {
+      toast.success(`Report exported successfully as ${format.toUpperCase()}`);
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || "Failed to export report");

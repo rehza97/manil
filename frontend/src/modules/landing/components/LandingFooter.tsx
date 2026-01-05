@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Cloud } from "lucide-react";
 
 export const LandingFooter = () => {
@@ -8,34 +9,34 @@ export const LandingFooter = () => {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Cloud className="h-6 w-6 text-blue-400" />
-              <span className="text-xl font-bold text-white">CloudManager</span>
+              <span className="text-xl font-bold text-white">CloudHost</span>
             </div>
             <p className="text-sm text-slate-400">
-              Enterprise cloud & hosting management platform built for Algeria
+              Fast, secure, and reliable hosting solutions for Algerian businesses. Priced in DZD with local support.
             </p>
           </div>
           <div>
-            <h4 className="font-semibold text-white mb-4">Product</h4>
+            <h4 className="font-semibold text-white mb-4">Services</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="#features" className="hover:text-white transition">
-                  Features
-                </a>
+                <Link to="/hosting" className="hover:text-white transition">
+                  Web Hosting
+                </Link>
               </li>
               <li>
-                <a href="#modules" className="hover:text-white transition">
-                  Modules
-                </a>
+                <Link to="/vps" className="hover:text-white transition">
+                  VPS Servers
+                </Link>
               </li>
               <li>
-                <a href="#security" className="hover:text-white transition">
-                  Security
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-white transition">
+                <Link to="/pricing" className="hover:text-white transition">
                   Pricing
-                </a>
+                </Link>
+              </li>
+              <li>
+                <Link to="/features" className="hover:text-white transition">
+                  Features
+                </Link>
               </li>
             </ul>
           </div>
@@ -43,53 +44,68 @@ export const LandingFooter = () => {
             <h4 className="font-semibold text-white mb-4">Company</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="#" className="hover:text-white transition">
-                  About
-                </a>
+                <Link to="/about" className="hover:text-white transition">
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" className="hover:text-white transition">
+                  Contact
+                </Link>
+              </li>
+              <li>
+                <Link to="/login" className="hover:text-white transition">
+                  Client Area
+                </Link>
               </li>
               <li>
                 <a href="#" className="hover:text-white transition">
                   Blog
                 </a>
               </li>
-              <li>
-                <a href="#" className="hover:text-white transition">
-                  Careers
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-white transition">
-                  Contact
-                </a>
-              </li>
             </ul>
           </div>
           <div>
-            <h4 className="font-semibold text-white mb-4">Legal</h4>
+            <h4 className="font-semibold text-white mb-4">Support</h4>
             <ul className="space-y-2 text-sm">
               <li>
                 <a href="#" className="hover:text-white transition">
-                  Privacy
+                  Help Center
                 </a>
               </li>
               <li>
                 <a href="#" className="hover:text-white transition">
-                  Terms
+                  Documentation
                 </a>
               </li>
               <li>
                 <a href="#" className="hover:text-white transition">
-                  Security
+                  Server Status
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-white transition">
+                  Report Abuse
                 </a>
               </li>
             </ul>
           </div>
         </div>
-        <div className="border-t border-slate-800 pt-8 text-sm text-center text-slate-400">
-          <p>
-            &copy; 2025 CloudManager. Built with ❤️ in Algeria. All rights
-            reserved.
-          </p>
+        <div className="border-t border-slate-800 pt-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-400">
+            <p>&copy; 2025 CloudHost. All rights reserved.</p>
+            <div className="flex gap-6">
+              <a href="#" className="hover:text-white transition">
+                Privacy Policy
+              </a>
+              <a href="#" className="hover:text-white transition">
+                Terms of Service
+              </a>
+              <a href="#" className="hover:text-white transition">
+                SLA
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </footer>

@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 from sqlalchemy import String, DateTime, Text, Integer, Boolean, ForeignKey
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.config.database import Base
@@ -55,7 +56,7 @@ class Ticket(Base):
         String(36), ForeignKey("users.id"), nullable=True, index=True
     )
     category_id: Mapped[Optional[str]] = mapped_column(
-        String(36), nullable=True, index=True
+        String(36), ForeignKey("ticket_categories.id"), nullable=True, index=True
     )
 
     # Timestamps
@@ -93,6 +94,7 @@ class Ticket(Base):
 
     # Relationships
     customer = relationship("Customer", back_populates="tickets")
+    category = relationship("TicketCategory", foreign_keys=[category_id])
     replies = relationship(
         "TicketReply", back_populates="ticket", cascade="all, delete-orphan"
     )
@@ -101,6 +103,12 @@ class Ticket(Base):
     )
     watchers = relationship(
         "TicketWatcher", back_populates="ticket", cascade="all, delete-orphan"
+    )
+    attachments = relationship(
+        "TicketAttachment", back_populates="ticket", cascade="all, delete-orphan"
+    )
+    history = relationship(
+        "TicketHistory", back_populates="ticket", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
@@ -536,3 +544,190 @@ class SLABreach(Base):
 
     def __repr__(self) -> str:
         return f"<SLABreach ticket={self.ticket_id} type={self.breach_type}>"
+
+
+class SupportGroup(Base):
+    """Support group model for organizing support agents."""
+
+    __tablename__ = "support_groups"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    # Relationships
+    members = relationship(
+        "SupportGroupMember", back_populates="group", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self) -> str:
+        return f"<SupportGroup {self.id} - {self.name}>"
+
+
+class SupportGroupMember(Base):
+    """Support group member (user) association."""
+
+    __tablename__ = "support_group_members"
+
+    group_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("support_groups.id", ondelete="CASCADE"),
+        primary_key=True,
+        nullable=False,
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+        nullable=False,
+        index=True,
+    )
+
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    # Relationships
+    group = relationship("SupportGroup", back_populates="members")
+    user = relationship("User", foreign_keys=[user_id])
+
+    def __repr__(self) -> str:
+        return f"<SupportGroupMember group={self.group_id} user={self.user_id}>"
+
+
+class AutomationRule(Base):
+    """Automation rule for ticket processing."""
+
+    __tablename__ = "automation_rules"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    trigger_type: Mapped[str] = mapped_column(
+        String(50), nullable=False, index=True
+    )  # 'ticket_created', 'ticket_updated', 'ticket_replied'
+    conditions: Mapped[dict] = mapped_column(
+        JSONB, nullable=False
+    )  # Rule conditions
+    actions: Mapped[dict] = mapped_column(JSONB, nullable=False)  # Actions to execute
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    priority: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    def __repr__(self) -> str:
+        return f"<AutomationRule {self.id} - {self.name}>"
+
+
+class TicketAttachment(Base):
+    """File attachment on a ticket."""
+
+    __tablename__ = "ticket_attachments"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    ticket_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)  # bytes
+    file_path: Mapped[str] = mapped_column(String(500), nullable=False)  # Storage path
+
+    # Security
+    virus_scanned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_safe: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # Metadata
+    is_public: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)  # Visible to customer
+    download_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    # Audit fields
+    uploaded_by: Mapped[str] = mapped_column(String(36), nullable=False)
+
+    # Relationships
+    ticket = relationship("Ticket", back_populates="attachments")
+
+    def __repr__(self) -> str:
+        return f"<TicketAttachment {self.id} - {self.filename}>"
+
+
+class TicketHistory(Base):
+    """Audit log for ticket changes."""
+
+    __tablename__ = "ticket_history"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    ticket_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    # Change tracking
+    action: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    # Actions: 'created', 'updated', 'status_changed', 'assigned', 'priority_changed',
+    # 'tagged', 'commented', 'closed', 'reopened', 'merged', etc.
+
+    field_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    old_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    new_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Context
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    change_metadata: Mapped[Optional[dict]] = mapped_column("metadata", JSONB, nullable=True)
+
+    # Timestamp
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        index=True,
+    )
+
+    # Audit
+    created_by: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)  # IPv6 support
+
+    # Relationships
+    ticket = relationship("Ticket", back_populates="history")
+
+    def __repr__(self) -> str:
+        return f"<TicketHistory {self.id} - {self.action} on ticket {self.ticket_id}>"
+
+
+# Import models that are defined in other files but need to be available via models.py
+from app.modules.tickets.response_templates import TicketCategory, ResponseTemplate  # noqa: E402, F401

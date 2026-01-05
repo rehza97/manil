@@ -64,7 +64,9 @@ class TicketBase(BaseModel):
 class TicketCreate(TicketBase):
     """Schema for creating ticket."""
 
-    customer_id: str
+    customer_id: str = Field(..., alias="customerId")
+    
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class TicketUpdate(BaseModel):

@@ -51,9 +51,9 @@ export const systemService = {
       total_users: stats.data?.total_users || 0,
       active_sessions: stats.data?.active_users || 0,
       total_customers: stats.data?.total_customers || 0,
-      total_orders: 0, // Not available yet
-      monthly_revenue: 0, // Not available yet
-      revenue_growth: 0, // Not available yet
+      total_orders: stats.data?.total_orders || 0,
+      monthly_revenue: stats.data?.monthly_revenue || 0,
+      revenue_growth: stats.data?.revenue_growth || 0,
     };
 
     return { health: mappedHealth, stats: mappedStats };
@@ -91,9 +91,9 @@ export const systemService = {
       total_users: stats?.total_users || 0,
       active_sessions: stats?.active_users || 0,
       total_customers: stats?.total_customers || 0,
-      total_orders: 0, // Not available yet
-      monthly_revenue: 0, // Not available yet
-      revenue_growth: 0, // Not available yet
+      total_orders: stats?.total_orders || 0,
+      monthly_revenue: stats?.monthly_revenue || 0,
+      revenue_growth: stats?.revenue_growth || 0,
     };
   },
 
@@ -120,6 +120,89 @@ export const systemService = {
    */
   async getUsersByRole(): Promise<any> {
     const response = await apiClient.get("/system/users/by-role");
+    return response.data;
+  },
+
+  /**
+   * Get system performance metrics
+   */
+  async getPerformanceMetrics(filters?: {
+    start_date?: string;
+    end_date?: string;
+  }): Promise<any> {
+    const params = new URLSearchParams();
+    if (filters?.start_date) params.append("start_date", filters.start_date);
+    if (filters?.end_date) params.append("end_date", filters.end_date);
+
+    const response = await apiClient.get(`/system/performance?${params}`);
+    return response.data;
+  },
+
+  /**
+   * Get system alerts
+   */
+  async getAlerts(filters?: {
+    severity?: string;
+    status?: string;
+    resolved?: boolean;
+    page?: number;
+    page_size?: number;
+  }): Promise<{
+    alerts: any[];
+    total: number;
+    page: number;
+    page_size: number;
+  }> {
+    const params = new URLSearchParams();
+    if (filters?.severity) params.append("severity", filters.severity);
+    if (filters?.status) params.append("status", filters.status);
+    if (filters?.resolved !== undefined)
+      params.append("resolved", String(filters.resolved));
+    if (filters?.page) params.append("page", String(filters.page));
+    if (filters?.page_size)
+      params.append("page_size", String(filters.page_size));
+
+    const response = await apiClient.get(`/system/alerts?${params}`);
+    return response.data;
+  },
+
+  /**
+   * Resolve an alert
+   */
+  async resolveAlert(alertId: string): Promise<void> {
+    await apiClient.post(`/system/alerts/${alertId}/resolve`);
+  },
+
+  /**
+   * Acknowledge an alert
+   */
+  async acknowledgeAlert(alertId: string): Promise<void> {
+    await apiClient.post(`/system/alerts/${alertId}/acknowledge`);
+  },
+
+  /**
+   * Get system logs
+   */
+  async getSystemLogs(filters?: {
+    level?: string;
+    component?: string;
+    start_date?: string;
+    end_date?: string;
+    page?: number;
+    page_size?: number;
+  }): Promise<{ logs: any[]; total: number; page: number; page_size: number }> {
+    const params = new URLSearchParams();
+    if (filters?.level) params.append("level", filters.level);
+    if (filters?.component) params.append("component", filters.component);
+    if (filters?.start_date) params.append("start_date", filters.start_date);
+    if (filters?.end_date) params.append("end_date", filters.end_date);
+    if (filters?.page) params.append("page", String(filters.page));
+    if (filters?.page_size)
+      params.append("page_size", String(filters.page_size));
+
+    const queryString = params.toString();
+    const url = `/admin/logs/system${queryString ? `?${queryString}` : ""}`;
+    const response = await apiClient.get(url);
     return response.data;
   },
 };

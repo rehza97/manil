@@ -39,12 +39,35 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # CoreDNS - Local DNS Server
+  coredns:
+    image: coredns/coredns:1.11.1
+    container_name: cloudmanager-coredns
+    volumes:
+      - ./coredns/Corefile:/etc/coredns/Corefile:ro
+      - ./coredns/zones:/etc/coredns/zones:rw
+      - coredns_data:/var/lib/coredns
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+      - "8080:8080"  # Health check and reload endpoint
+    networks:
+      - cloudmanager-network
+    # healthcheck:
+    #   test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 5
+    restart: unless-stopped
+    # user: "1000:1000"  # Commented out for macOS compatibility
+
   # FastAPI Backend
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: cloudmanager-backend
+    user: root  # Run as root to access Docker socket for VPS stats/logs
     environment:
       # Database Configuration
       - DATABASE_URL=postgresql+asyncpg://cloudmanager:${DB_PASSWORD:-cloudmanager_password}@postgres:5432/cloudmanager
@@ -73,10 +96,19 @@ services:
       - DEBUG=${DEBUG:-True}
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      # CoreDNS Configuration
+      - COREDNS_ZONES_DIR=/app/coredns/zones
+      - COREDNS_CONFIG_DIR=/app/coredns
+      - COREDNS_RELOAD_URL=http://coredns:8080/reload
+      - COREDNS_HEALTH_URL=http://coredns:8080/health
+      # Docker Configuration
+      - DOCKER_HOST=unix:///var/run/docker.sock
     volumes:
       - ./backend:/app
       - storage_data:/app/storage
       - logs_data:/app/logs
+      - ./coredns:/app/coredns
+      - /var/run/docker.sock:/var/run/docker.sock  # Access to Docker for VPS stats/logs
     ports:
       - "8000:8000"
     networks:
@@ -92,6 +124,88 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    restart: unless-stopped
+
+  # Celery Worker - Background Tasks
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cloudmanager-celery-worker
+    command: celery -A app.core.celery_app worker --loglevel=info --concurrency=2
+    user: root  # Run as root to access Docker socket for VPS provisioning
+    environment:
+      # Database Configuration
+      - DATABASE_URL=postgresql+asyncpg://cloudmanager:${DB_PASSWORD:-cloudmanager_password}@postgres:5432/cloudmanager
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=cloudmanager
+      - DB_PASSWORD=${DB_PASSWORD:-cloudmanager_password}
+      - DB_NAME=cloudmanager
+      # Redis Configuration
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_password}@redis:6379/0
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
+      # Security Configuration
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-secret-key-change-in-production}
+      # Application Configuration
+      - DEBUG=${DEBUG:-True}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      # Docker Configuration
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - ./backend:/app
+      - storage_data:/app/storage
+      - logs_data:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock  # Access to Docker for VPS provisioning
+      - /var/lib/vps-volumes:/var/lib/vps-volumes  # VPS container volumes
+    networks:
+      - cloudmanager-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Celery Beat - Scheduled Tasks
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cloudmanager-celery-beat
+    command: celery -A app.core.celery_app beat --loglevel=info
+    environment:
+      # Database Configuration
+      - DATABASE_URL=postgresql+asyncpg://cloudmanager:${DB_PASSWORD:-cloudmanager_password}@postgres:5432/cloudmanager
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=cloudmanager
+      - DB_PASSWORD=${DB_PASSWORD:-cloudmanager_password}
+      - DB_NAME=cloudmanager
+      # Redis Configuration
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_password}@redis:6379/0
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
+      # Security Configuration
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-secret-key-change-in-production}
+      # Application Configuration
+      - DEBUG=${DEBUG:-True}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./backend:/app
+      - logs_data:/app/logs
+    networks:
+      - cloudmanager-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
 
   # React Frontend (Development Mode)
@@ -134,6 +248,8 @@ volumes:
   storage_data:
     driver: local
   logs_data:
+    driver: local
+  coredns_data:
     driver: local
 
 # Networks

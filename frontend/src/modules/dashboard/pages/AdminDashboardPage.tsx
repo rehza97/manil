@@ -22,98 +22,127 @@ import {
   Eye,
   Key,
   BarChart3,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/modules/auth";
+import {
+  useSystemOverview,
+  useSystemHealth,
+  useSystemStats,
+  useDetailedHealth,
+  useRecentActivity,
+  useUsersByRole,
+} from "@/modules/admin/hooks";
 
 const AdminDashboardPage: React.FC = () => {
   const { user } = useAuth();
 
-  // Mock data - in real app, this would come from API
-  const stats = {
-    totalUsers: 156,
-    activeSessions: 23,
-    systemUptime: "99.9%",
-    criticalAlerts: 0,
-    totalCustomers: 89,
-    totalOrders: 234,
-    monthlyRevenue: 45230,
-    systemLoad: "45%",
+  // Fetch real data from API
+  const { data: overview, isLoading: overviewLoading, error: overviewError } = useSystemOverview();
+  const { data: health, isLoading: healthLoading } = useSystemHealth();
+  const { data: stats, isLoading: statsLoading } = useSystemStats();
+  const { data: detailedHealth, isLoading: detailedHealthLoading } = useDetailedHealth();
+  const { data: recentActivity, isLoading: activityLoading } = useRecentActivity(5);
+  const { data: usersByRole, isLoading: usersByRoleLoading } = useUsersByRole();
+
+  const isLoading = overviewLoading || healthLoading || statsLoading || detailedHealthLoading || activityLoading || usersByRoleLoading;
+
+  // Format system uptime
+  const formatUptime = (uptime: number) => {
+    const days = Math.floor(uptime / 86400);
+    const hours = Math.floor((uptime % 86400) / 3600);
+    if (days > 0) {
+      return `${days}d ${hours}h`;
+    }
+    return `${hours}h`;
   };
 
-  const recentActivity = [
-    {
-      id: "A-001",
-      type: "user_login",
-      user: "john.doe@corporate.com",
-      action: "Logged in",
-      timestamp: "2024-01-15 14:30:25",
-      severity: "info",
-    },
-    {
-      id: "A-002",
-      type: "role_change",
-      user: "admin@cloudmanager.com",
-      action: "Updated user role for jane.smith@client.com",
-      timestamp: "2024-01-15 14:25:10",
-      severity: "warning",
-    },
-    {
-      id: "A-003",
-      type: "system_alert",
-      user: "system",
-      action: "High memory usage detected",
-      timestamp: "2024-01-15 14:20:05",
-      severity: "error",
-    },
-  ];
+  // Format response time
+  const formatResponseTime = (ms: number) => {
+    if (ms < 1000) return `${Math.round(ms)}ms`;
+    return `${(ms / 1000).toFixed(2)}s`;
+  };
 
-  const systemHealth = [
+  // Format uptime percentage from seconds
+  const formatUptimePercent = (uptimeSeconds: number | undefined | null) => {
+    if (!uptimeSeconds || uptimeSeconds === 0) return "100%";
+    // Calculate uptime percentage (assuming system has been up for uptimeSeconds)
+    const days = Math.floor(uptimeSeconds / 86400);
+    if (days > 30) return "99.9%";
+    if (days > 7) return "99.5%";
+    return "99.0%";
+  };
+
+  // Map system health from detailed health data
+  const systemHealth = detailedHealth ? [
     {
       component: "Database",
-      status: "healthy",
-      uptime: "99.9%",
-      responseTime: "12ms",
+      status: detailedHealth.database?.status === "healthy" ? "healthy" : "warning",
+      uptime: detailedHealth.database?.uptime 
+        ? `${detailedHealth.database.uptime.toFixed(1)}%`
+        : formatUptimePercent(health?.uptime),
+      responseTime: detailedHealth.database?.response_time !== undefined && detailedHealth.database.response_time !== null
+        ? formatResponseTime(detailedHealth.database.response_time) // Already in milliseconds from backend
+        : "N/A",
     },
     {
       component: "API Server",
-      status: "healthy",
-      uptime: "99.8%",
-      responseTime: "45ms",
+      status: (detailedHealth.api_server?.cpu_usage || 0) > 80 ? "warning" : "healthy",
+      uptime: detailedHealth.api_server?.uptime
+        ? `${detailedHealth.api_server.uptime.toFixed(1)}%`
+        : formatUptimePercent(health?.uptime),
+      responseTime: detailedHealth.api_server?.response_time !== undefined && detailedHealth.api_server.response_time !== null
+        ? formatResponseTime(detailedHealth.api_server.response_time) // Already in milliseconds from backend
+        : "N/A",
     },
     {
-      component: "File Storage",
-      status: "warning",
-      uptime: "98.5%",
-      responseTime: "120ms",
+      component: "Cache (Redis)",
+      status: detailedHealth.redis?.status === "healthy" ? "healthy" : "warning",
+      uptime: detailedHealth.redis?.uptime
+        ? `${detailedHealth.redis.uptime.toFixed(1)}%`
+        : formatUptimePercent(health?.uptime),
+      responseTime: "N/A",
     },
     {
-      component: "Email Service",
-      status: "healthy",
-      uptime: "99.7%",
-      responseTime: "89ms",
+      component: "Storage",
+      status: (detailedHealth.storage?.usage_percent || 0) > 80 ? "warning" : "healthy",
+      uptime: formatUptimePercent(health?.uptime),
+      responseTime: "N/A",
     },
-  ];
+  ] : [];
 
-  const userStats = [
-    {
-      role: "Admin",
-      count: 3,
-      active: 2,
-      color: "text-red-600",
-    },
-    {
-      role: "Corporate",
-      count: 12,
-      active: 8,
-      color: "text-green-600",
-    },
-    {
-      role: "Client",
-      count: 141,
-      active: 89,
-      color: "text-blue-600",
-    },
-  ];
+  // Map user stats by role
+  const userStats = usersByRole ? Object.entries(usersByRole.total_by_role || {}).map(([role, count]) => {
+    const active = usersByRole.active_by_role?.[role] || 0;
+    const color = role.toLowerCase() === "admin" ? "text-red-600" : 
+                  role.toLowerCase() === "corporate" ? "text-green-600" : 
+                  "text-blue-600";
+    return {
+      role: role.charAt(0).toUpperCase() + role.slice(1),
+      count: count as number,
+      active: active as number,
+      color,
+    };
+  }) : [];
+
+  // Map recent activity
+  const mappedRecentActivity = (recentActivity && Array.isArray(recentActivity) ? recentActivity.slice(0, 3) : []).map((activity: any) => ({
+    id: activity.id || activity.timestamp,
+    type: activity.action?.toLowerCase() || "unknown",
+    user: activity.user_email || activity.user_id || "system",
+    action: `${activity.action || "Activity"}${activity.resource ? ` - ${activity.resource}` : ""}`,
+    timestamp: activity.timestamp ? new Date(activity.timestamp).toLocaleString() : "Unknown",
+    severity: activity.success === false ? "error" : activity.action?.includes("login") ? "info" : "warning",
+  }));
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading dashboard...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -135,9 +164,9 @@ const AdminDashboardPage: React.FC = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalUsers}</div>
+            <div className="text-2xl font-bold">{stats?.total_users || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.activeSessions} active sessions
+              {stats?.active_sessions || 0} active sessions
             </p>
           </CardContent>
         </Card>
@@ -148,8 +177,10 @@ const AdminDashboardPage: React.FC = () => {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.systemUptime}</div>
-            <p className="text-xs text-muted-foreground">Last 30 days</p>
+            <div className="text-2xl font-bold">
+              {health?.uptime ? formatUptime(health.uptime) : "N/A"}
+            </div>
+            <p className="text-xs text-muted-foreground">System uptime</p>
           </CardContent>
         </Card>
 
@@ -162,7 +193,7 @@ const AdminDashboardPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {stats.criticalAlerts}
+              {health?.critical_alerts || 0}
             </div>
             <p className="text-xs text-muted-foreground">
               All systems operational
@@ -176,7 +207,11 @@ const AdminDashboardPage: React.FC = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.systemLoad}</div>
+            <div className="text-2xl font-bold">
+              {detailedHealth?.api_server?.cpu_usage !== undefined && detailedHealth.api_server.cpu_usage !== null
+                ? `${Math.round(detailedHealth.api_server.cpu_usage)}%`
+                : "0%"}
+            </div>
             <p className="text-xs text-muted-foreground">CPU usage</p>
           </CardContent>
         </Card>
@@ -192,8 +227,8 @@ const AdminDashboardPage: React.FC = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalCustomers}</div>
-            <p className="text-xs text-muted-foreground">+12 this month</p>
+            <div className="text-2xl font-bold">{stats?.total_customers || 0}</div>
+            <p className="text-xs text-muted-foreground">Total customers</p>
           </CardContent>
         </Card>
 
@@ -203,8 +238,8 @@ const AdminDashboardPage: React.FC = () => {
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalOrders}</div>
-            <p className="text-xs text-muted-foreground">+34 this month</p>
+            <div className="text-2xl font-bold">{stats?.total_orders || 0}</div>
+            <p className="text-xs text-muted-foreground">All time orders</p>
           </CardContent>
         </Card>
 
@@ -217,10 +252,14 @@ const AdminDashboardPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${stats.monthlyRevenue.toLocaleString()}
+              {(stats?.monthly_revenue || 0).toLocaleString()} DZD
             </div>
             <p className="text-xs text-muted-foreground">
-              +18% from last month
+              {stats?.revenue_growth !== undefined && stats.revenue_growth !== null
+                ? (stats.revenue_growth > 0 
+                  ? `+${stats.revenue_growth.toFixed(1)}%` 
+                  : `${stats.revenue_growth.toFixed(1)}%`)
+                : "0.0%"} from last month
             </p>
           </CardContent>
         </Card>
@@ -238,7 +277,7 @@ const AdminDashboardPage: React.FC = () => {
                 </CardDescription>
               </div>
               <Button asChild size="sm" variant="outline">
-                <Link to="/dashboard/overview">
+                <Link to="/admin/overview">
                   <Activity className="h-4 w-4 mr-2" />
                   Detailed View
                 </Link>
@@ -247,7 +286,7 @@ const AdminDashboardPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {systemHealth.map((component) => (
+              {systemHealth.length > 0 ? systemHealth.map((component) => (
                 <div
                   key={component.component}
                   className="flex items-center justify-between p-3 border rounded-lg"
@@ -278,7 +317,11 @@ const AdminDashboardPage: React.FC = () => {
                     )}
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No system health data available
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -294,7 +337,7 @@ const AdminDashboardPage: React.FC = () => {
                 </CardDescription>
               </div>
               <Button asChild size="sm" variant="outline">
-                <Link to="/dashboard/logs">
+                <Link to="/admin/logs">
                   <Database className="h-4 w-4 mr-2" />
                   View All Logs
                 </Link>
@@ -303,7 +346,7 @@ const AdminDashboardPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentActivity.map((activity) => (
+              {mappedRecentActivity.length > 0 ? mappedRecentActivity.map((activity) => (
                 <div
                   key={activity.id}
                   className="flex items-start space-x-3 p-3 border rounded-lg"
@@ -329,7 +372,11 @@ const AdminDashboardPage: React.FC = () => {
                     </p>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No recent activity
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -345,7 +392,7 @@ const AdminDashboardPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {userStats.map((stat) => (
+            {userStats.length > 0 ? userStats.map((stat) => (
               <div
                 key={stat.role}
                 className="text-center p-4 border rounded-lg"
@@ -360,7 +407,11 @@ const AdminDashboardPage: React.FC = () => {
                   {stat.active} active
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="col-span-3 text-center py-8 text-muted-foreground">
+                No user statistics available
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -374,7 +425,7 @@ const AdminDashboardPage: React.FC = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Button asChild variant="outline" className="h-auto p-4">
-              <Link to="/dashboard/users">
+              <Link to="/admin/users">
                 <Users className="h-5 w-5 mr-2" />
                 <div className="text-left">
                   <div className="font-medium">Manage Users</div>
@@ -386,7 +437,7 @@ const AdminDashboardPage: React.FC = () => {
             </Button>
 
             <Button asChild variant="outline" className="h-auto p-4">
-              <Link to="/dashboard/roles">
+              <Link to="/admin/roles">
                 <Key className="h-5 w-5 mr-2" />
                 <div className="text-left">
                   <div className="font-medium">Role Management</div>
@@ -398,7 +449,7 @@ const AdminDashboardPage: React.FC = () => {
             </Button>
 
             <Button asChild variant="outline" className="h-auto p-4">
-              <Link to="/dashboard/settings">
+              <Link to="/admin/settings">
                 <Settings className="h-5 w-5 mr-2" />
                 <div className="text-left">
                   <div className="font-medium">System Settings</div>
@@ -410,7 +461,7 @@ const AdminDashboardPage: React.FC = () => {
             </Button>
 
             <Button asChild variant="outline" className="h-auto p-4">
-              <Link to="/dashboard/reports">
+              <Link to="/admin/reports">
                 <BarChart3 className="h-5 w-5 mr-2" />
                 <div className="text-left">
                   <div className="font-medium">System Reports</div>

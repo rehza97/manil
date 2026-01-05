@@ -8,34 +8,49 @@ export const LandingNavigation = () => {
     <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-lg border-b border-slate-200 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2">
             <Cloud className="h-8 w-8 text-blue-600" />
             <span className="text-2xl font-bold text-slate-900">
-              CloudManager
+              CloudHost
             </span>
-            <Badge variant="secondary" className="ml-2">
-              v1.0
-            </Badge>
-          </div>
+          </Link>
           <div className="hidden md:flex items-center gap-6">
-            <a
-              href="#features"
+            <Link
+              to="/hosting"
+              className="text-slate-600 hover:text-slate-900 transition"
+            >
+              Hosting
+            </Link>
+            <Link
+              to="/vps"
+              className="text-slate-600 hover:text-slate-900 transition"
+            >
+              VPS Servers
+            </Link>
+            <Link
+              to="/pricing"
+              className="text-slate-600 hover:text-slate-900 transition"
+            >
+              Pricing
+            </Link>
+            <Link
+              to="/features"
               className="text-slate-600 hover:text-slate-900 transition"
             >
               Features
-            </a>
-            <a
-              href="#modules"
+            </Link>
+            <Link
+              to="/about"
               className="text-slate-600 hover:text-slate-900 transition"
             >
-              Modules
-            </a>
-            <a
-              href="#security"
+              About
+            </Link>
+            <Link
+              to="/contact"
               className="text-slate-600 hover:text-slate-900 transition"
             >
-              Security
-            </a>
+              Contact
+            </Link>
             <Link to="/login">
               <Button variant="ghost">Login</Button>
             </Link>

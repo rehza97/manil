@@ -131,6 +131,12 @@ export const ticketsApi = {
     return response.data;
   },
 
+  // Categories
+  getCategories: async () => {
+    const response = await apiClient.get("/tickets/categories");
+    return response.data;
+  },
+
   // Tags
   getTags: async () => {
     const response = await apiClient.get("/tickets/tags");
@@ -248,6 +254,20 @@ export const ticketsApi = {
 
   getActiveSLABreaches: async () => {
     const response = await apiClient.get("/tickets/sla/breaches/active");
+    return response.data;
+  },
+
+  // Attachments
+  getAttachments: async (ticketId: string) => {
+    const response = await apiClient.get(`/tickets/${ticketId}/attachments`);
+    return response.data;
+  },
+
+  downloadAttachment: async (ticketId: string, attachmentId: string) => {
+    const response = await apiClient.get(
+      `/tickets/${ticketId}/attachments/${attachmentId}/download`,
+      { responseType: "blob" }
+    );
     return response.data;
   },
 

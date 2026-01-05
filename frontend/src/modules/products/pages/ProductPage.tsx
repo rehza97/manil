@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { formatCurrency } from "@/shared/utils/formatters";
 import {
   ProductCarousel,
   PricingDisplay,
@@ -12,8 +12,8 @@ import { useProduct, useCategories, useFeaturedProducts } from "../hooks";
 import type { ProductVariant } from "../types";
 
 export const ProductPage: React.FC = () => {
-  const params = useParams();
-  const slug = params?.slug as string;
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
 
   // Fetch product details
@@ -21,7 +21,7 @@ export const ProductPage: React.FC = () => {
     data: product,
     isLoading: isLoadingProduct,
     error: productError,
-  } = useProduct(slug, true);
+  } = useProduct(id || "", true);
 
   // Fetch categories for sidebar
   const {
@@ -35,7 +35,7 @@ export const ProductPage: React.FC = () => {
     isLoading: isLoadingFeatured,
   } = useFeaturedProducts();
 
-  if (!slug) {
+  if (!id) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -76,7 +76,7 @@ export const ProductPage: React.FC = () => {
           <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
             <h1 className="text-2xl font-bold text-red-900">Product not found</h1>
             <p className="mt-2 text-red-700">The product you're looking for doesn't exist.</p>
-            <Link href="/products" className="mt-4 inline-block text-blue-600 hover:text-blue-700">
+            <Link to="/dashboard/catalog" className="mt-4 inline-block text-blue-600 hover:text-blue-700">
               ← Back to catalogue
             </Link>
           </div>
@@ -95,7 +95,7 @@ export const ProductPage: React.FC = () => {
       <div className="border-b border-gray-200 bg-white px-4 py-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <nav className="flex gap-2 text-sm">
-            <Link href="/products" className="text-blue-600 hover:text-blue-700">
+            <Link to="/dashboard/catalog" className="text-blue-600 hover:text-blue-700">
               Products
             </Link>
             <span className="text-gray-500">/</span>
@@ -200,7 +200,7 @@ export const ProductPage: React.FC = () => {
                         </p>
                         {variant.price_adjustment && (
                           <p className="text-sm font-semibold text-gray-900 mt-1">
-                            +${variant.price_adjustment.toFixed(2)}
+                            +formatCurrency substitution needed
                           </p>
                         )}
                       </button>
@@ -231,14 +231,14 @@ export const ProductPage: React.FC = () => {
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Regular Price</dt>
                   <dd className="text-sm text-gray-900">
-                    ${product.regular_price.toFixed(2)}
+                    formatCurrency substitution needed
                   </dd>
                 </div>
                 {product.cost_price && (
                   <>
                     <dt className="text-sm font-medium text-gray-500">Cost Price</dt>
                     <dd className="text-sm text-gray-900">
-                      ${product.cost_price.toFixed(2)}
+                      formatCurrency substitution needed
                     </dd>
                   </>
                 )}
@@ -282,14 +282,14 @@ export const ProductPage: React.FC = () => {
                   {featuredProducts.slice(0, 5).map((feat) => (
                     <Link
                       key={feat.id}
-                      href={`/products/${feat.slug}`}
+                      to={`/dashboard/catalog/${feat.id}`}
                       className="block rounded-lg border border-gray-200 p-3 hover:bg-gray-50 transition"
                     >
                       <p className="text-sm font-medium text-gray-900 truncate">
                         {feat.name}
                       </p>
                       <p className="text-xs text-gray-600 mt-1">
-                        ${feat.regular_price.toFixed(2)}
+                        formatCurrency substitution needed
                       </p>
                     </Link>
                   ))}

@@ -203,6 +203,58 @@ async def initialize_database() -> bool:
             await create_admin_user(db)
         else:
             print("✅ Admin user already exists")
+    
+    # Seed permissions and roles
+    print("🔐 Seeding default permissions and roles...")
+    async with AsyncSessionLocal() as db:
+        from app.modules.settings.service import seed_permissions_and_roles
+        if await seed_permissions_and_roles(db):
+            print("✅ Permissions and roles seeded successfully")
+        else:
+            print("⚠️  Warning: Failed to seed permissions and roles")
+
+    # Seed system settings
+    print("⚙️  Seeding default system settings...")
+    async with AsyncSessionLocal() as db:
+        from app.modules.settings.service import seed_system_settings
+        if await seed_system_settings(db):
+            print("✅ System settings seeded successfully")
+        else:
+            print("⚠️  Warning: Failed to seed system settings")
+
+    # Seed VPS hosting data
+    print("🖥️  Seeding VPS hosting plans and permissions...")
+    async with AsyncSessionLocal() as db:
+        from app.modules.hosting.seed_data import seed_all_hosting_data
+        try:
+            await seed_all_hosting_data(db)
+            print("✅ VPS hosting data seeded successfully")
+        except Exception as e:
+            print(f"⚠️  Warning: Failed to seed VPS hosting data: {e}")
+
+    # Seed comprehensive demo data (users, products, subscriptions, DNS)
+    print("🎯 Seeding comprehensive demo data...")
+    async with AsyncSessionLocal() as db:
+        from app.modules.hosting.seed_demo_data import seed_all_demo_data
+        try:
+            await seed_all_demo_data(db)
+            print("✅ Demo data seeded successfully")
+        except Exception as e:
+            print(f"⚠️  Warning: Failed to seed demo data: {e}")
+            import traceback
+            traceback.print_exc()
+
+    # Seed ticket system data (support groups, categories, templates, rules)
+    print("🎫 Seeding ticket system data...")
+    async with AsyncSessionLocal() as db:
+        from app.modules.tickets.seed_data import seed_all_ticket_data
+        try:
+            await seed_all_ticket_data(db)
+            print("✅ Ticket system data seeded successfully")
+        except Exception as e:
+            print(f"⚠️  Warning: Failed to seed ticket data: {e}")
+            import traceback
+            traceback.print_exc()
 
     print("\n✅ Database initialization completed successfully!\n")
     return True

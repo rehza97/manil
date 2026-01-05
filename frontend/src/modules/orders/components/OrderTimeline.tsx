@@ -105,7 +105,7 @@ export function OrderTimeline({ orderId, className }: OrderTimelineProps) {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
+    return date.toLocaleDateString("fr-DZ", {
       year: "numeric",
       month: "short",
       day: "numeric",

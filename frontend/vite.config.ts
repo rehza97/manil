@@ -14,4 +14,15 @@ export default defineConfig({
   optimizeDeps: {
     include: ["axios"],
   },
+  server: {
+    host: "0.0.0.0",
+    port: 5173,
+    watch: {
+      usePolling: true, // Required for Docker volume mounts
+    },
+    hmr: {
+      host: "localhost", // Use localhost for HMR client connection
+      port: 5173,
+    },
+  },
 });

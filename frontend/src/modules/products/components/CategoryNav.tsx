@@ -1,5 +1,5 @@
 import React from "react";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import type { ProductCategory } from "../types";
 
 interface CategoryNavProps {
@@ -22,7 +22,7 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({
   if (variant === "inline") {
     return (
       <div className="flex flex-wrap gap-2">
-        <Link href="/products">
+        <Link to="/dashboard/catalog">
           <button
             className={`rounded-full px-4 py-2 text-sm font-medium transition ${
               !activeCategory
@@ -36,7 +36,7 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({
         {parentCategories.map((category) => (
           <Link
             key={category.id}
-            href={`/products?category=${category.slug}`}
+            to={`/dashboard/catalog?category=${category.id}`}
           >
             <button
               className={`rounded-full px-4 py-2 text-sm font-medium transition ${
@@ -59,7 +59,7 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({
   // Sidebar variant (default)
   return (
     <nav className="space-y-2">
-      <Link href="/products">
+      <Link to="/dashboard/catalog">
         <button
           className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition ${
             !activeCategory
@@ -85,7 +85,7 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({
 
             return (
               <div key={category.id}>
-                <Link href={`/products?category=${category.slug}`}>
+                <Link to={`/dashboard/catalog?category=${category.id}`}>
                   <button
                     className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition flex items-center justify-between ${
                       isActive
@@ -106,7 +106,7 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({
                     {children.map((child) => (
                       <Link
                         key={child.id}
-                        href={`/products?category=${child.slug}`}
+                        to={`/dashboard/catalog?category=${child.id}`}
                       >
                         <button
                           className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition ${

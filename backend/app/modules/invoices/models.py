@@ -50,6 +50,14 @@ class Invoice(Base):
     # Link to quote (optional - invoice can be created without quote)
     quote_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("quotes.id"), nullable=True, index=True)
 
+    # Link to VPS subscription (optional - invoice can be created without VPS subscription)
+    vps_subscription_id: Mapped[str | None] = mapped_column(
+        String(36), 
+        ForeignKey("vps_subscriptions.id"), 
+        nullable=True, 
+        index=True
+    )
+
     # Customer information
     customer_id: Mapped[str] = mapped_column(String(36), ForeignKey("customers.id"), nullable=False, index=True)
 
@@ -131,6 +139,7 @@ class Invoice(Base):
     # Relationships
     customer = relationship("Customer", back_populates="invoices")
     quote = relationship("Quote", foreign_keys=[quote_id])
+    vps_subscription = relationship("VPSSubscription", foreign_keys=[vps_subscription_id])
     items = relationship("InvoiceItem", back_populates="invoice", cascade="all, delete-orphan")
     timeline_events = relationship("InvoiceTimeline", back_populates="invoice", cascade="all, delete-orphan")
     created_by = relationship("User", foreign_keys=[created_by_id])

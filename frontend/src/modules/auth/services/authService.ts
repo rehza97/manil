@@ -25,6 +25,7 @@ export const authService = {
    * Login user
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
+    // Note: rememberMe is handled client-side for storage, not sent to backend
     const response = await authApi.login({
       email: credentials.email,
       password: credentials.password,
@@ -39,11 +40,11 @@ export const authService = {
     const response = await authApi.register({
       email: data.email,
       password: data.password,
-      full_name: data.fullName,
-      phone: data.phone,
-      role: data.role,
+      full_name: data.name,
+      role: "client", // Default role for new registrations
     });
-    return response as AuthResponse;
+    // LoginResponse and AuthResponse have compatible structures
+    return response as unknown as AuthResponse;
   },
 
   /**
@@ -143,9 +144,27 @@ export const authService = {
    * Get login history
    */
   async getLoginHistory(params?: {
-    skip?: number;
-    limit?: number;
+    page?: number;
+    page_size?: number;
   }): Promise<any[]> {
     return await authApi.getLoginHistory(params);
+  },
+
+  /**
+   * Update user profile
+   */
+  async updateProfile(data: { full_name?: string; phone?: string }): Promise<User> {
+    const response = await authApi.updateProfile(data);
+    return response as unknown as User;
+  },
+
+  /**
+   * Change user password
+   */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await authApi.changePassword({
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
   },
 };

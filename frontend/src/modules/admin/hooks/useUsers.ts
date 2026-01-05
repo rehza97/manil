@@ -106,3 +106,116 @@ export const useDeactivateUser = () => {
     },
   });
 };
+
+/**
+ * Assign roles mutation hook
+ */
+export const useAssignRoles = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ userId, roleIds }: { userId: string; roleIds: string[] }) =>
+      userService.assignRoles(userId, roleIds),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["users", variables.userId] });
+    },
+  });
+};
+
+/**
+ * Force password reset mutation hook
+ */
+export const useForcePasswordReset = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => userService.forcePasswordReset(userId),
+    onSuccess: (_, userId) => {
+      queryClient.invalidateQueries({ queryKey: ["users", userId] });
+    },
+  });
+};
+
+/**
+ * Unlock account mutation hook
+ */
+export const useUnlockAccount = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => userService.unlockAccount(userId),
+    onSuccess: (_, userId) => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["users", userId] });
+    },
+  });
+};
+
+/**
+ * Get user sessions hook
+ */
+export const useUserSessions = (userId: string) => {
+  return useQuery({
+    queryKey: ["users", userId, "sessions"],
+    queryFn: () => userService.getUserSessions(userId),
+    enabled: !!userId,
+  });
+};
+
+/**
+ * Revoke session mutation hook
+ */
+export const useRevokeSession = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ userId, sessionId }: { userId: string; sessionId: string }) =>
+      userService.revokeSession(userId, sessionId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["users", variables.userId, "sessions"],
+      });
+    },
+  });
+};
+
+/**
+ * Revoke all sessions mutation hook
+ */
+export const useRevokeAllSessions = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => userService.revokeAllSessions(userId),
+    onSuccess: (_, userId) => {
+      queryClient.invalidateQueries({ queryKey: ["users", userId, "sessions"] });
+    },
+  });
+};
+
+/**
+ * Get user activity hook
+ */
+export const useUserActivity = (
+  userId: string,
+  page: number = 1,
+  pageSize: number = 20
+) => {
+  return useQuery({
+    queryKey: ["users", userId, "activity", page, pageSize],
+    queryFn: () => userService.getUserActivity(userId, page, pageSize),
+    enabled: !!userId,
+  });
+};
+
+/**
+ * Get user statistics hook
+ */
+export const useUserStats = (userId: string) => {
+  return useQuery({
+    queryKey: ["users", userId, "stats"],
+    queryFn: () => userService.getUserStats(userId),
+    enabled: !!userId,
+  });
+};

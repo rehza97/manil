@@ -53,7 +53,7 @@ class Quote(Base):
 
     # Status and workflow
     status: Mapped[QuoteStatus] = mapped_column(
-        SQLEnum(QuoteStatus),
+        SQLEnum(QuoteStatus, name="quotestatus", native_enum=True, values_callable=lambda x: [e.value for e in x]),
         default=QuoteStatus.DRAFT,
         nullable=False,
         index=True

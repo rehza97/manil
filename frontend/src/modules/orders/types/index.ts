@@ -1,1 +1,1 @@
-export type * from "./order.types";
+export * from "./order.types";

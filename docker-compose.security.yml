@@ -1,0 +1,118 @@
+# Docker Compose Security Configuration for VPS Hosting
+# This file contains hardened security settings for production deployment
+
+version: '3.8'
+
+services:
+  # Docker Socket Proxy - Critical for security
+  # NEVER expose /var/run/docker.sock directly to containers
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: vps-docker-socket-proxy
+    restart: unless-stopped
+
+    # Security: Run as non-root user (requires proper setup)
+    # user: "1000:1000"  # Uncomment and set to appropriate UID:GID
+
+    # Resource Limits
+    mem_limit: 512m
+    cpus: 0.5
+
+    # Environment - Whitelist only required Docker API endpoints
+    environment:
+      # Allow container management
+      CONTAINERS: 1
+
+      # Allow network management
+      NETWORKS: 1
+
+      # Allow volume management
+      VOLUMES: 1
+
+      # Allow image management
+      IMAGES: 1
+
+      # Allow info endpoint
+      INFO: 1
+
+      # CRITICAL: Disable dangerous operations
+      POST: 0          # Prevent direct container creation via API
+      BUILD: 0         # Disable build via API (use our service instead)
+      COMMIT: 0        # Disable commit
+      CONFIGS: 0       # Disable configs
+      DISTRIBUTION: 0  # Disable distribution
+      EXEC: 0          # CRITICAL: Prevent exec into containers via API
+      GRPC: 0          # Disable gRPC
+      PLUGINS: 0       # Disable plugins
+      SERVICES: 0      # Disable services (Swarm)
+      SESSION: 0       # Disable session
+      SWARM: 0         # Disable Swarm
+      SYSTEM: 0        # Disable system operations
+      TASKS: 0         # Disable tasks (Swarm)
+      SECRETS: 0       # Disable secrets
+
+      # Logging
+      LOG_LEVEL: info
+
+    # Mount Docker socket (READ-ONLY)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+    # Network - Isolated internal network
+    networks:
+      - docker_api_internal
+
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:2375/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Main Backend Application
+  backend:
+    # ... your existing backend config ...
+    depends_on:
+      - docker-socket-proxy
+
+    # Environment variables
+    environment:
+      # Point to socket proxy instead of direct socket
+      DOCKER_HOST: tcp://docker-socket-proxy:2375
+
+      # VPS Password Encryption Key (MUST be set in production)
+      VPS_PASSWORD_ENCRYPTION_KEY: ${VPS_PASSWORD_ENCRYPTION_KEY}
+
+      # Security settings
+      VPS_MAX_CONTAINERS_PER_CUSTOMER: 10
+      VPS_REQUIRE_APPROVAL: true
+      VPS_SECURITY_SCAN_ENABLED: true
+
+    networks:
+      - docker_api_internal
+      - app_network
+
+networks:
+  # Internal network for Docker API communication
+  docker_api_internal:
+    driver: bridge
+    internal: true  # No external access
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
+
+  # Application network
+  app_network:
+    driver: bridge
+
+# Security Notes:
+# 1. The docker-socket-proxy container has access to Docker socket
+# 2. Backend container ONLY communicates with proxy via internal network
+# 3. Proxy exposes limited, read-only API endpoints
+# 4. All dangerous operations (exec, build, privileged) are disabled
+# 5. Resource limits prevent proxy from consuming excessive resources

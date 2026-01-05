@@ -95,7 +95,7 @@ export const TemplateList: React.FC<TemplateListProps> = ({
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState<string>('');
+  const [category, setCategory] = useState<string>('all');
 
   const { data, isLoading } = useTemplates(filters);
 
@@ -112,7 +112,7 @@ export const TemplateList: React.FC<TemplateListProps> = ({
     setCategory(value);
     setFilters({
       ...filters,
-      category: value ? (value as TemplateCategory) : undefined,
+      category: value && value !== 'all' ? (value as TemplateCategory) : undefined,
       page: 1,
     });
   };
@@ -166,7 +166,7 @@ export const TemplateList: React.FC<TemplateListProps> = ({
             <SelectValue placeholder="Filter by category" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Categories</SelectItem>
+            <SelectItem value="all">All Categories</SelectItem>
             {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
               <SelectItem key={key} value={key}>
                 {label}

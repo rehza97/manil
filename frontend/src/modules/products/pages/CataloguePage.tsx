@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   ProductGrid,
   ProductFilters,
@@ -12,7 +12,8 @@ import { productService } from "../services";
 import type { Product } from "../types";
 
 export const CataloguePage: React.FC = () => {
-  const searchParams = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     category_id: searchParams?.get("category") || undefined,
@@ -54,7 +55,7 @@ export const CataloguePage: React.FC = () => {
   }, []);
 
   const handleSelectProduct = (product: Product) => {
-    window.location.href = `/products/${product.slug}`;
+    navigate(`/dashboard/catalog/${product.id}`);
   };
 
   const displayProducts = isSearching ? searchResults : productsData?.data || [];

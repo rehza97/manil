@@ -9,6 +9,8 @@ from app.config.database import Base
 from app.modules.customers.schemas import CustomerStatus, CustomerType
 
 
+
+
 class Customer(Base):
     """Customer database model for storing customer information."""
 
@@ -45,14 +47,14 @@ class Customer(Base):
 
     # Customer Classification
     customer_type: Mapped[CustomerType] = mapped_column(
-        SQLEnum(CustomerType, name="customer_type_enum"),
+        SQLEnum(CustomerType, name="customer_type_enum", native_enum=True, values_callable=lambda x: [e.value for e in x]),
         default=CustomerType.INDIVIDUAL,
         nullable=False,
         index=True,
         doc="Type of customer (individual/corporate)",
     )
     status: Mapped[CustomerStatus] = mapped_column(
-        SQLEnum(CustomerStatus, name="customer_status_enum"),
+        SQLEnum(CustomerStatus, name="customer_status_enum", native_enum=True, values_callable=lambda x: [e.value for e in x]),
         default=CustomerStatus.PENDING,
         nullable=False,
         index=True,
@@ -102,7 +104,6 @@ class Customer(Base):
         doc="Postal/ZIP code",
     )
 
-    # Audit Fields (Required by CLAUDE_RULES.md)
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=lambda: datetime.utcnow(),

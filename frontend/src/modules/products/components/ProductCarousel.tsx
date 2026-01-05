@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import Image from "next/image";
 import type { ProductImage } from "../types";
 
 interface ProductCarouselProps {
@@ -57,12 +56,10 @@ export const ProductCarousel: React.FC<ProductCarouselProps> = ({
     <div className="space-y-4">
       {/* Main Image */}
       <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
-        <Image
+        <img
           src={currentImage.image_url}
           alt={currentImage.alt_text || productName}
-          fill
-          className="object-cover"
-          priority
+          className="w-full h-full object-cover"
         />
 
         {/* Navigation Arrows */}
@@ -141,11 +138,10 @@ export const ProductCarousel: React.FC<ProductCarouselProps> = ({
               }`}
               aria-label={`View image ${index + 1}`}
             >
-              <Image
+              <img
                 src={image.image_url}
                 alt={image.alt_text || `${productName} thumbnail ${index + 1}`}
-                fill
-                className="object-cover"
+                className="w-full h-full object-cover"
               />
             </button>
           ))}

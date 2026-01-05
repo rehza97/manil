@@ -41,6 +41,8 @@ class RecentActivity(BaseModel):
     timestamp: datetime
     user: Optional[str] = None
     status: Optional[str] = None
+    priority: Optional[str] = None  # For tickets: priority level
+    amount: Optional[float] = None  # For orders: total amount
 
     class Config:
         from_attributes = True

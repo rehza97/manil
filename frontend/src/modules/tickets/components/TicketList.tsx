@@ -81,7 +81,7 @@ export const TicketList: React.FC<TicketListProps> = ({ onSelectTicket }) => {
                     {ticket.priority}
                   </Badge>
                 </TableCell>
-                <TableCell>{ticket.customerId.slice(0, 8)}</TableCell>
+                <TableCell>{ticket.customerId?.slice(0, 8) || "N/A"}</TableCell>
                 <TableCell>{ticket.assignedTo || "Unassigned"}</TableCell>
                 <TableCell>
                   {new Date(ticket.createdAt).toLocaleDateString()}

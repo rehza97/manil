@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "@/modules/auth";
+import { useUpdateProfile } from "@/modules/auth/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -19,9 +20,10 @@ const ProfileEditPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const updateProfile = useUpdateProfile();
 
   const [formData, setFormData] = useState({
-    name: user?.name || "",
+    name: user?.full_name || "",
     email: user?.email || "",
     phone: user?.phone || "",
     address: user?.address || "",
@@ -33,8 +35,6 @@ const ProfileEditPage: React.FC = () => {
     tax_id: user?.tax_id || "",
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -44,11 +44,12 @@ const ProfileEditPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
 
     try {
-      // TODO: Implement API call to update profile
-      // await updateProfile(formData);
+      await updateProfile.mutateAsync({
+        full_name: formData.name,
+        phone: formData.phone || undefined,
+      });
 
       toast({
         title: "Profile Updated",
@@ -57,14 +58,12 @@ const ProfileEditPage: React.FC = () => {
 
       // Navigate back to profile page
       navigate("/dashboard/profile");
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to update profile. Please try again.",
+        description: error.message || "Failed to update profile. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -259,13 +258,13 @@ const ProfileEditPage: React.FC = () => {
             type="button"
             variant="outline"
             onClick={() => navigate("/dashboard/profile")}
-            disabled={isSubmitting}
+            disabled={updateProfile.isPending}
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={updateProfile.isPending}>
             <Save className="h-4 w-4 mr-2" />
-            {isSubmitting ? "Saving..." : "Save Changes"}
+            {updateProfile.isPending ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </form>

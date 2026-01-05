@@ -10,15 +10,15 @@ import { features } from "../data/features";
 
 export const FeaturesSection = () => {
   return (
-    <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50">
+    <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <Badge className="mb-4">Core Features</Badge>
+          <Badge className="mb-4">Why Choose Us</Badge>
           <h2 className="text-4xl font-bold text-slate-900 mb-4">
-            Everything you need to manage your infrastructure
+            Everything You Need to Succeed Online
           </h2>
           <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-            Professional-grade tools that scale with your business
+            Powerful hosting features designed to grow with your business
           </p>
         </div>
 

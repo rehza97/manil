@@ -89,15 +89,15 @@ export function OrderDetail() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("fr-DZ", {
       style: "currency",
-      currency: "USD",
+      currency: "DZD",
     }).format(amount);
   };
 
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString("en-US", {
+    return new Date(dateString).toLocaleDateString("fr-DZ", {
       year: "numeric",
       month: "short",
       day: "numeric",

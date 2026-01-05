@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
+import { useParams, Link } from "react-router-dom";
 import {
   ProductGrid,
   ProductFilters,
@@ -12,8 +11,8 @@ import { useCategories, useCategoryProducts } from "../hooks";
 import type { ProductCategory } from "../types";
 
 export const CategoryPage: React.FC = () => {
-  const params = useParams();
-  const categorySlug = params?.slug as string;
+  const { slug } = useParams<{ slug: string }>();
+  const categorySlug = slug;
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     sort_by: "created_at",
@@ -51,7 +50,7 @@ export const CategoryPage: React.FC = () => {
       <div className="border-b border-gray-200 bg-white px-4 py-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <nav className="flex gap-2 text-sm">
-            <Link href="/products" className="text-blue-600 hover:text-blue-700">
+            <Link to="/dashboard/catalog" className="text-blue-600 hover:text-blue-700">
               Products
             </Link>
             <span className="text-gray-500">/</span>

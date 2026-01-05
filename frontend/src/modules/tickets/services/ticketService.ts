@@ -24,10 +24,21 @@ export const ticketService = {
 
   async getAll(page = 1, pageSize = 20, filters?: any): Promise<TicketListResponse> {
     const response = await ticketsApi.getTickets({
-      skip: (page - 1) * pageSize,
-      limit: pageSize,
+      page,
+      page_size: pageSize,
       ...filters,
     });
+    // Transform backend response format to match frontend types
+    if (response && 'data' in response && 'pagination' in response) {
+      return {
+        data: response.data,
+        total: response.pagination?.total || response.data.length,
+        page: response.pagination?.page || page,
+        pageSize: response.pagination?.page_size || pageSize,
+        totalPages: response.pagination?.total_pages || 1,
+        pagination: response.pagination,
+      } as TicketListResponse;
+    }
     return response as TicketListResponse;
   },
 
@@ -75,8 +86,11 @@ export const ticketService = {
     return await ticketsApi.getReplies(ticketId);
   },
 
-  async createReply(ticketId: string, data: any): Promise<any> {
-    return await ticketsApi.createReply(ticketId, data);
+  async createReply(ticketId: string, data: { message: string; is_internal?: boolean }): Promise<any> {
+    return await ticketsApi.createReply(ticketId, {
+      message: data.message,
+      is_internal: data.is_internal || false,
+    });
   },
 
   async updateReply(replyId: string, data: any): Promise<any> {
@@ -123,5 +137,38 @@ export const ticketService = {
 
   async getActiveSLABreaches(): Promise<any[]> {
     return await ticketsApi.getActiveSLABreaches();
+  },
+
+  // ========== Attachments ==========
+
+  async getAttachments(ticketId: string): Promise<any[]> {
+    return await ticketsApi.getAttachments(ticketId);
+  },
+
+  async downloadAttachment(ticketId: string, attachmentId: string, filename: string): Promise<void> {
+    const blob = await ticketsApi.downloadAttachment(ticketId, attachmentId);
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
+
+  // ========== Categories ==========
+
+  async getCategories(): Promise<any[]> {
+    return await ticketsApi.getCategories();
+  },
+
+  // ========== Bulk Actions ==========
+
+  async bulkUpdateStatus(ticketIds: string[], status: string): Promise<void> {
+    // Update status for multiple tickets
+    await Promise.all(
+      ticketIds.map((id) => this.updateStatus(id, status))
+    );
   },
 };

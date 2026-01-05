@@ -45,7 +45,7 @@ export const COLORS = {
  */
 export const USER_ROLES = {
   ADMIN: "admin",
-  CORPORATE: "corporate",
+  corporate: "corporate",
   CLIENT: "client",
 } as const;
 

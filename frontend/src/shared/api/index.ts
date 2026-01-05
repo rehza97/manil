@@ -11,45 +11,61 @@
 export { apiClient, baseClient, handleApiError } from "./client";
 
 // Dashboard APIs (existing)
-export * from "./dashboard";
+// Note: dashboard/ is a directory, dashboard.ts is a file
+// Export dashboard.ts contents explicitly
+export { dashboardApi, default as dashboardApiDefault } from "./dashboard";
+export type * from "./dashboard";
+// Also export dashboard directory contents
+export * from "./dashboard/index";
 
 // Authentication & Authorization
-export { authApi } from "./auth";
+import { authApi } from "./auth";
+export { authApi };
 export type * from "./auth";
 
 // Audit & Activity Tracking
-export { auditApi } from "./audit";
+import { auditApi } from "./audit";
+export { auditApi };
 export type * from "./audit";
 
 // System Management
-export { systemApi } from "./system";
+import { systemApi } from "./system";
+export { systemApi };
 export type * from "./system";
 
 // Customer Management (including KYC, Notes, Documents)
-export { customersApi } from "./customers";
+import { customersApi } from "./customers";
+export { customersApi };
 export type * from "./customers";
 
 // Ticket Management (complete with tags, watchers, SLA, email)
-export { ticketsApi } from "./tickets";
+import { ticketsApi } from "./tickets";
+export { ticketsApi };
 export type * from "./tickets";
 
 // Product Catalog (products, categories, images, variants)
-export { productsApi } from "./products";
+import { productsApi } from "./products";
+export { productsApi };
 
 // Order Management
-export { ordersApi } from "./orders";
+import { ordersApi } from "./orders";
+export { ordersApi };
 
 // Quote Management
-export { quotesApi } from "./quotes";
+import { quotesApi } from "./quotes";
+export { quotesApi };
 
 // Invoice Management
-export { invoicesApi } from "./invoices";
+import { invoicesApi } from "./invoices";
+export { invoicesApi };
 
 // Reports & Analytics
-export { reportsApi } from "./reports";
+import { reportsApi } from "./reports";
+export { reportsApi };
 
 // Settings (roles, permissions, system settings)
-export { settingsApi } from "./settings";
+import { settingsApi } from "./settings";
+export { settingsApi };
 
 /**
  * Unified API object with all clients

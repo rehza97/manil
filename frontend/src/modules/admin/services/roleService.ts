@@ -9,47 +9,54 @@ import { apiClient } from "@/shared/api/client";
 export interface Permission {
   id: string;
   name: string;
-  description: string;
-  resource: string;
-  action: string;
+  slug: string;
+  category?: string;
+  description?: string | null;
+  is_system?: boolean;
+  is_active?: boolean;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 }
 
 export interface Role {
   id: string;
   name: string;
-  description: string;
+  slug: string;
+  description: string | null;
   permissions: Permission[];
-  is_system_role: boolean;
+  is_system: boolean;
+  is_active: boolean;
+  hierarchy_level: number;
+  parent_role_id: string | null;
   created_at: string;
   updated_at: string;
-  created_by: string;
-  updated_by: string;
 }
 
 export interface RoleFilters {
   search?: string;
-  is_system_role?: boolean;
+  is_active?: boolean;
 }
 
 export interface CreateRoleData {
   name: string;
-  description: string;
-  permission_ids: string[];
+  slug: string;
+  description?: string;
+  permission_ids?: string[];
+  is_system?: boolean;
 }
 
 export interface UpdateRoleData {
   name?: string;
   description?: string;
   permission_ids?: string[];
+  is_active?: boolean;
 }
 
 export interface PaginatedRoles {
-  data: Role[];
+  roles: Role[];
   total: number;
   page: number;
-  limit: number;
+  page_size: number;
   total_pages: number;
 }
 
@@ -62,13 +69,25 @@ export const roleService = {
     limit: number = 20,
     filters: RoleFilters = {}
   ): Promise<PaginatedRoles> {
-    const params = new URLSearchParams({
-      page: page.toString(),
-      limit: limit.toString(),
-      ...filters,
-    });
+    const skip = (page - 1) * limit;
+    const params: any = {
+      skip,
+      limit,
+    };
 
-    const response = await apiClient.get(`/admin/roles?${params}`);
+    if (filters.is_active !== undefined) {
+      params.is_active = filters.is_active;
+    }
+
+    // Backend returns { roles, total, page, page_size, total_pages }
+    console.log("[roleService.getRoles] Fetching roles from:", "/settings/roles", params);
+    
+    const response = await apiClient.get("/settings/roles", { params });
+    
+    console.log("[roleService.getRoles] Raw API response:", response.data);
+    console.log("[roleService.getRoles] Roles count:", response.data.roles?.length || 0);
+    
+    // Backend response already matches frontend format
     return response.data;
   },
 
@@ -76,7 +95,7 @@ export const roleService = {
    * Get role by ID
    */
   async getRole(roleId: string): Promise<Role> {
-    const response = await apiClient.get(`/admin/roles/${roleId}`);
+    const response = await apiClient.get(`/settings/roles/${roleId}`);
     return response.data;
   },
 
@@ -84,7 +103,7 @@ export const roleService = {
    * Create new role
    */
   async createRole(roleData: CreateRoleData): Promise<Role> {
-    const response = await apiClient.post("/admin/roles", roleData);
+    const response = await apiClient.post("/settings/roles", roleData);
     return response.data;
   },
 
@@ -92,7 +111,7 @@ export const roleService = {
    * Update role
    */
   async updateRole(roleId: string, roleData: UpdateRoleData): Promise<Role> {
-    const response = await apiClient.put(`/admin/roles/${roleId}`, roleData);
+    const response = await apiClient.put(`/settings/roles/${roleId}`, roleData);
     return response.data;
   },
 
@@ -100,57 +119,27 @@ export const roleService = {
    * Delete role
    */
   async deleteRole(roleId: string): Promise<void> {
-    await apiClient.delete(`/admin/roles/${roleId}`);
+    await apiClient.delete(`/settings/roles/${roleId}`);
   },
 
   /**
-   * Get all permissions
+   * Get role permissions
    */
-  async getPermissions(): Promise<Permission[]> {
-    const response = await apiClient.get("/admin/permissions");
+  async getRolePermissions(roleId: string): Promise<Permission[]> {
+    const response = await apiClient.get(`/settings/roles/${roleId}/permissions`);
+    return response.data.permissions || [];
+  },
+
+  /**
+   * Update role permissions
+   */
+  async updateRolePermissions(
+    roleId: string,
+    permissionIds: string[]
+  ): Promise<Role> {
+    const response = await apiClient.put(`/settings/roles/${roleId}/permissions`, {
+      permission_ids: permissionIds,
+    });
     return response.data;
-  },
-
-  /**
-   * Get permissions by resource
-   */
-  async getPermissionsByResource(resource: string): Promise<Permission[]> {
-    const response = await apiClient.get(
-      `/admin/permissions?resource=${resource}`
-    );
-    return response.data;
-  },
-
-  /**
-   * Create new permission
-   */
-  async createPermission(
-    permissionData: Omit<Permission, "id" | "created_at" | "updated_at">
-  ): Promise<Permission> {
-    const response = await apiClient.post("/admin/permissions", permissionData);
-    return response.data;
-  },
-
-  /**
-   * Update permission
-   */
-  async updatePermission(
-    permissionId: string,
-    permissionData: Partial<
-      Omit<Permission, "id" | "created_at" | "updated_at">
-    >
-  ): Promise<Permission> {
-    const response = await apiClient.put(
-      `/admin/permissions/${permissionId}`,
-      permissionData
-    );
-    return response.data;
-  },
-
-  /**
-   * Delete permission
-   */
-  async deletePermission(permissionId: string): Promise<void> {
-    await apiClient.delete(`/admin/permissions/${permissionId}`);
   },
 };

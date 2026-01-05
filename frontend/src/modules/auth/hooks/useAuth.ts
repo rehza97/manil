@@ -33,8 +33,13 @@ export const useLogin = () => {
   return useMutation({
     mutationFn: (credentials: LoginCredentials) =>
       authService.login(credentials),
-    onSuccess: (data) => {
-      setAuth(data.user, data.access_token);
+    onSuccess: (data, variables) => {
+      setAuth(
+        data.user, 
+        data.access_token, 
+        data.refresh_token, 
+        variables.rememberMe ?? true
+      );
       // Let RoleBasedRedirect handle the routing based on user role
       navigate("/redirect");
     },
@@ -51,7 +56,7 @@ export const useRegister = () => {
   return useMutation({
     mutationFn: (data: RegisterData) => authService.register(data),
     onSuccess: (data) => {
-      setAuth(data.user, data.access_token);
+      setAuth(data.user, data.access_token, data.refresh_token);
       // Let RoleBasedRedirect handle the routing based on user role
       navigate("/redirect");
     },
@@ -73,5 +78,51 @@ export const useLogout = () => {
       queryClient.clear();
       navigate("/login");
     },
+  });
+};
+
+/**
+ * Update profile mutation hook
+ */
+export const useUpdateProfile = () => {
+  const queryClient = useQueryClient();
+  const { setAuth } = useAuthStore();
+
+  return useMutation({
+    mutationFn: (data: { full_name?: string; phone?: string }) =>
+      authService.updateProfile(data),
+    onSuccess: (user) => {
+      // Update auth store with new user data
+      const currentAuth = useAuthStore.getState();
+      if (currentAuth.token && currentAuth.refreshToken) {
+        setAuth(user, currentAuth.token, currentAuth.refreshToken);
+      }
+      queryClient.invalidateQueries({ queryKey: ["auth", "current-user"] });
+    },
+  });
+};
+
+/**
+ * Change password mutation hook
+ */
+export const useChangePassword = () => {
+  return useMutation({
+    mutationFn: ({
+      currentPassword,
+      newPassword,
+    }: {
+      currentPassword: string;
+      newPassword: string;
+    }) => authService.changePassword(currentPassword, newPassword),
+  });
+};
+
+/**
+ * Get login history hook
+ */
+export const useLoginHistory = (page: number = 1, pageSize: number = 20) => {
+  return useQuery({
+    queryKey: ["auth", "login-history", page, pageSize],
+    queryFn: () => authService.getLoginHistory({ page, page_size: pageSize }),
   });
 };

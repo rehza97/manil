@@ -1,11 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { invoiceService } from "../services";
-import type { CreateInvoiceDTO, UpdateInvoiceDTO } from "../types";
+import type { CreateInvoiceDTO, UpdateInvoiceDTO, InvoiceStatus } from "../types";
 
-export const useInvoices = (page = 1, pageSize = 20) => {
+export const useInvoices = (
+  page = 1,
+  pageSize = 20,
+  filters?: {
+    status?: InvoiceStatus;
+    search?: string;
+    overdueOnly?: boolean;
+    customerId?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }
+) => {
   return useQuery({
-    queryKey: ["invoices", page, pageSize],
-    queryFn: () => invoiceService.getAll(page, pageSize),
+    queryKey: ["invoices", page, pageSize, filters],
+    queryFn: () => invoiceService.getAll(page, pageSize, filters),
   });
 };
 

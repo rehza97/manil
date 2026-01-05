@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useTicket } from "../hooks";
+import React, { useState, useMemo } from "react";
+import { useTicket, useUpdateTicket } from "../hooks";
 import { TicketStatus } from "../types/ticket.types";
 import {
   Card,
@@ -19,6 +19,8 @@ import {
 import { Textarea } from "@/shared/components/ui/textarea";
 import { useToast } from "@/shared/components/ui/use-toast";
 import { format } from "date-fns";
+import { ticketService } from "../services";
+import { useUsers } from "@/modules/admin/hooks";
 
 interface TicketDetailProps {
   ticketId: string;
@@ -39,14 +41,37 @@ const priorityColors: Record<string, string> = {
   urgent: "bg-red-100 text-red-800",
 };
 
+const formatDateSafe = (dateString: string | null | undefined, formatString: string): string => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "Invalid date";
+  try {
+    return format(date, formatString);
+  } catch (error) {
+    return "Invalid date";
+  }
+};
+
 export const TicketDetail: React.FC<TicketDetailProps> = ({
   ticketId,
   onStatusChange,
 }) => {
   const { toast } = useToast();
   const { data: ticket, isLoading } = useTicket(ticketId);
+  const updateTicket = useUpdateTicket();
   const [selectedStatus, setSelectedStatus] = useState<string>("");
+  const [selectedAssignee, setSelectedAssignee] = useState<string>("");
   const [replyMessage, setReplyMessage] = useState("");
+
+  // Fetch staff users for assignment (corporate and admin roles)
+  const { data: usersData } = useUsers(1, 100);
+  
+  const staffUsers = useMemo(() => {
+    const users = usersData?.data || [];
+    return users.filter((user) => 
+      user.role === "corporate" || user.role === "admin"
+    );
+  }, [usersData]);
 
   if (isLoading) {
     return <div className="text-center py-8">Loading ticket details...</div>;
@@ -66,12 +91,51 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
       return;
     }
 
-    // API call would go here
-    toast({
-      title: "Success",
-      description: "Ticket status updated",
-    });
-    onStatusChange?.();
+    try {
+      await updateTicket.mutateAsync({
+        id: ticketId,
+        data: { status: selectedStatus as TicketStatus },
+      });
+      toast({
+        title: "Success",
+        description: "Ticket status updated",
+      });
+      setSelectedStatus("");
+      onStatusChange?.();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAssignTicket = async () => {
+    if (!selectedAssignee) {
+      toast({
+        title: "Error",
+        description: "Please select an agent",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await ticketService.assign(ticketId, selectedAssignee);
+      toast({
+        title: "Success",
+        description: "Ticket assigned successfully",
+      });
+      setSelectedAssignee("");
+      onStatusChange?.();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to assign ticket",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleAddReply = async () => {
@@ -112,7 +176,7 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
             <div className="text-right text-sm text-gray-500">
               <div>Ticket #{ticket.id.slice(0, 8)}</div>
               <div>
-                Created {format(new Date(ticket.createdAt), "MMM dd, yyyy")}
+                Created {formatDateSafe(ticket.createdAt, "MMM dd, yyyy")}
               </div>
             </div>
           </div>
@@ -129,25 +193,54 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
               <div className="text-sm font-medium text-gray-600">Assigned To</div>
               <div className="text-sm">{ticket.assignedTo || "Unassigned"}</div>
             </div>
-            {ticket.firstResponseAt && (
-              <div>
-                <div className="text-sm font-medium text-gray-600">
-                  First Response
-                </div>
-                <div className="text-sm">
-                  {format(new Date(ticket.firstResponseAt), "MMM dd, yyyy HH:mm")}
-                </div>
-              </div>
-            )}
-            {ticket.resolvedAt && (
-              <div>
-                <div className="text-sm font-medium text-gray-600">Resolved At</div>
-                <div className="text-sm">
-                  {format(new Date(ticket.resolvedAt), "MMM dd, yyyy HH:mm")}
-                </div>
-              </div>
-            )}
           </div>
+
+          {/* Assignment Interface */}
+          <div className="border-t pt-6">
+            <h3 className="font-medium mb-3">Assign Ticket</h3>
+            <div className="flex gap-2">
+              <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
+                <SelectTrigger className="w-64">
+                  <SelectValue placeholder="Select agent to assign" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Unassign</SelectItem>
+                  {staffUsers.map((user: any) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.full_name || user.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={handleAssignTicket} disabled={!selectedAssignee || selectedAssignee === "none"}>
+                Assign
+              </Button>
+            </div>
+          </div>
+
+          {/* Response Times */}
+          {(ticket.firstResponseAt || ticket.resolvedAt) && (
+            <div className="border-t pt-6 space-y-3">
+              {ticket.firstResponseAt && (
+                <div>
+                  <div className="text-sm font-medium text-gray-600">
+                    First Response
+                  </div>
+                  <div className="text-sm">
+                    {formatDateSafe(ticket.firstResponseAt, "MMM dd, yyyy HH:mm")}
+                  </div>
+                </div>
+              )}
+              {ticket.resolvedAt && (
+                <div>
+                  <div className="text-sm font-medium text-gray-600">Resolved At</div>
+                  <div className="text-sm">
+                    {formatDateSafe(ticket.resolvedAt, "MMM dd, yyyy HH:mm")}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Description */}
           <div>

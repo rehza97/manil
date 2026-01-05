@@ -21,13 +21,35 @@ import type {
  */
 export const invoiceService = {
   /**
-   * Get all invoices with pagination
+   * Get all invoices with pagination and filters
    */
-  async getAll(page = 1, pageSize = 20): Promise<InvoiceListResponse> {
-    const response = await invoicesApi.getInvoices({
-      skip: (page - 1) * pageSize,
-      limit: pageSize,
-    });
+  async getAll(
+    page = 1,
+    pageSize = 20,
+    filters?: {
+      status?: string;
+      search?: string;
+      overdueOnly?: boolean;
+      customerId?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    }
+  ): Promise<InvoiceListResponse> {
+    const params: any = {
+      page,
+      page_size: pageSize,
+    };
+
+    if (filters) {
+      if (filters.status) params.status = filters.status;
+      if (filters.search) params.search = filters.search;
+      if (filters.overdueOnly) params.overdue_only = filters.overdueOnly;
+      if (filters.customerId) params.customer_id = filters.customerId;
+      if (filters.dateFrom) params.date_from = filters.dateFrom;
+      if (filters.dateTo) params.date_to = filters.dateTo;
+    }
+
+    const response = await invoicesApi.getInvoices(params);
     return response as InvoiceListResponse;
   },
 

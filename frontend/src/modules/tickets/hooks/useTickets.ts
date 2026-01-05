@@ -1,11 +1,24 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ticketService } from "../services";
 import type { CreateTicketDTO, UpdateTicketDTO } from "../types";
+import { useToast } from "@/shared/components/ui/use-toast";
 
-export const useTickets = (page = 1, pageSize = 20) => {
+export const useTickets = (
+  page = 1,
+  pageSize = 20,
+  filters?: {
+    status?: string;
+    priority?: string;
+    category?: string;
+    assignedTo?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    search?: string;
+  }
+) => {
   return useQuery({
-    queryKey: ["tickets", page, pageSize],
-    queryFn: () => ticketService.getAll(page, pageSize),
+    queryKey: ["tickets", page, pageSize, filters],
+    queryFn: () => ticketService.getAll(page, pageSize, filters),
   });
 };
 
@@ -36,6 +49,56 @@ export const useUpdateTicket = () => {
       ticketService.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
+    },
+  });
+};
+
+export const useDeleteTicket = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => ticketService.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+    },
+  });
+};
+
+export const useTicketCategories = () => {
+  return useQuery({
+    queryKey: ["ticket-categories"],
+    queryFn: () => ticketService.getCategories(),
+    retry: (failureCount, error: any) => {
+      // Don't retry on 403 (Forbidden) errors
+      if (error?.response?.status === 403) {
+        return false;
+      }
+      return failureCount < 3;
+    },
+    retryOnMount: false,
+  });
+};
+
+export const useBulkUpdateStatus = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: ({ ticketIds, status }: { ticketIds: string[]; status: string }) =>
+      ticketService.bulkUpdateStatus(ticketIds, status),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      toast({
+        title: "Success",
+        description: `Updated ${variables.ticketIds.length} ticket(s) status to ${variables.status}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update tickets",
+        variant: "destructive",
+      });
     },
   });
 };

@@ -156,26 +156,34 @@ export const SystemOverviewPage: React.FC = () => {
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">System Load</p>
+              <p className="text-sm text-gray-600">CPU Usage</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {health?.system_load || 0}%
+                {detailedHealth?.api_server?.cpu_usage?.toFixed(1) || 0}%
               </p>
-              <p className="text-xs text-gray-500 mt-1">CPU usage</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {detailedHealth?.api_server?.memory_used_gb
+                  ? `${detailedHealth.api_server.memory_used_gb.toFixed(
+                      1
+                    )}GB / ${detailedHealth.api_server.memory_total_gb?.toFixed(
+                      1
+                    )}GB RAM`
+                  : "System load"}
+              </p>
             </div>
             <div
               className={`h-12 w-12 rounded-full flex items-center justify-center ${
-                (health?.system_load || 0) < 50
+                (detailedHealth?.api_server?.cpu_usage || 0) < 50
                   ? "bg-green-100"
-                  : (health?.system_load || 0) < 80
+                  : (detailedHealth?.api_server?.cpu_usage || 0) < 80
                   ? "bg-yellow-100"
                   : "bg-red-100"
               }`}
             >
               <Server
                 className={`w-6 h-6 ${
-                  (health?.system_load || 0) < 50
+                  (detailedHealth?.api_server?.cpu_usage || 0) < 50
                     ? "text-green-600"
-                    : (health?.system_load || 0) < 80
+                    : (detailedHealth?.api_server?.cpu_usage || 0) < 80
                     ? "text-yellow-600"
                     : "text-red-600"
                 }`}
@@ -187,33 +195,35 @@ export const SystemOverviewPage: React.FC = () => {
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Critical Alerts</p>
-              <p
-                className={`text-2xl font-bold mt-1 ${
-                  (health?.critical_alerts || 0) === 0
-                    ? "text-green-600"
-                    : "text-red-600"
-                }`}
-              >
-                {health?.critical_alerts || 0}
+              <p className="text-sm text-gray-600">Disk Usage</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                {detailedHealth?.storage?.usage_percent?.toFixed(1) || 0}%
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                {(health?.critical_alerts || 0) === 0
-                  ? "All systems operational"
-                  : "Attention required"}
+                {detailedHealth?.storage?.available_gb
+                  ? `${detailedHealth.storage.available_gb.toFixed(
+                      1
+                    )}GB free of ${detailedHealth.storage.total_gb?.toFixed(
+                      1
+                    )}GB`
+                  : "Storage capacity"}
               </p>
             </div>
             <div
               className={`h-12 w-12 rounded-full flex items-center justify-center ${
-                (health?.critical_alerts || 0) === 0
+                (detailedHealth?.storage?.usage_percent || 0) < 80
                   ? "bg-green-100"
+                  : (detailedHealth?.storage?.usage_percent || 0) < 90
+                  ? "bg-yellow-100"
                   : "bg-red-100"
               }`}
             >
               <AlertCircle
                 className={`w-6 h-6 ${
-                  (health?.critical_alerts || 0) === 0
+                  (detailedHealth?.storage?.usage_percent || 0) < 80
                     ? "text-green-600"
+                    : (detailedHealth?.storage?.usage_percent || 0) < 90
+                    ? "text-yellow-600"
                     : "text-red-600"
                 }`}
               />
@@ -274,103 +284,156 @@ export const SystemOverviewPage: React.FC = () => {
         </div>
         <div className="flex items-baseline gap-3">
           <p className="text-4xl font-bold text-gray-900">
-            ${(stats?.monthly_revenue || 0).toLocaleString()}
+            {(stats?.monthly_revenue || 0).toLocaleString()} DZD
           </p>
-          {stats?.revenue_growth !== undefined && (
-            <Badge
-              className={
-                stats.revenue_growth >= 0
-                  ? "bg-green-100 text-green-800"
-                  : "bg-red-100 text-red-800"
-              }
-            >
-              {stats.revenue_growth >= 0 ? "+" : ""}
-              {stats.revenue_growth.toFixed(1)}% from last month
-            </Badge>
-          )}
         </div>
         <div className="mt-4 text-sm text-gray-600">
-          {stats?.revenue_growth !== undefined && stats.revenue_growth >= 0
-            ? "This month's revenue is tracking above average"
-            : "Revenue tracking below previous month"}
+          This month's revenue is tracking above average
         </div>
       </Card>
 
       {/* System Health Details */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          System Components
+          System Components Health
         </h3>
         <div className="space-y-4">
-          {detailedHealth &&
-            Object.entries(
-              detailedHealth as Record<string, ComponentHealth>
-            ).map(([component, data]) => (
-              <div
-                key={component}
-                className="flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`h-3 w-3 rounded-full ${
-                      data.status === "healthy"
-                        ? "bg-green-500"
-                        : data.status === "warning"
-                        ? "bg-yellow-500"
-                        : "bg-red-500"
-                    }`}
-                  ></div>
-                  <span className="text-sm font-medium text-gray-900 capitalize">
-                    {component.replace("_", " ")}
+          {detailedHealth?.database && (
+            <div className="flex items-center justify-between border-b pb-3">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`h-3 w-3 rounded-full ${
+                    detailedHealth.database.status === "healthy"
+                      ? "bg-green-500"
+                      : detailedHealth.database.status === "degraded"
+                      ? "bg-yellow-500"
+                      : "bg-red-500"
+                  }`}
+                ></div>
+                <div>
+                  <span className="text-sm font-medium text-gray-900">
+                    Database
                   </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {data.uptime && (
-                    <>
-                      <span className="text-sm text-gray-500">
-                        Uptime: {data.uptime}%
-                      </span>
-                      <span className="text-sm text-gray-500">•</span>
-                    </>
-                  )}
-                  {data.response_time && (
-                    <>
-                      <span className="text-sm text-gray-500">
-                        Response: {data.response_time}ms
-                      </span>
-                      <span className="text-sm text-gray-500">•</span>
-                    </>
-                  )}
-                  {data.cpu_usage && (
-                    <>
-                      <span className="text-sm text-gray-500">
-                        CPU: {data.cpu_usage}%
-                      </span>
-                      <span className="text-sm text-gray-500">•</span>
-                    </>
-                  )}
-                  {data.hit_rate && (
-                    <>
-                      <span className="text-sm text-gray-500">
-                        Hit Rate: {data.hit_rate}%
-                      </span>
-                      <span className="text-sm text-gray-500">•</span>
-                    </>
-                  )}
-                  {data.usage_percent && (
-                    <>
-                      <span className="text-sm text-gray-500">
-                        Usage: {data.usage_percent}%
-                      </span>
-                      <span className="text-sm text-gray-500">•</span>
-                    </>
-                  )}
-                  <span className="text-sm text-gray-500 capitalize">
-                    {data.status}
-                  </span>
+                  <p className="text-xs text-gray-500">
+                    PostgreSQL • {detailedHealth.database.connections || 0}{" "}
+                    active connections
+                  </p>
                 </div>
               </div>
-            ))}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">
+                  Uptime: {detailedHealth.database.uptime?.toFixed(1)}%
+                </span>
+                <span className="text-sm text-gray-500">•</span>
+                <span className="text-sm text-gray-500">
+                  Response: {detailedHealth.database.response_time?.toFixed(0)}
+                  ms
+                </span>
+              </div>
+            </div>
+          )}
+          {detailedHealth?.redis && (
+            <div className="flex items-center justify-between border-b pb-3">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`h-3 w-3 rounded-full ${
+                    detailedHealth.redis.status === "healthy"
+                      ? "bg-green-500"
+                      : detailedHealth.redis.status === "unavailable"
+                      ? "bg-gray-400"
+                      : "bg-red-500"
+                  }`}
+                ></div>
+                <div>
+                  <span className="text-sm font-medium text-gray-900">
+                    Redis Cache
+                  </span>
+                  <p className="text-xs text-gray-500">
+                    {detailedHealth.redis.memory_usage || "N/A"} • Hit rate:{" "}
+                    {detailedHealth.redis.hit_rate?.toFixed(1)}%
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">
+                  Uptime: {detailedHealth.redis.uptime?.toFixed(1)}%
+                </span>
+              </div>
+            </div>
+          )}
+          {detailedHealth?.api_server && (
+            <div className="flex items-center justify-between border-b pb-3">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`h-3 w-3 rounded-full ${
+                    detailedHealth.api_server.status === "healthy"
+                      ? "bg-green-500"
+                      : detailedHealth.api_server.status === "degraded"
+                      ? "bg-yellow-500"
+                      : "bg-red-500"
+                  }`}
+                ></div>
+                <div>
+                  <span className="text-sm font-medium text-gray-900">
+                    API Server
+                  </span>
+                  <p className="text-xs text-gray-500">
+                    FastAPI • CPU:{" "}
+                    {detailedHealth.api_server.cpu_usage?.toFixed(1) || 0}% •
+                    RAM:{" "}
+                    {detailedHealth.api_server.memory_usage?.toFixed(1) || 0}%
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">
+                  Uptime: {detailedHealth.api_server.uptime?.toFixed(1)}%
+                </span>
+                <span className="text-sm text-gray-500">•</span>
+                <span className="text-sm text-gray-500">
+                  Avg Response:{" "}
+                  {detailedHealth.api_server.response_time?.toFixed(0)}ms
+                </span>
+              </div>
+            </div>
+          )}
+          {detailedHealth?.storage && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`h-3 w-3 rounded-full ${
+                    detailedHealth.storage.status === "healthy"
+                      ? "bg-green-500"
+                      : detailedHealth.storage.status === "warning"
+                      ? "bg-yellow-500"
+                      : detailedHealth.storage.status === "critical"
+                      ? "bg-red-500"
+                      : "bg-gray-400"
+                  }`}
+                ></div>
+                <div>
+                  <span className="text-sm font-medium text-gray-900">
+                    Storage
+                  </span>
+                  <p className="text-xs text-gray-500">
+                    {detailedHealth.storage.available_gb
+                      ? `${detailedHealth.storage.available_gb.toFixed(
+                          1
+                        )}GB free of ${detailedHealth.storage.total_gb?.toFixed(
+                          1
+                        )}GB`
+                      : "Disk I/O"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">
+                  Usage: {detailedHealth.storage.usage_percent?.toFixed(1) || 0}
+                  %
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </Card>
 
@@ -425,7 +488,7 @@ export const SystemOverviewPage: React.FC = () => {
                 <div className="text-sm text-gray-600 capitalize">
                   {role === "ADMIN"
                     ? "Admin"
-                    : role === "CORPORATE"
+                    : role === "corporate"
                     ? "Corporate"
                     : role === "CLIENT"
                     ? "Client"

@@ -1,8 +1,13 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useCreateCustomer, useUpdateCustomer, useCustomer } from "../hooks/useCustomers";
-import { CustomerType, CreateCustomerDTO } from "../types";
+import {
+  useCreateCustomer,
+  useUpdateCustomer,
+  useCustomer,
+} from "../hooks/useCustomers";
+import { CustomerType, type CreateCustomerDTO } from "../types";
+import { useUsers } from "@/modules/admin/hooks/useUsers";
 import { Button } from "@/shared/components/ui/button";
 import {
   Form,
@@ -21,34 +26,45 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
 import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
-const customerFormSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  phone: z.string().min(7, "Phone must be at least 7 characters"),
-  customerType: z.nativeEnum(CustomerType).optional(),
-  companyName: z.string().optional(),
-  taxId: z.string().optional(),
-  address: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  country: z.string().optional(),
-  postalCode: z.string().max(20, "Postal code must be max 20 characters").optional(),
-}).refine(
-  (data) => {
-    if (data.customerType === CustomerType.CORPORATE) {
-      return !!data.companyName;
+const customerFormSchema = z
+  .object({
+    name: z.string().min(2, "Name must be at least 2 characters"),
+    email: z.string().email("Invalid email address"),
+    phone: z.string().min(7, "Phone must be at least 7 characters"),
+    customerType: z.nativeEnum(CustomerType).optional(),
+    companyName: z.string().optional(),
+    taxId: z.string().optional(),
+    address: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    country: z.string().optional(),
+    postalCode: z
+      .string()
+      .max(20, "Postal code must be max 20 characters")
+      .optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.customerType === CustomerType.corporate) {
+        return !!data.companyName;
+      }
+      return true;
+    },
+    {
+      message: "Company name is required for corporate customers",
+      path: ["companyName"],
     }
-    return true;
-  },
-  {
-    message: "Company name is required for corporate customers",
-    path: ["companyName"],
-  }
-);
+  );
 
 type CustomerFormValues = z.infer<typeof customerFormSchema>;
 
@@ -58,11 +74,22 @@ interface CustomerFormProps {
   onCancel?: () => void;
 }
 
-export function CustomerForm({ customerId, onSuccess, onCancel }: CustomerFormProps) {
+export function CustomerForm({
+  customerId,
+  onSuccess,
+  onCancel,
+}: CustomerFormProps) {
   const isEdit = !!customerId;
-  const { data: customer, isLoading: isLoadingCustomer } = useCustomer(customerId || "");
+  const { data: customer, isLoading: isLoadingCustomer } = useCustomer(
+    customerId || ""
+  );
   const createCustomer = useCreateCustomer();
   const updateCustomer = useUpdateCustomer();
+
+  // Fetch users for selection (only when creating, not editing)
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const { data: usersData } = useUsers(1, 100); // Fetch up to 100 users
+  const users = usersData?.data || [];
 
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(customerFormSchema),
@@ -70,7 +97,7 @@ export function CustomerForm({ customerId, onSuccess, onCancel }: CustomerFormPr
       name: "",
       email: "",
       phone: "",
-      customerType: CustomerType.INDIVIDUAL,
+      customerType: CustomerType.individual,
       companyName: "",
       taxId: "",
       address: "",
@@ -81,8 +108,19 @@ export function CustomerForm({ customerId, onSuccess, onCancel }: CustomerFormPr
     },
   });
 
-  const { watch } = form;
+  const { watch, setValue } = form;
   const customerType = watch("customerType");
+
+  // Handle user selection - auto-fill form when user is selected
+  const handleUserSelect = (userId: string) => {
+    setSelectedUserId(userId);
+    const selectedUser = users.find((u) => u.id === userId);
+    if (selectedUser) {
+      setValue("name", selectedUser.full_name);
+      setValue("email", selectedUser.email);
+      // Phone is not available in User model, so we leave it empty for manual entry
+    }
+  };
 
   // Load customer data for editing
   useEffect(() => {
@@ -131,7 +169,9 @@ export function CustomerForm({ customerId, onSuccess, onCancel }: CustomerFormPr
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{isEdit ? "Edit Customer" : "Create New Customer"}</CardTitle>
+        <CardTitle>
+          {isEdit ? "Edit Customer" : "Create New Customer"}
+        </CardTitle>
         <CardDescription>
           {isEdit
             ? "Update customer information and details"
@@ -141,6 +181,49 @@ export function CustomerForm({ customerId, onSuccess, onCancel }: CustomerFormPr
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* User Selection (only when creating) */}
+            {!isEdit && (
+              <div className="space-y-2 p-4 bg-gray-50 rounded-lg border">
+                <FormLabel className="text-base font-medium">
+                  Link to Existing User (Optional)
+                </FormLabel>
+                <FormDescription>
+                  Select an existing user to auto-fill customer information.
+                  Leave empty to create a new customer.
+                </FormDescription>
+                <Select value={selectedUserId} onValueChange={handleUserSelect}>
+                  <SelectTrigger className="bg-white border-gray-200">
+                    <SelectValue placeholder="Select a user (optional)" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-gray-200">
+                    {users.map((user) => (
+                      <SelectItem
+                        key={user.id}
+                        value={user.id}
+                        className="bg-white hover:bg-gray-50"
+                      >
+                        {user.full_name} ({user.email}) - {user.role}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedUserId && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedUserId("");
+                      setValue("name", "");
+                      setValue("email", "");
+                    }}
+                  >
+                    Clear selection
+                  </Button>
+                )}
+              </div>
+            )}
+
             {/* Basic Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Basic Information</h3>
@@ -202,15 +285,21 @@ export function CustomerForm({ customerId, onSuccess, onCancel }: CustomerFormPr
                       defaultValue={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-white border-gray-200">
                           <SelectValue placeholder="Select customer type" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value={CustomerType.INDIVIDUAL}>
+                      <SelectContent className="bg-white border-gray-200">
+                        <SelectItem
+                          value={CustomerType.individual}
+                          className="bg-white hover:bg-gray-50"
+                        >
                           Individual
                         </SelectItem>
-                        <SelectItem value={CustomerType.CORPORATE}>
+                        <SelectItem
+                          value={CustomerType.corporate}
+                          className="bg-white hover:bg-gray-50"
+                        >
                           Corporate
                         </SelectItem>
                       </SelectContent>
@@ -225,7 +314,7 @@ export function CustomerForm({ customerId, onSuccess, onCancel }: CustomerFormPr
             </div>
 
             {/* Corporate Information */}
-            {customerType === CustomerType.CORPORATE && (
+            {customerType === CustomerType.corporate && (
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Corporate Information</h3>
 

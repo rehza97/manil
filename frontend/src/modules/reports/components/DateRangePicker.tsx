@@ -5,7 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import { CalendarIcon } from '@heroicons/react/24/outline';
+import { Calendar } from 'lucide-react';
 
 interface DateRange {
   startDate?: string;
@@ -61,10 +61,10 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center space-x-2">
-        <CalendarIcon className="h-5 w-5 text-gray-400" />
-        <span className="text-sm font-medium text-gray-700">Date Range:</span>
+        <Calendar className="h-4 w-4 text-slate-500" />
+        <span className="text-sm font-medium text-slate-700">Date Range</span>
       </div>
 
       {/* Predefined Ranges */}
@@ -73,10 +73,10 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
           <button
             key={range.value}
             onClick={() => handlePredefinedChange(range.value)}
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
               value.period === range.value && !showCustomInput
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                ? 'bg-blue-600 text-white shadow-sm hover:bg-blue-700'
+                : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:border-slate-400'
             }`}
           >
             {range.label}
@@ -86,10 +86,10 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
         {showCustom && (
           <button
             onClick={handleCustomChange}
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
               showCustomInput
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                ? 'bg-blue-600 text-white shadow-sm hover:bg-blue-700'
+                : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:border-slate-400'
             }`}
           >
             Custom Range
@@ -99,9 +99,9 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
 
       {/* Custom Date Inputs */}
       {showCustomInput && (
-        <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-          <div className="flex-1">
-            <label htmlFor="start-date" className="block text-sm font-medium text-gray-700 mb-1">
+        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 p-4 bg-slate-50 rounded-lg border border-slate-200">
+          <div className="flex-1 w-full sm:w-auto">
+            <label htmlFor="start-date" className="block text-xs font-medium text-slate-700 mb-1.5">
               Start Date
             </label>
             <input
@@ -109,11 +109,11 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
               type="date"
               value={value.startDate || ''}
               onChange={(e) => handleDateChange('start', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             />
           </div>
-          <div className="flex-1">
-            <label htmlFor="end-date" className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="flex-1 w-full sm:w-auto">
+            <label htmlFor="end-date" className="block text-xs font-medium text-slate-700 mb-1.5">
               End Date
             </label>
             <input
@@ -122,7 +122,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
               value={value.endDate || ''}
               onChange={(e) => handleDateChange('end', e.target.value)}
               min={value.startDate}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             />
           </div>
         </div>

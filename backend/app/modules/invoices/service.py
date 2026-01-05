@@ -105,6 +105,7 @@ class InvoiceService:
         invoice = Invoice(
             invoice_number=invoice_number,
             quote_id=invoice_data.quote_id,
+            vps_subscription_id=invoice_data.vps_subscription_id,
             customer_id=invoice_data.customer_id,
             title=invoice_data.title,
             description=invoice_data.description,

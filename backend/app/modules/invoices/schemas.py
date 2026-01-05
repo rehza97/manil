@@ -55,6 +55,7 @@ class InvoiceCreate(InvoiceBase):
     """Schema for creating invoices."""
     customer_id: str
     quote_id: Optional[str] = None
+    vps_subscription_id: Optional[str] = None
     items: List[InvoiceItemCreate] = Field(..., min_length=1)
     issue_date: datetime
     due_date: datetime

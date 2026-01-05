@@ -19,52 +19,50 @@ import {
   AlertCircle,
   Plus,
   Eye,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/modules/auth";
+import { useCustomerDashboard } from "../hooks/useDashboard";
 
 const UserDashboardPage: React.FC = () => {
   const { user } = useAuth();
+  const { data, isLoading, error } = useCustomerDashboard("month");
 
-  // Mock data - in real app, this would come from API
-  const stats = {
-    activeServices: 3,
-    openTickets: 2,
-    pendingOrders: 1,
-    totalSpent: 1250,
+  // Use real data from API or defaults
+  const stats = data?.stats || {
+    activeServices: 0,
+    openTickets: 0,
+    pendingOrders: 0,
+    totalSpent: 0,
   };
 
-  const recentTickets = [
-    {
-      id: "T-001",
-      subject: "Server performance issue",
-      status: "open",
-      priority: "high",
-      createdAt: "2024-01-15",
-    },
-    {
-      id: "T-002",
-      subject: "Billing inquiry",
-      status: "resolved",
-      priority: "medium",
-      createdAt: "2024-01-14",
-    },
-  ];
+  const recentTickets = data?.recentTickets || [];
+  const recentOrders = data?.recentOrders || [];
 
-  const recentOrders = [
-    {
-      id: "O-001",
-      service: "VPS Hosting - Basic",
-      status: "pending",
-      amount: 29.99,
-      createdAt: "2024-01-15",
-    },
-  ];
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
+          <p className="text-destructive">Failed to load dashboard data</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-6 text-white">
-        <h1 className="text-2xl font-bold mb-2">Welcome back, {user?.name}!</h1>
+        <h1 className="text-2xl font-bold mb-2">Welcome back, {user?.full_name || user?.email}!</h1>
         <p className="text-blue-100">
           Here's an overview of your CloudManager services and activities.
         </p>
@@ -144,43 +142,49 @@ const UserDashboardPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentTickets.map((ticket) => (
-                <div
-                  key={ticket.id}
-                  className="flex items-center justify-between p-3 border rounded-lg"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium">{ticket.id}</span>
-                      <Badge
-                        variant={
-                          ticket.status === "resolved" ? "default" : "secondary"
-                        }
-                      >
-                        {ticket.status}
-                      </Badge>
-                      <Badge
-                        variant={
-                          ticket.priority === "high" ? "destructive" : "outline"
-                        }
-                      >
-                        {ticket.priority}
-                      </Badge>
+              {recentTickets.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No recent tickets
+                </p>
+              ) : (
+                recentTickets.map((ticket) => (
+                  <div
+                    key={ticket.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-medium">{ticket.id}</span>
+                        <Badge
+                          variant={
+                            ticket.status === "resolved" ? "default" : "secondary"
+                          }
+                        >
+                          {ticket.status}
+                        </Badge>
+                        <Badge
+                          variant={
+                            ticket.priority === "high" ? "destructive" : "outline"
+                          }
+                        >
+                          {ticket.priority}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {ticket.subject}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(ticket.created_at).toLocaleDateString()}
+                      </p>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {ticket.subject}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {ticket.createdAt}
-                    </p>
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link to={`/dashboard/tickets/${ticket.id}`}>
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                    </Button>
                   </div>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link to={`/dashboard/tickets/${ticket.id}`}>
-                      <Eye className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -202,7 +206,12 @@ const UserDashboardPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentOrders.map((order) => (
+              {recentOrders.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No recent orders
+                </p>
+              ) : (
+                recentOrders.map((order) => (
                 <div
                   key={order.id}
                   className="flex items-center justify-between p-3 border rounded-lg"
@@ -216,7 +225,7 @@ const UserDashboardPage: React.FC = () => {
                       {order.service}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      ${order.amount} • {order.createdAt}
+                      ${order.amount} • {new Date(order.created_at).toLocaleDateString()}
                     </p>
                   </div>
                   <Button variant="ghost" size="sm" asChild>
@@ -225,7 +234,8 @@ const UserDashboardPage: React.FC = () => {
                     </Link>
                   </Button>
                 </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

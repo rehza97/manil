@@ -2,11 +2,12 @@
 import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, status, Query
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
 from app.core.dependencies import get_current_user, require_permission
+from app.core.permissions import Permission
 from app.core.logging import logger
 from app.modules.auth.models import User
 from app.modules.tickets.models import Ticket, TicketPriority
@@ -37,7 +38,7 @@ router = APIRouter(prefix="/tickets", tags=["tickets"])
 async def create_ticket_category(
     category_data: TicketCategoryCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_MANAGE")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_ASSIGN)),
 ):
     """Create a new ticket category."""
     try:
@@ -63,7 +64,7 @@ async def create_ticket_category(
 )
 async def list_ticket_categories(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_VIEW")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
     """List all active ticket categories."""
     query = select(TicketCategory).where(TicketCategory.is_active == True)
@@ -80,7 +81,7 @@ async def list_ticket_categories(
 async def get_ticket_category(
     category_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_VIEW")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
     """Get ticket category by ID."""
     query = select(TicketCategory).where(TicketCategory.id == category_id)
@@ -100,7 +101,7 @@ async def update_ticket_category(
     category_id: str,
     category_data: TicketCategoryUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_MANAGE")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_ASSIGN)),
 ):
     """Update ticket category."""
     try:
@@ -131,7 +132,7 @@ async def update_ticket_category(
 async def delete_ticket_category(
     category_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_MANAGE")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_ASSIGN)),
 ):
     """Soft delete ticket category."""
     try:
@@ -163,7 +164,7 @@ async def delete_ticket_category(
 async def create_response_template(
     template_data: ResponseTemplateCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_MANAGE")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_ASSIGN)),
 ):
     """Create a new response template (canned reply)."""
     try:
@@ -185,23 +186,52 @@ async def create_response_template(
 
 @router.get(
     "/templates",
-    response_model=list[ResponseTemplateResponse],
     summary="List response templates",
 )
 async def list_response_templates(
     category: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    search: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_VIEW")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
-    """List response templates, optionally filtered by category."""
+    """List response templates with pagination and optional filtering."""
     conditions = [ResponseTemplate.deleted_at.is_(None)]
     if category:
         conditions.append(ResponseTemplate.category == category)
+    if search:
+        conditions.append(
+            or_(
+                ResponseTemplate.title.ilike(f"%{search}%"),
+                ResponseTemplate.content.ilike(f"%{search}%"),
+            )
+        )
 
-    query = select(ResponseTemplate).where(*conditions).order_by(ResponseTemplate.created_at.desc())
+    # Count total
+    count_query = select(func.count()).select_from(ResponseTemplate).where(*conditions)
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+
+    # Get paginated results
+    skip = (page - 1) * page_size
+    query = (
+        select(ResponseTemplate)
+        .where(*conditions)
+        .order_by(ResponseTemplate.created_at.desc())
+        .offset(skip)
+        .limit(page_size)
+    )
     result = await db.execute(query)
     templates = result.scalars().all()
-    return templates
+
+    return {
+        "items": [ResponseTemplateResponse.model_validate(t) for t in templates],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "has_more": (skip + len(templates)) < total,
+    }
 
 
 @router.get(
@@ -212,7 +242,7 @@ async def list_response_templates(
 async def get_response_template(
     template_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_VIEW")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
     """Get response template by ID."""
     query = select(ResponseTemplate).where(
@@ -234,7 +264,7 @@ async def update_response_template(
     template_id: str,
     template_data: ResponseTemplateUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_MANAGE")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_ASSIGN)),
 ):
     """Update response template."""
     try:
@@ -268,7 +298,7 @@ async def update_response_template(
 async def delete_response_template(
     template_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_MANAGE")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_ASSIGN)),
 ):
     """Soft delete response template."""
     try:
@@ -304,7 +334,7 @@ async def filter_tickets_by_priority(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_VIEW")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
     """Filter tickets by priority level."""
     conditions = [
@@ -354,7 +384,7 @@ async def filter_tickets_by_category(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_VIEW")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
     """Filter tickets by category."""
     conditions = [

@@ -85,8 +85,17 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Get client IP
         client_ip = request.client.host if request.client else "unknown"
 
-        # Skip rate limiting for health checks
-        if request.url.path in ["/health", "/"]:
+        # Skip rate limiting for health checks and status polling endpoints
+        # These endpoints are designed to be polled frequently
+        excluded_paths = [
+            "/health",
+            "/",
+        ]
+        # Exclude download-status and stats endpoints (frequent polling)
+        if "/download-status" in request.url.path or "/stats" in request.url.path:
+            return await call_next(request)
+        
+        if request.url.path in excluded_paths:
             return await call_next(request)
 
         try:

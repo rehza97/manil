@@ -4,7 +4,7 @@
  * @module modules/customers/types
  */
 
-import { AuditFields, PaginatedResponse } from "@/shared/types";
+import type { AuditFields, PaginatedResponse } from "@/shared/types";
 
 export enum CustomerStatus {
   PENDING = "pending",
@@ -14,8 +14,8 @@ export enum CustomerStatus {
 }
 
 export enum CustomerType {
-  INDIVIDUAL = "individual",
-  CORPORATE = "corporate",
+  individual = "individual",
+  corporate = "corporate",
 }
 
 export interface Customer extends AuditFields {

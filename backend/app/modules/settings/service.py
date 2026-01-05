@@ -21,6 +21,7 @@ from app.modules.settings.schemas import (
     SystemSettingCreate,
     SystemSettingUpdate,
 )
+from app.modules.settings.seed_data import SYSTEM_PERMISSIONS, SYSTEM_ROLES, SYSTEM_SETTINGS
 
 
 class PermissionService:
@@ -398,3 +399,135 @@ class SystemSettingService:
         setting = await self.get_by_key(key)
         await self.repository.delete(setting)
         await self.repository.commit()
+
+
+async def seed_permissions_and_roles(db: AsyncSession) -> bool:
+    """
+    Seed database with default permissions and roles.
+
+    This function is idempotent - it will skip creating permissions/roles
+    that already exist (based on slug).
+
+    Args:
+        db: Database session
+
+    Returns:
+        True if seeding was successful, False otherwise
+    """
+    try:
+        permission_repo = PermissionRepository(db)
+        role_repo = RoleRepository(db)
+
+        # Step 1: Create permissions
+        permission_map = {}  # slug -> Permission object
+        for perm_data in SYSTEM_PERMISSIONS:
+            # Check if permission already exists
+            existing = await permission_repo.get_by_slug(perm_data["slug"])
+            if existing:
+                permission_map[perm_data["slug"]] = existing
+                continue
+
+            # Create new permission
+            permission = Permission(
+                name=perm_data["name"],
+                slug=perm_data["slug"],
+                description=perm_data["description"],
+                category=perm_data["category"],
+                resource=perm_data["resource"],
+                action=perm_data["action"],
+                is_system=True,  # System permissions cannot be deleted
+            )
+            permission = await permission_repo.create(permission)
+            permission_map[perm_data["slug"]] = permission
+
+        await db.commit()
+
+        # Step 2: Create roles
+        role_map = {}  # slug -> Role object
+        for role_data in SYSTEM_ROLES:
+            # Check if role already exists
+            existing = await role_repo.get_by_slug(role_data["slug"])
+            if existing:
+                role_map[role_data["slug"]] = existing
+                continue
+
+            # Create new role
+            role = Role(
+                name=role_data["name"],
+                slug=role_data["slug"],
+                description=role_data["description"],
+                is_system=role_data["is_system"],
+                hierarchy_level=role_data["hierarchy_level"],
+            )
+
+            # Assign permissions to role
+            role_permissions = [
+                permission_map[perm_slug]
+                for perm_slug in role_data["permissions"]
+                if perm_slug in permission_map
+            ]
+            role.permissions = role_permissions
+
+            role = await role_repo.create(role)
+            role_map[role_data["slug"]] = role
+
+        await db.commit()
+        print(f"✅ Seeded {len(permission_map)} permissions and {len(role_map)} roles")
+        return True
+
+    except Exception as e:
+        print(f"❌ Error seeding permissions and roles: {e}")
+        import traceback
+        traceback.print_exc()
+        await db.rollback()
+        return False
+
+
+async def seed_system_settings(db: AsyncSession) -> bool:
+    """
+    Seed database with default system settings.
+
+    This function is idempotent - it will skip creating settings
+    that already exist (based on key).
+
+    Args:
+        db: Database session
+
+    Returns:
+        True if seeding was successful, False otherwise
+    """
+    try:
+        setting_repo = SystemSettingRepository(db)
+
+        settings_created = 0
+        settings_skipped = 0
+
+        for setting_data in SYSTEM_SETTINGS:
+            # Check if setting already exists
+            existing = await setting_repo.get_by_key(setting_data["key"])
+            if existing:
+                settings_skipped += 1
+                continue
+
+            # Create new setting
+            setting = SystemSetting(
+                key=setting_data["key"],
+                value=setting_data["value"],
+                category=setting_data["category"],
+                description=setting_data["description"],
+                is_public=setting_data["is_public"],
+            )
+
+            await setting_repo.create(setting)
+            settings_created += 1
+
+        await db.commit()
+        print(f"✅ Seeded {settings_created} system settings (skipped {settings_skipped} existing)")
+        return True
+
+    except Exception as e:
+        print(f"❌ Error seeding system settings: {e}")
+        import traceback
+        traceback.print_exc()
+        await db.rollback()
+        return False

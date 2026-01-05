@@ -5,6 +5,7 @@ import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
+import axios from "axios";
 import { useLogin } from "../hooks";
 import type { LoginCredentials } from "../types";
 
@@ -20,7 +21,10 @@ export const LoginForm = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    loginMutation.mutate(formData);
+    loginMutation.mutate({
+      ...formData,
+      rememberMe,
+    });
   };
 
   const handleInputChange =
@@ -29,13 +33,29 @@ export const LoginForm = () => {
       setFormData((prev) => ({ ...prev, [field]: e.target.value }));
     };
 
+  // Extract error message from axios error response
+  const getErrorMessage = () => {
+    if (!loginMutation.error) return "";
+    if (axios.isAxiosError(loginMutation.error)) {
+      return (
+        loginMutation.error.response?.data?.detail ||
+        loginMutation.error.response?.data?.error ||
+        loginMutation.error.response?.data?.message ||
+        loginMutation.error.message ||
+        "Login failed. Please try again."
+      );
+    }
+    if (loginMutation.error instanceof Error) {
+      return loginMutation.error.message;
+    }
+    return "Login failed. Please try again.";
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {loginMutation.error && (
         <Alert variant="destructive">
-          <AlertDescription>
-            {loginMutation.error.message || "Login failed. Please try again."}
-          </AlertDescription>
+          <AlertDescription>{getErrorMessage()}</AlertDescription>
         </Alert>
       )}
 

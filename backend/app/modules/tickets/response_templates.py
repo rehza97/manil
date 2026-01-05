@@ -5,6 +5,7 @@ from typing import Optional
 
 from sqlalchemy import String, DateTime, Text, Integer, ForeignKey, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.dialects.postgresql import JSONB
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,11 +19,23 @@ class ResponseTemplate(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    category: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
-    content: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    is_default: Mapped[bool] = mapped_column(Boolean, default=False)
-    usage_count: Mapped[int] = mapped_column(Integer, default=0)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # Template variables
+    variables: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+
+    # Organization
+    category: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_public: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
+
+    # Usage tracking
+    usage_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_used_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
@@ -43,7 +56,6 @@ class ResponseTemplate(Base):
     deleted_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    deleted_by: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
 
     def __repr__(self) -> str:
         return f"<ResponseTemplate {self.id} - {self.title}>"
@@ -57,8 +69,24 @@ class TicketCategory(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    color: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)  # Hex color
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    slug: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
+    color: Mapped[str] = mapped_column(String(7), default="#3B82F6", nullable=False)
+    icon: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
+    # Organization
+    display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
+
+    # Auto-assignment
+    default_support_group_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("support_groups.id"), nullable=True
+    )
+    default_priority: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+
+    # SLA
+    sla_policy_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("sla_policies.id"), nullable=True
+    )
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
@@ -72,6 +100,16 @@ class TicketCategory(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+
+    # Audit fields
+    created_by: Mapped[str] = mapped_column(String(36), nullable=False)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # Relationships
+    default_support_group = relationship("SupportGroup", foreign_keys=[default_support_group_id])
+    sla_policy = relationship("SLAPolicy", foreign_keys=[sla_policy_id])
 
     def __repr__(self) -> str:
         return f"<TicketCategory {self.id} - {self.name}>"

@@ -4,6 +4,7 @@ from typing import Optional, Tuple
 from uuid import uuid4
 
 from sqlalchemy import select, and_, or_, func, desc, asc
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app.modules.products.models import (
@@ -211,8 +212,8 @@ class ProductService:
         return product
 
     @staticmethod
-    def list_products(
-        db: Session,
+    async def list_products(
+        db: AsyncSession,
         skip: int = 0,
         limit: int = 20,
         category_id: Optional[str] = None,
@@ -258,9 +259,10 @@ class ProductService:
             query = query.where(Product.stock_quantity > 0)
 
         # Get total count
-        total_count = db.execute(
+        total_result = await db.execute(
             select(func.count(Product.id)).where(Product.deleted_at.is_(None))
-        ).scalar()
+        )
+        total_count = total_result.scalar() or 0
 
         # Sorting
         sort_column = getattr(Product, sort_by, Product.created_at)
@@ -270,7 +272,8 @@ class ProductService:
             query = query.order_by(desc(sort_column))
 
         # Pagination
-        products = db.execute(query.offset(skip).limit(limit)).scalars().all()
+        result = await db.execute(query.offset(skip).limit(limit))
+        products = result.scalars().all()
 
         return list(products), total_count
 

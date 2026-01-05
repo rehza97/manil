@@ -11,6 +11,7 @@ from app.modules.tickets.schemas import (
     TicketUpdate,
     TicketReplyCreate,
 )
+from app.modules.customers.repository import CustomerRepository
 
 
 class TicketService:
@@ -19,17 +20,29 @@ class TicketService:
     def __init__(self, db: AsyncSession):
         """Initialize service with database session."""
         self.repository = TicketRepository(db)
+        self.db = db
 
     async def create_ticket(
         self, ticket_data: TicketCreate, created_by: str
     ) -> Ticket:
         """Create new support ticket."""
         try:
+            # Validate that customer exists
+            customer_repo = CustomerRepository(self.db)
+            customer = await customer_repo.get_by_id(ticket_data.customer_id)
+            if not customer:
+                raise NotFoundException(
+                    f"Customer with ID {ticket_data.customer_id} not found. "
+                    "Please ensure the customer exists before creating a ticket."
+                )
+            
             ticket = await self.repository.create(ticket_data, created_by)
             logger.info(
                 f"Ticket created: {ticket.id} for customer {ticket.customer_id}"
             )
             return ticket
+        except NotFoundException:
+            raise
         except Exception as e:
             logger.error(f"Failed to create ticket: {str(e)}")
             raise

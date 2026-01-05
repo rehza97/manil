@@ -7,7 +7,7 @@ import {
   useRejectQuoteRequest,
   useDeleteQuoteRequest,
 } from "../hooks/useQuotes";
-import { CreateQuoteRequestDTO } from "../types/quote.types";
+import type { CreateQuoteRequestDTO } from "../types";
 
 export const QuoteRequestPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);

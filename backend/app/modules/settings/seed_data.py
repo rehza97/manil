@@ -55,6 +55,15 @@ SYSTEM_PERMISSIONS = [
     {"name": "Send Invoices", "slug": "invoices:send", "category": "Invoices", "resource": "invoices", "action": "send", "description": "Send invoices to customers"},
     {"name": "Delete Invoices", "slug": "invoices:delete", "category": "Invoices", "resource": "invoices", "action": "delete", "description": "Delete invoices"},
 
+    # VPS Hosting permissions
+    {"name": "View Hosting", "slug": "hosting:view", "category": "Hosting", "resource": "hosting", "action": "view", "description": "View VPS plans and subscription details"},
+    {"name": "Request Hosting", "slug": "hosting:request", "category": "Hosting", "resource": "hosting", "action": "request", "description": "Request a new VPS subscription"},
+    {"name": "Upgrade Hosting", "slug": "hosting:upgrade", "category": "Hosting", "resource": "hosting", "action": "upgrade", "description": "Upgrade a VPS subscription plan"},
+    {"name": "Manage Hosting", "slug": "hosting:manage", "category": "Hosting", "resource": "hosting", "action": "manage", "description": "Manage VPS instances (start/stop/reboot/cancel)"},
+    {"name": "Approve Hosting Requests", "slug": "hosting:approve", "category": "Hosting", "resource": "hosting", "action": "approve", "description": "Approve or reject VPS subscription requests"},
+    {"name": "Admin Hosting", "slug": "hosting:admin", "category": "Hosting", "resource": "hosting", "action": "admin", "description": "Administer all VPS subscriptions across customers"},
+    {"name": "Monitor Hosting", "slug": "hosting:monitor", "category": "Hosting", "resource": "hosting", "action": "monitor", "description": "View system-wide VPS monitoring and alerts"},
+
     # Report permissions
     {"name": "View Reports", "slug": "reports:view", "category": "Reports", "resource": "reports", "action": "view", "description": "View reports and analytics"},
     {"name": "Export Reports", "slug": "reports:export", "category": "Reports", "resource": "reports", "action": "export", "description": "Export reports in various formats"},
@@ -100,6 +109,8 @@ SYSTEM_ROLES = [
             "products:view", "products:create", "products:edit",
             "orders:view", "orders:create", "orders:edit", "orders:approve", "orders:deliver",
             "invoices:view", "invoices:create", "invoices:edit", "invoices:approve", "invoices:send",
+            # Hosting (staff/admin ops)
+            "hosting:view", "hosting:approve", "hosting:admin", "hosting:monitor",
             "reports:view", "reports:export",
             "settings:view",
         ]
@@ -116,6 +127,48 @@ SYSTEM_ROLES = [
             "products:view",
             "orders:view", "orders:create",
             "invoices:view",
+            # Hosting (own resources only; ownership checks enforced by routes)
+            "hosting:view", "hosting:request", "hosting:upgrade", "hosting:manage",
+        ]
+    },
+    {
+        "name": "Support Agent",
+        "slug": "support_agent",
+        "description": "Support team member with access to tickets and customer information for customer service",
+        "is_system": True,
+        "hierarchy_level": 1,
+        "permissions": [
+            # Ticket management - core support functions
+            "tickets:view", "tickets:create", "tickets:reply", "tickets:close",
+            # Customer access - view customer info to assist with tickets
+            "customers:view",
+            # KYC access - view KYC documents to verify customer identity
+            "kyc:view", "kyc:download",
+            # Product/Order/Invoice access - view to help customers with questions
+            "products:view",
+            "orders:view",
+            "invoices:view",
+        ]
+    },
+    {
+        "name": "Support Supervisor",
+        "slug": "support_supervisor",
+        "description": "Support team supervisor with additional permissions to assign tickets and manage support operations",
+        "is_system": True,
+        "hierarchy_level": 1,
+        "permissions": [
+            # Ticket management - full ticket operations including assignment
+            "tickets:view", "tickets:create", "tickets:reply", "tickets:assign", "tickets:close",
+            # Customer access - view and edit customer info for support
+            "customers:view", "customers:edit",
+            # KYC access - view and download KYC documents
+            "kyc:view", "kyc:download",
+            # Product/Order/Invoice access - view to help customers
+            "products:view",
+            "orders:view",
+            "invoices:view",
+            # Reports - view support reports and analytics
+            "reports:view",
         ]
     },
 ]
@@ -129,3 +182,392 @@ def get_permissions() -> List[Dict]:
 def get_roles() -> List[Dict]:
     """Get list of system roles with permissions."""
     return SYSTEM_ROLES
+
+
+# System settings with default values
+SYSTEM_SETTINGS = [
+    # General settings
+    {
+        "key": "application_name",
+        "value": "CloudHost",
+        "category": "general",
+        "description": "Application name displayed throughout the system",
+        "is_public": True,
+    },
+    {
+        "key": "support_email",
+        "value": "support@cloudhost.dz",
+        "category": "general",
+        "description": "Primary support email address",
+        "is_public": True,
+    },
+    {
+        "key": "support_phone",
+        "value": "+213 (0) 21 XX XX XX",
+        "category": "general",
+        "description": "Support phone number",
+        "is_public": True,
+    },
+    {
+        "key": "timezone",
+        "value": "Africa/Algiers",
+        "category": "general",
+        "description": "System default timezone",
+        "is_public": False,
+    },
+    {
+        "key": "date_format",
+        "value": "DD/MM/YYYY",
+        "category": "general",
+        "description": "Default date format",
+        "is_public": False,
+    },
+    {
+        "key": "currency",
+        "value": "DZD",
+        "category": "general",
+        "description": "System currency",
+        "is_public": True,
+    },
+    {
+        "key": "language",
+        "value": "en",
+        "category": "general",
+        "description": "System default language",
+        "is_public": False,
+    },
+
+    # Email settings
+    {
+        "key": "smtp_host",
+        "value": "smtp.gmail.com",
+        "category": "email",
+        "description": "SMTP server hostname",
+        "is_public": False,
+    },
+    {
+        "key": "smtp_port",
+        "value": 587,
+        "category": "email",
+        "description": "SMTP server port",
+        "is_public": False,
+    },
+    {
+        "key": "smtp_username",
+        "value": "",
+        "category": "email",
+        "description": "SMTP authentication username",
+        "is_public": False,
+    },
+    {
+        "key": "smtp_password",
+        "value": "",
+        "category": "email",
+        "description": "SMTP authentication password",
+        "is_public": False,
+    },
+    {
+        "key": "smtp_use_tls",
+        "value": True,
+        "category": "email",
+        "description": "Use TLS for SMTP connection",
+        "is_public": False,
+    },
+    {
+        "key": "from_email",
+        "value": "noreply@cloudhost.dz",
+        "category": "email",
+        "description": "Default sender email address",
+        "is_public": False,
+    },
+    {
+        "key": "from_name",
+        "value": "CloudHost",
+        "category": "email",
+        "description": "Default sender name",
+        "is_public": False,
+    },
+
+    # Security settings
+    {
+        "key": "password_min_length",
+        "value": 8,
+        "category": "security",
+        "description": "Minimum password length",
+        "is_public": False,
+    },
+    {
+        "key": "password_require_uppercase",
+        "value": True,
+        "category": "security",
+        "description": "Require uppercase letters in passwords",
+        "is_public": False,
+    },
+    {
+        "key": "password_require_lowercase",
+        "value": True,
+        "category": "security",
+        "description": "Require lowercase letters in passwords",
+        "is_public": False,
+    },
+    {
+        "key": "password_require_numbers",
+        "value": True,
+        "category": "security",
+        "description": "Require numbers in passwords",
+        "is_public": False,
+    },
+    {
+        "key": "password_require_symbols",
+        "value": False,
+        "category": "security",
+        "description": "Require symbols in passwords",
+        "is_public": False,
+    },
+    {
+        "key": "session_timeout",
+        "value": 3600,
+        "category": "security",
+        "description": "Session timeout in seconds (1 hour default)",
+        "is_public": False,
+    },
+    {
+        "key": "max_login_attempts",
+        "value": 5,
+        "category": "security",
+        "description": "Maximum failed login attempts before account lockout",
+        "is_public": False,
+    },
+    {
+        "key": "lockout_duration",
+        "value": 900,
+        "category": "security",
+        "description": "Account lockout duration in seconds (15 minutes default)",
+        "is_public": False,
+    },
+    {
+        "key": "require_2fa",
+        "value": False,
+        "category": "security",
+        "description": "Require two-factor authentication for all users",
+        "is_public": False,
+    },
+
+    # Notification settings
+    {
+        "key": "email_notifications",
+        "value": True,
+        "category": "notifications",
+        "description": "Enable email notifications",
+        "is_public": False,
+    },
+    {
+        "key": "sms_notifications",
+        "value": False,
+        "category": "notifications",
+        "description": "Enable SMS notifications",
+        "is_public": False,
+    },
+    {
+        "key": "push_notifications",
+        "value": False,
+        "category": "notifications",
+        "description": "Enable push notifications",
+        "is_public": False,
+    },
+    {
+        "key": "maintenance_notifications",
+        "value": True,
+        "category": "notifications",
+        "description": "Send maintenance notifications to users",
+        "is_public": False,
+    },
+    {
+        "key": "security_notifications",
+        "value": True,
+        "category": "notifications",
+        "description": "Send security-related notifications",
+        "is_public": False,
+    },
+    {
+        "key": "marketing_notifications",
+        "value": False,
+        "category": "notifications",
+        "description": "Send marketing and promotional notifications",
+        "is_public": False,
+    },
+
+    # Backup settings
+    {
+        "key": "backup_enabled",
+        "value": True,
+        "category": "backup",
+        "description": "Enable automatic database backups",
+        "is_public": False,
+    },
+    {
+        "key": "backup_frequency",
+        "value": "daily",
+        "category": "backup",
+        "description": "Backup frequency (daily, weekly, monthly)",
+        "is_public": False,
+    },
+    {
+        "key": "backup_retention_days",
+        "value": 30,
+        "category": "backup",
+        "description": "Number of days to retain backups",
+        "is_public": False,
+    },
+    {
+        "key": "backup_location",
+        "value": "/app/backups",
+        "category": "backup",
+        "description": "Backup storage location",
+        "is_public": False,
+    },
+    {
+        "key": "auto_backup",
+        "value": True,
+        "category": "backup",
+        "description": "Enable automatic scheduled backups",
+        "is_public": False,
+    },
+
+    # API settings
+    {
+        "key": "api_rate_limit",
+        "value": 100,
+        "category": "api",
+        "description": "API rate limit (requests per minute)",
+        "is_public": False,
+    },
+    {
+        "key": "api_key_expiry_days",
+        "value": 365,
+        "category": "api",
+        "description": "API key expiration period in days",
+        "is_public": False,
+    },
+    {
+        "key": "api_versioning_enabled",
+        "value": True,
+        "category": "api",
+        "description": "Enable API versioning",
+        "is_public": False,
+    },
+    {
+        "key": "api_documentation_enabled",
+        "value": True,
+        "category": "api",
+        "description": "Enable API documentation (Swagger/OpenAPI)",
+        "is_public": True,
+    },
+
+    # Storage settings
+    {
+        "key": "max_file_size",
+        "value": 10485760,
+        "category": "storage",
+        "description": "Maximum file size in bytes (10MB default)",
+        "is_public": False,
+    },
+    {
+        "key": "allowed_file_types",
+        "value": ["pdf", "doc", "docx", "xls", "xlsx", "jpg", "jpeg", "png", "gif", "zip"],
+        "category": "storage",
+        "description": "Allowed file types for uploads",
+        "is_public": False,
+    },
+    {
+        "key": "storage_provider",
+        "value": "local",
+        "category": "storage",
+        "description": "Storage provider (local, s3, azure, gcp)",
+        "is_public": False,
+    },
+    {
+        "key": "storage_path",
+        "value": "/app/uploads",
+        "category": "storage",
+        "description": "Local storage path for uploaded files",
+        "is_public": False,
+    },
+    {
+        "key": "s3_bucket",
+        "value": "",
+        "category": "storage",
+        "description": "AWS S3 bucket name",
+        "is_public": False,
+    },
+    {
+        "key": "s3_region",
+        "value": "us-east-1",
+        "category": "storage",
+        "description": "AWS S3 region",
+        "is_public": False,
+    },
+    {
+        "key": "s3_access_key",
+        "value": "",
+        "category": "storage",
+        "description": "AWS S3 access key",
+        "is_public": False,
+    },
+    {
+        "key": "s3_secret_key",
+        "value": "",
+        "category": "storage",
+        "description": "AWS S3 secret key",
+        "is_public": False,
+    },
+
+    # SMS settings
+    {
+        "key": "sms_provider",
+        "value": "twilio",
+        "category": "sms",
+        "description": "SMS provider (twilio, nexmo, custom)",
+        "is_public": False,
+    },
+    {
+        "key": "sms_enabled",
+        "value": False,
+        "category": "sms",
+        "description": "Enable SMS functionality",
+        "is_public": False,
+    },
+    {
+        "key": "twilio_account_sid",
+        "value": "",
+        "category": "sms",
+        "description": "Twilio account SID",
+        "is_public": False,
+    },
+    {
+        "key": "twilio_auth_token",
+        "value": "",
+        "category": "sms",
+        "description": "Twilio authentication token",
+        "is_public": False,
+    },
+    {
+        "key": "twilio_phone_number",
+        "value": "",
+        "category": "sms",
+        "description": "Twilio phone number for sending SMS",
+        "is_public": False,
+    },
+    {
+        "key": "sms_sender_name",
+        "value": "CloudHost",
+        "category": "sms",
+        "description": "SMS sender name/ID",
+        "is_public": False,
+    },
+]
+
+
+def get_settings() -> List[Dict]:
+    """Get list of default system settings."""
+    return SYSTEM_SETTINGS

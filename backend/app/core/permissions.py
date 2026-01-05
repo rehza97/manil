@@ -81,6 +81,20 @@ class Permission(str, Enum):
     ROLES_EDIT = "roles:edit"
     ROLES_DELETE = "roles:delete"
 
+    # VPS Hosting permissions
+    HOSTING_VIEW = "hosting:view"
+    HOSTING_REQUEST = "hosting:request"
+    HOSTING_UPGRADE = "hosting:upgrade"
+    HOSTING_MANAGE = "hosting:manage"
+    HOSTING_APPROVE = "hosting:approve"
+    HOSTING_ADMIN = "hosting:admin"
+    HOSTING_MONITOR = "hosting:monitor"
+
+    # DNS Management permissions
+    DNS_VIEW = "dns:view"
+    DNS_MANAGE = "dns:manage"
+    DNS_ADMIN = "dns:admin"
+
 
 # Role-based permission mappings
 ROLE_PERMISSIONS: dict[str, Set[Permission]] = {
@@ -136,6 +150,20 @@ ROLE_PERMISSIONS: dict[str, Set[Permission]] = {
         Permission.ROLES_CREATE,
         Permission.ROLES_EDIT,
         Permission.ROLES_DELETE,
+
+        # VPS Hosting - full access
+        Permission.HOSTING_VIEW,
+        Permission.HOSTING_REQUEST,
+        Permission.HOSTING_UPGRADE,
+        Permission.HOSTING_MANAGE,
+        Permission.HOSTING_APPROVE,
+        Permission.HOSTING_ADMIN,
+        Permission.HOSTING_MONITOR,
+
+        # DNS Management - full access
+        Permission.DNS_VIEW,
+        Permission.DNS_MANAGE,
+        Permission.DNS_ADMIN,
     },
     "corporate": {
         # Corporate can manage customers, tickets, products, orders
@@ -174,6 +202,16 @@ ROLE_PERMISSIONS: dict[str, Set[Permission]] = {
         Permission.REPORTS_VIEW,
         Permission.REPORTS_EXPORT,
         Permission.SETTINGS_VIEW,
+
+        # VPS Hosting - staff access (admin operations)
+        Permission.HOSTING_VIEW,
+        Permission.HOSTING_APPROVE,
+        Permission.HOSTING_ADMIN,
+        Permission.HOSTING_MONITOR,
+
+        # DNS Management - admin access
+        Permission.DNS_VIEW,
+        Permission.DNS_ADMIN,
     },
     "client": {
         # Client can only view their own data and create tickets/orders
@@ -188,6 +226,16 @@ ROLE_PERMISSIONS: dict[str, Set[Permission]] = {
         Permission.ORDERS_CREATE,
         Permission.INVOICES_VIEW,
         Permission.QUOTES_VIEW,
+
+        # VPS Hosting - customer access (own resources only, enforced by route checks)
+        Permission.HOSTING_VIEW,
+        Permission.HOSTING_REQUEST,
+        Permission.HOSTING_UPGRADE,
+        Permission.HOSTING_MANAGE,
+
+        # DNS Management - customer access (own zones only, enforced by route checks)
+        Permission.DNS_VIEW,
+        Permission.DNS_MANAGE,
     },
 }
 

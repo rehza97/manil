@@ -111,8 +111,8 @@ class RoleListResponse(BaseModel):
 
 class SystemSettingBase(BaseModel):
     """Base system setting schema."""
-    key: str = Field(..., min_length=3, max_length=100, pattern=r'^[a-z_\.]+$')
-    value: Dict[str, Any]
+    key: str = Field(..., min_length=3, max_length=100, pattern=r'^[a-z0-9_\.]+$')
+    value: Any  # Can be any JSON value: string, number, boolean, dict, list, etc.
     category: str = Field(..., min_length=2, max_length=50)
     description: Optional[str] = None
     is_public: bool = False
@@ -125,7 +125,7 @@ class SystemSettingCreate(SystemSettingBase):
 
 class SystemSettingUpdate(BaseModel):
     """Update system setting schema."""
-    value: Optional[Dict[str, Any]] = None
+    value: Optional[Any] = None  # Can be any JSON value
     description: Optional[str] = None
     is_public: Optional[bool] = None
 

@@ -192,6 +192,17 @@ class InvoiceWorkflowService:
             recorded_by_id
         )
 
+        # If invoice is fully paid and linked to VPS subscription, trigger webhook
+        if new_paid_amount >= invoice.total_amount and invoice.vps_subscription_id:
+            try:
+                from app.modules.hosting.services.billing_service import SubscriptionBillingService
+                billing_service = SubscriptionBillingService(self.db)
+                await billing_service.process_payment_webhook(invoice.id)
+            except Exception as e:
+                from app.core.logging import logger
+                logger.error(f"VPS payment webhook failed for invoice {invoice.id}: {e}")
+                # Don't fail payment recording if webhook fails
+
         await self.db.commit()
         return invoice
 

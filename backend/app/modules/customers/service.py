@@ -62,6 +62,10 @@ class CustomerService:
             raise NotFoundException(f"Customer with ID {customer_id} not found")
         return customer
 
+    async def get_by_email(self, email: str) -> Optional[Customer]:
+        """Get customer by email address."""
+        return await self.repository.get_by_email(email)
+
     async def create(self, customer_data: CustomerCreate, created_by: str) -> Customer:
         """
         Create a new customer.
@@ -71,6 +75,15 @@ class CustomerService:
         - Corporate customers must have company_name
         - Validate tax_id format if provided
         """
+        # #region agent log
+        import json, os, time
+        log_path = '/tmp/debug.log'
+        dump_data = customer_data.model_dump()
+        try:
+            with open(log_path, 'a') as f:
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"D","location":"service.py:65","message":"Service received from router","data":{"customer_type":str(customer_data.customer_type),"customer_type_type":str(type(customer_data.customer_type)),"customer_type_value":customer_data.customer_type.value if hasattr(customer_data.customer_type,'value') else None,"model_dump_customer_type":dump_data.get('customer_type'),"model_dump_customer_type_type":str(type(dump_data.get('customer_type'))) if dump_data.get('customer_type') else None},"timestamp":int(time.time()*1000)})+'\n')
+        except: pass
+        # #endregion
         # Check if email already exists
         existing = await self.repository.get_by_email(customer_data.email)
         if existing:
@@ -83,7 +96,6 @@ class CustomerService:
 
         # Create customer
         customer = await self.repository.create(customer_data, created_by)
-
         return customer
 
     async def update(self, customer_id: str, customer_data: CustomerUpdate, updated_by: str) -> Customer:

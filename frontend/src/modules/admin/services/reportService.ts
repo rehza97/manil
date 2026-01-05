@@ -161,44 +161,73 @@ export const reportService = {
   async getPerformanceReport(
     filters: ReportFilters = {}
   ): Promise<PerformanceReport> {
-    const params = new URLSearchParams(filters);
-    const response = await apiClient.get(
-      `/admin/reports/performance?${params}`
-    );
+    // Build query params properly, filtering out undefined/null values
+    const params = new URLSearchParams();
+    if (filters.date_from) {
+      params.append("date_from", filters.date_from);
+    }
+    if (filters.date_to) {
+      params.append("date_to", filters.date_to);
+    }
+    if (filters.search) {
+      params.append("search", filters.search);
+    }
+    if (filters.user_id) {
+      params.append("user_id", filters.user_id);
+    }
+    if (filters.resource) {
+      params.append("resource", filters.resource);
+    }
+    if (filters.action) {
+      params.append("action", filters.action);
+    }
+    
+    const queryString = params.toString();
+    const url = `/admin/reports/performance${queryString ? `?${queryString}` : ""}`;
+    const response = await apiClient.get(url);
     return response.data;
   },
 
   /**
-   * Export report to CSV
+   * Export report in specified format (CSV, Excel, or PDF)
+   * Creates export file on server and triggers download
    */
   async exportReport(
     reportType: string,
+    format: "csv" | "excel" | "pdf",
     filters: ReportFilters = {}
-  ): Promise<Blob> {
-    const params = new URLSearchParams(filters);
-    const response = await apiClient.get(
-      `/admin/reports/${reportType}/export?${params}`,
-      {
-        responseType: "blob",
-      }
-    );
-    return response.data;
-  },
+  ): Promise<{ file_name: string }> {
+    // Request export creation on server
+    const exportResponse = await apiClient.post(`/reports/export`, {
+      report_type: reportType,
+      format: format,
+      filters: filters,
+    });
 
-  /**
-   * Export report to PDF
-   */
-  async exportReportPDF(
-    reportType: string,
-    filters: ReportFilters = {}
-  ): Promise<Blob> {
-    const params = new URLSearchParams(filters);
-    const response = await apiClient.get(
-      `/admin/reports/${reportType}/export/pdf?${params}`,
+    const fileName = exportResponse.data.file_name;
+
+    // Download the file from server
+    const downloadResponse = await apiClient.get(
+      `/reports/export/download/${fileName}`,
       {
         responseType: "blob",
       }
     );
-    return response.data;
+
+    // Trigger browser download
+    const url = window.URL.createObjectURL(downloadResponse.data);
+    const link = document.createElement("a");
+    link.href = url;
+    const extension =
+      format === "pdf" ? "pdf" : format === "excel" ? "xlsx" : "csv";
+    link.download = `${reportType}_report_${
+      new Date().toISOString().split("T")[0]
+    }.${extension}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    return { file_name: fileName };
   },
 };

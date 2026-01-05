@@ -1,4 +1,4 @@
-import { AuditFields, PaginatedResponse } from "@/shared/types";
+import type { AuditFields, PaginatedResponse } from "@/shared/types";
 
 export enum TicketStatus {
   OPEN = "open",

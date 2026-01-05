@@ -4,71 +4,59 @@
  * Admin page for managing users
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Plus,
   Search,
   Filter,
-  Shield,
   UserX,
   UserCheck,
   Loader2,
 } from "lucide-react";
-import { useActivityLogs } from "../hooks";
+import {
+  useUsers,
+  useDeactivateUser,
+  useActivateUser,
+} from "../hooks/useUsers";
+import { CreateUserDialog } from "../components/CreateUserDialog";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Badge } from "@/shared/components/ui/badge";
 import { Card } from "@/shared/components/ui/card";
-
-interface ExtractedUser {
-  id: string;
-  email: string;
-  full_name: string;
-  role: string;
-  is_active: boolean;
-  last_activity: string;
-  created_at: string;
-}
+import { useToast } from "@/shared/components/ui/use-toast";
+import type { User } from "../types/user.types";
 
 export const UserManagementPage: React.FC = () => {
-  // For now, we'll use audit logs to extract user information
-  // since dedicated user management endpoints don't exist yet
-
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
-  // Use audit logs to extract user information
-  const { data: auditData, isLoading } = useActivityLogs(page, 100, {});
+  // Use real user endpoints
+  const { data: usersData, isLoading, error } = useUsers(page, 20, {
+    search: searchQuery || undefined,
+  });
 
-  // Extract unique users from audit logs
-  const extractUsersFromAudit = () => {
-    if (!auditData?.data) return [];
+  const deactivateUser = useDeactivateUser();
+  const activateUser = useActivateUser();
 
-    const userMap = new Map();
+  // Log users data
+  useEffect(() => {
+    console.log("[UserManagementPage] Users data:", usersData);
+    console.log("[UserManagementPage] Is loading:", isLoading);
+    console.log("[UserManagementPage] Error:", error);
+    if (usersData) {
+      console.log("[UserManagementPage] Users count:", usersData.data?.length || 0);
+      console.log("[UserManagementPage] Total users:", usersData.total);
+      console.log("[UserManagementPage] Page:", usersData.page);
+      console.log("[UserManagementPage] Page size:", usersData.page_size);
+    }
+  }, [usersData, isLoading, error]);
 
-    auditData.data.forEach((log) => {
-      if (log.user_email && log.user_id) {
-        userMap.set(log.user_id, {
-          id: log.user_id,
-          email: log.user_email,
-          full_name: log.user_email.split("@")[0].replace(/[._]/g, " "),
-          role: "CLIENT", // Default role since it's not in ActivityLog
-          is_active: true,
-          last_activity: log.timestamp,
-          created_at: log.timestamp,
-        });
-      }
-    });
-
-    return Array.from(userMap.values());
-  };
-
-  const users = extractUsersFromAudit();
-  const filteredUsers = users.filter(
-    (user) =>
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.full_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const users = usersData?.data || [];
+  const filteredUsers = users;
 
   const getRoleBadgeColor = (role: string) => {
     switch (role?.toLowerCase()) {
@@ -83,8 +71,42 @@ export const UserManagementPage: React.FC = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+  const handleCreateSuccess = () => {
+    setIsCreateDialogOpen(false);
+  };
+
+  const handleEditUser = (userId: string) => {
+    navigate(`/admin/users/${userId}/edit`);
+  };
+
+  const handleToggleUserStatus = async (user: User) => {
+    try {
+      if (user.is_active) {
+        await deactivateUser.mutateAsync(user.id);
+        toast({
+          title: "Success",
+          description: "User has been deactivated",
+        });
+      } else {
+        await activateUser.mutateAsync(user.id);
+        toast({
+          title: "Success",
+          description: "User has been activated",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description:
+          error?.response?.data?.detail || error.message || "Failed to update user status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return "Never";
+    return new Date(dateString).toLocaleDateString("fr-DZ", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -104,6 +126,12 @@ export const UserManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <CreateUserDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        onSuccess={handleCreateSuccess}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -112,22 +140,14 @@ export const UserManagementPage: React.FC = () => {
             Manage system users, roles, and permissions
           </p>
         </div>
-        <Button className="flex items-center gap-2" disabled>
+        <Button
+          className="flex items-center gap-2"
+          onClick={() => setIsCreateDialogOpen(true)}
+        >
           <Plus className="w-4 h-4" />
           Add User
         </Button>
       </div>
-
-      {/* Info Card */}
-      <Card className="p-4 bg-blue-50 border-blue-200">
-        <div className="flex items-center gap-2">
-          <Shield className="w-5 h-5 text-blue-600" />
-          <p className="text-blue-800">
-            <strong>Note:</strong> User data is extracted from audit logs. Full
-            user management endpoints are not yet available.
-          </p>
-        </div>
-      </Card>
 
       {/* Filters */}
       <Card className="p-4">
@@ -180,11 +200,11 @@ export const UserManagementPage: React.FC = () => {
                   >
                     {searchQuery
                       ? "No users found matching your search."
-                      : "No users found in audit logs."}
+                      : "No users found."}
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((user: ExtractedUser) => (
+                filteredUsers.map((user: User) => (
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -211,19 +231,28 @@ export const UserManagementPage: React.FC = () => {
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge className="bg-green-100 text-green-800">
-                        Active
+                      <Badge
+                        className={
+                          user.is_active
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-800"
+                        }
+                      >
+                        {user.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(user.last_activity)}
+                      {formatDate(user.last_login_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          disabled
+                          onClick={() => handleEditUser(user.id)}
+                          disabled={
+                            deactivateUser.isPending || activateUser.isPending
+                          }
                           className="flex items-center gap-1"
                         >
                           <UserCheck className="w-3 h-3" />
@@ -232,11 +261,18 @@ export const UserManagementPage: React.FC = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          disabled
-                          className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                          onClick={() => handleToggleUserStatus(user)}
+                          disabled={
+                            deactivateUser.isPending || activateUser.isPending
+                          }
+                          className={`flex items-center gap-1 ${
+                            user.is_active
+                              ? "text-red-600 hover:text-red-700 hover:bg-red-50"
+                              : "text-green-600 hover:text-green-700 hover:bg-green-50"
+                          }`}
                         >
                           <UserX className="w-3 h-3" />
-                          Deactivate
+                          {user.is_active ? "Deactivate" : "Activate"}
                         </Button>
                       </div>
                     </td>
@@ -248,10 +284,10 @@ export const UserManagementPage: React.FC = () => {
         </div>
 
         {/* Pagination */}
-        {filteredUsers.length > 0 && (
+        {usersData && usersData.total > 0 && (
           <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
             <div className="text-sm text-gray-700">
-              Showing {filteredUsers.length} of {users.length} users
+              Showing {users.length} of {usersData.total} users
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -262,13 +298,13 @@ export const UserManagementPage: React.FC = () => {
               >
                 Previous
               </Button>
-              <span className="text-sm text-gray-700">Page {page}</span>
+              <span className="text-sm text-gray-700">
+                Page {page} of {Math.ceil(usersData.total / usersData.page_size)}
+              </span>
               <Button
                 variant="outline"
                 size="sm"
-                disabled={
-                  !auditData?.total_pages || page >= auditData.total_pages
-                }
+                disabled={page >= Math.ceil(usersData.total / usersData.page_size)}
                 onClick={() => setPage(page + 1)}
               >
                 Next

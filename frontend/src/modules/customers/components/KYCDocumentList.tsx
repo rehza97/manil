@@ -5,10 +5,8 @@ import {
   useDeleteKYCDocument,
   useDownloadKYCDocument,
 } from "../hooks";
-import {
-  KYCDocument,
-  KYC_DOCUMENT_TYPE_LABELS,
-} from "../types/kyc.types";
+import type { KYCDocument } from "../types/kyc.types";
+import { KYC_DOCUMENT_TYPE_LABELS } from "../types/kyc.types";
 import { KYCStatusBadge } from "./KYCStatusBadge";
 import { Button } from "@/shared/components/ui/button";
 import {

@@ -19,6 +19,7 @@ from app.core.rate_limiter import (
 from app.modules.auth.session import SessionManager, SessionData
 from app.modules.auth.schemas import (
     UserCreate,
+    UserUpdate,
     UserResponse,
     LoginRequest,
     LoginResponse,
@@ -28,6 +29,7 @@ from app.modules.auth.schemas import (
     PasswordResetRequest,
     PasswordResetConfirm,
     PasswordResetResponse,
+    ChangePasswordRequest,
 )
 from app.modules.auth.service import AuthService
 from app.modules.audit.schemas import AuditLogFilter
@@ -35,7 +37,7 @@ from app.modules.audit.schemas import AuditLogFilter
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=LoginResponse, status_code=status.HTTP_201_CREATED)
 @registration_rate_limit
 async def register(
     user_data: UserCreate,
@@ -43,7 +45,7 @@ async def register(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """
-    Register a new user.
+    Register a new user and automatically log them in.
 
     Security:
     - Rate limited: 3 attempts per hour per IP
@@ -55,11 +57,10 @@ async def register(
         db: Database session
 
     Returns:
-        Created user information
+        Access token, refresh token, and user information
     """
     service = AuthService(db)
-    user = await service.register(user_data)
-    return user
+    return await service.register(user_data, request)
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -321,8 +322,22 @@ async def get_login_history(
     from app.modules.audit.models import AuditAction
 
     service = AuditService(db)
-    filters = AuditLogFilter(user_id=user_id, action=AuditAction.LOGIN)
-    return await service.get_logs(page=page, page_size=page_size, filters=filters)
+    # Filter by both login success and failed attempts
+    # Note: AuditLogFilter doesn't support multiple actions, so we filter by user_id and success field
+    # We'll get all login-related actions for this user
+    filters = AuditLogFilter(user_id=user_id)
+    logs = await service.get_logs(page=page, page_size=page_size, filters=filters)
+    # Filter to only include login-related actions
+    login_actions = [log for log in logs.data if log.action in [AuditAction.LOGIN_SUCCESS, AuditAction.LOGIN_FAILED]]
+    # Return filtered results with same pagination structure
+    from app.modules.audit.schemas import AuditLogListResponse
+    return AuditLogListResponse(
+        data=login_actions,
+        total=len(login_actions),
+        page=page,
+        page_size=page_size,
+        total_pages=(len(login_actions) + page_size - 1) // page_size if page_size > 0 else 1
+    )
 
 
 @router.get("/security/activity")
@@ -350,3 +365,51 @@ async def get_security_activity(
     return await service.get_user_activity(
         user_id=user_id, page=page, page_size=page_size
     )
+
+
+@router.put("/profile", response_model=UserResponse)
+async def update_profile(
+    profile_data: UserUpdate,
+    user_id: Annotated[str, Depends(get_current_user_id)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """
+    Update current user's profile.
+
+    Args:
+        profile_data: Profile update data
+        user_id: Current user ID
+        db: Database session
+
+    Returns:
+        Updated user information
+    """
+    service = AuthService(db)
+    user = await service.update_profile(user_id, profile_data)
+    return user
+
+
+@router.put("/change-password")
+async def change_password(
+    password_data: ChangePasswordRequest,
+    user_id: Annotated[str, Depends(get_current_user_id)],
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """
+    Change current user's password.
+
+    Args:
+        password_data: Password change request with current and new password
+        user_id: Current user ID
+        request: FastAPI request for audit logging
+        db: Database session
+
+    Returns:
+        Success message
+    """
+    service = AuthService(db)
+    await service.change_password(
+        user_id, password_data.current_password, password_data.new_password, request
+    )
+    return {"message": "Password changed successfully"}

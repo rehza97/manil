@@ -1,10 +1,31 @@
-import { useCustomer, useActivateCustomer, useSuspendCustomer, useDeleteCustomer } from "../hooks/useCustomers";
+import {
+  useCustomer,
+  useActivateCustomer,
+  useSuspendCustomer,
+  useDeleteCustomer,
+} from "../hooks/useCustomers";
 import { CustomerStatus, CustomerType } from "../types";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
 import { Separator } from "@/shared/components/ui/separator";
-import { Loader2, Mail, Phone, Building2, MapPin, Calendar, User, Edit, Trash2 } from "lucide-react";
+import {
+  Loader2,
+  Mail,
+  Phone,
+  Building2,
+  MapPin,
+  Calendar,
+  User,
+  Edit,
+  Trash2,
+} from "lucide-react";
 import { format } from "date-fns";
 
 interface CustomerDetailProps {
@@ -13,7 +34,11 @@ interface CustomerDetailProps {
   onDelete?: () => void;
 }
 
-export function CustomerDetail({ customerId, onEdit, onDelete }: CustomerDetailProps) {
+export function CustomerDetail({
+  customerId,
+  onEdit,
+  onDelete,
+}: CustomerDetailProps) {
   const { data: customer, isLoading, error } = useCustomer(customerId);
   const activateCustomer = useActivateCustomer();
   const suspendCustomer = useSuspendCustomer();
@@ -34,6 +59,22 @@ export function CustomerDetail({ customerId, onEdit, onDelete }: CustomerDetailP
     );
   };
 
+  // Helper function to safely format dates
+  const formatDate = (dateString: string | null | undefined): string => {
+    if (!dateString) {
+      return "N/A";
+    }
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return "Invalid date";
+    }
+    try {
+      return format(date, "PPP");
+    } catch (error) {
+      return "Invalid date";
+    }
+  };
+
   const handleActivate = async () => {
     await activateCustomer.mutateAsync(customerId);
   };
@@ -45,7 +86,11 @@ export function CustomerDetail({ customerId, onEdit, onDelete }: CustomerDetailP
   };
 
   const handleDelete = async () => {
-    if (window.confirm(`Are you sure you want to delete customer "${customer?.name}"? This action cannot be undone.`)) {
+    if (
+      window.confirm(
+        `Are you sure you want to delete customer "${customer?.name}"? This action cannot be undone.`
+      )
+    ) {
       await deleteCustomer.mutateAsync(customerId);
       onDelete?.();
     }
@@ -84,7 +129,7 @@ export function CustomerDetail({ customerId, onEdit, onDelete }: CustomerDetailP
                 {getStatusBadge(customer.status)}
               </div>
               <CardDescription className="mt-2">
-                {customer.customerType === CustomerType.CORPORATE
+                {customer.customerType === CustomerType.corporate
                   ? "Corporate Customer"
                   : "Individual Customer"}
               </CardDescription>
@@ -126,7 +171,9 @@ export function CustomerDetail({ customerId, onEdit, onDelete }: CustomerDetailP
               <Mail className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="text-sm font-medium">Email</p>
-                <p className="text-sm text-muted-foreground">{customer.email}</p>
+                <p className="text-sm text-muted-foreground">
+                  {customer.email}
+                </p>
               </div>
             </div>
             <Separator />
@@ -134,14 +181,16 @@ export function CustomerDetail({ customerId, onEdit, onDelete }: CustomerDetailP
               <Phone className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="text-sm font-medium">Phone</p>
-                <p className="text-sm text-muted-foreground">{customer.phone}</p>
+                <p className="text-sm text-muted-foreground">
+                  {customer.phone}
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Corporate Information */}
-        {customer.customerType === CustomerType.CORPORATE && (
+        {customer.customerType === CustomerType.corporate && (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Corporate Information</CardTitle>
@@ -163,7 +212,9 @@ export function CustomerDetail({ customerId, onEdit, onDelete }: CustomerDetailP
                     <User className="h-5 w-5 text-muted-foreground" />
                     <div>
                       <p className="text-sm font-medium">Tax ID / NIF</p>
-                      <p className="text-sm text-muted-foreground">{customer.taxId}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {customer.taxId}
+                      </p>
                     </div>
                   </div>
                 </>
@@ -174,7 +225,13 @@ export function CustomerDetail({ customerId, onEdit, onDelete }: CustomerDetailP
 
         {/* Address Information */}
         {(customer.address || customer.city || customer.country) && (
-          <Card className={customer.customerType === CustomerType.CORPORATE ? "md:col-span-2" : ""}>
+          <Card
+            className={
+              customer.customerType === CustomerType.corporate
+                ? "md:col-span-2"
+                : ""
+            }
+          >
             <CardHeader>
               <CardTitle className="text-lg">Address</CardTitle>
             </CardHeader>
@@ -202,7 +259,9 @@ export function CustomerDetail({ customerId, onEdit, onDelete }: CustomerDetailP
         )}
 
         {/* Account Information */}
-        <Card className={!customer.address && !customer.city ? "" : "md:col-span-2"}>
+        <Card
+          className={!customer.address && !customer.city ? "" : "md:col-span-2"}
+        >
           <CardHeader>
             <CardTitle className="text-lg">Account Information</CardTitle>
           </CardHeader>
@@ -213,7 +272,7 @@ export function CustomerDetail({ customerId, onEdit, onDelete }: CustomerDetailP
                 <div>
                   <p className="text-sm font-medium">Created</p>
                   <p className="text-sm text-muted-foreground">
-                    {format(new Date(customer.createdAt), "PPP")}
+                    {formatDate(customer.createdAt)}
                   </p>
                 </div>
               </div>
@@ -222,7 +281,7 @@ export function CustomerDetail({ customerId, onEdit, onDelete }: CustomerDetailP
                 <div>
                   <p className="text-sm font-medium">Last Updated</p>
                   <p className="text-sm text-muted-foreground">
-                    {format(new Date(customer.updatedAt), "PPP")}
+                    {formatDate(customer.updatedAt)}
                   </p>
                 </div>
               </div>
@@ -230,7 +289,9 @@ export function CustomerDetail({ customerId, onEdit, onDelete }: CustomerDetailP
             <Separator />
             <div>
               <p className="text-sm font-medium mb-1">Customer ID</p>
-              <p className="text-sm text-muted-foreground font-mono">{customer.id}</p>
+              <p className="text-sm text-muted-foreground font-mono">
+                {customer.id}
+              </p>
             </div>
           </CardContent>
         </Card>

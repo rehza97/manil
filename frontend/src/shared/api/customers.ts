@@ -151,6 +151,15 @@ export const customersApi = {
   },
 
   /**
+   * Get current user's own customer profile (for clients)
+   * GET /api/v1/customers/me
+   */
+  getMyCustomer: async (): Promise<Customer> => {
+    const response: AxiosResponse<Customer> = await apiClient.get("/customers/me");
+    return response.data;
+  },
+
+  /**
    * Create a new customer
    * POST /api/v1/customers
    */

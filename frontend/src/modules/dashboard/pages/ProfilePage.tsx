@@ -1,6 +1,9 @@
 import React from "react";
 import { useAuth } from "@/modules/auth";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { customerService } from "@/modules/customers/services";
+import { KYCPanel } from "@/modules/customers/components/KYCPanel";
 import {
   Card,
   CardContent,
@@ -19,10 +22,23 @@ import {
   Calendar,
   Edit,
   Shield,
+  FileCheck,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
+import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 
 const ProfilePage: React.FC = () => {
   const { user } = useAuth();
+
+  // Fetch current user's customer profile
+  const { data: customer, isLoading: isLoadingCustomer } = useQuery({
+    queryKey: ["customers", "me"],
+    queryFn: () => customerService.getMyCustomer(),
+    enabled: !!user,
+  });
+
+  const customerId = customer?.id;
 
   if (!user) {
     return (
@@ -183,6 +199,35 @@ const ProfilePage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* KYC Documents Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center space-x-2">
+            <FileCheck className="h-5 w-5 text-blue-600" />
+            <CardTitle>KYC Documents</CardTitle>
+          </div>
+          <CardDescription>
+            Upload and manage your Know Your Customer (KYC) verification documents
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoadingCustomer ? (
+            <div className="flex items-center justify-center p-6">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : !customerId ? (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Customer profile not found. Please contact support to set up your customer account.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <KYCPanel customerId={customerId} showVerificationControls={false} />
+          )}
+        </CardContent>
+      </Card>
 
       {/* Quick Actions */}
       <Card>

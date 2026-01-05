@@ -1,5 +1,6 @@
 /**
  * Admin Dashboard Page
+import { formatCurrency } from "@/shared/utils/formatters";
  *
  * System-wide metrics and analytics for administrators.
  */

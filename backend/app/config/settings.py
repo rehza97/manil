@@ -66,6 +66,7 @@ class Settings(BaseSettings):
     EMAIL_PROVIDER: str = "sendgrid"
     EMAIL_FROM: str = "noreply@cloudmanager.com"
     EMAIL_FROM_NAME: str = "CloudManager"
+    ADMIN_EMAIL: str = "admin@cloudmanager.dz"  # Admin email for critical notifications
     SENDGRID_API_KEY: str | None = None
     SMTP_HOST: str | None = None
     SMTP_PORT: int = 587

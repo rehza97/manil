@@ -4,7 +4,8 @@
  * Admin page for managing roles and permissions
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Plus,
   Search,
@@ -15,73 +16,140 @@ import {
   Eye,
   Edit,
   Trash2,
+  Loader2,
+  Table2,
+  Filter,
 } from "lucide-react";
+import { useRoles, useDeleteRole } from "../hooks/useRoles";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Badge } from "@/shared/components/ui/badge";
 import { Card } from "@/shared/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
+import { PermissionMatrix } from "../components/PermissionMatrix";
 
 export const RoleManagementPage: React.FC = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [showMatrix, setShowMatrix] = useState(false);
+  const deleteRole = useDeleteRole();
 
-  // Mock data for roles since endpoints don't exist yet
-  const roles = [
-    {
-      id: "admin",
-      name: "Administrator",
-      description: "Full system access and control",
-      permissions: [
-        "users.read",
-        "users.write",
-        "users.delete",
-        "system.read",
-        "system.write",
-        "audit.read",
-      ],
-      userCount: 3,
-      isSystem: true,
-    },
-    {
-      id: "corporate",
-      name: "Corporate User",
-      description: "Corporate account management and customer oversight",
-      permissions: [
-        "customers.read",
-        "customers.write",
-        "tickets.read",
-        "tickets.write",
-      ],
-      userCount: 12,
-      isSystem: false,
-    },
-    {
-      id: "client",
-      name: "Client User",
-      description: "Client portal access and service management",
-      permissions: [
-        "services.read",
-        "tickets.read",
-        "tickets.write",
-        "profile.read",
-        "profile.write",
-      ],
-      userCount: 141,
-      isSystem: false,
-    },
-  ];
+  // Fetch real roles from API
+  const { data: rolesData, isLoading, error } = useRoles(1, 100, {
+    is_active: true,
+  });
 
-  const filteredRoles = roles.filter(
-    (role) =>
-      role.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      role.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Log roles data
+  useEffect(() => {
+    console.log("[RoleManagementPage] Roles data:", rolesData);
+    console.log("[RoleManagementPage] Is loading:", isLoading);
+    console.log("[RoleManagementPage] Error:", error);
+    if (rolesData) {
+      console.log("[RoleManagementPage] Roles count:", rolesData.roles?.length || 0);
+      console.log("[RoleManagementPage] Total roles:", rolesData.total);
+    }
+  }, [rolesData, isLoading, error]);
 
-  const getPermissionIcon = (permission: string) => {
-    if (permission.includes("users")) return <Users className="w-4 h-4" />;
-    if (permission.includes("system")) return <Settings className="w-4 h-4" />;
-    if (permission.includes("audit")) return <Eye className="w-4 h-4" />;
+  const roles = rolesData?.roles || [];
+
+  // Get unique permission categories from roles
+  const permissionCategories = useMemo(() => {
+    const categories = new Set<string>();
+    roles.forEach((role) => {
+      role.permissions?.forEach((perm) => {
+        const category = perm.category || "other";
+        categories.add(category);
+      });
+    });
+    return Array.from(categories).sort();
+  }, [roles]);
+
+  // Filter roles by search query and category
+  const filteredRoles = useMemo(() => {
+    return roles.filter((role) => {
+      // Search filter
+      const matchesSearch =
+        role.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        role.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        role.slug?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      if (!matchesSearch) return false;
+
+      // Category filter
+      if (selectedCategory === "all") return true;
+
+      return role.permissions?.some(
+        (perm) => (perm.category || "other") === selectedCategory
+      );
+    });
+  }, [roles, searchQuery, selectedCategory]);
+
+  // Build role hierarchy
+  const roleHierarchy = useMemo(() => {
+    const roleMap = new Map(roles.map((r) => [r.id, r]));
+    const rootRoles: typeof roles = [];
+    const childMap = new Map<string, typeof roles>();
+
+    roles.forEach((role) => {
+      if (role.parent_role_id && roleMap.has(role.parent_role_id)) {
+        if (!childMap.has(role.parent_role_id)) {
+          childMap.set(role.parent_role_id, []);
+        }
+        childMap.get(role.parent_role_id)!.push(role);
+      } else {
+        rootRoles.push(role);
+      }
+    });
+
+    return { rootRoles, childMap };
+  }, [roles]);
+
+  const getPermissionIcon = (permission: { name?: string; slug?: string; category?: string }) => {
+    const name = permission.name || permission.slug || "";
+    const category = permission.category || "";
+    
+    if (name.includes("user") || category.includes("user")) return <Users className="w-4 h-4" />;
+    if (name.includes("system") || category.includes("system")) return <Settings className="w-4 h-4" />;
+    if (name.includes("audit") || category.includes("audit")) return <Eye className="w-4 h-4" />;
     return <Key className="w-4 h-4" />;
   };
+
+  const formatPermissionName = (permission: { name?: string; slug?: string }) => {
+    return permission.name || permission.slug || "";
+  };
+
+  const handleDeleteRole = async (roleId: string, roleName: string) => {
+    if (window.confirm(`Are you sure you want to delete the role "${roleName}"? This action cannot be undone.`)) {
+      try {
+        await deleteRole.mutateAsync(roleId);
+      } catch (error) {
+        // Error is handled by the useDeleteRole hook (toast notification)
+      }
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <span className="ml-2 text-gray-500">Loading roles...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -95,22 +163,25 @@ export const RoleManagementPage: React.FC = () => {
             Manage user roles and their associated permissions
           </p>
         </div>
-        <Button className="flex items-center gap-2" disabled>
-          <Plus className="w-4 h-4" />
-          Create Role
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => setShowMatrix(true)}
+          >
+            <Table2 className="w-4 h-4" />
+            View Matrix
+          </Button>
+          <Button
+            className="flex items-center gap-2"
+            onClick={() => navigate("/admin/roles/new")}
+          >
+            <Plus className="w-4 h-4" />
+            Create Role
+          </Button>
+        </div>
       </div>
 
-      {/* Info Card */}
-      <Card className="p-4 bg-blue-50 border-blue-200">
-        <div className="flex items-center gap-2">
-          <Shield className="w-5 h-5 text-blue-600" />
-          <p className="text-blue-800">
-            <strong>Note:</strong> Role management endpoints are not yet
-            available. This page shows predefined system roles.
-          </p>
-        </div>
-      </Card>
 
       {/* Filters */}
       <Card className="p-4">
@@ -124,6 +195,20 @@ export const RoleManagementPage: React.FC = () => {
               className="pl-10"
             />
           </div>
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-[200px]">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Filter by category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {permissionCategories.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </Card>
 
@@ -137,34 +222,66 @@ export const RoleManagementPage: React.FC = () => {
                   <h3 className="text-lg font-semibold text-gray-900">
                     {role.name}
                   </h3>
-                  {role.isSystem && (
+                  {role.is_system && (
                     <Badge className="bg-blue-100 text-blue-800">
                       System Role
                     </Badge>
                   )}
-                  <Badge className="bg-gray-100 text-gray-800">
-                    {role.userCount} users
-                  </Badge>
+                  {!role.is_active && (
+                    <Badge className="bg-gray-100 text-gray-800">
+                      Inactive
+                    </Badge>
+                  )}
                 </div>
-                <p className="text-gray-600 mb-4">{role.description}</p>
+                {role.description && (
+                  <p className="text-gray-600 mb-4">{role.description}</p>
+                )}
+
+                {/* Hierarchy */}
+                {role.parent_role_id && (
+                  <div className="mb-2">
+                    <Badge variant="outline" className="text-xs">
+                      Child of: {roles.find((r) => r.id === role.parent_role_id)?.name || "Unknown"}
+                    </Badge>
+                  </div>
+                )}
+                {roleHierarchy.childMap.has(role.id) && (
+                  <div className="mb-2">
+                    <Badge variant="outline" className="text-xs">
+                      Parent to: {roleHierarchy.childMap.get(role.id)!.length} role(s)
+                    </Badge>
+                  </div>
+                )}
 
                 {/* Permissions */}
-                <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">
-                    Permissions ({role.permissions.length})
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {role.permissions.map((permission) => (
-                      <div
-                        key={permission}
-                        className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-xs text-gray-700"
-                      >
-                        {getPermissionIcon(permission)}
-                        {permission}
-                      </div>
-                    ))}
+                {role.permissions && role.permissions.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-medium text-gray-700">
+                        Permissions
+                      </h4>
+                      <Badge variant="secondary" className="text-xs">
+                        {role.permissions.length} assigned
+                      </Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {role.permissions.slice(0, 10).map((permission) => (
+                        <div
+                          key={permission.id}
+                          className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-xs text-gray-700"
+                        >
+                          {getPermissionIcon(permission)}
+                          {formatPermissionName(permission)}
+                        </div>
+                      ))}
+                      {role.permissions.length > 10 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{role.permissions.length - 10} more
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Actions */}
@@ -172,21 +289,22 @@ export const RoleManagementPage: React.FC = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled
+                  onClick={() => navigate(`/admin/roles/${role.id}/edit`)}
                   className="flex items-center gap-1"
                 >
                   <Edit className="w-3 h-3" />
                   Edit
                 </Button>
-                {!role.isSystem && (
+                {!role.is_system && (
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled
+                    onClick={() => handleDeleteRole(role.id, role.name)}
+                    disabled={deleteRole.isPending}
                     className="flex items-center gap-1 text-red-600 hover:text-red-700"
                   >
                     <Trash2 className="w-3 h-3" />
-                    Delete
+                    {deleteRole.isPending ? "Deleting..." : "Delete"}
                   </Button>
                 )}
               </div>
@@ -209,6 +327,19 @@ export const RoleManagementPage: React.FC = () => {
           </p>
         </Card>
       )}
+
+      {/* Permission Matrix Dialog */}
+      <Dialog open={showMatrix} onOpenChange={setShowMatrix}>
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Permission Matrix</DialogTitle>
+            <DialogDescription>
+              Visual overview of all permissions assigned to each role
+            </DialogDescription>
+          </DialogHeader>
+          <PermissionMatrix onClose={() => setShowMatrix(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

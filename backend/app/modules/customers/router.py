@@ -1,5 +1,6 @@
 """Customer API router with all endpoints."""
 
+import logging
 from typing import Optional
 from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config.database import get_db
 from app.core.dependencies import get_current_user, require_permission
 from app.core.permissions import Permission
+from app.core.exceptions import NotFoundException, ForbiddenException
 from app.modules.auth.models import User
 from app.modules.customers.schemas import (
     CustomerCreate,
@@ -18,6 +20,8 @@ from app.modules.customers.schemas import (
     CustomerType,
 )
 from app.modules.customers.service import CustomerService
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(prefix="/customers", tags=["customers"])
@@ -42,6 +46,28 @@ async def get_customers(
         customer_type=customer_type,
         search=search,
     )
+
+
+@router.get("/me", response_model=CustomerResponse)
+async def get_my_customer(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get current user's own customer profile (for clients)."""
+    if not current_user.email:
+        raise NotFoundException("User email not found")
+    
+    service = CustomerService(db)
+    customer = await service.get_by_email(current_user.email)
+    
+    if not customer:
+        raise NotFoundException("Customer profile not found for this user")
+    
+    # Verify ownership - clients can only access their own customer data
+    if current_user.role == "client" and customer.email != current_user.email:
+        raise ForbiddenException("You can only access your own customer profile")
+    
+    return customer
 
 
 @router.get("/statistics", response_model=CustomerStatistics)
@@ -72,8 +98,17 @@ async def create_customer(
     current_user: User = Depends(require_permission(Permission.CUSTOMERS_CREATE)),
 ):
     """Create a new customer."""
+    # #region agent log
+    import json, os, time
+    log_path = '/tmp/debug.log'
+    try:
+        with open(log_path, 'a') as f:
+            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"D","location":"router.py:69","message":"Pydantic received data","data":{"customer_type":str(customer_data.customer_type),"customer_type_type":str(type(customer_data.customer_type)),"has_value":hasattr(customer_data.customer_type,'value'),"customer_type_value":customer_data.customer_type.value if hasattr(customer_data.customer_type,'value') else None,"model_dump":customer_data.model_dump()},"timestamp":int(time.time()*1000)})+'\n')
+    except: pass
+    # #endregion
     service = CustomerService(db)
-    return await service.create(customer_data, created_by=current_user.id)
+    result = await service.create(customer_data, created_by=current_user.id)
+    return result
 
 
 @router.put("/{customer_id}", response_model=CustomerResponse)

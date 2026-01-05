@@ -28,19 +28,21 @@ export const formatDate = (
 };
 
 /**
- * Format currency value
+ * Format currency value in DZD (Algerian Dinar)
  *
  * @param {number} amount - Amount to format
- * @param {string} currency - Currency code (default: USD)
+ * @param {number} decimals - Number of decimal places (default: 2)
  * @returns {string} Formatted currency
  */
 export const formatCurrency = (
   amount: number,
-  currency: string = "USD"
+  decimals: number = 2
 ): string => {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("fr-DZ", {
     style: "currency",
-    currency,
+    currency: "DZD",
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   }).format(amount);
 };
 
@@ -51,7 +53,7 @@ export const formatCurrency = (
  * @returns {string} Formatted number
  */
 export const formatNumber = (value: number): string => {
-  return new Intl.NumberFormat("en-US").format(value);
+  return new Intl.NumberFormat("fr-DZ").format(value);
 };
 
 /**
@@ -80,4 +82,15 @@ export const formatFileSize = (bytes: number): string => {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+};
+
+/**
+ * Format amount in DZD (alias for formatCurrency for backward compatibility)
+ *
+ * @param {number} amount - Amount to format in DZD
+ * @param {number} decimals - Number of decimal places (default: 2)
+ * @returns {string} Formatted DZD amount
+ */
+export const formatDZD = (amount: number, decimals: number = 2): string => {
+  return formatCurrency(amount, decimals);
 };

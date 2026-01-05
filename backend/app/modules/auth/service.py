@@ -27,10 +27,11 @@ from app.core.security import (
 )
 from app.modules.auth.models import User
 from app.modules.auth.repository import UserRepository
-from app.modules.auth.schemas import UserCreate, LoginResponse, Enable2FAResponse
+from app.modules.auth.schemas import UserCreate, UserUpdate, LoginResponse, Enable2FAResponse
 from app.modules.audit.service import AuditService
 from app.modules.audit.models import AuditAction
 from app.infrastructure.email.service import EmailService
+from app.core.logging import logger
 
 settings = get_settings()
 
@@ -44,15 +45,16 @@ class AuthService:
         self.email_service = EmailService()
         self.db = db
 
-    async def register(self, user_data: UserCreate) -> User:
+    async def register(self, user_data: UserCreate, request: Optional[Request] = None) -> LoginResponse:
         """
-        Register a new user.
+        Register a new user and automatically log them in.
 
         Args:
             user_data: User registration data
+            request: FastAPI request for audit logging
 
         Returns:
-            Created user object
+            Login response with tokens and user information
 
         Raises:
             ConflictException: If email already exists
@@ -67,7 +69,30 @@ class AuthService:
 
         # Create user
         user = await self.repository.create(user_data, password_hash)
-        return user
+
+        # Generate tokens for automatic login
+        access_token = create_access_token(data={"sub": user.id})
+        refresh_token = create_refresh_token(data={"sub": user.id})
+
+        # Log successful registration
+        await self.audit_service.log_action(
+            action=AuditAction.USER_CREATE,
+            resource_type="user",
+            description=f"New user registered: {user.email}",
+            user_id=user.id,
+            user_email=user.email,
+            user_role=user.role,
+            request=request,
+            success=True,
+        )
+
+        # Return login response with tokens
+        return LoginResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer",
+            user=user,
+        )
 
     async def login(
         self, email: str, password: str, request: Optional[Request] = None
@@ -91,22 +116,26 @@ class AuthService:
         Raises:
             UnauthorizedException: If credentials are invalid or account is locked
         """
-        from datetime import timedelta
+        from datetime import datetime, timedelta
 
         # Get user by email
         user = await self.repository.get_by_email(email)
         if not user:
-            # Log failed login attempt
-            await self.audit_service.log_action(
-                action=AuditAction.LOGIN_FAILED,
-                resource_type="auth",
-                description=f"Failed login attempt for {email} - user not found",
-                user_email=email,
-                request=request,
-                success=False,
-                error_message="Invalid email or password",
-            )
-            raise UnauthorizedException("Invalid email or password")
+            # Log failed login attempt (wrap in try-except to ensure login error is still raised)
+            try:
+                await self.audit_service.log_action(
+                    action=AuditAction.LOGIN_FAILED,
+                    resource_type="auth",
+                    description=f"Failed login attempt for {email} - user not found",
+                    user_email=email,
+                    request=request,
+                    success=False,
+                    error_message="Email not found",
+                )
+            except Exception as e:
+                # Log error but don't prevent login error from being raised
+                logger.error(f"Failed to log failed login attempt: {e}", exc_info=True)
+            raise UnauthorizedException("Email not found")
 
         # SECURITY: Check if account is locked
         if user.locked_until:
@@ -115,17 +144,20 @@ class AuthService:
                 time_remaining = user.locked_until - datetime.utcnow()
                 minutes_remaining = int(time_remaining.total_seconds() / 60) + 1
 
-                await self.audit_service.log_action(
-                    action=AuditAction.LOGIN_FAILED,
-                    resource_type="auth",
-                    description=f"Login attempt for locked account: {email}",
-                    user_id=user.id,
-                    user_email=email,
-                    user_role=user.role,
-                    request=request,
-                    success=False,
-                    error_message=f"Account locked for {minutes_remaining} more minutes",
-                )
+                try:
+                    await self.audit_service.log_action(
+                        action=AuditAction.LOGIN_FAILED,
+                        resource_type="auth",
+                        description=f"Login attempt for locked account: {email}",
+                        user_id=user.id,
+                        user_email=email,
+                        user_role=user.role,
+                        request=request,
+                        success=False,
+                        error_message=f"Account locked for {minutes_remaining} more minutes",
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to log locked account login attempt: {e}", exc_info=True)
 
                 raise UnauthorizedException(
                     f"Account is temporarily locked due to multiple failed login attempts. "
@@ -149,17 +181,20 @@ class AuthService:
 
                 await self.db.commit()
 
-                await self.audit_service.log_action(
-                    action=AuditAction.LOGIN_FAILED,
-                    resource_type="auth",
-                    description=f"Account locked due to {user.failed_login_attempts} failed attempts: {email}",
-                    user_id=user.id,
-                    user_email=email,
-                    user_role=user.role,
-                    request=request,
-                    success=False,
-                    error_message="Account locked - too many failed attempts",
-                )
+                try:
+                    await self.audit_service.log_action(
+                        action=AuditAction.LOGIN_FAILED,
+                        resource_type="auth",
+                        description=f"Account locked due to {user.failed_login_attempts} failed attempts: {email}",
+                        user_id=user.id,
+                        user_email=email,
+                        user_role=user.role,
+                        request=request,
+                        success=False,
+                        error_message="Account locked - too many failed attempts",
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to log account lock audit: {e}", exc_info=True)
 
                 raise UnauthorizedException(
                     "Account has been locked due to multiple failed login attempts. "
@@ -168,33 +203,39 @@ class AuthService:
 
             await self.db.commit()
 
-            await self.audit_service.log_action(
-                action=AuditAction.LOGIN_FAILED,
-                resource_type="auth",
-                description=f"Failed login attempt for {email} - invalid password (attempt {user.failed_login_attempts}/5)",
-                user_id=user.id,
-                user_email=email,
-                user_role=user.role,
-                request=request,
-                success=False,
-                error_message="Invalid password",
-            )
+            try:
+                await self.audit_service.log_action(
+                    action=AuditAction.LOGIN_FAILED,
+                    resource_type="auth",
+                    description=f"Failed login attempt for {email} - invalid password (attempt {user.failed_login_attempts}/5)",
+                    user_id=user.id,
+                    user_email=email,
+                    user_role=user.role,
+                    request=request,
+                    success=False,
+                    error_message="Wrong password",
+                )
+            except Exception as e:
+                logger.error(f"Failed to log failed login attempt: {e}", exc_info=True)
 
-            raise UnauthorizedException("Invalid email or password")
+            raise UnauthorizedException("Wrong password")
 
         # Check if user is active
         if not user.is_active:
-            await self.audit_service.log_action(
-                action=AuditAction.LOGIN_FAILED,
-                resource_type="auth",
-                description=f"Failed login for {email} - account inactive",
-                user_id=user.id,
-                user_email=email,
-                user_role=user.role,
-                request=request,
-                success=False,
-                error_message="Account is inactive",
-            )
+            try:
+                await self.audit_service.log_action(
+                    action=AuditAction.LOGIN_FAILED,
+                    resource_type="auth",
+                    description=f"Failed login for {email} - account inactive",
+                    user_id=user.id,
+                    user_email=email,
+                    user_role=user.role,
+                    request=request,
+                    success=False,
+                    error_message="Account is inactive",
+                )
+            except Exception as e:
+                logger.error(f"Failed to log inactive account login attempt: {e}", exc_info=True)
             raise UnauthorizedException("Account is inactive")
 
         # SECURITY: Reset failed login attempts on successful login
@@ -426,3 +467,60 @@ class AuthService:
 
         # Update password
         return await self.repository.update_password(user, password_hash)
+
+    async def update_profile(self, user_id: str, profile_data: "UserUpdate") -> User:
+        """
+        Update user profile information.
+
+        Args:
+            user_id: User ID
+            profile_data: Profile update data
+
+        Returns:
+            Updated user object
+
+        Raises:
+            UnauthorizedException: If user not found
+        """
+        user = await self.repository.get_by_id(user_id)
+        if not user:
+            raise UnauthorizedException("User not found")
+        return await self.repository.update(user, profile_data)
+
+    async def change_password(
+        self, user_id: str, current_password: str, new_password: str, request: Optional[Request] = None
+    ) -> None:
+        """
+        Change user password after verifying current password.
+
+        Args:
+            user_id: User ID
+            current_password: Current password
+            new_password: New password
+            request: FastAPI request for audit logging
+
+        Raises:
+            UnauthorizedException: If user not found
+            ValidationException: If current password is incorrect
+        """
+        user = await self.repository.get_by_id(user_id)
+        if not user:
+            raise UnauthorizedException("User not found")
+
+        if not verify_password(current_password, user.password_hash):
+            raise ValidationException("Current password is incorrect")
+
+        password_hash = get_password_hash(new_password)
+        await self.repository.update_password(user, password_hash)
+
+        # Log password change
+        await self.audit_service.log_action(
+            action=AuditAction.PASSWORD_CHANGE,
+            resource_type="user",
+            description="User changed password",
+            user_id=user.id,
+            user_email=user.email,
+            user_role=user.role,
+            request=request,
+            success=True,
+        )

@@ -11,7 +11,7 @@ RUN apk add --no-cache git curl
 COPY package*.json ./
 
 # Install ALL dependencies
-RUN npm install --silent
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .

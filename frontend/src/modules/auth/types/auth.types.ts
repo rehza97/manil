@@ -32,6 +32,7 @@ export interface LoginCredentials {
   email: string;
   password: string;
   twoFactorCode?: string;
+  rememberMe?: boolean;
 }
 
 /**

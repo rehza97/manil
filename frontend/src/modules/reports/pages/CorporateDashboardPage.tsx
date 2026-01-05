@@ -1,5 +1,6 @@
 /**
  * Corporate Dashboard Page
+import { formatCurrency } from "@/shared/utils/formatters";
  *
  * Business operations overview for corporate users.
  */

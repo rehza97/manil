@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -27,7 +27,10 @@ import {
   Calendar,
   MapPin,
   Shield,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
+import { useLoginHistory } from "@/modules/auth/hooks/useAuth";
 
 interface LoginAttempt {
   id: string;
@@ -41,54 +44,38 @@ interface LoginAttempt {
 
 const LoginHistoryPage: React.FC = () => {
   const navigate = useNavigate();
-  // TODO: Fetch from API using auth/security/login-history endpoint
-  const [loginHistory] = useState<LoginAttempt[]>([
-    {
-      id: "1",
-      timestamp: "2024-01-20T10:30:00Z",
-      success: true,
-      ip_address: "192.168.1.1",
-      user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
-      location: "Algiers, Algeria",
-      device_type: "desktop",
-    },
-    {
-      id: "2",
-      timestamp: "2024-01-19T15:45:00Z",
-      success: true,
-      ip_address: "192.168.1.2",
-      user_agent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
-      location: "Algiers, Algeria",
-      device_type: "mobile",
-    },
-    {
-      id: "3",
-      timestamp: "2024-01-18T08:15:00Z",
-      success: false,
-      ip_address: "203.0.113.0",
-      user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Firefox/121.0",
-      location: "Unknown",
-      device_type: "desktop",
-    },
-    {
-      id: "4",
-      timestamp: "2024-01-17T14:20:00Z",
-      success: true,
-      ip_address: "192.168.1.1",
-      user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
-      location: "Algiers, Algeria",
-      device_type: "desktop",
-    },
-    {
-      id: "5",
-      timestamp: "2024-01-16T09:00:00Z",
-      success: true,
-      ip_address: "192.168.1.2",
-      user_agent: "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X)",
-      location: "Algiers, Algeria",
-      device_type: "tablet",
-    },
-  ]);
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  const { data, isLoading, error } = useLoginHistory(page, pageSize);
+
+  // Transform backend response to match LoginAttempt interface
+  const loginHistory = useMemo<LoginAttempt[]>(() => {
+    if (!data) return [];
+    return data.map((item: any) => {
+      // Determine device type from user agent
+      let device_type: "desktop" | "mobile" | "tablet" = "desktop";
+      const userAgent = item.user_agent || "";
+      if (userAgent.includes("iPhone") || userAgent.includes("Android")) {
+        device_type = "mobile";
+      } else if (userAgent.includes("iPad")) {
+        device_type = "tablet";
+      }
+
+      return {
+        id: item.id || String(Math.random()),
+        timestamp: item.created_at || item.timestamp,
+        // AuditLogResponse has 'success' boolean field and 'action' field
+        // success=true means login succeeded, success=false means login failed
+        // action will be "login_success" or "login_failed"
+        success: item.success === true || (item.action === "login_success"),
+        ip_address: item.ip_address || "Unknown",
+        user_agent: item.user_agent || "Unknown",
+        location: item.location || "Unknown",
+        device_type,
+      };
+    });
+  }, [data]);
 
   const getDeviceIcon = (deviceType: string) => {
     switch (deviceType) {
@@ -103,7 +90,7 @@ const LoginHistoryPage: React.FC = () => {
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
-    return new Intl.DateTimeFormat("en-US", {
+    return new Intl.DateTimeFormat("fr-DZ", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -122,6 +109,25 @@ const LoginHistoryPage: React.FC = () => {
 
   const successfulLogins = loginHistory.filter((login) => login.success).length;
   const failedLogins = loginHistory.filter((login) => !login.success).length;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
+          <p className="text-destructive">Failed to load login history</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -208,7 +214,14 @@ const LoginHistoryPage: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loginHistory.map((login) => (
+              {loginHistory.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    No login history found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                loginHistory.map((login) => (
                 <TableRow key={login.id}>
                   <TableCell>
                     {login.success ? (
@@ -257,7 +270,8 @@ const LoginHistoryPage: React.FC = () => {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>

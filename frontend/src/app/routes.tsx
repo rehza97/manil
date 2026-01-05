@@ -9,7 +9,15 @@
  * @module app/routes
  */
 
-import { LandingPage } from "@/modules/landing";
+import {
+  LandingPage,
+  PricingPage,
+  FeaturesPage,
+  AboutPage,
+  ContactPage,
+  HostingPage,
+  VPSPage
+} from "@/modules/landing";
 import {
   LoginPage,
   RegisterPage,
@@ -32,6 +40,10 @@ import {
   ProfileEditPage,
   SecurityPage,
   LoginHistoryPage,
+  ServicesListPage,
+  ServiceDetailPage,
+  SettingsPage,
+  NotificationSettingsPage,
 } from "@/modules/dashboard";
 import {
   UserManagementPage,
@@ -42,8 +54,73 @@ import {
   SystemSettingsPage,
   RoleManagementPage,
   ReportsPage,
+  SecurityLogsPage,
+  TicketsPage,
+  GeneralSettingsPage,
+  SecuritySettingsPage,
+  EmailConfigPage,
+  SMSConfigPage,
+  StorageConfigPage,
+  BackupSettingsPage,
 } from "@/modules/admin";
 import {
+  SystemHealthPage,
+  PerformanceMetricsPage,
+  SystemAlertsPage,
+} from "@/modules/admin/pages/overview";
+import {
+  UserReportsPage,
+  ActivityReportsPage,
+  SecurityReportsPage,
+  PerformanceReportsPage,
+} from "@/modules/admin/pages/reports";
+import {
+  SystemLogsPage,
+  UserActivityLogsPage,
+} from "@/modules/admin/pages/logs";
+import {
+  CustomerDetailsPage,
+  CustomerKYCPage,
+  CustomerCreatePage,
+  CustomerEditPage,
+} from "@/modules/admin/pages/customers";
+import {
+  SupportDashboardPage,
+  SupportGroupsPage,
+  TicketCategoriesPage,
+  AutomationRulesPage,
+} from "@/modules/admin/pages/support";
+import {
+  MaintenanceDashboardPage,
+  BackupManagementPage,
+  CacheManagementPage,
+  DataCleanupPage,
+  MigrationsPage,
+} from "@/modules/admin/pages/maintenance";
+import {
+  ProductListPage,
+  ProductFormPage,
+  CategoryManagementPage,
+} from "@/modules/admin/pages/products";
+import {
+  UserCreatePage,
+  UserDetailsPage,
+  UserEditPage,
+  UserRolesPage,
+  UserSessionsPage,
+  UserActivityPage,
+} from "@/modules/admin/pages/users";
+import {
+  RoleCreatePage,
+  RoleDetailsPage,
+  RoleEditPage,
+  RolePermissionsPage,
+  PermissionListPage,
+} from "@/modules/admin/pages/roles";
+import {
+  TicketListPage,
+  TicketDetailPage,
+  TicketCreatePage,
   TemplateListPage,
   TemplateCreatePage,
   TemplateEditPage,
@@ -56,6 +133,46 @@ import {
   OrderEditPage,
   OrderStatusPage,
 } from "@/modules/orders/pages";
+import {
+  InvoiceListPage,
+  InvoiceCreatePage,
+  InvoiceDetailPage,
+  InvoiceEditPage,
+} from "@/modules/invoices/pages";
+import {
+  CataloguePage,
+  ProductPage,
+  QuoteRequestPage,
+} from "@/modules/products/pages";
+import {
+  VPSPlansPage,
+  MyVPSPage,
+  VPSInstancePage,
+  CustomImagesPage,
+  CustomImageDetailPage,
+  ImageUploadPage,
+} from "@/modules/hosting/pages";
+import {
+  PendingVPSRequestsPage,
+  AllVPSSubscriptionsPage,
+  AdminVPSSubscriptionDetailPage,
+  VPSMonitoringPage,
+  AdminCustomImagesPage,
+  VPSPlansAdminPage,
+} from "@/modules/admin/pages/hosting";
+import {
+  MyDNSZonesPage,
+  DNSZoneDetailPage,
+} from "@/modules/dns/pages/client";
+import {
+  AllDNSZonesPage,
+  DNSMonitoringPage,
+  DNSTemplatesPage,
+} from "@/modules/dns/pages/admin";
+import {
+  CustomerDNSZonesPage,
+  DNSOverviewPage,
+} from "@/modules/dns/pages/corporate";
 
 // Placeholder components for modules not yet implemented
 const ModulePlaceholder = ({ module }: { module: string }) => {
@@ -80,6 +197,30 @@ export const routes = [
   {
     path: "/",
     element: <LandingPage />,
+  },
+  {
+    path: "/pricing",
+    element: <PricingPage />,
+  },
+  {
+    path: "/features",
+    element: <FeaturesPage />,
+  },
+  {
+    path: "/about",
+    element: <AboutPage />,
+  },
+  {
+    path: "/contact",
+    element: <ContactPage />,
+  },
+  {
+    path: "/hosting",
+    element: <HostingPage />,
+  },
+  {
+    path: "/vps",
+    element: <VPSPage />,
   },
   {
     path: "/login",
@@ -139,41 +280,37 @@ export const routes = [
       // Services
       {
         path: "services",
-        element: <ModulePlaceholder module="My Services" />,
+        element: <ServicesListPage />,
       },
       {
         path: "services/:id",
-        element: <ModulePlaceholder module="Service Details" />,
+        element: <ServiceDetailPage />,
       },
       // Support Tickets
       {
         path: "tickets",
-        element: <ModulePlaceholder module="My Tickets" />,
+        element: <TicketListPage />,
       },
       {
         path: "tickets/new",
-        element: <ModulePlaceholder module="Create Ticket" />,
+        element: <TicketCreatePage />,
       },
       {
         path: "tickets/:id",
-        element: <ModulePlaceholder module="Ticket Details" />,
-      },
-      {
-        path: "tickets/:id/reply",
-        element: <ModulePlaceholder module="Reply to Ticket" />,
+        element: <TicketDetailPage />,
       },
       // Product Catalog
       {
         path: "catalog",
-        element: <ModulePlaceholder module="Product Catalog" />,
+        element: <CataloguePage />,
       },
       {
         path: "catalog/:id",
-        element: <ModulePlaceholder module="Product Details" />,
+        element: <ProductPage />,
       },
       {
         path: "catalog/quote-request",
-        element: <ModulePlaceholder module="Quote Request" />,
+        element: <QuoteRequestPage />,
       },
       // Orders
       {
@@ -199,20 +336,62 @@ export const routes = [
       // Invoices
       {
         path: "invoices",
-        element: <ModulePlaceholder module="My Invoices" />,
+        element: <InvoiceListPage />,
+      },
+      {
+        path: "invoices/create",
+        element: <InvoiceCreatePage />,
       },
       {
         path: "invoices/:id",
-        element: <ModulePlaceholder module="Invoice Details" />,
+        element: <InvoiceDetailPage />,
+      },
+      {
+        path: "invoices/:id/edit",
+        element: <InvoiceEditPage />,
+      },
+      // VPS Hosting
+      {
+        path: "vps/plans",
+        element: <VPSPlansPage />,
+      },
+      {
+        path: "vps/subscriptions",
+        element: <MyVPSPage />,
+      },
+      {
+        path: "vps/subscriptions/:id",
+        element: <VPSInstancePage />,
+      },
+      {
+        path: "vps/custom-images",
+        element: <CustomImagesPage />,
+      },
+      {
+        path: "vps/custom-images/upload",
+        element: <ImageUploadPage />,
+      },
+      {
+        path: "vps/custom-images/:imageId",
+        element: <CustomImageDetailPage />,
+      },
+      // DNS Management
+      {
+        path: "dns/zones",
+        element: <MyDNSZonesPage />,
+      },
+      {
+        path: "dns/zones/:zoneId",
+        element: <DNSZoneDetailPage />,
       },
       // Settings
       {
         path: "settings",
-        element: <ModulePlaceholder module="Account Settings" />,
+        element: <SettingsPage />,
       },
       {
         path: "settings/notifications",
-        element: <ModulePlaceholder module="Notification Preferences" />,
+        element: <NotificationSettingsPage />,
       },
     ],
   },
@@ -406,10 +585,64 @@ export const routes = [
         path: "reports/revenue",
         element: <ModulePlaceholder module="Revenue Reports" />,
       },
+      // VPS Management
+      {
+        path: "hosting/requests",
+        element: <PendingVPSRequestsPage />,
+      },
+      {
+        path: "hosting/subscriptions",
+        element: <AllVPSSubscriptionsPage />,
+      },
+      {
+        path: "hosting/subscriptions/:id",
+        element: <AdminVPSSubscriptionDetailPage />,
+      },
+      {
+        path: "hosting/monitoring",
+        element: <VPSMonitoringPage />,
+      },
+      {
+        path: "hosting/custom-images",
+        element: <AdminCustomImagesPage />,
+      },
+      {
+        path: "hosting/plans",
+        element: <VPSPlansAdminPage />,
+      },
+      // DNS Management
+      {
+        path: "dns/zones",
+        element: <CustomerDNSZonesPage />,
+      },
+      {
+        path: "dns/overview",
+        element: <DNSOverviewPage />,
+      },
       // Corporate Settings
       {
         path: "settings",
-        element: <ModulePlaceholder module="Corporate Settings" />,
+        element: <GeneralSettingsPage />,
+      },
+      {
+        path: "settings/general",
+        element: <GeneralSettingsPage />,
+      },
+      {
+        path: "settings/roles",
+        element: <RoleManagementPage />,
+      },
+      {
+        path: "settings/users",
+        element: <UserManagementPage />,
+      },
+      {
+        path: "settings/system",
+        element: <SystemSettingsPage />,
+      },
+      {
+        path: "settings/permissions",
+        element: <PermissionListPage />,
       },
       {
         path: "settings/notifications",
@@ -463,15 +696,15 @@ export const routes = [
       },
       {
         path: "overview/health",
-        element: <ModulePlaceholder module="System Health" />,
+        element: <SystemHealthPage />,
       },
       {
         path: "overview/performance",
-        element: <ModulePlaceholder module="Performance Metrics" />,
+        element: <PerformanceMetricsPage />,
       },
       {
         path: "overview/alerts",
-        element: <ModulePlaceholder module="System Alerts" />,
+        element: <SystemAlertsPage />,
       },
       // User Management
       {
@@ -480,23 +713,27 @@ export const routes = [
       },
       {
         path: "users/new",
-        element: <ModulePlaceholder module="Create User" />,
+        element: <UserCreatePage />,
       },
       {
         path: "users/:id",
-        element: <ModulePlaceholder module="User Details" />,
+        element: <UserDetailsPage />,
       },
       {
         path: "users/:id/edit",
-        element: <ModulePlaceholder module="Edit User" />,
+        element: <UserEditPage />,
       },
       {
         path: "users/:id/roles",
-        element: <ModulePlaceholder module="Manage User Roles" />,
+        element: <UserRolesPage />,
       },
       {
         path: "users/:id/sessions",
-        element: <ModulePlaceholder module="User Sessions" />,
+        element: <UserSessionsPage />,
+      },
+      {
+        path: "users/:id/activity",
+        element: <UserActivityPage />,
       },
       // Role & Permission Management
       {
@@ -505,19 +742,40 @@ export const routes = [
       },
       {
         path: "roles/new",
-        element: <ModulePlaceholder module="Create Role" />,
+        element: <RoleCreatePage />,
       },
       {
         path: "roles/:id",
-        element: <ModulePlaceholder module="Role Details" />,
+        element: <RoleDetailsPage />,
+      },
+      {
+        path: "roles/:id/edit",
+        element: <RoleEditPage />,
       },
       {
         path: "roles/:id/permissions",
-        element: <ModulePlaceholder module="Role Permissions" />,
+        element: <RolePermissionsPage />,
       },
       {
         path: "permissions",
-        element: <ModulePlaceholder module="Permission Management" />,
+        element: <PermissionListPage />,
+      },
+      // Product Management
+      {
+        path: "products",
+        element: <ProductListPage />,
+      },
+      {
+        path: "products/new",
+        element: <ProductFormPage />,
+      },
+      {
+        path: "products/:productId/edit",
+        element: <ProductFormPage />,
+      },
+      {
+        path: "products/categories",
+        element: <CategoryManagementPage />,
       },
       // System Settings
       {
@@ -526,27 +784,27 @@ export const routes = [
       },
       {
         path: "settings/general",
-        element: <ModulePlaceholder module="General Settings" />,
+        element: <GeneralSettingsPage />,
       },
       {
         path: "settings/security",
-        element: <ModulePlaceholder module="Security Settings" />,
+        element: <SecuritySettingsPage />,
       },
       {
         path: "settings/email",
-        element: <ModulePlaceholder module="Email Configuration" />,
+        element: <EmailConfigPage />,
       },
       {
         path: "settings/sms",
-        element: <ModulePlaceholder module="SMS Configuration" />,
+        element: <SMSConfigPage />,
       },
       {
         path: "settings/storage",
-        element: <ModulePlaceholder module="Storage Configuration" />,
+        element: <StorageConfigPage />,
       },
       {
         path: "settings/backup",
-        element: <ModulePlaceholder module="Backup Settings" />,
+        element: <BackupSettingsPage />,
       },
       // Activity & Audit Logs
       {
@@ -559,15 +817,15 @@ export const routes = [
       },
       {
         path: "logs/security",
-        element: <ModulePlaceholder module="Security Logs" />,
+        element: <SecurityLogsPage />,
       },
       {
         path: "logs/system",
-        element: <ModulePlaceholder module="System Logs" />,
+        element: <SystemLogsPage />,
       },
       {
         path: "logs/users/:id",
-        element: <ModulePlaceholder module="User Activity Logs" />,
+        element: <UserActivityLogsPage />,
       },
       // Customer Management (Admin)
       {
@@ -575,12 +833,20 @@ export const routes = [
         element: <CustomerManagementPage />,
       },
       {
+        path: "customers/create",
+        element: <CustomerCreatePage />,
+      },
+      {
         path: "customers/:id",
-        element: <ModulePlaceholder module="Customer Details (Admin)" />,
+        element: <CustomerDetailsPage />,
+      },
+      {
+        path: "customers/:id/edit",
+        element: <CustomerEditPage />,
       },
       {
         path: "customers/:id/kyc",
-        element: <ModulePlaceholder module="Customer KYC Management" />,
+        element: <CustomerKYCPage />,
       },
       // System Reports
       {
@@ -589,36 +855,46 @@ export const routes = [
       },
       {
         path: "reports/users",
-        element: <ModulePlaceholder module="User Reports" />,
+        element: <UserReportsPage />,
       },
       {
         path: "reports/activity",
-        element: <ModulePlaceholder module="Activity Reports" />,
+        element: <ActivityReportsPage />,
       },
       {
         path: "reports/security",
-        element: <ModulePlaceholder module="Security Reports" />,
+        element: <SecurityReportsPage />,
       },
       {
         path: "reports/performance",
-        element: <ModulePlaceholder module="Performance Reports" />,
+        element: <PerformanceReportsPage />,
       },
       // Support Groups & Categories
+      // Support Management
       {
         path: "support",
-        element: <ModulePlaceholder module="Support Management" />,
+        element: <SupportDashboardPage />,
       },
       {
         path: "support/groups",
-        element: <ModulePlaceholder module="Support Groups" />,
+        element: <SupportGroupsPage />,
       },
       {
         path: "support/categories",
-        element: <ModulePlaceholder module="Ticket Categories" />,
+        element: <TicketCategoriesPage />,
       },
       {
         path: "support/automation",
-        element: <ModulePlaceholder module="Automation Rules" />,
+        element: <AutomationRulesPage />,
+      },
+      // Tickets Management
+      {
+        path: "tickets",
+        element: <TicketsPage />,
+      },
+      {
+        path: "tickets/:id",
+        element: <TicketDetailPage backPath="/admin/tickets" />,
       },
       // Ticket Templates
       {
@@ -640,23 +916,61 @@ export const routes = [
       // System Maintenance
       {
         path: "maintenance",
-        element: <ModulePlaceholder module="System Maintenance" />,
+        element: <MaintenanceDashboardPage />,
       },
       {
         path: "maintenance/backup",
-        element: <ModulePlaceholder module="Backup Management" />,
+        element: <BackupManagementPage />,
       },
       {
         path: "maintenance/cache",
-        element: <ModulePlaceholder module="Cache Management" />,
+        element: <CacheManagementPage />,
       },
       {
         path: "maintenance/cleanup",
-        element: <ModulePlaceholder module="Data Cleanup" />,
+        element: <DataCleanupPage />,
       },
       {
         path: "maintenance/migrations",
-        element: <ModulePlaceholder module="Database Migrations" />,
+        element: <MigrationsPage />,
+      },
+      // VPS Hosting Management
+      {
+        path: "hosting/requests",
+        element: <PendingVPSRequestsPage />,
+      },
+      {
+        path: "hosting/subscriptions",
+        element: <AllVPSSubscriptionsPage />,
+      },
+      {
+        path: "hosting/subscriptions/:id",
+        element: <AdminVPSSubscriptionDetailPage />,
+      },
+      {
+        path: "hosting/monitoring",
+        element: <VPSMonitoringPage />,
+      },
+      {
+        path: "hosting/custom-images",
+        element: <AdminCustomImagesPage />,
+      },
+      {
+        path: "hosting/plans",
+        element: <VPSPlansAdminPage />,
+      },
+      // DNS Management
+      {
+        path: "dns/zones",
+        element: <AllDNSZonesPage />,
+      },
+      {
+        path: "dns/monitoring",
+        element: <DNSMonitoringPage />,
+      },
+      {
+        path: "dns/templates",
+        element: <DNSTemplatesPage />,
       },
     ],
   },
@@ -726,6 +1040,12 @@ export const routePermissions = {
   "/dashboard/orders/:orderId/edit": ["client"],
   "/dashboard/orders/:orderId/status": ["client"],
   "/dashboard/invoices": ["client"],
+  "/dashboard/vps/plans": ["client"],
+  "/dashboard/vps/subscriptions": ["client"],
+  "/dashboard/vps/subscriptions/:id": ["client"],
+  "/dashboard/vps/custom-images": ["client"],
+  "/dashboard/vps/custom-images/upload": ["client"],
+  "/dashboard/vps/custom-images/:imageId": ["client"],
   "/dashboard/settings": ["client"],
 
   // Corporate routes
@@ -741,7 +1061,15 @@ export const routePermissions = {
   "/corporate/quotes": ["corporate", "admin"],
   "/corporate/invoices": ["corporate", "admin"],
   "/corporate/reports": ["corporate", "admin"],
+  "/corporate/hosting/requests": ["corporate", "admin"],
+  "/corporate/hosting/subscriptions": ["corporate", "admin"],
+  "/corporate/hosting/monitoring": ["corporate", "admin"],
   "/corporate/settings": ["corporate", "admin"],
+  "/corporate/settings/general": ["corporate", "admin"],
+  "/corporate/settings/roles": ["corporate", "admin"],
+  "/corporate/settings/users": ["corporate", "admin"],
+  "/corporate/settings/system": ["corporate", "admin"],
+  "/corporate/settings/permissions": ["corporate", "admin"],
 
   // Admin routes
   "/admin": ["admin"],
@@ -752,6 +1080,8 @@ export const routePermissions = {
   "/admin/logs": ["admin"],
   "/admin/reports": ["admin"],
   "/admin/support": ["admin"],
+  "/admin/tickets": ["admin"],
+  "/admin/tickets/:id": ["admin"],
   "/admin/tickets/templates": ["admin"],
   "/admin/tickets/templates/create": ["admin"],
   "/admin/tickets/templates/:id": ["admin"],
@@ -878,5 +1208,19 @@ export const moduleRoutes = {
     "/admin/settings/sms",
     "/admin/settings/storage",
     "/admin/settings/backup",
+  ],
+
+  // Module 8: VPS Hosting
+  hosting: [
+    "/dashboard/vps/plans",
+    "/dashboard/vps/subscriptions",
+    "/dashboard/vps/subscriptions/:id",
+    "/dashboard/vps/custom-images",
+    "/dashboard/vps/custom-images/upload",
+    "/dashboard/vps/custom-images/:imageId",
+    "/corporate/hosting/requests",
+    "/corporate/hosting/subscriptions",
+    "/corporate/hosting/monitoring",
+    "/corporate/hosting/custom-images",
   ],
 } as const;

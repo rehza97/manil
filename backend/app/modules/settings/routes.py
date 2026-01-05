@@ -56,8 +56,11 @@ async def get_permissions(
         is_active=is_active,
     )
 
+    # Convert SQLAlchemy models to Pydantic schemas
+    permission_schemas = [PermissionResponse.model_validate(perm) for perm in permissions]
+
     return {
-        "permissions": permissions,
+        "permissions": permission_schemas,
         "total": total,
         "page": (skip // limit) + 1,
         "page_size": limit,
@@ -262,8 +265,11 @@ async def get_system_settings(
         is_public=is_public,
     )
 
+    # Convert SQLAlchemy models to Pydantic schemas
+    setting_schemas = [SystemSettingResponse.model_validate(setting) for setting in settings]
+
     return {
-        "settings": settings,
+        "settings": setting_schemas,
         "total": total,
         "page": (skip // limit) + 1,
         "page_size": limit,
@@ -283,7 +289,9 @@ async def get_public_settings(
         category=category,
         is_public=True,
     )
-    return {"settings": settings}
+    # Convert SQLAlchemy models to Pydantic schemas
+    setting_schemas = [SystemSettingResponse.model_validate(setting) for setting in settings]
+    return {"settings": setting_schemas}
 
 
 @router.get("/system/{key}", response_model=SystemSettingResponse)

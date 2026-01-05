@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useCustomerKYCStatus } from "../hooks";
-import { KYCDocument } from "../types/kyc.types";
+import type { KYCDocument } from "../types/kyc.types";
 import { KYCDocumentUpload } from "./KYCDocumentUpload";
 import { KYCDocumentList } from "./KYCDocumentList";
 import { KYCDocumentVerification } from "./KYCDocumentVerification";
@@ -102,6 +102,14 @@ export function KYCPanel({
           icon: AlertCircle,
           className: "bg-yellow-100 text-yellow-800",
         };
+      default:
+        // Default fallback for unknown status values
+        return {
+          label: "KYC Incomplete",
+          variant: "destructive" as const,
+          icon: XCircle,
+          className: "bg-red-100 text-red-800",
+        };
     }
   };
 
@@ -158,7 +166,7 @@ export function KYCPanel({
             </div>
           </div>
 
-          {kycStatus.missingDocuments.length > 0 && (
+          {kycStatus.missingDocuments && kycStatus.missingDocuments.length > 0 && (
             <Alert className="mt-4">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>

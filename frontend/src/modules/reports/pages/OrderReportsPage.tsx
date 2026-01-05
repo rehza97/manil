@@ -1,5 +1,6 @@
 /**
  * Order Reports Page
+import { formatCurrency } from "@/shared/utils/formatters";
  *
  * Order analytics and performance reports.
  */

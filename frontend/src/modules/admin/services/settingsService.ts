@@ -6,6 +6,14 @@
 
 import { apiClient } from "@/shared/api/client";
 
+export interface Setting {
+  key: string;
+  value: any;
+  category: string;
+  description: string;
+  is_public: boolean;
+}
+
 export interface GeneralSettings {
   application_name: string;
   support_email: string;
@@ -156,6 +164,39 @@ export const settingsService = {
    */
   async testStorageConfig(): Promise<{ success: boolean; message: string }> {
     const response = await apiClient.post("/admin/settings/storage/test");
+    return response.data;
+  },
+
+  /**
+   * Get settings by category (new backend API)
+   */
+  async getSettingsByCategory(category: string): Promise<Setting[]> {
+    const response = await apiClient.get<{ settings: Setting[] }>(`/settings/system?category=${category}`);
+    // Backend returns { settings: [...], total, page, page_size, total_pages }
+    return response.data.settings || [];
+  },
+
+  /**
+   * Get single setting by key (new backend API)
+   */
+  async getSetting(key: string): Promise<Setting> {
+    const response = await apiClient.get<Setting>(`/settings/system/${key}`);
+    return response.data;
+  },
+
+  /**
+   * Update setting value (new backend API)
+   */
+  async updateSetting(key: string, value: any): Promise<Setting> {
+    const response = await apiClient.put<Setting>(`/settings/system/${key}`, { value });
+    return response.data;
+  },
+
+  /**
+   * Reset setting to default (new backend API)
+   */
+  async resetSetting(key: string): Promise<Setting> {
+    const response = await apiClient.delete<Setting>(`/settings/system/${key}`);
     return response.data;
   },
 };

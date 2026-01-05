@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "@/modules/auth";
+import { useChangePassword } from "@/modules/auth/hooks/useAuth";
+import { authService } from "@/modules/auth/services";
 import { Link } from "react-router-dom";
 import {
   Card,
@@ -27,8 +29,11 @@ import { useToast } from "@/shared/hooks/use-toast";
 const SecurityPage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const changePassword = useChangePassword();
   const [show2FASetup, setShow2FASetup] = useState(false);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [showDisable2FA, setShowDisable2FA] = useState(false);
+  const [twoFACode, setTwoFACode] = useState("");
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -48,7 +53,10 @@ const SecurityPage: React.FC = () => {
     }
 
     try {
-      // TODO: Implement password change API call
+      await changePassword.mutateAsync({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
       toast({
         title: "Password Updated",
         description: "Your password has been successfully changed.",
@@ -59,10 +67,39 @@ const SecurityPage: React.FC = () => {
         newPassword: "",
         confirmPassword: "",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to change password. Please try again.",
+        description: error.message || "Failed to change password. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDisable2FA = async () => {
+    if (!twoFACode) {
+      toast({
+        title: "Error",
+        description: "Please enter your 2FA code",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await authService.disable2FA(twoFACode);
+      toast({
+        title: "2FA Disabled",
+        description: "Two-factor authentication has been disabled.",
+      });
+      setShowDisable2FA(false);
+      setTwoFACode("");
+      // Refresh user data to update 2FA status
+      window.location.reload();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to disable 2FA. Please try again.",
         variant: "destructive",
       });
     }
@@ -125,7 +162,7 @@ const SecurityPage: React.FC = () => {
               </div>
               <div className="flex-1">
                 <p className="font-medium">Password</p>
-                <p className="text-sm text-muted-foreground">Strong & secure</p>
+                <p className="text-sm text-muted-foreground">Last changed recently</p>
               </div>
               <CheckCircle className="h-5 w-5 text-green-600" />
             </div>
@@ -241,12 +278,12 @@ const SecurityPage: React.FC = () => {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">
+              <div className="font-medium">
                 Status:{" "}
                 <Badge variant={user.is_2fa_enabled ? "default" : "secondary"}>
                   {user.is_2fa_enabled ? "Enabled" : "Disabled"}
                 </Badge>
-              </p>
+              </div>
               <p className="text-sm text-muted-foreground mt-1">
                 {user.is_2fa_enabled
                   ? "Your account is protected with 2FA"
@@ -272,20 +309,50 @@ const SecurityPage: React.FC = () => {
                 <strong>Note:</strong> Two-factor authentication is currently
                 enabled. You'll need your authenticator app to log in.
               </p>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="mt-3"
-                onClick={() => {
-                  // TODO: Implement disable 2FA
-                  toast({
-                    title: "Feature Coming Soon",
-                    description: "Disable 2FA will be available soon.",
-                  });
-                }}
-              >
-                Disable 2FA
-              </Button>
+              {!showDisable2FA ? (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => setShowDisable2FA(true)}
+                >
+                  Disable 2FA
+                </Button>
+              ) : (
+                <div className="mt-3 space-y-3">
+                  <div>
+                    <Label htmlFor="2fa-code">Enter 2FA Code</Label>
+                    <Input
+                      id="2fa-code"
+                      type="text"
+                      placeholder="000000"
+                      value={twoFACode}
+                      onChange={(e) => setTwoFACode(e.target.value)}
+                      maxLength={6}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDisable2FA}
+                    >
+                      Confirm Disable
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowDisable2FA(false);
+                        setTwoFACode("");
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

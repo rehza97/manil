@@ -2,7 +2,7 @@
 
 from typing import Optional
 from datetime import datetime, timezone
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, or_, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.customers.kyc_models import KYCDocument, KYCStatus, KYCDocumentType
@@ -70,7 +70,8 @@ class KYCRepository:
         )
 
         if status:
-            query = query.where(KYCDocument.status == status)
+            # Cast enum to string and compare with enum value to bypass SQLAlchemy's enum binding issue
+            query = query.where(cast(KYCDocument.status, String) == status.value)
 
         query = query.order_by(KYCDocument.created_at.desc())
 
@@ -134,7 +135,8 @@ class KYCRepository:
         )
 
         if status:
-            query = query.where(KYCDocument.status == status)
+            # Cast enum to string and compare with enum value to bypass SQLAlchemy's enum binding issue
+            query = query.where(cast(KYCDocument.status, String) == status.value)
 
         result = await self.db.execute(query)
         return result.scalar() or 0
@@ -145,7 +147,7 @@ class KYCRepository:
         query = select(KYCDocument).where(
             and_(
                 KYCDocument.expires_at < now,
-                KYCDocument.status == KYCStatus.APPROVED,
+                cast(KYCDocument.status, String) == KYCStatus.APPROVED.value,
                 KYCDocument.deleted_at.is_(None)
             )
         )
@@ -173,11 +175,11 @@ class KYCRepository:
             and_(
                 KYCDocument.customer_id == customer_id,
                 KYCDocument.document_type == document_type,
-                KYCDocument.status.in_([
-                    KYCStatus.PENDING,
-                    KYCStatus.UNDER_REVIEW,
-                    KYCStatus.APPROVED
-                ]),
+                or_(
+                    cast(KYCDocument.status, String) == KYCStatus.PENDING.value,
+                    cast(KYCDocument.status, String) == KYCStatus.UNDER_REVIEW.value,
+                    cast(KYCDocument.status, String) == KYCStatus.APPROVED.value
+                ),
                 KYCDocument.deleted_at.is_(None)
             )
         )
