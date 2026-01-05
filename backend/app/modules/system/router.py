@@ -151,12 +151,16 @@ async def get_system_stats(
     )
     failed_logins = failed_logins_result.scalar() or 0
 
-    # Get total orders
-    total_orders_result = await db.execute(
-        select(func.count(Order.id))
-        .where(Order.deleted_at.is_(None))
-    )
-    total_orders = total_orders_result.scalar() or 0
+    # Get total orders (handle case where orders table doesn't exist)
+    try:
+        total_orders_result = await db.execute(
+            select(func.count(Order.id))
+            .where(Order.deleted_at.is_(None))
+        )
+        total_orders = total_orders_result.scalar() or 0
+    except Exception:
+        # Orders table doesn't exist yet (migration not run)
+        total_orders = 0
 
     # Get monthly revenue from paid invoices
     # Calculate revenue for current month

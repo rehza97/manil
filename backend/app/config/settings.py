@@ -103,6 +103,12 @@ class Settings(BaseSettings):
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_PER_MINUTE: int = 60
 
+    # VPS / Docker Deployment Engine
+    # - auto: prefer host Docker via docker-socket-proxy, fallback to DinD if proxy unreachable
+    # - proxy: always use host Docker via proxy (builds happen on the host)
+    # - dind: always use Docker-in-Docker inside the VPS (builds happen inside the VPS container)
+    VPS_DOCKER_ENGINE_MODE: str = "auto"
+
     # Pagination
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100

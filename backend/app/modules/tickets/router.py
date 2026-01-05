@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config.database import get_db
 from app.core.dependencies import get_current_user, require_permission
 from app.core.permissions import Permission
+from app.core.exceptions import ForbiddenException
 from app.core.logging import logger
 from app.modules.auth.models import User
 from app.modules.tickets.service import TicketService
@@ -113,6 +114,56 @@ async def create_ticket(
     service = TicketService(db)
     ticket = await service.create_ticket(ticket_data, current_user.id)
     return ticket
+
+
+@router.get(
+    "/my-tickets",
+    response_model=TicketListResponse,
+    summary="List my tickets",
+)
+async def list_my_tickets(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
+):
+    """List current user's tickets (for clients)."""
+    if current_user.role != "client":
+        raise ForbiddenException("Only customers can use this endpoint")
+
+    # Get customer by user's email (tickets are linked to customers, not users)
+    from app.modules.customers.repository import CustomerRepository
+    customer_repo = CustomerRepository(db)
+    customer = await customer_repo.get_by_email(current_user.email)
+    
+    if not customer:
+        # No customer found for this user, return empty list
+        pagination = PaginationMetadata(
+            total=0,
+            page=page,
+            page_size=page_size,
+            total_pages=0,
+        )
+        return TicketListResponse(
+            data=[],
+            pagination=pagination,
+        )
+
+    service = TicketService(db)
+    skip = (page - 1) * page_size
+    tickets, total = await service.list_tickets(skip, page_size, customer.id)
+
+    pagination = PaginationMetadata(
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=(total + page_size - 1) // page_size,
+    )
+
+    return TicketListResponse(
+        data=[TicketResponse.model_validate(t) for t in tickets],
+        pagination=pagination,
+    )
 
 
 @router.get(

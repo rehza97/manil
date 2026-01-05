@@ -33,6 +33,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { customersApi } from "@/shared/api";
 import { quotesApi } from "@/shared/api";
+import { formatCurrency } from "@/shared/utils/formatters";
 import type { CreateInvoiceDTO, InvoiceItemCreate, Invoice } from "../types/invoice.types";
 
 const invoiceSchema = z.object({

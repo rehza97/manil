@@ -94,3 +94,30 @@ export const formatFileSize = (bytes: number): string => {
 export const formatDZD = (amount: number, decimals: number = 2): string => {
   return formatCurrency(amount, decimals);
 };
+
+/**
+ * Safely format a date string, handling null, undefined, or invalid dates
+ *
+ * @param {string | null | undefined} dateString - Date string to format
+ * @param {string} formatString - Date format (default: "MMM dd, yyyy")
+ * @returns {string} Formatted date or "N/A" if invalid
+ */
+export const formatDateSafe = (
+  dateString: string | null | undefined,
+  formatString: string = "MMM dd, yyyy"
+): string => {
+  if (!dateString) {
+    return "N/A";
+  }
+
+  try {
+    const date = typeof dateString === "string" ? parseISO(dateString) : dateString;
+    if (!date || isNaN(date.getTime())) {
+      return "N/A";
+    }
+    return format(date, formatString);
+  } catch (error) {
+    console.warn("Invalid date value:", dateString, error);
+    return "N/A";
+  }
+};

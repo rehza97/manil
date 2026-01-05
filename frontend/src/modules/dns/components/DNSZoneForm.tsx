@@ -99,11 +99,13 @@ export function DNSZoneForm({ onSubmit, isLoading, onCancel }: DNSZoneFormProps)
                       No active VPS subscriptions found
                     </div>
                   ) : (
-                    subscriptions.map((sub) => (
-                      <SelectItem key={sub.id} value={sub.id}>
-                        {sub.subscription_number} - {sub.plan.name}
-                      </SelectItem>
-                    ))
+                    subscriptions
+                      .filter((sub) => sub.id && sub.id.trim() !== "")
+                      .map((sub) => (
+                        <SelectItem key={sub.id} value={sub.id}>
+                          {sub.subscription_number} - {sub.plan.name}
+                        </SelectItem>
+                      ))
                   )}
                 </SelectContent>
               </Select>

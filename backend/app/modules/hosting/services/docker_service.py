@@ -11,6 +11,10 @@ import tarfile
 import zipfile
 import tempfile
 import shutil
+import json
+import time
+import io
+import re
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, Iterator, BinaryIO
@@ -158,6 +162,8 @@ class DockerManagementService:
             # Create isolated bridge network with unique subnet per subscription
             # Use subscription ID hash to ensure unique subnet (avoids overlaps)
             subnet_octet = self._get_unique_subnet_octet(str(subscription.id))
+            shared_network = None  # Initialize for Docker proxy access
+
             try:
                 network = self.client.networks.create(
                     name=network_name,
@@ -196,6 +202,56 @@ class DockerManagementService:
                     logger.error(f"Network {network_name} does not exist and creation failed: {e}")
                     raise
 
+            # Get cloudmanager-network for Docker proxy access
+            # VPS will connect to this network to access docker-socket-proxy
+            # NOTE: docker-compose usually prefixes network names (e.g. "manil_cloudmanager-network"),
+            # so we try to discover the real network via the proxy container attachments.
+            try:
+                shared_network = None
+                shared_network_name = None
+
+                # 1) Direct lookup (works if network was created with explicit name)
+                try:
+                    shared_network = self.client.networks.get("cloudmanager-network")
+                    shared_network_name = "cloudmanager-network"
+                except Exception:
+                    shared_network = None
+
+                # 2) Discover via proxy container's networks (handles compose-prefixed names)
+                if not shared_network:
+                    proxy_container = None
+                    try:
+                        proxy_container = self.client.containers.get("cloudmanager-docker-proxy")
+                    except Exception:
+                        try:
+                            proxy_container = self.client.containers.get("docker-socket-proxy")
+                        except Exception:
+                            proxy_container = None
+
+                    proxy_networks = (proxy_container.attrs.get("NetworkSettings", {}).get("Networks", {}) or {}) if proxy_container else {}
+                    if proxy_networks:
+                        # Prefer the expected suffix; otherwise fall back to any network that contains "cloudmanager".
+                        candidates = list(proxy_networks.keys())
+                        preferred = next((n for n in candidates if n.endswith("cloudmanager-network")), None)
+                        if not preferred:
+                            preferred = next((n for n in candidates if "cloudmanager" in n), None)
+                        shared_network_name = preferred or candidates[0]
+                        try:
+                            shared_network = self.client.networks.get(shared_network_name)
+                        except Exception:
+                            shared_network = None
+
+                if shared_network:
+                    logger.info(f"Found shared network '{shared_network_name}', VPS will access host Docker via proxy on this network")
+                else:
+                    logger.warning("Could not locate shared cloudmanager network; Docker proxy access may be unavailable")
+            except NotFound:
+                logger.warning("cloudmanager-network not found, Docker-in-Docker will not be available")
+                shared_network = None
+            except Exception as e:
+                logger.warning(f"Error getting cloudmanager-network: {e}, Docker-in-Docker will not be available")
+                shared_network = None
+
             # Create persistent volume path
             volume_path = f"/var/lib/vps-volumes/{container_name}"
             os.makedirs(volume_path, exist_ok=True)
@@ -210,13 +266,20 @@ class DockerManagementService:
 
             # Command to keep container running and set up SSH
             # This will: set root password, install/start SSH, then keep running
+            # Note: SSH installation is done here synchronously to avoid apt-get lock conflicts
+            # with later Docker installation
             container_command = [
                 "/bin/bash", "-c",
                 (
                     "set -e && "
                     f"echo 'root:{root_password}' | chpasswd && "
                     "if ! command -v sshd &> /dev/null; then "
-                    "apt-get update -qq && apt-get install -y -qq openssh-server && rm -rf /var/lib/apt/lists/*; "
+                    # Install SSH with lock file to prevent conflicts
+                    "flock -x /var/lock/apt-setup.lock -c '"
+                    "DEBIAN_FRONTEND=noninteractive apt-get update -qq && "
+                    "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq openssh-server && "
+                    "rm -rf /var/lib/apt/lists/*"
+                    "'; "
                     "fi && "
                     "mkdir -p /var/run/sshd && "
                     "echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && "
@@ -263,26 +326,46 @@ class DockerManagementService:
                 # === VOLUMES ===
                 mounts=[
                     Mount(target="/data", source=volume_path, type="bind", read_only=False)
+                    # NOTE: Docker socket NOT mounted directly for security
+                    # VPS accesses Docker via docker-socket-proxy over TCP (see DOCKER_HOST env var)
                 ] if Mount else None,
 
                 # === SECURITY HARDENING ===
                 # CRITICAL: Never run as root
                 # user="1000:1000",  # Uncomment if image supports non-root user
 
-                # Drop ALL Linux capabilities (defense in depth)
-                cap_drop=["ALL"],
-
-                # Add NET_BIND_SERVICE so SSH can bind to port 22
-                cap_add=["CHOWN", "DAC_OVERRIDE", "SETGID", "SETUID", "NET_BIND_SERVICE"],
-
-                # Don't allow new privileges
-                security_opt=[
-                    "no-new-privileges:true",
-                    # Add AppArmor profile if available
-                    # "apparmor=docker-vps-restricted"
+                # For Docker-in-Docker support, we need specific capabilities
+                # These allow running Docker inside the VPS while maintaining some security
+                cap_add=[
+                    # Basic capabilities
+                    "CHOWN",           # Change file ownership
+                    "DAC_OVERRIDE",    # Bypass file permissions
+                    "SETGID",          # Set group ID
+                    "SETUID",          # Set user ID
+                    "NET_BIND_SERVICE", # Bind to ports < 1024
+                    # Docker-specific capabilities
+                    "SYS_ADMIN",       # Required for mounting filesystems (Docker volumes)
+                    "NET_ADMIN",       # Required for Docker networking
+                    "SYS_RESOURCE",    # Required for resource management
+                    "MKNOD",           # Required for device creation
+                    "AUDIT_WRITE",     # Required for audit logs
+                    "SYS_CHROOT",      # Required for chroot operations
                 ],
 
+                # Security options - allow some privileges for Docker
+                security_opt=[
+                    # NOTE: no-new-privileges is disabled to allow Docker operations
+                    # The Docker Socket Proxy restricts what operations are allowed
+                    "apparmor:unconfined",  # Required for Docker-in-Docker (use colon, not =)
+                    "seccomp:unconfined"    # Required for Docker-in-Docker (use colon, not =)
+                ],
+
+                # Cgroup namespace - gives container its own cgroup view
+                # This allows Docker inside to create cgroups without affecting host
+                cgroupns_mode="private",
+
                 # CRITICAL: Never run in privileged mode
+                # We use capabilities instead for better security
                 privileged=False,
 
                 # NOTE: read_only=True disabled to allow SSH installation at runtime
@@ -315,7 +398,19 @@ class DockerManagementService:
                 environment={
                     "ROOT_PASSWORD": root_password,  # Will be used by entrypoint
                     "CONTAINER_ID": str(subscription.id)[:8],
-                    "VPS_SUBSCRIPTION_ID": str(subscription.id)
+                    "VPS_SUBSCRIPTION_ID": str(subscription.id),
+                    # Docker engine selection:
+                    # - If VPS_DOCKER_ENGINE_MODE=dind, do NOT pin DOCKER_HOST to the host proxy (build must happen inside VPS).
+                    # - Otherwise, default to host Docker proxy for compatibility/performance.
+                    **(
+                        {}
+                        if (getattr(settings, "VPS_DOCKER_ENGINE_MODE", "auto") or "auto").strip().lower() == "dind"
+                        else {
+                            # Use docker-compose container_name for reliable DNS on the shared network.
+                            "DOCKER_HOST": "tcp://cloudmanager-docker-proxy:2375",
+                            "DOCKER_API_VERSION": "1.41",
+                        }
+                    ),
                 },
 
                 # === LABELS ===
@@ -330,6 +425,27 @@ class DockerManagementService:
             # Start the container
             container.start()
             logger.info(f"Container {container_name} started with ID: {container.id}")
+
+            # Connect to cloudmanager-network for Docker proxy access (if available)
+            if shared_network and (getattr(settings, "VPS_DOCKER_ENGINE_MODE", "auto") or "auto").strip().lower() != "dind":
+                try:
+                    # Add explicit aliases so the VPS can reliably resolve the proxy
+                    # regardless of docker-compose service/container_name differences.
+                    #
+                    # If it's already connected, Docker won't update aliases in-place,
+                    # so disconnect/reconnect to enforce aliases.
+                    try:
+                        shared_network.disconnect(container, force=True)
+                    except Exception:
+                        pass
+                    shared_network.connect(
+                        container,
+                        aliases=["docker-socket-proxy", "cloudmanager-docker-proxy"],
+                    )
+                    logger.info(f"Connected VPS to cloudmanager-network for Docker proxy access")
+                except Exception as e:
+                    logger.warning(f"Could not connect VPS to cloudmanager-network: {e}")
+                    logger.warning("Docker-in-Docker will not be available for this VPS")
 
             # Create ContainerInstance model
             instance = ContainerInstance(
@@ -648,83 +764,1554 @@ class DockerManagementService:
             extract: Whether to extract archive or copy as-is
         
         Returns:
-            Dict with deployment status and details
+            Dict with deployment status, details, and logs
         """
         if not self.docker_available:
             return {
                 "success": False,
-                "error": "Docker not available"
+                "error": "Docker not available",
+                "logs": ["❌ Docker not available"]
             }
         
         temp_dir = None
+        logs = []
+        
+        def add_log(message: str, level: str = "info"):
+            """Add a log message with timestamp."""
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            log_entry = f"[{timestamp}] {message}"
+            logs.append(log_entry)
+            if level == "error":
+                logger.error(log_entry)
+            else:
+                logger.info(log_entry)
+        
         try:
+            add_log("🚀 Starting deployment process...")
             container = self.client.containers.get(container_id)
             
             # Create temporary directory for extraction
             temp_dir = tempfile.mkdtemp(prefix="vps_deploy_")
             extracted_path = os.path.join(temp_dir, "extracted")
             os.makedirs(extracted_path, exist_ok=True)
+            add_log(f"📁 Created temporary directory: {temp_dir}")
             
             # Extract archive
             archive_file = Path(archive_path)
             if not archive_file.exists():
+                add_log(f"❌ Archive not found: {archive_path}", "error")
                 return {
                     "success": False,
-                    "error": f"Archive not found: {archive_path}"
+                    "error": f"Archive not found: {archive_path}",
+                    "logs": logs
                 }
             
-            logger.info(f"Extracting archive {archive_path} to {extracted_path}")
+            archive_size = os.path.getsize(archive_path)
+            add_log(f"📦 Archive size: {(archive_size / 1024 / 1024):.2f} MB")
+            add_log(f"📂 Extracting archive: {archive_file.name}")
             
             if archive_file.suffix == '.zip':
                 with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+                    file_list = zip_ref.namelist()
                     zip_ref.extractall(extracted_path)
+                    add_log(f"✅ Extracted {len(file_list)} files from ZIP archive")
             elif archive_file.suffix in ['.tar', '.gz'] or archive_file.name.endswith('.tar.gz'):
                 with tarfile.open(archive_path, 'r:*') as tar_ref:
+                    members = tar_ref.getmembers()
                     tar_ref.extractall(extracted_path)
+                    add_log(f"✅ Extracted {len(members)} items from TAR archive")
             else:
+                add_log(f"❌ Unsupported archive format: {archive_file.suffix}", "error")
                 return {
                     "success": False,
-                    "error": f"Unsupported archive format: {archive_file.suffix}"
+                    "error": f"Unsupported archive format: {archive_file.suffix}",
+                    "logs": logs
                 }
             
             # Create tar archive of extracted files for docker cp
             tar_path = os.path.join(temp_dir, "deploy.tar")
+            add_log("📦 Creating deployment archive...")
+            # Filter macOS metadata that can break extraction inside container (AppleDouble / __MACOSX).
+            def _tar_filter(tarinfo: tarfile.TarInfo) -> tarfile.TarInfo | None:
+                name = (tarinfo.name or "").lstrip("./")
+                base = os.path.basename(name)
+                parts = name.split("/")
+                if "__MACOSX" in parts:
+                    return None
+                if base == ".DS_Store" or base.startswith("._"):
+                    return None
+                return tarinfo
+            # IMPORTANT:
+            # Use arcname="." so extracted files land directly in target_path.
+            # Using basename(target_path) would create /target/target/... (e.g. /dataz/dataz/...).
             with tarfile.open(tar_path, 'w') as tar:
-                tar.add(extracted_path, arcname=os.path.basename(target_path))
+                tar.add(extracted_path, arcname=".", filter=_tar_filter)
+            tar_size = os.path.getsize(tar_path)
+            add_log(f"✅ Created deployment archive: {(tar_size / 1024 / 1024):.2f} MB")
             
             # Copy to container using docker cp (via put_archive)
-            logger.info(f"Copying files to container {container_id} at {target_path}")
+            add_log(f"📤 Copying files to container at {target_path}...")
             
             # Ensure target directory exists in container
-            container.exec_run(f"mkdir -p {target_path}")
+            mkdir_result = container.exec_run(f"mkdir -p {target_path}")
+            if mkdir_result.exit_code == 0:
+                add_log(f"✅ Created target directory: {target_path}")
+            else:
+                add_log(f"⚠️  Warning: mkdir returned exit code {mkdir_result.exit_code}")
             
             # Use put_archive to copy files
             with open(tar_path, 'rb') as tar_file:
                 container.put_archive(path=target_path, data=tar_file.read())
+            add_log("✅ Files copied to container")
             
             # Get file count for reporting
-            result = container.exec_run(f"find {target_path} -type f | wc -l")
-            file_count = int(result.output.decode('utf-8').strip()) if result.output else 0
+            result = container.exec_run(f"sh -c 'find {target_path} -type f | wc -l'")
+            try:
+                file_count = int(result.output.decode('utf-8').strip()) if result.output else 0
+            except (ValueError, AttributeError):
+                file_count = 0
+            add_log(f"📊 Found {file_count} files in target directory")
             
-            logger.info(f"Successfully deployed {file_count} files to {target_path}")
+            # Verify deployment
+            verify_result = container.exec_run(f"sh -c 'ls -la {target_path} | head -10'")
+            if verify_result.exit_code == 0:
+                add_log("✅ Deployment verification successful")
+            
+            add_log(f"🎉 Successfully deployed {file_count} files to {target_path}")
+            
+            # Check for docker-compose.yml and automatically run docker-compose up -d
+            add_log("")
+            add_log("🔍 Searching for docker-compose.yml (recursive search)...")
+            
+            # Search recursively for docker-compose.yml or docker-compose.yaml
+            compose_search = container.exec_run(
+                f"sh -c 'find {target_path} -type f \\( -name \"docker-compose.yml\" -o -name \"docker-compose.yaml\" \\) | head -1'",
+                user="root"
+            )
+            
+            compose_file = None
+            compose_dir = target_path
+            docker_compose_output = ""
+            
+            if compose_search.exit_code == 0 and compose_search.output:
+                found_path = compose_search.output.decode('utf-8', errors='replace').strip()
+                if found_path:
+                    # Extract directory and filename
+                    path_obj = Path(found_path)
+                    compose_dir = str(path_obj.parent)
+                    compose_file = path_obj.name
+                    add_log(f"✅ Found {compose_file} at: {found_path}")
+                    add_log(f"📁 Using directory: {compose_dir}")
+                else:
+                    add_log("ℹ️  No docker-compose.yml found in any subdirectory")
+            else:
+                add_log("ℹ️  No docker-compose.yml found in any subdirectory")
+            
+            if compose_file:
+                add_log(f"✅ Found {compose_file} - automatically starting services...")
+                add_log("")
+                
+                # Run docker-compose up -d
+                # Use the directory where docker-compose.yml was found
+                full_command = f"cd {compose_dir} && (docker compose -f {compose_file} up -d || docker-compose -f {compose_file} up -d)"
+                add_log(f"📝 Running: {full_command}")
+                
+                result = container.exec_run(
+                    f"sh -c '{full_command}'",
+                    user="root",
+                    workdir=compose_dir
+                )
+                
+                docker_compose_output = result.output.decode('utf-8', errors='replace') if result.output else ""
+                
+                if result.exit_code == 0:
+                    add_log("✅ Docker Compose services started successfully")
+                    # Add output to logs
+                    if docker_compose_output:
+                        for line in docker_compose_output.split('\n'):
+                            if line.strip():
+                                add_log(line.strip())
+                else:
+                    add_log(f"⚠️  Docker Compose command completed with exit code {result.exit_code}")
+                    if docker_compose_output:
+                        for line in docker_compose_output.split('\n'):
+                            if line.strip():
+                                add_log(line.strip(), "error")
+            else:
+                add_log("ℹ️  No docker-compose.yml found - skipping automatic startup")
             
             return {
                 "success": True,
                 "target_path": target_path,
                 "files_deployed": file_count,
-                "archive_size": os.path.getsize(archive_path)
+                "archive_size": archive_size,
+                "docker_compose_run": compose_file is not None,
+                "docker_compose_output": docker_compose_output if compose_file else None,
+                "logs": logs
             }
             
         except Exception as e:
+            error_msg = str(e)
+            add_log(f"❌ Deployment failed: {error_msg}", "error")
             logger.error(f"Failed to deploy files to container {container_id}: {e}", exc_info=True)
             return {
                 "success": False,
-                "error": str(e)
+                "error": error_msg,
+                "logs": logs
             }
         finally:
             # Cleanup temporary directory
             if temp_dir and os.path.exists(temp_dir):
-                shutil.rmtree(temp_dir, ignore_errors=True)
+                try:
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                    if logs:
+                        logs.append(f"🧹 Cleaned up temporary directory")
+                except Exception as e:
+                    logger.warning(f"Failed to cleanup temp directory: {e}")
+    
+    def deploy_files_to_container_stream(
+        self,
+        container_id: str,
+        archive_path: str,
+        target_path: str = "/data",
+        extract: bool = True
+    ) -> Iterator[str]:
+        """
+        Deploy files to container with streaming logs.
+        
+        Yields log messages as they occur during deployment.
+        
+        Args:
+            container_id: Docker container ID
+            archive_path: Path to archive file (zip, tar, tar.gz) on host
+            target_path: Target directory in container (default: /data)
+            extract: Whether to extract archive or copy as-is
+        
+        Yields:
+            Log messages as strings
+        """
+        if not self.docker_available:
+            # Use a deploy-specific error event so the client can handle it deterministically.
+            yield "event: deploy_error\ndata: " + json.dumps({"error": "Docker not available"}) + "\n\n"
+            return
+        
+        temp_dir = None
+        
+        def log(message: str, level: str = "info"):
+            """Yield a log message with timestamp."""
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            log_entry = f"[{timestamp}] {message}"
+            # IMPORTANT: Do not emit generic SSE "error" events for log lines.
+            # The frontend treats event=error as fatal and will stop reading the stream,
+            # which hides the underlying failure output.
+            if level == "error":
+                logger.error(log_entry)
+            else:
+                logger.info(log_entry)
+            yield f"data: {log_entry}\n\n"
+        
+        try:
+            yield from log("🚀 Starting deployment process...")
+            container = self.client.containers.get(container_id)
+            deploy_debug = settings.DEBUG or os.getenv("DEPLOY_DEBUG_LOGS", "false").lower() in ("1", "true", "yes", "on", "1")
+            engine_mode = (getattr(settings, "VPS_DOCKER_ENGINE_MODE", None) or os.getenv("VPS_DOCKER_ENGINE_MODE", "auto")).strip().lower()
+            if engine_mode not in ("auto", "proxy", "dind"):
+                engine_mode = "auto"
+            if deploy_debug:
+                yield from log(f"🧩 VPS_DOCKER_ENGINE_MODE={engine_mode}")
+            
+            # Create temporary directory for extraction
+            temp_dir = tempfile.mkdtemp(prefix="vps_deploy_")
+            extracted_path = os.path.join(temp_dir, "extracted")
+            os.makedirs(extracted_path, exist_ok=True)
+            yield from log(f"📁 Created temporary directory: {temp_dir}")
+            
+            # Extract archive
+            archive_file = Path(archive_path)
+            if not archive_file.exists():
+                yield from log(f"❌ Archive not found: {archive_path}", "error")
+                yield "event: deploy_error\ndata: " + json.dumps({"error": f"Archive not found: {archive_path}"}) + "\n\n"
+                return
+            
+            archive_size = os.path.getsize(archive_path)
+            yield from log(f"📦 Archive size: {(archive_size / 1024 / 1024):.2f} MB")
+            yield from log(f"📂 Extracting archive: {archive_file.name}")
+            
+            if archive_file.suffix == '.zip':
+                with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+                    file_list = zip_ref.namelist()
+                    zip_ref.extractall(extracted_path)
+                    yield from log(f"✅ Extracted {len(file_list)} files from ZIP archive")
+            elif archive_file.suffix in ['.tar', '.gz'] or archive_file.name.endswith('.tar.gz'):
+                with tarfile.open(archive_path, 'r:*') as tar_ref:
+                    members = tar_ref.getmembers()
+                    tar_ref.extractall(extracted_path)
+                    yield from log(f"✅ Extracted {len(members)} items from TAR archive")
+            else:
+                yield from log(f"❌ Unsupported archive format: {archive_file.suffix}", "error")
+                yield "event: deploy_error\ndata: " + json.dumps({"error": f"Unsupported archive format: {archive_file.suffix}"}) + "\n\n"
+                return
+            
+            # Create tar archive of extracted files for docker cp
+            tar_path = os.path.join(temp_dir, "deploy.tar")
+            yield from log("📦 Creating deployment archive...")
+            # Filter macOS metadata that can break extraction inside container (AppleDouble / __MACOSX).
+            def _tar_filter(tarinfo: tarfile.TarInfo) -> tarfile.TarInfo | None:
+                name = (tarinfo.name or "").lstrip("./")
+                base = os.path.basename(name)
+                parts = name.split("/")
+                if "__MACOSX" in parts:
+                    return None
+                if base == ".DS_Store" or base.startswith("._"):
+                    return None
+                return tarinfo
+            # IMPORTANT:
+            # Use arcname="." so extracted files land directly in target_path.
+            # Using basename(target_path) would create /target/target/... (e.g. /dataz/dataz/...).
+            with tarfile.open(tar_path, 'w') as tar:
+                tar.add(extracted_path, arcname=".", filter=_tar_filter)
+            tar_size = os.path.getsize(tar_path)
+            yield from log(f"✅ Created deployment archive: {(tar_size / 1024 / 1024):.2f} MB")
+            
+            # Copy to container using docker cp (via put_archive)
+            yield from log(f"📤 Copying files to container at {target_path}...")
+            
+            # Ensure target directory exists in container
+            mkdir_result = container.exec_run(f"mkdir -p {target_path}")
+            if mkdir_result.exit_code == 0:
+                yield from log(f"✅ Created target directory: {target_path}")
+            else:
+                yield from log(f"⚠️  Warning: mkdir returned exit code {mkdir_result.exit_code}")
+            
+            # Use put_archive to copy files
+            with open(tar_path, 'rb') as tar_file:
+                container.put_archive(path=target_path, data=tar_file.read())
+            yield from log("✅ Files copied to container")
+            
+            # Get file count for reporting
+            result = container.exec_run(f"sh -c 'find {target_path} -type f | wc -l'")
+            try:
+                file_count = int(result.output.decode('utf-8').strip()) if result.output else 0
+            except (ValueError, AttributeError):
+                file_count = 0
+            yield from log(f"📊 Found {file_count} files in target directory")
+            
+            # Verify deployment
+            verify_result = container.exec_run(f"sh -c 'ls -la {target_path} | head -10'")
+            if verify_result.exit_code == 0:
+                yield from log("✅ Deployment verification successful")
+            
+            yield from log(f"🎉 Successfully deployed {file_count} files to {target_path}")
+            
+            # Check for docker-compose.yml and automatically run docker-compose up -d
+            yield from log("")
+            yield from log("🔍 Searching for docker-compose.yml (recursive search)...")
+            
+            # Search recursively for docker-compose.yml or docker-compose.yaml
+            # Find the first occurrence and use its directory
+            compose_search = container.exec_run(
+                f"sh -c 'find {target_path} -type f \\( -name \"docker-compose.yml\" -o -name \"docker-compose.yaml\" \\) | head -1'",
+                user="root"
+            )
+            
+            compose_file = None
+            compose_dir = target_path
+            
+            if compose_search.exit_code == 0 and compose_search.output:
+                found_path = compose_search.output.decode('utf-8', errors='replace').strip()
+                if found_path:
+                    # Extract directory and filename
+                    path_obj = Path(found_path)
+                    compose_dir = str(path_obj.parent)
+                    compose_file = path_obj.name
+                    yield from log(f"✅ Found {compose_file} at: {found_path}")
+                    yield from log(f"📁 Using directory: {compose_dir}")
+                else:
+                    yield from log("ℹ️  No docker-compose.yml found in any subdirectory")
+            else:
+                yield from log("ℹ️  No docker-compose.yml found in any subdirectory")
+            
+            if compose_file:
+                yield from log(f"✅ Found {compose_file} - automatically starting services...")
+                yield from log("")
+                
+                # Prefer using host Docker via docker-socket-proxy (avoids Docker-in-Docker cgroup/overlay issues).
+                # Fallback to DinD only if proxy is unreachable.
+                yield from log("🔍 Checking Docker access via docker-socket-proxy...")
+
+                # Ensure VPS container is connected to cloudmanager-network (so it can reach the proxy).
+                # If already connected without aliases, disconnect/reconnect to enforce aliases.
+                shared_net = None
+                shared_net_name = None
+                proxy_container = None
+                proxy_networks: dict = {}
+                proxy_ip = None
+
+                # Discover proxy container + its networks (also used for IP probing and diagnostics)
+                try:
+                    try:
+                        proxy_container = self.client.containers.get("cloudmanager-docker-proxy")
+                    except Exception:
+                        proxy_container = self.client.containers.get("docker-socket-proxy")
+                    proxy_networks = proxy_container.attrs.get("NetworkSettings", {}).get("Networks", {}) or {}
+                except Exception:
+                    proxy_container = None
+                    proxy_networks = {}
+
+                # Determine the real shared network name.
+                # - Prefer exact "cloudmanager-network"
+                # - Else prefer compose-prefixed network ending with "cloudmanager-network"
+                # - Else fall back to any network containing "cloudmanager"
+                try:
+                    try:
+                        shared_net = self.client.networks.get("cloudmanager-network")
+                        shared_net_name = "cloudmanager-network"
+                    except Exception:
+                        shared_net = None
+
+                    if not shared_net and proxy_networks:
+                        candidates = list(proxy_networks.keys())
+                        preferred = next((n for n in candidates if n.endswith("cloudmanager-network")), None)
+                        if not preferred:
+                            preferred = next((n for n in candidates if "cloudmanager" in n), None)
+                        shared_net_name = preferred or candidates[0]
+                        try:
+                            shared_net = self.client.networks.get(shared_net_name)
+                        except Exception:
+                            shared_net = None
+                except Exception:
+                    shared_net = None
+                    shared_net_name = None
+
+                # Resolve proxy IP on that same shared network, if possible.
+                if proxy_networks:
+                    if shared_net_name and shared_net_name in proxy_networks:
+                        proxy_ip = (proxy_networks.get(shared_net_name) or {}).get("IPAddress")
+                    else:
+                        # fallback to any attached network ip
+                        try:
+                            proxy_ip = next(iter(proxy_networks.values())).get("IPAddress")
+                        except Exception:
+                            proxy_ip = None
+
+                if shared_net and shared_net_name:
+                    try:
+                        # Refresh attrs: Docker SDK does not always keep NetworkSettings up to date.
+                        try:
+                            container.reload()
+                        except Exception:
+                            pass
+                        networks = container.attrs.get("NetworkSettings", {}).get("Networks", {})
+                        existing = networks.get(shared_net_name)
+                        existing_aliases = set((existing or {}).get("Aliases") or [])
+                        desired_aliases = {"docker-socket-proxy", "cloudmanager-docker-proxy"}
+                        if existing and not (desired_aliases & existing_aliases):
+                            try:
+                                shared_net.disconnect(container, force=True)
+                            except Exception:
+                                pass
+                        shared_net.connect(
+                            container,
+                            aliases=list(desired_aliases),
+                        )
+                        try:
+                            container.reload()
+                        except Exception:
+                            pass
+                    except Exception as e:
+                        # If it's already connected, Docker may refuse a second connect with:
+                        # 403 Forbidden (... endpoint with name ... already exists in network ...)
+                        # Treat that as success (the VPS is already on the shared network).
+                        msg = str(e)
+                        if "already exists in network" in msg:
+                            if deploy_debug:
+                                yield from log(f"ℹ️  VPS already connected to '{shared_net_name}' (endpoint exists); continuing")
+                        else:
+                            # already connected / cannot connect - continue probing
+                            yield from log(f"ℹ️  Could not (re)connect VPS to shared network '{shared_net_name}': {e}")
+                else:
+                    # No shared network found; proxy cannot be reachable via DNS.
+                    if proxy_networks:
+                        yield from log(
+                            "ℹ️  Proxy container networks: " + ", ".join(sorted(proxy_networks.keys()))
+                        )
+                    else:
+                        yield from log("ℹ️  Proxy container not found or has no networks; cannot attach VPS for proxy access")
+
+                if deploy_debug:
+                    try:
+                        proxy_name = getattr(proxy_container, "name", None) or "<unknown>"
+                    except Exception:
+                        proxy_name = "<unknown>"
+                    yield from log(f"🧩 Proxy container: {proxy_name}")
+                    yield from log(f"🧩 Shared network resolved: {shared_net_name or '<none>'}")
+                    yield from log(f"🧩 Proxy IP resolved: {proxy_ip or '<none>'}")
+
+                if deploy_debug:
+                    try:
+                        networks_now = container.attrs.get("NetworkSettings", {}).get("Networks", {}) or {}
+                        net_lines = []
+                        for net_name, net_cfg in networks_now.items():
+                            ip = (net_cfg or {}).get("IPAddress")
+                            aliases = (net_cfg or {}).get("Aliases") or []
+                            net_lines.append(f"{net_name}: ip={ip} aliases={aliases}")
+                        if net_lines:
+                            yield from log("🧩 VPS networks: " + " | ".join(net_lines))
+                    except Exception as e:
+                        yield from log(f"🧩 VPS networks: <failed to read: {e}>")
+
+                    # DNS hints
+                    try:
+                        dns_hint = container.exec_run("sh -c 'echo ---/etc/resolv.conf---; cat /etc/resolv.conf 2>/dev/null || true; echo ---/etc/hosts---; tail -n 20 /etc/hosts 2>/dev/null || true'", user="root")
+                        out = dns_hint.output.decode("utf-8", errors="replace") if dns_hint.output else ""
+                        if out.strip():
+                            for line in out.strip().split("\n")[-30:]:
+                                yield f"data: {line}\n\n"
+                    except Exception:
+                        pass
+
+                # Try IP-based proxy host as well (avoids DNS issues)
+                # (proxy_container/proxy_ip already resolved above)
+
+                # Prefer IP first (most reliable), then names.
+                proxy_candidates: list[str] = []
+                if proxy_ip:
+                    proxy_candidates.append(f"tcp://{proxy_ip}:2375")
+                proxy_candidates.extend([
+                    "tcp://cloudmanager-docker-proxy:2375",
+                    "tcp://docker-socket-proxy:2375",
+                ])
+
+                use_proxy = False
+                proxy_host = None
+                for candidate in proxy_candidates:
+                    # IMPORTANT:
+                    # Don't use a pipeline (`| head`) without preserving the exit code — it can mask failures.
+                    # We run docker version twice: once to capture exit code, once to show a short diagnostic.
+                    check = container.exec_run(
+                        "sh -c '"
+                        f"DOCKER_HOST={candidate} docker version >/dev/null 2>&1; "
+                        "ec=$?; "
+                        f"DOCKER_HOST={candidate} docker version 2>&1 | head -5; "
+                        "exit $ec"
+                        "'",
+                        user="root",
+                    )
+                    if check.exit_code == 0:
+                        use_proxy = True
+                        proxy_host = candidate
+                        break
+
+                    try:
+                        msg = check.output.decode("utf-8", errors="replace").strip()
+                    except Exception:
+                        msg = ""
+                    if msg:
+                        yield from log(f"ℹ️  Proxy check failed for {candidate}: {msg}")
+                    if deploy_debug:
+                        # Provide more actionable diagnostics: DNS resolution + TCP connect to 2375 (if possible)
+                        host_for_dns = candidate.replace("tcp://", "").split(":")[0]
+                        try:
+                            dns_check = container.exec_run(
+                                "sh -c '"
+                                f"echo \"resolving {host_for_dns}\"; "
+                                f"(getent hosts {host_for_dns} 2>/dev/null || echo \"getent not available or no record\"); "
+                                "true"
+                                "'",
+                                user="root",
+                            )
+                            out = dns_check.output.decode("utf-8", errors="replace") if dns_check.output else ""
+                            for line in out.strip().split("\n")[-5:]:
+                                if line.strip():
+                                    yield f"data: {line}\n\n"
+                        except Exception:
+                            pass
+
+                        # Try a quick TCP connect (bash /dev/tcp). Not all images have bash; ignore failures.
+                        try:
+                            tcp_check = container.exec_run(
+                                "sh -c '"
+                                f"(command -v bash >/dev/null 2>&1 && bash -lc \"cat < /dev/null > /dev/tcp/{host_for_dns}/2375\" && echo \"tcp:2375 OK\" ) "
+                                "|| echo \"tcp:2375 CHECK_SKIPPED_OR_FAILED\""
+                                "'",
+                                user="root",
+                            )
+                            out = tcp_check.output.decode("utf-8", errors="replace") if tcp_check.output else ""
+                            for line in out.strip().split("\n")[-3:]:
+                                if line.strip():
+                                    yield f"data: {line}\n\n"
+                        except Exception:
+                            pass
+
+                if use_proxy and proxy_host:
+                    yield from log(f"✅ Using host Docker via {proxy_host}")
+                else:
+                    if engine_mode == "proxy":
+                        yield from log("❌ VPS_DOCKER_ENGINE_MODE=proxy but docker-socket-proxy is not reachable", level="error")
+                        yield "event: deploy_error\ndata: " + json.dumps({"error": "Host Docker proxy required but not reachable from VPS"}) + "\n\n"
+                        return
+                    yield from log("⚠️  docker-socket-proxy not reachable from VPS; falling back to Docker-in-Docker", level="error")
+                    yield from log("🔍 Checking Docker daemon status...")
+                    if not self._ensure_docker_daemon_running(container):
+                        yield from log("❌ Docker daemon is not running and could not be started", level="error")
+                        # Include a short dockerd log tail for actionable debugging.
+                        try:
+                            err_log = container.exec_run(
+                                "sh -c 'tail -80 /var/log/dockerd.log 2>/dev/null || echo no_dockerd_logs'",
+                                user="root",
+                            )
+                            err_out = err_log.output.decode("utf-8", errors="replace") if err_log.output else ""
+                            if err_out.strip():
+                                yield from log("📄 dockerd.log (tail):")
+                                for line in err_out.strip().split("\n")[-80:]:
+                                    if line.strip():
+                                        yield f"data: {line}\n\n"
+                        except Exception:
+                            pass
+                        yield from log("💡 Please install Docker or start the daemon manually")
+                        # terminal failure
+                        yield "event: deploy_error\ndata: " + json.dumps({"error": "Docker not available inside VPS (proxy unreachable and DinD failed)"}) + "\n\n"
+                        return
+                    yield from log("✅ Docker daemon is running")
+                    # Double-check connectivity (pgrep can lie; docker compose needs the socket).
+                    ready_check = container.exec_run(
+                        "sh -c 'DOCKER_HOST=unix:///var/run/docker.sock docker info >/dev/null 2>&1'",
+                        user="root",
+                    )
+                    if ready_check.exit_code != 0:
+                        yield from log("⚠️  Docker daemon process exists but socket is not ready; restarting dockerd...", level="error")
+                        if not self._ensure_docker_daemon_running(container):
+                            yield from log("❌ Docker daemon is still not reachable after restart", level="error")
+                            try:
+                                err_log = container.exec_run(
+                                    "sh -c 'tail -80 /var/log/dockerd.log 2>/dev/null || echo no_dockerd_logs'",
+                                    user="root",
+                                )
+                                err_out = err_log.output.decode("utf-8", errors="replace") if err_log.output else ""
+                                if err_out.strip():
+                                    yield from log("📄 dockerd.log (tail):")
+                                    for line in err_out.strip().split("\n")[-80:]:
+                                        if line.strip():
+                                            yield f"data: {line}\n\n"
+                            except Exception:
+                                pass
+                            yield "event: deploy_error\ndata: " + json.dumps({"error": "Docker daemon is not reachable inside VPS (DinD failed)"}) + "\n\n"
+                            return
+
+                yield from log("")
+
+                # Ensure Docker CLI exists inside the VPS. When using docker-socket-proxy, we only need the client,
+                # not dockerd. Without it, compose fails with exit code 127 ("docker: not found").
+                yield from log("🔍 Ensuring Docker CLI is available in VPS...")
+                docker_cli_check = container.exec_run(
+                    "sh -c 'command -v docker >/dev/null 2>&1'",
+                    user="root",
+                )
+                if docker_cli_check.exit_code != 0:
+                    yield from log("⚙️ Installing Docker CLI inside VPS (required for docker compose)...")
+                    install_cmd = (
+                        "sh -c 'set -e; "
+                        # wait for dpkg/apt locks (SSH install / other tasks may be running)
+                        "for i in $(seq 1 90); do "
+                        "  if pgrep -x apt-get >/dev/null 2>&1 || pgrep -x dpkg >/dev/null 2>&1 || "
+                        "     lsof /var/lib/dpkg/lock-frontend >/dev/null 2>&1; then "
+                        "    sleep 2; "
+                        "  else "
+                        "    break; "
+                        "  fi; "
+                        "done; "
+                        "export DEBIAN_FRONTEND=noninteractive; "
+                        "apt-get update -qq; "
+                        # Prefer compose plugin; fallback to docker-compose package.
+                        "apt-get install -y -qq docker.io docker-compose-plugin || apt-get install -y -qq docker.io docker-compose; "
+                        "docker --version; "
+                        "(docker compose version || docker-compose --version) 2>/dev/null || true"
+                        "'"
+                    )
+                    install_res = container.exec_run(install_cmd, user="root")
+                    if install_res.exit_code != 0:
+                        out = install_res.output.decode("utf-8", errors="replace") if install_res.output else ""
+                        yield from log(f"❌ Failed to install Docker CLI: {out[-500:]}", level="error")
+                        yield "event: deploy_error\ndata: " + json.dumps({"error": "Failed to install Docker CLI in VPS. Try again once apt/dpkg locks clear."}) + "\n\n"
+                        return
+
+                # If forced DinD, ensure we run against local dockerd (inside the VPS) even if proxy is reachable.
+                if engine_mode == "dind":
+                    if use_proxy:
+                        yield from log("🔧 VPS_DOCKER_ENGINE_MODE=dind: ignoring host Docker proxy; using DinD inside VPS")
+                    use_proxy = False
+                    proxy_host = None
+                    yield from log("🔍 Ensuring Docker daemon is running inside VPS (DinD)...")
+                    if not self._ensure_docker_daemon_running(container):
+                        yield from log("❌ Docker daemon is not running inside VPS and could not be started", level="error")
+                        yield "event: deploy_error\ndata: " + json.dumps({"error": "Docker-in-Docker daemon not available inside VPS"}) + "\n\n"
+                        return
+                    yield from log("✅ Docker daemon is ready inside VPS")
+
+                # Run docker-compose up -d and capture the *real* failure output.
+                # Use the directory where docker-compose.yml was found
+                full_command = f"cd {compose_dir} && (docker compose -f {compose_file} up -d || docker-compose -f {compose_file} up -d)"
+
+                yield from log(f"📝 Running: {full_command}")
+                yield from log("")
+
+                yield from log("🔧 Executing docker-compose from inside VPS container")
+                if use_proxy:
+                    yield from log(f"📦 Docker engine is host Docker via {proxy_host}")
+                else:
+                    yield from log("📦 Docker engine is Docker-in-Docker (/var/run/docker.sock)")
+
+                # Write full compose output to a file, then emit a tail so we always include
+                # the actual failing lines (e.g. npm install failure), even if output is huge.
+                compose_log_path = f"/tmp/cloudmanager_compose_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+                # Disable BuildKit by default to reduce cgroup-related failures in constrained envs.
+                # IMPORTANT: export env vars so they apply to the whole shell session, not just `cd` (builtin).
+                # Always override DOCKER_HOST so VPS env vars don't accidentally force host proxy when we want DinD.
+                export_env = "export DOCKER_HOST=unix:///var/run/docker.sock DOCKER_BUILDKIT=0 COMPOSE_DOCKER_CLI_BUILD=0;"
+                if use_proxy and proxy_host:
+                    export_env = f"export DOCKER_HOST={proxy_host} DOCKER_BUILDKIT=0 COMPOSE_DOCKER_CLI_BUILD=0;"
+
+                runner = (
+                    "sh -c '"
+                    f"{export_env} cd {compose_dir} && "
+                    f"({full_command}) > {compose_log_path} 2>&1; "
+                    "ec=$?; "
+                    "echo __CM_EXIT_CODE__:$ec; "
+                    f"tail -n 400 {compose_log_path} 2>/dev/null || true; "
+                    "exit $ec"
+                    "'"
+                )
+                result = container.exec_run(runner, user="root", workdir=compose_dir, stream=False)
+
+                exit_code = result.exit_code
+                output = result.output.decode('utf-8', errors='replace') if result.output else ""
+
+                # If using host Docker via proxy and compose failed due to host-port conflicts,
+                # auto-patch the compose file to use random available host ports (published=0 via "0:target")
+                # and retry once.
+                if use_proxy and exit_code != 0:
+                    # Example: "Bind for 0.0.0.0:5432 failed: port is already allocated"
+                    # Be permissive: Docker may include other host IPs, and line breaks can be messy.
+                    conflict_ports = sorted(
+                        set(
+                            int(p)
+                            for p in re.findall(
+                                r"Bind for (?:[0-9]{1,3}\.){3}[0-9]{1,3}:(\d+) failed: port is already allocated",
+                                output,
+                            )
+                        )
+                    )
+                    if conflict_ports:
+                        yield from log(
+                            "⚠️  Host port conflict detected (already in use on CloudManager host): "
+                            + ", ".join(str(p) for p in conflict_ports),
+                            level="error",
+                        )
+                        yield from log("🩹 Auto-patching docker-compose ports to use random host ports and retrying once...")
+
+                        # Read original compose file from inside the VPS container.
+                        compose_path = f"{compose_dir}/{compose_file}"
+                        read_compose = container.exec_run(f"sh -c 'cat {compose_path} 2>/dev/null'", user="root")
+                        compose_text = read_compose.output.decode("utf-8", errors="replace") if read_compose.output else ""
+
+                        if compose_text.strip():
+                            # Patch lines like: - "5432:5432" or - 5432:5432 to - "0:5432" / - 0:5432
+                            # Also handle host IP form: - "0.0.0.0:5432:5432"
+                            # Only for conflicting host ports; leave container port unchanged.
+                            def _patch_line(line: str) -> str:
+                                # 1) host:container[/proto]
+                                m = re.match(r"^(\s*-\s*['\"]?)(\d+):(\d+)(.*)$", line)
+                                if m:
+                                    prefix, host_p, cont_p, rest = m.groups()
+                                    try:
+                                        hp = int(host_p)
+                                    except Exception:
+                                        return line
+                                    if hp in conflict_ports:
+                                        return f"{prefix}0:{cont_p}{rest}"
+                                    return line
+
+                                # 2) ip:host:container[/proto]
+                                m = re.match(r"^(\s*-\s*['\"]?)(?:[0-9]{1,3}\.){3}[0-9]{1,3}:(\d+):(\d+)(.*)$", line)
+                                if m:
+                                    prefix, host_p, cont_p, rest = m.groups()
+                                    try:
+                                        hp = int(host_p)
+                                    except Exception:
+                                        return line
+                                    if hp in conflict_ports:
+                                        # Drop the host IP and let Docker pick a free port.
+                                        return f"{prefix}0:{cont_p}{rest}"
+                                    return line
+
+                                return line
+
+                            patched_lines = [_patch_line(ln) for ln in compose_text.splitlines()]
+                            patched_text = "\n".join(patched_lines) + "\n"
+
+                            patched_name = ".cloudmanager.compose.patched.yml"
+                            patched_path = f"{compose_dir}/{patched_name}"
+
+                            # Upload patched file via put_archive to avoid shell command length limits.
+                            tar_bytes = io.BytesIO()
+                            with tarfile.open(fileobj=tar_bytes, mode="w") as tf:
+                                data = patched_text.encode("utf-8")
+                                info = tarfile.TarInfo(name=patched_name)
+                                info.size = len(data)
+                                info.mtime = int(time.time())
+                                tf.addfile(info, io.BytesIO(data))
+                            tar_bytes.seek(0)
+                            container.put_archive(path=compose_dir, data=tar_bytes.read())
+
+                            yield from log(f"📝 Retrying with patched compose file: {patched_path}")
+
+                            patched_command = f"cd {compose_dir} && (docker compose -f {patched_name} up -d || docker-compose -f {patched_name} up -d)"
+                            patched_runner = (
+                                "sh -c '"
+                                f"{export_env} cd {compose_dir} && "
+                                f"({patched_command}) > {compose_log_path} 2>&1; "
+                                "ec=$?; "
+                                "echo __CM_EXIT_CODE__:$ec; "
+                                f"tail -n 400 {compose_log_path} 2>/dev/null || true; "
+                                "exit $ec"
+                                "'"
+                            )
+                            result_retry = container.exec_run(patched_runner, user="root", workdir=compose_dir, stream=False)
+                            exit_code = result_retry.exit_code
+                            output = result_retry.output.decode('utf-8', errors='replace') if result_retry.output else ""
+
+                # If DinD was selected and compose failed due to a dead socket, try one restart + retry.
+                if (not use_proxy) and exit_code != 0 and ("Cannot connect to the Docker daemon" in output):
+                    yield from log("")
+                    yield from log("🔁 Docker Compose failed due to Docker socket connectivity; restarting dockerd and retrying once...", level="error")
+                    if self._ensure_docker_daemon_running(container):
+                        result_retry = container.exec_run(runner, user="root", workdir=compose_dir, stream=False)
+                        exit_code = result_retry.exit_code
+                        output = result_retry.output.decode('utf-8', errors='replace') if result_retry.output else ""
+                    else:
+                        yield from log("❌ Could not restart dockerd for retry", level="error")
+                        try:
+                            err_log = container.exec_run(
+                                "sh -c 'tail -80 /var/log/dockerd.log 2>/dev/null || echo no_dockerd_logs'",
+                                user="root",
+                            )
+                            err_out = err_log.output.decode("utf-8", errors="replace") if err_log.output else ""
+                            if err_out.strip():
+                                yield from log("📄 dockerd.log (tail):")
+                                for line in err_out.strip().split("\n")[-80:]:
+                                    if line.strip():
+                                        yield f"data: {line}\n\n"
+                        except Exception:
+                            pass
+
+                if output.strip():
+                    yield from log("📤 Docker Compose (tail) output:")
+                    for line in output.split('\n'):
+                        if line.strip():
+                            yield f"data: {line}\n\n"
+                else:
+                    yield from log("ℹ️  Docker Compose produced no output (unexpected).")
+
+                # Check exit code
+                yield from log("")
+                if exit_code == 0:
+                    yield from log(f"✅ Docker Compose completed successfully (exit code: {exit_code})")
+                else:
+                    yield from log(f"⚠️  Docker Compose completed with exit code: {exit_code}", level="error")
+
+                # Verify the command succeeded by checking containers
+                yield from log("")
+                yield from log("🔍 Verifying container creation...")
+
+                # Check if docker-compose created any containers from this compose file
+                # Use docker-compose ps to check services defined in the compose file
+                ps_prefix = f"DOCKER_HOST={proxy_host} " if (use_proxy and proxy_host) else ""
+                ps_compose_result = container.exec_run(
+                    f"sh -c 'cd {compose_dir} && ({ps_prefix}docker compose -f {compose_file} ps -a --format json 2>/dev/null || {ps_prefix}docker-compose -f {compose_file} ps --quiet 2>/dev/null)'",
+                    user="root",
+                    workdir=compose_dir
+                )
+
+                if ps_compose_result.exit_code == 0 and ps_compose_result.output:
+                    compose_containers = ps_compose_result.output.decode('utf-8', errors='replace').strip()
+                    if compose_containers:
+                        yield from log(f"✅ Docker Compose services are defined")
+
+                        # Get detailed status of these containers
+                        status_result = container.exec_run(
+                            f"sh -c 'cd {compose_dir} && ({ps_prefix}docker compose -f {compose_file} ps 2>/dev/null || {ps_prefix}docker-compose -f {compose_file} ps)'",
+                            user="root",
+                            workdir=compose_dir
+                        )
+
+                        if status_result.exit_code == 0 and status_result.output:
+                            status_output = status_result.output.decode('utf-8', errors='replace').strip()
+                            if status_output:
+                                yield from log("📊 Container status from compose file:")
+                                for line in status_output.split('\n'):
+                                    if line.strip():
+                                        yield f"data: {line}\n\n"
+
+                                # Check if any are actually running
+                                if 'Up' in status_output or 'running' in status_output.lower():
+                                    yield from log("✅ Some services are running")
+                                else:
+                                    yield from log("⚠️  Services were created but may not be running yet")
+                                    yield from log("💡 Check logs with: docker-compose logs")
+                            else:
+                                yield from log("⚠️  Could not get container status")
+                    else:
+                        yield from log("⚠️  No containers found for this compose file")
+                        yield from log("💡 This might be normal if docker-compose.yml has no services defined")
+                else:
+                    # Fallback: check all docker containers
+                    yield from log("ℹ️  Checking all Docker containers in VPS...")
+                    ps_all_result = container.exec_run(
+                        f"sh -c '{ps_prefix}docker ps -a --format \"table {{{{.Names}}}}\\t{{{{.Status}}}}\\t{{{{.Image}}}}\" 2>/dev/null | head -20'",
+                        user="root"
+                    )
+
+                    if ps_all_result.exit_code == 0 and ps_all_result.output:
+                        all_containers = ps_all_result.output.decode('utf-8', errors='replace').strip()
+                        if all_containers:
+                            yield from log("📊 All Docker containers in VPS:")
+                            for line in all_containers.split('\n'):
+                                if line.strip():
+                                    yield f"data: {line}\n\n"
+                        else:
+                            yield from log("ℹ️  No Docker containers found in VPS")
+                    else:
+                        yield from log("⚠️  Could not list Docker containers (Docker daemon may not be accessible)")
+
+                yield from log("")
+                if exit_code == 0:
+                    yield from log("✅ Docker Compose deployment completed successfully")
+                else:
+                    yield from log("⚠️  Docker Compose deployment completed with warnings/errors", level="error")
+                    # Emit a single terminal failure event at the end (after logs are streamed),
+                    # so the frontend can stop cleanly without losing the actual failure output.
+                    yield "event: deploy_error\ndata: " + json.dumps({
+                        "error": f"Docker Compose failed (exit code: {exit_code}). See logs above."
+                    }) + "\n\n"
+            else:
+                yield from log("ℹ️  No docker-compose.yml found - skipping automatic startup")
+            
+            yield f"event: success\ndata: {json.dumps({'files_deployed': file_count, 'target_path': target_path, 'docker_compose_run': compose_file is not None})}\n\n"
+            
+        except Exception as e:
+            error_msg = str(e)
+            yield from log(f"❌ Deployment failed: {error_msg}", "error")
+            logger.error(f"Failed to deploy files to container {container_id}: {e}", exc_info=True)
+            yield "event: deploy_error\ndata: " + json.dumps({"error": error_msg}) + "\n\n"
+        finally:
+            # Cleanup temporary directory
+            if temp_dir and os.path.exists(temp_dir):
+                try:
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                    yield from log("🧹 Cleaned up temporary directory")
+                except Exception as e:
+                    logger.warning(f"Failed to cleanup temp directory: {e}")
+            yield "event: close\ndata: deployment_completed\n\n"
+    
+    async def install_docker_in_container(self, container_id: str) -> Dict[str, any]:
+        """
+        Install Docker and docker-compose in a container.
+        
+        Args:
+            container_id: Docker container ID
+            
+        Returns:
+            Dict with installation status and output
+        """
+        if not self.docker_available:
+            return {
+                "success": False,
+                "error": "Docker not available on host"
+            }
+        
+        try:
+            container = self.client.containers.get(container_id)
+            logs = []
+            
+            # Detect OS distribution
+            result = container.exec_run("sh -c 'lsb_release -is 2>/dev/null || cat /etc/os-release | grep ^ID= | cut -d= -f2 | tr -d \\\"'", user="root")
+            if result.exit_code == 0:
+                os_id = result.output.decode('utf-8', errors='replace').strip().lower()
+            else:
+                # Default to ubuntu if detection fails
+                os_id = "ubuntu"
+                logs.append(f"Could not detect OS, defaulting to ubuntu")
+            
+            # Map OS to Docker repository
+            if "ubuntu" in os_id or "debian" not in os_id:
+                docker_os = "ubuntu"
+            else:
+                docker_os = "debian"
+            
+            logs.append(f"Detected OS: {os_id}, using Docker repository for: {docker_os}")
+
+            # IMPORTANT: Wait for any existing apt-get processes to finish FIRST
+            # The container startup script might be installing SSH
+            logs.append("Waiting for container initialization to complete...")
+            logs.append("Checking for existing apt-get processes...")
+            max_wait = 120  # 2 minutes (reduced from 5)
+            wait_interval = 3  # Check every 3 seconds
+            waited = 0
+            
+            while waited < max_wait:
+                # Check for both apt-get processes and lock files
+                check_result = container.exec_run(
+                    "sh -c 'pgrep -x apt-get > /dev/null 2>&1 && echo running || (lsof /var/lib/dpkg/lock-frontend > /dev/null 2>&1 && echo locked || echo none)'",
+                    user="root"
+                )
+                if check_result.exit_code == 0:
+                    output = check_result.output.decode('utf-8', errors='replace').strip()
+                    if output == "none":
+                        logs.append("No existing apt-get processes or locks found, proceeding...")
+                        break
+                    elif output == "locked":
+                        logs.append(f"apt-get lock file exists, waiting... (waited {waited}s)")
+                        time.sleep(wait_interval)
+                        waited += wait_interval
+                    else:
+                        # Check if the process is actually still running
+                        pid_check = container.exec_run(
+                            f"sh -c 'ps -p {output} > /dev/null 2>&1 && echo running || echo dead'",
+                            user="root"
+                        )
+                        if pid_check.exit_code == 0:
+                            pid_output = pid_check.output.decode('utf-8', errors='replace').strip()
+                            if pid_output == "dead":
+                                logs.append("apt-get process appears to be dead, proceeding...")
+                                break
+                        logs.append(f"Waiting for apt-get process to finish... (waited {waited}s)")
+                        time.sleep(wait_interval)
+                        waited += wait_interval
+                else:
+                    # If check fails, assume no process and continue
+                    logs.append("Could not check apt-get status, proceeding...")
+                    break
+            
+            if waited >= max_wait:
+                logs.append(f"⚠️ Timeout waiting for apt-get (waited {waited}s), proceeding anyway...")
+                # Don't fail, just log warning - sometimes processes can be stuck but we can still proceed
+
+            # Now update package lists (after waiting for lock to clear)
+            logs.append("Updating package lists...")
+            result = container.exec_run("sh -c 'apt-get update 2>&1'", user="root")
+            logs.append(f"Update packages: exit_code={result.exit_code}")
+            if result.exit_code != 0:
+                error_output = result.output.decode('utf-8', errors='replace') if result.output else "Unknown error"
+                # Only fail if it's a real error, not just permission warnings
+                if "Operation not permitted" not in error_output and "E:" in error_output:
+                    return {
+                        "success": False,
+                        "error": f"Failed to update packages: {error_output}",
+                        "logs": logs
+                    }
+
+            # Install prerequisites
+            logs.append("Installing Docker prerequisites...")
+            result = container.exec_run(
+                "sh -c 'apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release'",
+                user="root"
+            )
+            logs.append(f"Install prerequisites: exit_code={result.exit_code}")
+            if result.exit_code != 0:
+                error_output = result.output.decode('utf-8', errors='replace') if result.output else "Unknown error"
+                # Check if it's a lock error and suggest retry
+                if "lock" in error_output.lower() or "held by process" in error_output.lower():
+                    return {
+                        "success": False,
+                        "error": f"Package manager is locked. Please wait a moment and try again. Error: {error_output}",
+                        "logs": logs
+                    }
+                return {
+                    "success": False,
+                    "error": f"Failed to install prerequisites: {error_output}",
+                    "logs": logs
+                }
+            
+            # Create keyrings directory
+            result = container.exec_run("mkdir -p /etc/apt/keyrings", user="root")
+            if result.exit_code != 0:
+                return {
+                    "success": False,
+                    "error": f"Failed to create keyrings directory: {result.output.decode('utf-8', errors='replace')}",
+                    "logs": logs
+                }
+            
+            # Add Docker's official GPG key (use correct OS)
+            # Use --batch --yes to avoid tty issues, and redirect stderr to avoid curl writing errors
+            result = container.exec_run(
+                f"sh -c 'curl -fsSL https://download.docker.com/linux/{docker_os}/gpg 2>/dev/null | gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg 2>&1'",
+                user="root"
+            )
+            logs.append(f"Add Docker GPG key: exit_code={result.exit_code}")
+            if result.exit_code != 0:
+                error_output = result.output.decode('utf-8', errors='replace') if result.output else "Unknown error"
+                # Check if the key file was actually created despite the error
+                check_result = container.exec_run("test -f /etc/apt/keyrings/docker.gpg", user="root")
+                if check_result.exit_code == 0:
+                    logs.append("Docker GPG key file exists despite error, continuing...")
+                else:
+                    return {
+                        "success": False,
+                        "error": f"Failed to add Docker GPG key: {error_output}",
+                        "logs": logs
+                    }
+            
+            # Set up Docker repository (use correct OS)
+            result = container.exec_run(
+                f"sh -c 'echo \"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/{docker_os} $(lsb_release -cs) stable\" | tee /etc/apt/sources.list.d/docker.list > /dev/null'",
+                user="root"
+            )
+            logs.append(f"Setup Docker repo: exit_code={result.exit_code}")
+            if result.exit_code != 0:
+                return {
+                    "success": False,
+                    "error": f"Failed to set up Docker repository: {result.output.decode('utf-8', errors='replace')}",
+                    "logs": logs
+                }
+            
+            # Update packages again (ignore permission warnings)
+            result = container.exec_run("sh -c 'apt-get update 2>&1 | grep -v \"Operation not permitted\" || true'", user="root")
+            logs.append(f"Update packages (after repo add): exit_code={result.exit_code}")
+            # Verify the update worked by checking if Docker packages are available
+            result_check = container.exec_run("sh -c 'apt-cache search docker-ce 2>/dev/null | head -1'", user="root")
+            if result_check.exit_code != 0:
+                # Try without filtering warnings
+                result = container.exec_run("sh -c 'apt-get update'", user="root")
+                if result.exit_code != 0:
+                    error_output = result.output.decode('utf-8', errors='replace') if result.output else "Unknown error"
+                    # Check if it's a real error or just permission warnings
+                    if "404 Not Found" in error_output or "does not have a Release file" in error_output:
+                        return {
+                            "success": False,
+                            "error": f"Failed to update packages: {error_output}",
+                            "logs": logs
+                        }
+                    elif "Operation not permitted" not in error_output:
+                        return {
+                            "success": False,
+                            "error": f"Failed to update packages: {error_output}",
+                            "logs": logs
+                        }
+            
+            # Install Docker Engine
+            result = container.exec_run(
+                "sh -c 'apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin'",
+                user="root"
+            )
+            logs.append(f"Install Docker: exit_code={result.exit_code}")
+            if result.exit_code != 0:
+                return {
+                    "success": False,
+                    "error": f"Failed to install Docker: {result.output.decode('utf-8', errors='replace')}",
+                    "logs": logs
+                }
+            
+            # Install docker-compose standalone (fallback)
+            result = container.exec_run(
+                "sh -c 'curl -L \"https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)\" -o /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose'",
+                user="root"
+            )
+            logs.append(f"Install docker-compose: exit_code={result.exit_code}")
+            
+            # Verify installation
+            result = container.exec_run("sh -c 'docker --version'", user="root")
+            docker_version = result.output.decode('utf-8', errors='replace').strip() if result.output else "unknown"
+            logs.append(f"Docker version: {docker_version}")
+            
+            result = container.exec_run("sh -c 'docker compose version'", user="root")
+            compose_version = result.output.decode('utf-8', errors='replace').strip() if result.output else "unknown"
+            logs.append(f"Docker Compose version: {compose_version}")
+            
+            # Start Docker daemon if not running
+            logs.append("Checking Docker daemon status...")
+            check_daemon = container.exec_run("sh -c 'pgrep -x dockerd || echo not_running'", user="root")
+            if check_daemon.exit_code == 0:
+                output = check_daemon.output.decode('utf-8', errors='replace').strip()
+                if output == "not_running":
+                    logs.append("Starting Docker daemon...")
+                    # Create necessary directories
+                    container.exec_run("mkdir -p /var/run", user="root")
+                    container.exec_run("mkdir -p /var/lib/docker", user="root")
+
+                    # Configure Docker daemon for nested Docker (DinD)
+                    # Use VFS storage driver instead of overlayfs (avoids overlayfs-on-overlayfs issues)
+                    daemon_config = {
+                        "storage-driver": "vfs",
+                        "log-level": "info",
+                        "insecure-registries": []
+                    }
+                    daemon_json = json.dumps(daemon_config, indent=2)
+                    # Use heredoc to avoid fragile shell quoting.
+                    container.exec_run(
+                        "sh -c 'mkdir -p /etc/docker && cat > /etc/docker/daemon.json << \"EOF\"\n"
+                        + daemon_json
+                        + "\nEOF\n'",
+                        user="root",
+                    )
+                    logs.append("Configured Docker daemon with VFS storage driver for DinD compatibility")
+
+                    # Start dockerd in background with VFS storage driver
+                    start_result = container.exec_run(
+                        "sh -c 'nohup dockerd --storage-driver=vfs > /var/log/dockerd.log 2>&1 &'",
+                        user="root"
+                    )
+                    if start_result.exit_code == 0:
+                        # Wait for daemon to start
+                        import time
+                        time.sleep(3)
+                        # Verify it's running
+                        verify_result = container.exec_run("sh -c 'pgrep -x dockerd || echo not_running'", user="root")
+                        if verify_result.exit_code == 0:
+                            verify_output = verify_result.output.decode('utf-8', errors='replace').strip()
+                            if verify_output != "not_running":
+                                logs.append("✅ Docker daemon started successfully")
+                            else:
+                                logs.append("⚠️ Docker daemon may not have started properly")
+                        else:
+                            logs.append("⚠️ Could not verify Docker daemon status")
+                    else:
+                        error_msg = start_result.output.decode('utf-8', errors='replace') if start_result.output else "Unknown error"
+                        logs.append(f"⚠️ Failed to start dockerd: {error_msg}")
+                else:
+                    logs.append("✅ Docker daemon is already running")
+            else:
+                logs.append("⚠️ Could not check Docker daemon status")
+            
+            return {
+                "success": True,
+                "docker_version": docker_version,
+                "compose_version": compose_version,
+                "logs": logs
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to install Docker in container {container_id}: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    def _ensure_docker_daemon_running(self, container) -> bool:
+        """
+        Ensure Docker daemon is running in the container.
+        
+        Args:
+            container: Docker container object
+            
+        Returns:
+            True if daemon is running, False otherwise
+        """
+        def _docker_ready() -> bool:
+            """
+            Validate the daemon is actually reachable via the default unix socket.
+            `pgrep dockerd` can be true while the daemon is still initializing or the socket is unusable.
+            """
+            try:
+                # Force local socket; the VPS container may have DOCKER_HOST env set to the proxy.
+                res = container.exec_run(
+                    "sh -c 'DOCKER_HOST=unix:///var/run/docker.sock docker info >/dev/null 2>&1'",
+                    user="root",
+                )
+                return res.exit_code == 0
+            except Exception:
+                return False
+
+        def _write_daemon_json_vfs() -> None:
+            daemon_config = {
+                "storage-driver": "vfs",
+                "log-level": "info",
+                "insecure-registries": [],
+            }
+            daemon_json = json.dumps(daemon_config, indent=2)
+            # Use a heredoc so quoting works reliably across sh/bash (POSIX sh cannot escape quotes inside single quotes).
+            container.exec_run(
+                "sh -c 'mkdir -p /etc/docker && cat > /etc/docker/daemon.json << \"EOF\"\n"
+                + daemon_json
+                + "\nEOF\n'",
+                user="root",
+            )
+
+        def _start_dockerd_vfs(clear_graph: bool = False) -> bool:
+            try:
+                container.exec_run("sh -c 'mkdir -p /var/run /var/lib/docker /etc/docker'", user="root")
+                _write_daemon_json_vfs()
+                if clear_graph:
+                    container.exec_run("sh -c 'rm -rf /var/lib/docker/* 2>/dev/null || true'", user="root")
+                # Remove any stale socket before restart
+                container.exec_run("sh -c 'rm -f /var/run/docker.sock 2>/dev/null || true'", user="root")
+                # Start dockerd detached; be explicit about the unix socket and storage driver.
+                container.exec_run(
+                    "sh -c 'setsid dockerd --host=unix:///var/run/docker.sock --storage-driver=vfs > /var/log/dockerd.log 2>&1 < /dev/null &'",
+                    user="root",
+                )
+                # Wait up to ~20s for the daemon to become reachable.
+                for _ in range(20):
+                    time.sleep(1)
+                    if _docker_ready():
+                        return True
+                return False
+            except Exception:
+                return False
+
+        # If docker is already reachable, we're done.
+        if _docker_ready():
+            return True
+
+        # Check if dockerd is running
+        check_result = container.exec_run("sh -c 'pgrep -x dockerd || echo not_running'", user="root")
+        if check_result.exit_code == 0:
+            output = check_result.output.decode('utf-8', errors='replace').strip()
+            if output == "not_running":
+                # Try to start dockerd
+                logger.info("Docker daemon not running, attempting to start...")
+                ok = _start_dockerd_vfs(clear_graph=False)
+                if ok:
+                    logger.info("Docker daemon started and is reachable via /var/run/docker.sock")
+                    return True
+
+                # If start failed, check logs for overlay/graphdriver errors and retry with a clean graph.
+                try:
+                    error_log = container.exec_run(
+                        "sh -c 'tail -80 /var/log/dockerd.log 2>/dev/null || echo no_logs'",
+                        user="root",
+                    )
+                    error_output = error_log.output.decode('utf-8', errors='replace') if error_log.output else ""
+                except Exception:
+                    error_output = ""
+
+                if any(
+                    s in (error_output or "").lower()
+                    for s in ["overlay", "graphdriver", "failed to mount", "invalid argument"]
+                ):
+                    logger.warning("dockerd failed to become ready; retrying with cleaned /var/lib/docker and vfs driver")
+                    ok2 = _start_dockerd_vfs(clear_graph=True)
+                    if ok2:
+                        return True
+                    logger.warning(f"dockerd still not ready after retry. Logs: {(error_output or '')[:500]}")
+                    return False
+
+                logger.warning(f"dockerd failed to become ready. Logs: {(error_output or '')[:500]}")
+                return False
+            else:
+                # Daemon process exists; ensure it's actually reachable.
+                if _docker_ready():
+                    return True
+
+                # Restart dockerd if the process exists but the socket is unusable.
+                logger.warning("dockerd is running but docker client cannot connect; restarting dockerd with vfs")
+                try:
+                    container.exec_run("sh -c 'pkill -x dockerd 2>/dev/null || true'", user="root")
+                except Exception:
+                    pass
+
+                ok = _start_dockerd_vfs(clear_graph=False)
+                if ok:
+                    return True
+
+                # As last resort, retry with a clean graph (handles overlayfs-on-overlayfs leftovers).
+                ok2 = _start_dockerd_vfs(clear_graph=True)
+                return ok2
+        else:
+            logger.warning("Could not check Docker daemon status")
+            return False
+    
+    async def run_docker_compose(
+        self,
+        container_id: str,
+        compose_file_path: str,
+        command: str = "up -d",
+        working_dir: str = "/data"
+    ) -> Dict[str, any]:
+        """
+        Run docker-compose command in container.
+        
+        Args:
+            container_id: Docker container ID
+            compose_file_path: Path to docker-compose.yml file (relative to working_dir)
+            command: docker-compose command (e.g., "up -d", "down", "ps")
+            working_dir: Working directory where docker-compose.yml is located
+            
+        Returns:
+            Dict with command output and exit code
+        """
+        if not self.docker_available:
+            return {
+                "success": False,
+                "error": "Docker not available on host"
+            }
+        
+        try:
+            container = self.client.containers.get(container_id)
+            
+            # Ensure Docker daemon is running
+            if not self._ensure_docker_daemon_running(container):
+                return {
+                    "success": False,
+                    "error": "Docker daemon is not running and could not be started"
+                }
+            
+            # Build the command
+            # Try docker compose (plugin) first, fallback to docker-compose
+            full_command = f"cd {working_dir} && (docker compose -f {compose_file_path} {command} || docker-compose -f {compose_file_path} {command})"
+            
+            result = container.exec_run(
+                f"sh -c '{full_command}'",
+                user="root",
+                workdir=working_dir
+            )
+            
+            output = result.output.decode('utf-8', errors='replace') if result.output else ""
+            
+            return {
+                "success": result.exit_code == 0,
+                "exit_code": result.exit_code,
+                "output": output,
+                "command": full_command
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to run docker-compose in container {container_id}: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    def run_docker_compose_stream(
+        self,
+        container_id: str,
+        compose_file_path: str,
+        command: str = "up -d",
+        working_dir: str = "/data"
+    ) -> Iterator[str]:
+        """
+        Run docker-compose command in container with streaming output.
+        
+        Yields log lines in real-time via SSE format.
+        
+        Args:
+            container_id: Docker container ID
+            compose_file_path: Path to docker-compose.yml file (relative to working_dir)
+            command: docker-compose command (e.g., "up -d", "down", "ps")
+            working_dir: Working directory where docker-compose.yml is located
+            
+        Yields:
+            SSE-formatted log lines
+        """
+        if not self.docker_available:
+            yield f"event: error\ndata: {json.dumps({'error': 'Docker not available on host'})}\n\n"
+            return
+        
+        def log(message: str, level: str = "info"):
+            """Yield a log message with timestamp."""
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            log_entry = f"[{timestamp}] {message}"
+            if level == "error":
+                logger.error(log_entry)
+                yield f"event: error\ndata: {json.dumps({'message': log_entry})}\n\n"
+            else:
+                logger.info(log_entry)
+                yield f"data: {log_entry}\n\n"
+        
+        try:
+            yield from log("🚀 Starting docker-compose command...")
+            container = self.client.containers.get(container_id)
+            
+            # Ensure Docker daemon is running
+            yield from log("🔍 Checking Docker daemon status...")
+            if not self._ensure_docker_daemon_running(container):
+                yield from log("❌ Docker daemon is not running and could not be started", level="error")
+                return
+            yield from log("✅ Docker daemon is running")
+            
+            # Build the command
+            # Try docker compose (plugin) first, fallback to docker-compose
+            full_command = f"cd {working_dir} && (docker compose -f {compose_file_path} {command} || docker-compose -f {compose_file_path} {command})"
+            
+            yield from log(f"📝 Command: {full_command}")
+            yield from log(f"📁 Working directory: {working_dir}")
+            yield from log(f"📄 Compose file: {compose_file_path}")
+            yield from log("")
+            
+            # Execute with streaming
+            exec_instance = container.exec_run(
+                f"sh -c '{full_command}'",
+                user="root",
+                workdir=working_dir,
+                stream=True,
+                demux=True  # Separate stdout and stderr
+            )
+            
+            # Stream output line by line in real-time
+            buffer_stdout = ""
+            buffer_stderr = ""
+            
+            for chunk in exec_instance:
+                if chunk is None:
+                    continue
+                
+                # Handle different return formats from Docker SDK
+                # With demux=True, it should return (stdout, stderr) tuple
+                # But sometimes it might return just bytes or a different format
+                stdout_chunk = None
+                stderr_chunk = None
+                
+                if isinstance(chunk, tuple) and len(chunk) == 2:
+                    stdout_chunk, stderr_chunk = chunk
+                elif isinstance(chunk, bytes):
+                    # If demux didn't work, treat all as stdout
+                    stdout_chunk = chunk
+                else:
+                    # Unknown format, skip
+                    continue
+                
+                # Process stdout - yield immediately as lines arrive
+                if stdout_chunk:
+                    text = stdout_chunk.decode('utf-8', errors='replace')
+                    buffer_stdout += text
+                    # Yield complete lines immediately (don't wait for more)
+                    while '\n' in buffer_stdout:
+                        line, buffer_stdout = buffer_stdout.split('\n', 1)
+                        # Yield all lines (even empty ones for formatting)
+                        yield f"data: {line}\n\n"
+                
+                # Process stderr - yield immediately as lines arrive
+                if stderr_chunk:
+                    text = stderr_chunk.decode('utf-8', errors='replace')
+                    buffer_stderr += text
+                    # Yield complete lines immediately
+                    while '\n' in buffer_stderr:
+                        line, buffer_stderr = buffer_stderr.split('\n', 1)
+                        if line.strip():  # Only yield non-empty stderr lines
+                            yield f"event: error\ndata: {json.dumps({'message': line})}\n\n"
+            
+            # Yield any remaining buffer content (incomplete lines at the end)
+            if buffer_stdout.strip():
+                yield f"data: {buffer_stdout}\n\n"
+            if buffer_stderr.strip():
+                yield f"event: error\ndata: {json.dumps({'message': buffer_stderr})}\n\n"
+            
+            # Get exit code (we need to check the exec instance)
+            # Note: exec_run with stream=True doesn't return exit code directly
+            # We'll check if docker-compose is still running or check the last output
+            yield from log("")
+            yield from log("✅ Command execution completed")
+            yield f"event: success\ndata: {json.dumps({'message': 'Command completed'})}\n\n"
+            
+        except GeneratorExit:
+            logger.info(f"Client disconnected during docker-compose stream for container {container_id}")
+            raise
+        except Exception as e:
+            error_msg = str(e)
+            yield from log(f"❌ Error: {error_msg}", "error")
+            logger.error(f"Failed to run docker-compose in container {container_id}: {e}", exc_info=True)
+            yield f"event: error\ndata: {json.dumps({'error': error_msg})}\n\n"
+        finally:
+            yield "event: close\ndata: stream_ended\n\n"
 
     async def get_container_id(self, subscription_id: str) -> Optional[str]:
         """

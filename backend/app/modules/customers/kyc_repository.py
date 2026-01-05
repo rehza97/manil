@@ -171,10 +171,14 @@ class KYCRepository:
 
         Active means: PENDING, UNDER_REVIEW, or APPROVED status.
         """
+        # Use cast to ensure proper enum comparison in PostgreSQL
+        # Cast the string value to the enum type for comparison
+        from sqlalchemy.dialects.postgresql import ENUM as PG_ENUM
+        
         query = select(func.count()).where(
             and_(
                 KYCDocument.customer_id == customer_id,
-                KYCDocument.document_type == document_type,
+                cast(KYCDocument.document_type, String) == document_type.value,
                 or_(
                     cast(KYCDocument.status, String) == KYCStatus.PENDING.value,
                     cast(KYCDocument.status, String) == KYCStatus.UNDER_REVIEW.value,

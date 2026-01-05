@@ -129,12 +129,14 @@ export const CustomerManagementPage: React.FC = () => {
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
                           <span className="text-blue-600 font-semibold">
-                            {customer.full_name?.charAt(0).toUpperCase() || "C"}
+                            {customer.name?.charAt(0).toUpperCase() ||
+                              customer.email?.charAt(0).toUpperCase() ||
+                              "C"}
                           </span>
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
-                            {customer.full_name}
+                            {customer.name}
                           </div>
                           <div className="text-sm text-gray-500">
                             {customer.email}
@@ -143,36 +145,35 @@ export const CustomerManagementPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {customer.company_name || "-"}
+                      {customer.companyName || "-"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Badge
                         className={
-                          customer.is_active
+                          customer.status === "active"
                             ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }
-                      >
-                        {customer.is_active ? "Active" : "Suspended"}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge
-                        className={
-                          customer.kyc_status === "verified"
-                            ? "bg-green-100 text-green-800"
-                            : customer.kyc_status === "pending"
+                            : customer.status === "pending"
                             ? "bg-yellow-100 text-yellow-800"
-                            : customer.kyc_status === "rejected"
+                            : customer.status === "suspended"
                             ? "bg-red-100 text-red-800"
                             : "bg-gray-100 text-gray-800"
                         }
                       >
-                        {customer.kyc_status || "Not Started"}
+                        {customer.status
+                          ? customer.status.charAt(0).toUpperCase() +
+                            customer.status.slice(1)
+                          : "Unknown"}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Badge className="bg-gray-100 text-gray-800">
+                        Not Available
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(customer.created_at).toLocaleDateString()}
+                      {customer.createdAt
+                        ? new Date(customer.createdAt).toLocaleDateString()
+                        : "N/A"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
@@ -195,7 +196,7 @@ export const CustomerManagementPage: React.FC = () => {
                           <Edit className="w-4 h-4" />
                         </Button>
                         <Button variant="ghost" size="sm">
-                          {customer.is_active ? (
+                          {customer.status === "active" ? (
                             <Ban className="w-4 h-4 text-red-600" />
                           ) : (
                             <CheckCircle className="w-4 h-4 text-green-600" />

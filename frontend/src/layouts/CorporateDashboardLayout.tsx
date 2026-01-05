@@ -34,6 +34,7 @@ import {
   Image,
   Globe,
   TrendingUp,
+  UserPlus,
 } from "lucide-react";
 import { useAuth, RoleGuard, useLogout } from "@/modules/auth";
 
@@ -69,13 +70,6 @@ const CorporateDashboardLayout: React.FC = () => {
       icon: Package,
       current: location.pathname.startsWith("/corporate/products"),
       permission: "product:read",
-    },
-    {
-      name: "Orders",
-      href: "/corporate/orders",
-      icon: ShoppingCart,
-      current: location.pathname.startsWith("/corporate/orders"),
-      permission: "order:read",
     },
     {
       name: "Invoices",

@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { useTickets, useBulkUpdateStatus } from "../hooks";
 import { TicketStatus, TicketPriority } from "../types/ticket.types";
+import { useAuth } from "@/modules/auth";
+import { formatDateSafe } from "@/shared/utils/formatters";
 import {
   Table,
   TableBody,
@@ -62,42 +64,87 @@ const priorityColors: Record<string, string> = {
   urgent: "bg-red-100 text-red-800",
 };
 
-const columns = [
-  { id: "title", label: "Title", visible: true },
-  { id: "status", label: "Status", visible: true },
-  { id: "priority", label: "Priority", visible: true },
-  { id: "customer", label: "Customer", visible: true },
-  { id: "assignedTo", label: "Assigned To", visible: true },
-  { id: "createdAt", label: "Created", visible: true },
-] as const;
+const getColumns = (isClient: boolean) =>
+  [
+    { id: "title", label: "Title", visible: true },
+    { id: "status", label: "Status", visible: true },
+    { id: "priority", label: "Priority", visible: true },
+    ...(isClient
+      ? []
+      : [
+          { id: "customer", label: "Customer", visible: true },
+          { id: "assignedTo", label: "Assigned To", visible: true },
+        ]),
+    { id: "createdAt", label: "Created", visible: true },
+  ] as const;
 
 export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
   tickets: providedTickets,
   onSelectTicket,
   onBulkAction,
 }) => {
+  const { user } = useAuth();
+  const isClient = user?.role === "client";
   const bulkUpdateStatus = useBulkUpdateStatus();
+
+  // Get columns first before using them in useState
+  const columns = getColumns(isClient);
+
   const [page, setPage] = useState(1);
-  const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set());
+  const [selectedTickets, setSelectedTickets] = useState<Set<string>>(
+    new Set()
+  );
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
-    new Set(columns.map((c) => c.id))
+    new Set(
+      columns
+        .filter(
+          (c) => !isClient || (c.id !== "customer" && c.id !== "assignedTo")
+        )
+        .map((c) => c.id)
+    )
   );
 
   // Only fetch if tickets not provided
-  const { data, isLoading } = useTickets(page, 20);
-  const ticketList = providedTickets || data?.data || [];
+  const { data, isLoading, error } = useTickets(page, 20);
+
+  console.log("[TicketListEnhanced] Component render:", {
+    page,
+    isClient,
+    providedTickets: providedTickets?.length || 0,
+    data,
+    isLoading,
+    error,
+    "data?.data": data?.data,
+    "data?.data length": data?.data?.length,
+    "data?.total": data?.total,
+    "data?.page": data?.page,
+    "data?.pageSize": data?.pageSize,
+    "data?.totalPages": data?.totalPages,
+  });
+
+  const ticketList = providedTickets || (data as any)?.data || [];
+  console.log(
+    "[TicketListEnhanced] ticketList:",
+    ticketList,
+    "length:",
+    ticketList.length
+  );
 
   const tickets = useMemo(() => {
     const list = ticketList;
-    return [...list].sort((a, b) => {
+    console.log(
+      "[TicketListEnhanced] useMemo - sorting tickets, list length:",
+      list.length
+    );
+    const sorted = [...list].sort((a, b) => {
       let aVal: any = a[sortField as keyof Ticket];
       let bVal: any = b[sortField as keyof Ticket];
 
       if (sortField === "createdAt") {
-        aVal = new Date(aVal).getTime();
-        bVal = new Date(bVal).getTime();
+        aVal = aVal ? new Date(aVal).getTime() : 0;
+        bVal = bVal ? new Date(bVal).getTime() : 0;
       } else if (typeof aVal === "string") {
         aVal = aVal.toLowerCase();
         bVal = bVal.toLowerCase();
@@ -109,9 +156,25 @@ export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
         return aVal < bVal ? 1 : -1;
       }
     });
-  }, [data?.data, sortField, sortDirection]);
+    console.log(
+      "[TicketListEnhanced] useMemo - sorted tickets length:",
+      sorted.length
+    );
+    return sorted;
+  }, [ticketList, sortField, sortDirection]);
 
-  const pagination = data?.pagination;
+  // PaginatedResponse has total, page, pageSize, totalPages directly (not in a pagination object)
+  const pagination = data
+    ? {
+        total: (data as any).total,
+        page: (data as any).page,
+        page_size: (data as any).pageSize,
+        total_pages: (data as any).totalPages,
+      }
+    : null;
+
+  console.log("[TicketListEnhanced] pagination object:", pagination);
+  console.log("[TicketListEnhanced] tickets to render:", tickets.length);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -142,7 +205,7 @@ export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
 
   const handleBulkStatusChange = async (status: TicketStatus) => {
     if (selectedTickets.size === 0) return;
-    
+
     const ticketIds = Array.from(selectedTickets);
     try {
       await bulkUpdateStatus.mutateAsync({ ticketIds, status });
@@ -155,8 +218,17 @@ export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
     }
   };
 
-  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
-    <TableHead className="cursor-pointer hover:bg-slate-50" onClick={() => handleSort(field)}>
+  const SortableHeader = ({
+    field,
+    children,
+  }: {
+    field: SortField;
+    children: React.ReactNode;
+  }) => (
+    <TableHead
+      className="cursor-pointer hover:bg-slate-50"
+      onClick={() => handleSort(field)}
+    >
       <div className="flex items-center gap-2">
         {children}
         <ArrowUpDown className="h-4 w-4 text-slate-400" />
@@ -175,8 +247,8 @@ export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Bulk Actions Bar */}
-      {selectedTickets.size > 0 && (
+      {/* Bulk Actions Bar - Only for non-clients */}
+      {!isClient && selectedTickets.size > 0 && (
         <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="text-sm font-medium text-blue-900">
             {selectedTickets.size} ticket(s) selected
@@ -184,14 +256,18 @@ export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
           <div className="flex gap-2">
             <Select
               value=""
-              onValueChange={(value) => handleBulkStatusChange(value as TicketStatus)}
+              onValueChange={(value) =>
+                handleBulkStatusChange(value as TicketStatus)
+              }
             >
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Change status..." />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={TicketStatus.OPEN}>Open</SelectItem>
-                <SelectItem value={TicketStatus.IN_PROGRESS}>In Progress</SelectItem>
+                <SelectItem value={TicketStatus.IN_PROGRESS}>
+                  In Progress
+                </SelectItem>
                 <SelectItem value={TicketStatus.RESOLVED}>Resolved</SelectItem>
                 <SelectItem value={TicketStatus.CLOSED}>Closed</SelectItem>
               </SelectContent>
@@ -222,23 +298,39 @@ export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-12">
-                <Checkbox
-                  checked={selectedTickets.size === tickets.length && tickets.length > 0}
-                  onCheckedChange={handleSelectAll}
-                />
-              </TableHead>
-              {columns.map((col) => {
-                if (!visibleColumns.has(col.id)) return null;
-                if (col.id === "title" || col.id === "status" || col.id === "priority" || col.id === "createdAt") {
-                  return (
-                    <SortableHeader key={col.id} field={col.id as SortField}>
-                      {col.label}
-                    </SortableHeader>
-                  );
-                }
-                return <TableHead key={col.id}>{col.label}</TableHead>;
-              })}
+              {!isClient && (
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={
+                      selectedTickets.size === tickets.length &&
+                      tickets.length > 0
+                    }
+                    onCheckedChange={handleSelectAll}
+                  />
+                </TableHead>
+              )}
+              {columns
+                .filter(
+                  (col) =>
+                    !isClient ||
+                    (col.id !== "customer" && col.id !== "assignedTo")
+                )
+                .map((col) => {
+                  if (!visibleColumns.has(col.id)) return null;
+                  if (
+                    col.id === "title" ||
+                    col.id === "status" ||
+                    col.id === "priority" ||
+                    col.id === "createdAt"
+                  ) {
+                    return (
+                      <SortableHeader key={col.id} field={col.id as SortField}>
+                        {col.label}
+                      </SortableHeader>
+                    );
+                  }
+                  return <TableHead key={col.id}>{col.label}</TableHead>;
+                })}
               <TableHead className="text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -249,23 +341,29 @@ export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {columns.map((col) => (
-                      <DropdownMenuCheckboxItem
-                        key={col.id}
-                        checked={visibleColumns.has(col.id)}
-                        onCheckedChange={(checked) => {
-                          const newVisible = new Set(visibleColumns);
-                          if (checked) {
-                            newVisible.add(col.id);
-                          } else {
-                            newVisible.delete(col.id);
-                          }
-                          setVisibleColumns(newVisible);
-                        }}
-                      >
-                        {col.label}
-                      </DropdownMenuCheckboxItem>
-                    ))}
+                    {columns
+                      .filter(
+                        (col) =>
+                          !isClient ||
+                          (col.id !== "customer" && col.id !== "assignedTo")
+                      )
+                      .map((col) => (
+                        <DropdownMenuCheckboxItem
+                          key={col.id}
+                          checked={visibleColumns.has(col.id)}
+                          onCheckedChange={(checked) => {
+                            const newVisible = new Set(visibleColumns);
+                            if (checked) {
+                              newVisible.add(col.id);
+                            } else {
+                              newVisible.delete(col.id);
+                            }
+                            setVisibleColumns(newVisible);
+                          }}
+                        >
+                          {col.label}
+                        </DropdownMenuCheckboxItem>
+                      ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableHead>
@@ -278,44 +376,55 @@ export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
                 className="cursor-pointer hover:bg-gray-50"
                 onClick={() => onSelectTicket?.(ticket.id)}
               >
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <Checkbox
-                    checked={selectedTickets.has(ticket.id)}
-                    onCheckedChange={(checked) =>
-                      handleSelectTicket(ticket.id, checked as boolean)
-                    }
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </TableCell>
+                {!isClient && (
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selectedTickets.has(ticket.id)}
+                      onCheckedChange={(checked) =>
+                        handleSelectTicket(ticket.id, checked as boolean)
+                      }
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </TableCell>
+                )}
                 {visibleColumns.has("title") && (
                   <TableCell className="font-medium">{ticket.title}</TableCell>
                 )}
                 {visibleColumns.has("status") && (
                   <TableCell>
-                    <Badge className={statusColors[ticket.status] || "bg-gray-100"}>
+                    <Badge
+                      className={statusColors[ticket.status] || "bg-gray-100"}
+                    >
                       {ticket.status.replace("_", " ")}
                     </Badge>
                   </TableCell>
                 )}
                 {visibleColumns.has("priority") && (
                   <TableCell>
-                    <Badge className={priorityColors[ticket.priority] || "bg-gray-100"}>
+                    <Badge
+                      className={
+                        priorityColors[ticket.priority] || "bg-gray-100"
+                      }
+                    >
                       {ticket.priority}
                     </Badge>
                   </TableCell>
                 )}
                 {visibleColumns.has("customer") && (
-                  <TableCell>{ticket.customerId?.slice(0, 8) || "N/A"}</TableCell>
+                  <TableCell>
+                    {ticket.customerId?.slice(0, 8) || "N/A"}
+                  </TableCell>
                 )}
                 {visibleColumns.has("assignedTo") && (
                   <TableCell>{ticket.assignedTo || "Unassigned"}</TableCell>
                 )}
                 {visibleColumns.has("createdAt") && (
-                  <TableCell>
-                    {new Date(ticket.createdAt).toLocaleDateString()}
-                  </TableCell>
+                  <TableCell>{formatDateSafe(ticket.createdAt)}</TableCell>
                 )}
-                <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                <TableCell
+                  className="text-right"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm">
@@ -323,12 +432,20 @@ export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onSelectTicket?.(ticket.id)}>
+                      <DropdownMenuItem
+                        onClick={() => onSelectTicket?.(ticket.id)}
+                      >
                         View Details
                       </DropdownMenuItem>
-                      <DropdownMenuItem>Edit</DropdownMenuItem>
-                      <DropdownMenuItem>Assign</DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
+                      {!isClient && (
+                        <>
+                          <DropdownMenuItem>Edit</DropdownMenuItem>
+                          <DropdownMenuItem>Assign</DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-600">
+                            Delete
+                          </DropdownMenuItem>
+                        </>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -341,8 +458,9 @@ export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
       {pagination && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600">
-            Showing {(page - 1) * 20 + 1} to {Math.min(page * 20, pagination.total)} of{" "}
-            {pagination.total} tickets
+            Showing {(page - 1) * 20 + 1} to{" "}
+            {Math.min(page * 20, pagination.total)} of {pagination.total}{" "}
+            tickets
           </div>
           <div className="flex gap-2">
             <Button
@@ -356,7 +474,9 @@ export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setPage(Math.min(pagination.total_pages, page + 1))}
+              onClick={() =>
+                setPage(Math.min(pagination.total_pages, page + 1))
+              }
               disabled={page === pagination.total_pages}
             >
               <ChevronRight className="h-4 w-4" />
@@ -367,4 +487,3 @@ export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
     </div>
   );
 };
-

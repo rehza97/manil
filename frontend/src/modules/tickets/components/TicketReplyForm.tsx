@@ -11,6 +11,7 @@ import { RichTextEditor } from "@/shared/components/ui/rich-text-editor";
 import { ticketService } from "../services";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/shared/components/ui/badge";
+import { useAuth } from "@/modules/auth";
 
 interface TicketReplyFormProps {
   ticketId: string;
@@ -22,12 +23,14 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({
   onReplyAdded,
 }) => {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isClient = user?.role === "client";
   const [message, setMessage] = useState("");
   const [isInternal, setIsInternal] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch existing attachments
+  // Fetch existing attachments - disable for clients since endpoint returns 404
   const { data: existingAttachments = [], refetch: refetchAttachments } = useQuery({
     queryKey: ["ticket-attachments", ticketId],
     queryFn: async () => {
@@ -41,7 +44,7 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({
         throw error;
       }
     },
-    enabled: !!ticketId,
+    enabled: !!ticketId && !isClient, // Disable for clients to avoid 404 errors
     retry: (failureCount, error: any) => {
       // Don't retry on 404 errors
       if (error?.response?.status === 404) {
@@ -135,16 +138,19 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="internal"
-              checked={isInternal}
-              onCheckedChange={(checked) => setIsInternal(checked as boolean)}
-            />
-            <Label htmlFor="internal" className="text-sm font-normal cursor-pointer">
-              Internal note (visible to staff only)
-            </Label>
-          </div>
+          {/* Internal note checkbox - only for non-clients */}
+          {!isClient && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="internal"
+                checked={isInternal}
+                onCheckedChange={(checked) => setIsInternal(checked as boolean)}
+              />
+              <Label htmlFor="internal" className="text-sm font-normal cursor-pointer">
+                Internal note (visible to staff only)
+              </Label>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Attachments</Label>

@@ -4,7 +4,7 @@
  */
 
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useOrder, useDeleteOrder, useOrderTimeline } from "../hooks/useOrders";
 import type { OrderStatus } from "../types/order.types";
 import {
@@ -55,7 +55,22 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
 export function OrderDetail() {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
+  // Determine base path based on current location
+  const getBasePath = () => {
+    if (location.pathname.startsWith("/dashboard")) {
+      return "/dashboard/orders";
+    } else if (location.pathname.startsWith("/corporate")) {
+      return "/corporate/orders";
+    } else if (location.pathname.startsWith("/admin")) {
+      return "/admin/orders";
+    }
+    return "/dashboard/orders"; // Default to dashboard for clients
+  };
+  
+  const basePath = getBasePath();
 
   if (!orderId) {
     return (
@@ -72,17 +87,17 @@ export function OrderDetail() {
   const deleteOrderMutation = useDeleteOrder();
 
   const handleEdit = () => {
-    navigate(`/orders/${orderId}/edit`);
+    navigate(`${basePath}/${orderId}/edit`);
   };
 
   const handleChangeStatus = () => {
-    navigate(`/orders/${orderId}/status`);
+    navigate(`${basePath}/${orderId}/status`);
   };
 
   const handleDelete = async () => {
     try {
       await deleteOrderMutation.mutateAsync(orderId);
-      navigate("/orders");
+      navigate(basePath);
     } catch (error) {
       console.error("Failed to delete order:", error);
     }
@@ -127,7 +142,7 @@ export function OrderDetail() {
           <Button
             variant="ghost"
             className="mb-4"
-            onClick={() => navigate("/orders")}
+            onClick={() => navigate(basePath)}
           >
             ← Back to Orders
           </Button>

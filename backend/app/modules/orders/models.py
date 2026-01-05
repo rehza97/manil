@@ -49,15 +49,15 @@ class Order(Base):
     # Quote Reference (optional)
     quote_id: Mapped[Optional[str]] = mapped_column(
         String(36),
-        ForeignKey("quote_requests.id", ondelete="SET NULL"),
+        ForeignKey("quotes.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
-        doc="Reference to quote request if from quote",
+        doc="Reference to quote if order originated from quote",
     )
 
     # Order Status
     status: Mapped[OrderStatus] = mapped_column(
-        SQLEnum(OrderStatus, name="order_status_enum"),
+        SQLEnum(OrderStatus, name="order_status_enum", native_enum=True, values_callable=lambda x: [e.value for e in x]),
         default=OrderStatus.REQUEST,
         nullable=False,
         index=True,
@@ -298,12 +298,12 @@ class OrderTimeline(Base):
 
     # Status Change
     previous_status: Mapped[Optional[OrderStatus]] = mapped_column(
-        SQLEnum(OrderStatus, name="order_status_enum"),
+        SQLEnum(OrderStatus, name="order_status_enum", native_enum=True, values_callable=lambda x: [e.value for e in x]),
         nullable=True,
         doc="Previous status",
     )
     new_status: Mapped[OrderStatus] = mapped_column(
-        SQLEnum(OrderStatus, name="order_status_enum"),
+        SQLEnum(OrderStatus, name="order_status_enum", native_enum=True, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         doc="New status",
     )

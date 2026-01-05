@@ -37,8 +37,12 @@ export interface User {
 }
 
 // Get watchers for a ticket
-export const useWatchers = (ticketId: string) => {
+export const useWatchers = (ticketId: string, options?: { enabled?: boolean }) => {
   const queryClient = useQueryClient();
+  
+  // Explicitly check if query should be enabled
+  // If enabled is explicitly false, disable. Otherwise, enable if ticketId exists
+  const isEnabled = options?.enabled !== false && !!ticketId;
 
   const query = useQuery({
     queryKey: ['tickets', ticketId, 'watchers'],
@@ -51,12 +55,19 @@ export const useWatchers = (ticketId: string) => {
       } catch (error: any) {
         // Handle 404 gracefully - endpoint may not be implemented yet
         if (error?.response?.status === 404) {
+          console.warn(`Watchers endpoint not available for ticket ${ticketId}`);
           return [] as Watcher[];
         }
         throw error;
       }
     },
-    enabled: !!ticketId,
+    enabled: isEnabled,
+    // Prevent all refetching when disabled
+    refetchOnWindowFocus: false,
+    refetchOnMount: isEnabled,
+    refetchOnReconnect: false,
+    // Don't refetch on query invalidation if disabled
+    refetchInterval: false,
     retry: (failureCount, error: any) => {
       // Don't retry on 404 errors
       if (error?.response?.status === 404) {

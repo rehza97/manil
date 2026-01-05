@@ -30,6 +30,7 @@ from app.modules.customers.kyc_router import router as kyc_router
 from app.modules.customers.notes_router import router as notes_router
 from app.modules.tickets.router import router as tickets_router
 from app.modules.tickets.router_phase2 import router as tickets_phase2_router
+from app.modules.tickets.attachments_router import router as ticket_attachments_router
 from app.modules.tickets.routes.admin_support_routes import router as admin_support_router
 from app.modules.products.routes import router as products_router
 from app.modules.orders.routes import router as orders_router
@@ -70,11 +71,14 @@ async def lifespan(app: FastAPI):
         logger.warning(f"⚠️  Redis initialization failed: {e}")
         logger.warning("⚠️  Continuing without Redis cache")
 
-    # Initialize database (only in development)
-    if settings.ENVIRONMENT == "development" and settings.DEBUG:
-        logger.info("🗄️  Initializing database...")
+    # Initialize database (seeds admin user, settings, demo data, etc.)
+    logger.info("🗄️  Initializing database...")
+    try:
         await init_db()
         logger.info("✅ Database initialized successfully")
+    except Exception as e:
+        logger.warning(f"⚠️  Database initialization failed: {e}")
+        logger.warning("⚠️  Continuing startup - database may need manual initialization")
     
     # Always seed roles and permissions if they don't exist (idempotent)
     logger.info("🔐 Ensuring default roles and permissions are seeded...")
@@ -244,6 +248,7 @@ app.include_router(notes_router, prefix="/api/v1")
 # Register phase2 router FIRST so specific routes like /templates are matched before catch-all routes
 app.include_router(tickets_phase2_router, prefix="/api/v1")
 app.include_router(tickets_router, prefix="/api/v1")
+app.include_router(ticket_attachments_router, prefix="/api/v1")
 app.include_router(admin_support_router, prefix="/api/v1")
 app.include_router(products_router, prefix="/api/v1")
 app.include_router(orders_router, prefix="/api/v1")

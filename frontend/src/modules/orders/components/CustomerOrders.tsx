@@ -4,7 +4,7 @@
  */
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useCustomerOrders } from "../hooks/useOrders";
 import type { OrderStatus } from "../types/order.types";
 import {
@@ -62,8 +62,23 @@ export function CustomerOrders({
   className,
 }: CustomerOrdersProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
+  
+  // Determine base path based on current location
+  const getBasePath = () => {
+    if (location.pathname.startsWith("/dashboard")) {
+      return "/dashboard/orders";
+    } else if (location.pathname.startsWith("/corporate")) {
+      return "/corporate/orders";
+    } else if (location.pathname.startsWith("/admin")) {
+      return "/admin/orders";
+    }
+    return "/dashboard/orders"; // Default to dashboard for clients
+  };
+  
+  const basePath = getBasePath();
 
   const { data, isLoading, isError, error } = useCustomerOrders(
     customerId,
@@ -75,7 +90,7 @@ export function CustomerOrders({
     if (onOrderClick) {
       onOrderClick(orderId);
     } else {
-      navigate(`/orders/${orderId}`);
+      navigate(`${basePath}/${orderId}`);
     }
   };
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useTicket, useUpdateTicket } from "../hooks";
 import { TicketStatus } from "../types/ticket.types";
 import {
@@ -21,6 +21,7 @@ import { useToast } from "@/shared/components/ui/use-toast";
 import { format } from "date-fns";
 import { ticketService } from "../services";
 import { useUsers } from "@/modules/admin/hooks";
+import { useAuth } from "@/modules/auth";
 
 interface TicketDetailProps {
   ticketId: string;
@@ -57,21 +58,61 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
   onStatusChange,
 }) => {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isClient = user?.role === "client";
   const { data: ticket, isLoading } = useTicket(ticketId);
   const updateTicket = useUpdateTicket();
   const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [selectedAssignee, setSelectedAssignee] = useState<string>("");
   const [replyMessage, setReplyMessage] = useState("");
 
-  // Fetch staff users for assignment (corporate and admin roles)
-  const { data: usersData } = useUsers(1, 100);
+  // Fetch staff users for assignment (corporate and admin roles) - only for non-clients
+  const { data: usersData } = useUsers(1, 100, { enabled: !isClient });
   
   const staffUsers = useMemo(() => {
+    if (isClient) return [];
     const users = usersData?.data || [];
     return users.filter((user) => 
       user.role === "corporate" || user.role === "admin"
     );
-  }, [usersData]);
+  }, [usersData, isClient]);
+
+  // Set selected status when ticket loads or changes
+  useEffect(() => {
+    if (ticket?.status) {
+      // Ensure status is set, converting to lowercase to match SelectItem values
+      // The status from backend should already be in the correct format (e.g., "closed", "open", "in_progress")
+      const normalizedStatus = String(ticket.status).toLowerCase().trim();
+      console.log("[TicketDetail] Setting selectedStatus from ticket:", {
+        ticketStatus: ticket.status,
+        normalizedStatus,
+      });
+      setSelectedStatus(normalizedStatus);
+    } else {
+      // If no status, clear selection
+      setSelectedStatus("");
+    }
+  }, [ticket?.status]);
+
+  // Set selected assignee when ticket loads or changes
+  useEffect(() => {
+    if (ticket?.assignedTo && staffUsers.length > 0) {
+      // assignedTo is a user ID - find matching user in staffUsers
+      const assignedUser = staffUsers.find(
+        (user) => user.id === ticket.assignedTo
+      );
+      if (assignedUser) {
+        setSelectedAssignee(assignedUser.id);
+      } else if (ticket.assignedTo) {
+        // If it's a user ID that's not in the staffUsers list yet, still set it
+        // (user might not be loaded yet, or might not be admin/corporate)
+        setSelectedAssignee(ticket.assignedTo);
+      }
+    } else if (!ticket?.assignedTo) {
+      // Clear selection if ticket is unassigned
+      setSelectedAssignee("");
+    }
+  }, [ticket?.assignedTo, staffUsers]);
 
   if (isLoading) {
     return <div className="text-center py-8">Loading ticket details...</div>;
@@ -100,7 +141,8 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
         title: "Success",
         description: "Ticket status updated",
       });
-      setSelectedStatus("");
+      // Don't clear selectedStatus - keep it selected so user can see current status
+      // The useEffect will update it when ticket refetches
       onStatusChange?.();
     } catch (error: any) {
       toast({
@@ -112,6 +154,28 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
   };
 
   const handleAssignTicket = async () => {
+    if (selectedAssignee === "none") {
+      // Handle unassign
+      try {
+        // For unassign, we might need to pass null or empty string
+        // Check backend - it might accept null/empty to unassign
+        await ticketService.assign(ticketId, "");
+        toast({
+          title: "Success",
+          description: "Ticket unassigned successfully",
+        });
+        setSelectedAssignee("");
+        onStatusChange?.();
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to unassign ticket",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
     if (!selectedAssignee) {
       toast({
         title: "Error",
@@ -127,7 +191,8 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
         title: "Success",
         description: "Ticket assigned successfully",
       });
-      setSelectedAssignee("");
+      // Don't clear selectedAssignee - keep it selected so user can see who it's assigned to
+      // The useEffect will update it when ticket refetches
       onStatusChange?.();
     } catch (error: any) {
       toast({
@@ -183,40 +248,44 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {/* Ticket Info Grid */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="text-sm font-medium text-gray-600">Customer ID</div>
-              <div className="text-sm">{ticket.customerId}</div>
+          {/* Ticket Info Grid - Hide Customer ID and Assigned To for clients */}
+          {!isClient && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm font-medium text-gray-600">Customer ID</div>
+                <div className="text-sm">{ticket.customerId}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-gray-600">Assigned To</div>
+                <div className="text-sm">{ticket.assignedTo || "Unassigned"}</div>
+              </div>
             </div>
-            <div>
-              <div className="text-sm font-medium text-gray-600">Assigned To</div>
-              <div className="text-sm">{ticket.assignedTo || "Unassigned"}</div>
-            </div>
-          </div>
+          )}
 
-          {/* Assignment Interface */}
-          <div className="border-t pt-6">
-            <h3 className="font-medium mb-3">Assign Ticket</h3>
-            <div className="flex gap-2">
-              <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
-                <SelectTrigger className="w-64">
-                  <SelectValue placeholder="Select agent to assign" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Unassign</SelectItem>
-                  {staffUsers.map((user: any) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.full_name || user.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button onClick={handleAssignTicket} disabled={!selectedAssignee || selectedAssignee === "none"}>
-                Assign
-              </Button>
+          {/* Assignment Interface - Hide for clients */}
+          {!isClient && (
+            <div className="border-t pt-6">
+              <h3 className="font-medium mb-3">Assign Ticket</h3>
+              <div className="flex gap-2">
+                <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
+                  <SelectTrigger className="w-64">
+                    <SelectValue placeholder="Select agent to assign" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Unassign</SelectItem>
+                    {staffUsers.map((user: any) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.full_name || user.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleAssignTicket} disabled={!selectedAssignee || selectedAssignee === "none"}>
+                  Assign
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Response Times */}
           {(ticket.firstResponseAt || ticket.resolvedAt) && (
@@ -250,24 +319,29 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
             </div>
           </div>
 
-          {/* Status Management */}
-          <div className="border-t pt-6">
-            <h3 className="font-medium mb-3">Update Status</h3>
-            <div className="flex gap-2">
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Select new status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="open">Open</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
-                  <SelectItem value="closed">Closed</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button onClick={handleStatusChange}>Update Status</Button>
+          {/* Status Management - Hide for clients */}
+          {!isClient && (
+            <div className="border-t pt-6">
+              <h3 className="font-medium mb-3">Update Status</h3>
+              <div className="flex gap-2">
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Select new status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="answered">Answered</SelectItem>
+                    <SelectItem value="waiting_for_response">Waiting for Response</SelectItem>
+                    <SelectItem value="on_hold">On Hold</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleStatusChange}>Update Status</Button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Add Reply */}
           <div className="border-t pt-6">

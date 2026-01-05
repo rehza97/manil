@@ -245,6 +245,93 @@ export const vpsService = {
   },
 
   // ============================================================================
+  // Command Execution (Client)
+  // ============================================================================
+
+  /**
+   * Execute command in VPS container (client - own instances only)
+   */
+  async execCommand(
+    subscriptionId: string,
+    command: string,
+    tty: boolean = false
+  ): Promise<{ exit_code: number; output: string; command: string; executed_at: string }> {
+    const response = await apiClient.post(
+      `/hosting/instances/${subscriptionId}/exec`,
+      { command, tty }
+    );
+    return response.data;
+  },
+
+  // ============================================================================
+  // Docker Management (Client)
+  // ============================================================================
+
+  /**
+   * Install Docker and docker-compose in VPS container
+   * Uses fetch instead of axios to avoid timeout (Docker installation can take several minutes)
+   */
+  async installDocker(subscriptionId: string): Promise<{
+    success: boolean;
+    docker_version?: string;
+    compose_version?: string;
+    logs?: string[];
+    installed_at?: string;
+  }> {
+    const token = sessionStorage.getItem("access_token") || localStorage.getItem("access_token");
+    const baseUrl = apiClient.defaults.baseURL || "";
+    const url = `${baseUrl}/hosting/instances/${subscriptionId}/docker/install`;
+    
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      // No timeout - Docker installation can take several minutes
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: response.statusText }));
+      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  },
+
+  /**
+   * Run docker-compose command in VPS container
+   */
+  async runDockerCompose(
+    subscriptionId: string,
+    composeFile: string = "docker-compose.yml",
+    command: string = "up -d",
+    workingDir: string = "/data"
+  ): Promise<{
+    success: boolean;
+    exit_code: number;
+    output: string;
+    command: string;
+    executed_at: string;
+  }> {
+    const formData = new FormData();
+    formData.append("compose_file", composeFile);
+    formData.append("command", command);
+    formData.append("working_dir", workingDir);
+
+    const response = await apiClient.post(
+      `/hosting/instances/${subscriptionId}/docker/compose`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data;
+  },
+
+  // ============================================================================
   // Timeline Methods
   // ============================================================================
 
@@ -547,6 +634,43 @@ export const vpsService = {
     const response = await apiClient.post(
       `/hosting/admin/subscriptions/${subscriptionId}/exec`,
       { command, tty }
+    );
+    return response.data;
+  },
+
+  // ============================================================================
+  // File Deployment (Client)
+  // ============================================================================
+
+  /**
+   * Deploy files directly to VPS container (client - own instances only)
+   */
+  async deployFiles(
+    subscriptionId: string,
+    file: File,
+    targetPath: string = "/data"
+  ): Promise<{
+    success: boolean;
+    subscription_id: string;
+    target_path: string;
+    files_deployed: number;
+    archive_size: number;
+    deployed_at: string;
+    logs?: string[];
+    error?: string;
+  }> {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("target_path", targetPath);
+
+    const response = await apiClient.post(
+      `/hosting/instances/${subscriptionId}/deploy/files`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
     );
     return response.data;
   },

@@ -3,13 +3,19 @@ VPS Hosting Client API routes.
 
 Customer-facing endpoints for managing VPS subscriptions.
 """
-from typing import Optional, List
+from typing import Optional, List, AsyncGenerator
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, UploadFile, File, Form, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import StreamingResponse
+from pydantic import BaseModel, Field
 import json
+import tempfile
+import os
+from pathlib import Path
+import asyncio
+import threading
 
 from app.config.database import get_db
 from app.core.dependencies import get_current_user, require_permission
@@ -638,6 +644,831 @@ async def reboot_container(
 
 
 # ============================================================================
+# Command Execution
+# ============================================================================
+
+class ExecCommandRequest(BaseModel):
+    """Schema for executing a command in VPS container."""
+    command: str = Field(..., min_length=1, max_length=1000, description="Command to execute")
+    tty: bool = Field(default=False, description="Allocate pseudo-TTY for interactive commands")
+
+
+@router.post(
+    "/instances/{subscription_id}/exec",
+    summary="Execute Command in VPS Container",
+    description="""
+    Execute a command in the VPS container and return output.
+    
+    **Permissions Required:** `hosting:manage`
+    
+    **Security:** Users can only execute commands on their own VPS instances.
+    
+    **Security Note:** Commands are executed as root. Use with caution.
+    """
+)
+async def exec_container_command(
+    subscription_id: str,
+    request: ExecCommandRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.HOSTING_MANAGE)),
+):
+    """Execute command in VPS container (client)."""
+    repo = VPSSubscriptionRepository(db)
+    subscription = await repo.get_by_id(subscription_id)
+    
+    if not subscription:
+        raise NotFoundException(f"Subscription {subscription_id} not found")
+    
+    # Security: only own subscriptions
+    if subscription.customer_id != current_user.id:
+        raise NotFoundException(f"Subscription {subscription_id} not found")
+    
+    if not subscription.container:
+        raise NotFoundException(f"Container not found for subscription {subscription_id}")
+    
+    docker_service = DockerManagementService(db)
+    result = await docker_service.exec_command(
+        container_id=subscription.container.container_id,
+        command=request.command,
+        tty=request.tty
+    )
+    
+    if result is None:
+        raise BadRequestException("Failed to execute command. Docker may not be available.")
+    
+    return {
+        "subscription_id": subscription_id,
+        "command": request.command,
+        "exit_code": result.get("exit_code", -1),
+        "output": result.get("output", ""),
+        "executed_at": datetime.utcnow().isoformat()
+    }
+
+
+@router.get(
+    "/instances/{subscription_id}/exec/stream",
+    summary="Stream Command Execution Output",
+    description="""
+    Execute a command in the VPS container and stream output via SSE.
+    
+    **Permissions Required:** `hosting:manage`
+    
+    **Security:** Users can only execute commands on their own VPS instances.
+    
+    **Query Parameters:**
+    - command: Command to execute (required)
+    - tty: Allocate pseudo-TTY (default: false)
+    
+    **Use Case:** For long-running commands or interactive terminal sessions.
+    """
+)
+async def stream_exec_command(
+    subscription_id: str,
+    command: str = Query(..., min_length=1, max_length=1000, description="Command to execute"),
+    tty: bool = Query(False, description="Allocate pseudo-TTY"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.HOSTING_MANAGE)),
+):
+    """Stream command execution output (client)."""
+    repo = VPSSubscriptionRepository(db)
+    subscription = await repo.get_by_id(subscription_id)
+    
+    if not subscription:
+        raise NotFoundException(f"Subscription {subscription_id} not found")
+    
+    # Security: only own subscriptions
+    if subscription.customer_id != current_user.id:
+        raise NotFoundException(f"Subscription {subscription_id} not found")
+    
+    if not subscription.container:
+        raise NotFoundException(f"Container not found for subscription {subscription_id}")
+    
+    docker_service = DockerManagementService(db)
+    container_id = subscription.container.container_id
+    
+    def event_stream():
+        # Always yield the open event first to ensure a response is returned
+        try:
+            yield "event: open\ndata: connected\n\n"
+        except GeneratorExit:
+            raise
+        
+        try:
+            if not docker_service.docker_available:
+                yield f"event: error\ndata: {json.dumps({'error': 'Docker not available'})}\n\n"
+                return
+            
+            output_gen = docker_service.exec_command_stream(
+                container_id=container_id,
+                command=command,
+                tty=tty
+            )
+            
+            for chunk in output_gen:
+                if chunk:
+                    # Escape newlines for SSE
+                    escaped = chunk.replace('\n', '\\n').replace('\r', '\\r')
+                    try:
+                        yield f"data: {escaped}\n\n"
+                    except GeneratorExit:
+                        raise
+            
+            try:
+                yield "event: close\ndata: command_completed\n\n"
+            except GeneratorExit:
+                raise
+        except GeneratorExit:
+            # Client disconnected - let it propagate for proper cleanup
+            logger.info(f"Client disconnected during exec stream for container {container_id}")
+            raise
+        except Exception as e:
+            logger.error(f"Error executing command in container {container_id}: {e}", exc_info=True)
+            try:
+                payload = json.dumps({"error": str(e)})
+                yield f"event: error\ndata: {payload}\n\n"
+            except GeneratorExit:
+                raise
+            except:
+                pass  # Ignore other errors when client has disconnected
+    
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.websocket("/instances/{subscription_id}/terminal")
+async def websocket_terminal(
+    websocket: WebSocket,
+    subscription_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    WebSocket endpoint for interactive terminal session.
+    
+    Provides bidirectional terminal communication:
+    - Client sends: keystrokes/input
+    - Server sends: command output
+    
+    Query params:
+    - token: JWT authentication token
+    """
+    def _extract_bearer_token(authorization: str | None) -> str | None:
+        if not authorization:
+            return None
+        parts = authorization.split(" ", 1)
+        if len(parts) != 2:
+            return None
+        scheme, token_val = parts[0].strip(), parts[1].strip()
+        if scheme.lower() != "bearer" or not token_val:
+            return None
+        return token_val
+
+    await websocket.accept()
+
+    try:
+        # Token can be passed via query param (browser-friendly) or Authorization header (non-browser clients)
+        token = websocket.query_params.get("token") or _extract_bearer_token(websocket.headers.get("authorization"))
+        if not token:
+            await websocket.close(code=1008, reason="Authentication required")
+            return
+        
+        # Verify token and get user
+        from app.core.security import decode_token
+        from app.modules.auth.repository import UserRepository
+        
+        payload = decode_token(token)
+        if not payload:
+            await websocket.close(code=1008, reason="Invalid token")
+            return
+        
+        user_id = payload.get("sub")
+        if not user_id:
+            await websocket.close(code=1008, reason="Invalid token")
+            return
+        
+        user_repo = UserRepository(db)
+        user = await user_repo.get_by_id(user_id)
+        if not user:
+            await websocket.close(code=1008, reason="User not found")
+            return
+        
+        # Get subscription and verify ownership
+        repo = VPSSubscriptionRepository(db)
+        subscription = await repo.get_by_id(subscription_id)
+        
+        if not subscription:
+            await websocket.close(code=1008, reason="Subscription not found")
+            return
+        
+        if subscription.customer_id != user.id:
+            await websocket.close(code=1008, reason="Access denied")
+            return
+        
+        if not subscription.container:
+            await websocket.close(code=1008, reason="Container not found")
+            return
+        
+        docker_service = DockerManagementService(db)
+        container_id = subscription.container.container_id
+        
+        if not docker_service.docker_available:
+            await websocket.send_text(json.dumps({
+                "type": "error",
+                "message": "Docker not available"
+            }))
+            await websocket.close()
+            return
+        
+        # Get container and create exec instance
+        container = docker_service.client.containers.get(container_id)
+        
+        # Create interactive shell session (docker-py Container does not expose exec_create/exec_start)
+        # Use exec_run with socket=True to get a raw socket for bidirectional I/O.
+        exec_result = container.exec_run(
+            cmd="/bin/bash -i",
+            tty=True,
+            stdin=True,
+            socket=True,
+            environment={"TERM": "xterm-256color"},
+            user="root",
+        )
+        exec_socket = getattr(exec_result, "output", exec_result)
+        
+        # Send welcome message
+        await websocket.send_text(json.dumps({
+            "type": "output",
+            "data": "\r\n\x1b[32mConnected to VPS Terminal\x1b[0m\r\n"
+        }))
+        
+        # Queues for communication
+        input_queue = asyncio.Queue()
+        output_queue = asyncio.Queue()
+        stop_event = threading.Event()
+        loop = asyncio.get_running_loop()
+        
+        # Get the actual socket from the exec_socket object
+        docker_sock = exec_socket._sock if hasattr(exec_socket, "_sock") else exec_socket
+
+        # Trigger initial prompt/output (bash often won't print until it receives input)
+        try:
+          docker_sock.sendall(b"\n")
+        except Exception:
+          pass
+        
+        # Thread to read from Docker exec socket
+        def read_from_docker():
+            try:
+                while not stop_event.is_set():
+                    try:
+                        # Read from socket (non-blocking with timeout)
+                        docker_sock.settimeout(0.1)
+                        chunk = docker_sock.recv(4096)
+                        if chunk == b"":
+                            break  # socket closed
+                        if chunk:
+                            asyncio.run_coroutine_threadsafe(output_queue.put(chunk), loop)
+                    except Exception as e:
+                        # Timeout or other error - check if we should continue
+                        if stop_event.is_set():
+                            break
+                        if "timed out" not in str(e).lower():
+                            logger.debug(f"Socket read: {e}")
+                        continue
+            except Exception as e:
+                logger.error(f"Error reading from Docker: {e}")
+            finally:
+                asyncio.run_coroutine_threadsafe(output_queue.put(None), loop)  # Signal end
+        
+        # Thread to write to Docker exec socket
+        def write_to_docker():
+            import concurrent.futures
+            try:
+                while not stop_event.is_set():
+                    try:
+                        fut = asyncio.run_coroutine_threadsafe(input_queue.get(), loop)
+                        data = fut.result(timeout=0.1)
+                        if data is None:
+                            break
+                        docker_sock.sendall(data)
+                    except concurrent.futures.TimeoutError:
+                        continue
+                    except Exception as e:
+                        if not stop_event.is_set():
+                            logger.error(f"Error writing to Docker: {e}")
+                        break
+            except Exception as e:
+                logger.error(f"Error in write thread: {e}")
+        
+        # Start threads
+        read_thread = threading.Thread(target=read_from_docker, daemon=True)
+        write_thread = threading.Thread(target=write_to_docker, daemon=True)
+        read_thread.start()
+        write_thread.start()
+        
+        # Handle output from Docker
+        async def handle_output():
+            while True:
+                chunk = await output_queue.get()
+                if chunk is None:
+                    break
+                try:
+                    text = chunk.decode('utf-8', errors='replace')
+                    await websocket.send_text(json.dumps({
+                        "type": "output",
+                        "data": text
+                    }))
+                except Exception as e:
+                    logger.error(f"Error sending output: {e}")
+                    break
+        
+        output_task = asyncio.create_task(handle_output())
+        
+        # Handle WebSocket messages
+        try:
+            while True:
+                message = await websocket.receive_text()
+                try:
+                    data = json.loads(message)
+                    
+                    if data.get("type") == "input":
+                        # Send input to Docker
+                        input_data = data.get("data", "").encode('utf-8')
+                        await input_queue.put(input_data)
+                    elif data.get("type") == "resize":
+                        # Handle terminal resize (optional)
+                        pass
+                except json.JSONDecodeError:
+                    # If not JSON, treat as raw input
+                    await input_queue.put(message.encode('utf-8'))
+                    
+        except WebSocketDisconnect:
+            logger.info(f"WebSocket disconnected for subscription {subscription_id}")
+        except Exception as e:
+            logger.error(f"WebSocket error: {e}", exc_info=True)
+        finally:
+            # Cleanup
+            stop_event.set()
+            await input_queue.put(None)
+            output_task.cancel()
+            try:
+                await output_task
+            except asyncio.CancelledError:
+                pass
+            try:
+                docker_sock.close()
+            except Exception:
+                pass
+            
+            try:
+                await websocket.close()
+            except:
+                pass
+            finally:
+                await db.close()
+    
+    except Exception as e:
+        logger.error(f"Terminal WebSocket error: {e}", exc_info=True)
+        try:
+            await websocket.close(code=1011, reason=str(e))
+        except Exception:
+            pass
+
+        finally:
+            await db.close()
+
+
+# ============================================================================
+# File Deployment
+# ============================================================================
+
+@router.post(
+    "/instances/{subscription_id}/deploy/files",
+    summary="Deploy Files to VPS Container",
+    description="""
+    Upload and deploy project files directly to the VPS container's /data directory.
+    
+    **Permissions Required:** `hosting:manage`
+    
+    **Security:** Users can only deploy files to their own VPS instances.
+    
+    **Process:**
+    1. Upload archive (zip, tar, tar.gz)
+    2. Extract archive
+    3. Copy files to container's /data directory
+    
+    **File Size Limit:** 500 MB
+    """
+)
+async def deploy_files_to_container(
+    subscription_id: str,
+    file: UploadFile = File(..., description="Project archive (zip, tar, tar.gz)"),
+    target_path: str = Form("/data", description="Target directory in container"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.HOSTING_MANAGE)),
+):
+    """Deploy files directly to VPS container (client)."""
+    repo = VPSSubscriptionRepository(db)
+    subscription = await repo.get_by_id(subscription_id)
+    
+    if not subscription:
+        raise NotFoundException(f"Subscription {subscription_id} not found")
+    
+    # Security: only own subscriptions
+    if subscription.customer_id != current_user.id:
+        raise NotFoundException(f"Subscription {subscription_id} not found")
+    
+    if not subscription.container:
+        raise NotFoundException(f"Container not found for subscription {subscription_id}")
+    
+    # Validate file type
+    filename = file.filename or "archive"
+    allowed_extensions = ['.zip', '.tar', '.gz', '.tar.gz']
+    if not any(filename.lower().endswith(ext) for ext in allowed_extensions):
+        raise BadRequestException(
+            f"Invalid file type. Allowed: {', '.join(allowed_extensions)}"
+        )
+    
+    # Save uploaded file temporarily
+    temp_file = None
+    try:
+        # Create temp file
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=Path(filename).suffix)
+        
+        # Read and save file (with size limit: 500 MB)
+        max_size = 500 * 1024 * 1024  # 500 MB
+        file_size = 0
+        while chunk := await file.read(8192):
+            file_size += len(chunk)
+            if file_size > max_size:
+                raise BadRequestException("File too large. Maximum size: 500 MB")
+            temp_file.write(chunk)
+        
+        temp_file.close()
+        
+        # Deploy to container
+        docker_service = DockerManagementService(db)
+        result = await docker_service.deploy_files_to_container(
+            container_id=subscription.container.container_id,
+            archive_path=temp_file.name,
+            target_path=target_path
+        )
+        
+        if not result.get("success"):
+            # Return failure with logs if available
+            error_msg = result.get('error', 'Unknown error')
+            return {
+                "subscription_id": subscription_id,
+                "success": False,
+                "error": error_msg,
+                "target_path": target_path,
+                "archive_size": file_size,
+                "deployed_at": datetime.utcnow().isoformat(),
+                "logs": result.get("logs", [])
+            }
+        
+        return {
+            "subscription_id": subscription_id,
+            "success": True,
+            "target_path": target_path,
+            "files_deployed": result.get("files_deployed", 0),
+            "archive_size": file_size,
+            "deployed_at": datetime.utcnow().isoformat(),
+            "logs": result.get("logs", [])
+        }
+        
+    except BadRequestException as e:
+        # Re-raise BadRequestException as-is (for validation errors)
+        raise
+    except Exception as e:
+        logger.error(f"Failed to deploy files to container: {e}", exc_info=True)
+        raise BadRequestException(f"Deployment failed: {str(e)}")
+    finally:
+        # Cleanup temp file
+        if temp_file and os.path.exists(temp_file.name):
+            os.unlink(temp_file.name)
+
+
+@router.post(
+    "/instances/{subscription_id}/deploy/files/stream",
+    summary="Deploy Files to VPS Container (Streaming)",
+    description="""
+    Upload and deploy project files with real-time log streaming via SSE.
+    
+    **Permissions Required:** `hosting:manage`
+    
+    **Security:** Users can only deploy files to their own VPS instances.
+    
+    **Process:**
+    1. Upload archive (zip, tar, tar.gz)
+    2. Stream deployment logs in real-time
+    3. Extract archive and copy files to container
+    
+    **File Size Limit:** 500 MB
+    """
+)
+async def deploy_files_to_container_stream(
+    subscription_id: str,
+    file: UploadFile = File(..., description="Project archive (zip, tar, tar.gz)"),
+    target_path: str = Form("/data", description="Target directory in container"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.HOSTING_MANAGE)),
+):
+    """Deploy files with streaming logs (client)."""
+    repo = VPSSubscriptionRepository(db)
+    subscription = await repo.get_by_id(subscription_id)
+    
+    if not subscription:
+        raise NotFoundException(f"Subscription {subscription_id} not found")
+    
+    # Security: only own subscriptions
+    if subscription.customer_id != current_user.id:
+        raise NotFoundException(f"Subscription {subscription_id} not found")
+    
+    if not subscription.container:
+        raise NotFoundException(f"Container not found for subscription {subscription_id}")
+    
+    # Validate file type
+    filename = file.filename or "archive"
+    allowed_extensions = ['.zip', '.tar', '.gz', '.tar.gz']
+    if not any(filename.lower().endswith(ext) for ext in allowed_extensions):
+        raise BadRequestException(
+            f"Invalid file type. Allowed: {', '.join(allowed_extensions)}"
+        )
+    
+    async def event_stream():
+        temp_file = None
+        try:
+            yield "event: open\ndata: connected\n\n"
+            
+            # Save uploaded file temporarily
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=Path(filename).suffix)
+            
+            # Read and save file (with size limit: 500 MB)
+            max_size = 500 * 1024 * 1024  # 500 MB
+            file_size = 0
+            
+            yield f"data: [Upload] Starting file upload...\n\n"
+            
+            while chunk := await file.read(8192):
+                file_size += len(chunk)
+                if file_size > max_size:
+                    yield f"event: error\ndata: {json.dumps({'error': 'File too large. Maximum size: 500 MB'})}\n\n"
+                    return
+                temp_file.write(chunk)
+            
+            temp_file.close()
+            yield f"data: [Upload] File uploaded successfully ({(file_size / 1024 / 1024):.2f} MB)\n\n"
+            
+            # Now stream the deployment
+            docker_service = DockerManagementService(db)
+            for log_line in docker_service.deploy_files_to_container_stream(
+                container_id=subscription.container.container_id,
+                archive_path=temp_file.name,
+                target_path=target_path
+            ):
+                yield log_line
+                
+        except GeneratorExit:
+            logger.info(f"Client disconnected during deployment stream for subscription {subscription_id}")
+            raise
+        except Exception as e:
+            logger.error(f"Error in deployment stream: {e}", exc_info=True)
+            try:
+                yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+            except GeneratorExit:
+                raise
+        finally:
+            # Cleanup temp file
+            if temp_file and os.path.exists(temp_file.name):
+                try:
+                    os.unlink(temp_file.name)
+                except:
+                    pass
+            try:
+                yield "event: close\ndata: stream_ended\n\n"
+            except GeneratorExit:
+                raise
+    
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.post(
+    "/instances/{subscription_id}/docker/install",
+    summary="Install Docker in VPS Container",
+    description="""
+    Install Docker and docker-compose in the VPS container.
+    
+    **Permissions Required:** `hosting:manage`
+    
+    **Security:** Users can only install Docker on their own VPS instances.
+    
+    **Note:** This operation may take several minutes. The container must be running.
+    """
+)
+async def install_docker_in_container(
+    subscription_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.HOSTING_MANAGE)),
+):
+    """Install Docker in VPS container (client)."""
+    repo = VPSSubscriptionRepository(db)
+    subscription = await repo.get_by_id(subscription_id)
+    
+    if not subscription:
+        raise NotFoundException(f"Subscription {subscription_id} not found")
+    
+    # Security: only own subscriptions
+    if subscription.customer_id != current_user.id:
+        raise NotFoundException(f"Subscription {subscription_id} not found")
+    
+    if not subscription.container:
+        raise NotFoundException(f"Container not found for subscription {subscription_id}")
+    
+    docker_service = DockerManagementService(db)
+    result = await docker_service.install_docker_in_container(
+        container_id=subscription.container.container_id
+    )
+    
+    if not result.get("success"):
+        raise BadRequestException(result.get("error", "Failed to install Docker"))
+    
+    return {
+        "subscription_id": subscription_id,
+        "success": True,
+        "docker_version": result.get("docker_version"),
+        "compose_version": result.get("compose_version"),
+        "logs": result.get("logs", []),
+        "installed_at": datetime.utcnow().isoformat()
+    }
+
+
+@router.post(
+    "/instances/{subscription_id}/docker/compose",
+    summary="Run Docker Compose Command",
+    description="""
+    Execute a docker-compose command in the VPS container.
+    
+    **Permissions Required:** `hosting:manage`
+    
+    **Security:** Users can only run docker-compose on their own VPS instances.
+    
+    **Request Body:**
+    - compose_file: Path to docker-compose.yml (default: "docker-compose.yml")
+    - command: Command to run (default: "up -d")
+    - working_dir: Working directory (default: "/data")
+    
+    **Common Commands:**
+    - "up -d": Start services in detached mode
+    - "down": Stop and remove services
+    - "ps": List running services
+    - "logs": Show logs
+    - "restart": Restart services
+    """
+)
+async def run_docker_compose(
+    subscription_id: str,
+    compose_file: str = Form("docker-compose.yml"),
+    command: str = Form("up -d"),
+    working_dir: str = Form("/data"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.HOSTING_MANAGE)),
+):
+    """Run docker-compose command in VPS container (client)."""
+    repo = VPSSubscriptionRepository(db)
+    subscription = await repo.get_by_id(subscription_id)
+    
+    if not subscription:
+        raise NotFoundException(f"Subscription {subscription_id} not found")
+    
+    # Security: only own subscriptions
+    if subscription.customer_id != current_user.id:
+        raise NotFoundException(f"Subscription {subscription_id} not found")
+    
+    if not subscription.container:
+        raise NotFoundException(f"Container not found for subscription {subscription_id}")
+    
+    docker_service = DockerManagementService(db)
+    result = await docker_service.run_docker_compose(
+        container_id=subscription.container.container_id,
+        compose_file_path=compose_file,
+        command=command,
+        working_dir=working_dir
+    )
+    
+    if not result.get("success"):
+        raise BadRequestException(result.get("error", "Failed to run docker-compose command"))
+    
+    return {
+        "subscription_id": subscription_id,
+        "success": True,
+        "exit_code": result.get("exit_code", 0),
+        "output": result.get("output", ""),
+        "command": result.get("command", ""),
+        "executed_at": datetime.utcnow().isoformat()
+    }
+
+
+@router.post(
+    "/instances/{subscription_id}/docker/compose/stream",
+    summary="Run Docker Compose Command (Streaming)",
+    description="""
+    Execute a docker-compose command in the VPS container with real-time log streaming via SSE.
+    
+    **Permissions Required:** `hosting:manage`
+    
+    **Security:** Users can only run docker-compose on their own VPS instances.
+    
+    **Request Body:**
+    - compose_file: Path to docker-compose.yml (default: "docker-compose.yml")
+    - command: Command to run (default: "up -d")
+    - working_dir: Working directory (default: "/data")
+    
+    **Common Commands:**
+    - "up -d": Start services in detached mode
+    - "down": Stop and remove services
+    - "ps": List running services
+    - "logs": Show logs
+    - "restart": Restart services
+    """
+)
+async def run_docker_compose_stream(
+    subscription_id: str,
+    compose_file: str = Form("docker-compose.yml"),
+    command: str = Form("up -d"),
+    working_dir: str = Form("/data"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.HOSTING_MANAGE)),
+):
+    """Run docker-compose command with streaming logs (client)."""
+    repo = VPSSubscriptionRepository(db)
+    subscription = await repo.get_by_id(subscription_id)
+    
+    if not subscription:
+        raise NotFoundException(f"Subscription {subscription_id} not found")
+    
+    # Security: only own subscriptions
+    if subscription.customer_id != current_user.id:
+        raise NotFoundException(f"Subscription {subscription_id} not found")
+    
+    if not subscription.container:
+        raise NotFoundException(f"Container not found for subscription {subscription_id}")
+    
+    async def event_stream():
+        try:
+            yield "event: open\ndata: connected\n\n"
+            
+            docker_service = DockerManagementService(db)
+            # Stream from the blocking generator
+            # We iterate synchronously since this is a generator that yields immediately
+            for log_line in docker_service.run_docker_compose_stream(
+                container_id=subscription.container.container_id,
+                compose_file_path=compose_file,
+                command=command,
+                working_dir=working_dir
+            ):
+                yield log_line
+                
+        except GeneratorExit:
+            logger.info(f"Client disconnected during docker-compose stream for subscription {subscription_id}")
+            raise
+        except Exception as e:
+            logger.error(f"Error in docker-compose stream: {e}", exc_info=True)
+            try:
+                yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+            except GeneratorExit:
+                raise
+        finally:
+            try:
+                yield "event: close\ndata: stream_ended\n\n"
+            except GeneratorExit:
+                raise
+    
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+# ============================================================================
 # Metrics & Stats
 # ============================================================================
 
@@ -949,6 +1780,5 @@ async def get_subscription_timeline(
     
     timeline_repo = SubscriptionTimelineRepository(db)
     timeline = await timeline_repo.get_by_subscription_id(subscription_id, limit=100)
-    
-    return [SubscriptionTimelineResponse.model_validate(event) for event in timeline]
 
+    return [SubscriptionTimelineResponse.model_validate(event) for event in timeline]

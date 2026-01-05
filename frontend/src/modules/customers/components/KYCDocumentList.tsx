@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { format } from "date-fns";
+import { formatDateSafe } from "@/shared/utils/formatters";
 import {
   useKYCDocuments,
   useDeleteKYCDocument,
@@ -157,11 +157,11 @@ export function KYCDocumentList({
                         <KYCStatusBadge status={document.status} />
                       </TableCell>
                       <TableCell>
-                        {format(new Date(document.createdAt), "MMM dd, yyyy")}
+                        {formatDateSafe(document.createdAt)}
                       </TableCell>
                       <TableCell>
                         {document.expiresAt ? (
-                          format(new Date(document.expiresAt), "MMM dd, yyyy")
+                          formatDateSafe(document.expiresAt)
                         ) : (
                           <span className="text-gray-400">N/A</span>
                         )}
@@ -210,7 +210,8 @@ export function KYCDocumentList({
 
           {documents && documents.length > 0 && (
             <div className="mt-4 text-sm text-gray-600">
-              Total: {documents.length} document{documents.length !== 1 ? "s" : ""}
+              Total: {documents.length} document
+              {documents.length !== 1 ? "s" : ""}
             </div>
           )}
         </CardContent>

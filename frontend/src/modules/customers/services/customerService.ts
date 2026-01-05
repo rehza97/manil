@@ -19,6 +19,38 @@ import type {
 } from "../types";
 
 /**
+ * Transform snake_case API response to camelCase Customer
+ */
+function transformCustomer(apiCustomer: any): Customer {
+  return {
+    id: apiCustomer.id,
+    name: apiCustomer.name || apiCustomer.full_name,
+    email: apiCustomer.email,
+    phone: apiCustomer.phone || "",
+    status:
+      apiCustomer.status ||
+      (apiCustomer.is_active
+        ? CustomerStatus.ACTIVE
+        : CustomerStatus.SUSPENDED),
+    customerType:
+      apiCustomer.customer_type ||
+      apiCustomer.customerType ||
+      CustomerType.individual,
+    companyName: apiCustomer.company_name || apiCustomer.companyName,
+    taxId: apiCustomer.tax_id || apiCustomer.taxId,
+    address: apiCustomer.address,
+    city: apiCustomer.city,
+    state: apiCustomer.state,
+    country: apiCustomer.country,
+    postalCode: apiCustomer.postal_code || apiCustomer.postalCode,
+    createdAt: apiCustomer.created_at || apiCustomer.createdAt,
+    updatedAt: apiCustomer.updated_at || apiCustomer.updatedAt,
+    createdBy: apiCustomer.created_by || apiCustomer.createdBy,
+    updatedBy: apiCustomer.updated_by || apiCustomer.updatedBy,
+  };
+}
+
+/**
  * Customer service - uses centralized customersApi
  * Provides module-specific interface aligned with component needs
  */
@@ -42,14 +74,25 @@ export const customerService = {
       status: filters?.status,
       search: filters?.search,
     });
-    return response as CustomerListResponse;
+
+    // Transform snake_case to camelCase
+    const transformedData = {
+      data: (response.items || response.data || []).map(transformCustomer),
+      total: response.total || 0,
+      page: page,
+      page_size: pageSize,
+      total_pages: Math.ceil((response.total || 0) / pageSize),
+    };
+
+    return transformedData;
   },
 
   /**
    * Get customer by ID
    */
   async getById(id: string): Promise<Customer> {
-    return await customersApi.getCustomer(id);
+    const customer = await customersApi.getCustomer(id);
+    return transformCustomer(customer);
   },
 
   /**
@@ -75,21 +118,23 @@ export const customerService = {
     // CustomerType enum values are "individual" and "corporate" (lowercase strings)
     // Ensure we always send lowercase string values to the backend
     let customerTypeValue: "individual" | "corporate" = "individual";
-    
+
     if (data.customerType !== undefined && data.customerType !== null) {
       // Handle enum value - extract the actual string value
       if (typeof data.customerType === "string") {
         // If it's already a string, normalize to lowercase
         const typeStr = data.customerType.toLowerCase();
-        customerTypeValue = typeStr === "corporate" ? "corporate" : "individual";
+        customerTypeValue =
+          typeStr === "corporate" ? "corporate" : "individual";
       } else {
         // If it's an enum object, use its value (which should be lowercase)
         // TypeScript string enums serialize to their value
         const typeStr = String(data.customerType).toLowerCase();
-        customerTypeValue = typeStr === "corporate" ? "corporate" : "individual";
+        customerTypeValue =
+          typeStr === "corporate" ? "corporate" : "individual";
       }
     }
-    
+
     const backendData = {
       name: data.name,
       email: data.email,
@@ -103,11 +148,21 @@ export const customerService = {
       country: data.country || undefined,
       postal_code: data.postalCode || undefined,
     };
-    
-    console.log("[customerService.create] Input data.customerType:", data.customerType, typeof data.customerType);
-    console.log("[customerService.create] Transformed customer_type:", customerTypeValue);
-    console.log("[customerService.create] Full backend data:", JSON.stringify(backendData, null, 2));
-    
+
+    console.log(
+      "[customerService.create] Input data.customerType:",
+      data.customerType,
+      typeof data.customerType
+    );
+    console.log(
+      "[customerService.create] Transformed customer_type:",
+      customerTypeValue
+    );
+    console.log(
+      "[customerService.create] Full backend data:",
+      JSON.stringify(backendData, null, 2)
+    );
+
     return await customersApi.createCustomer(backendData);
   },
 
@@ -117,23 +172,27 @@ export const customerService = {
   async update(id: string, data: UpdateCustomerDTO): Promise<Customer> {
     // Transform from frontend format (camelCase) to backend format (snake_case)
     const backendData: any = {};
-    
+
     if (data.name !== undefined) backendData.name = data.name; // Backend expects 'name', not 'full_name'
     if (data.email !== undefined) backendData.email = data.email;
     if (data.phone !== undefined) backendData.phone = data.phone;
     if (data.customerType !== undefined) {
       // Convert enum to lowercase string value
-      backendData.customer_type = (data.customerType === "corporate" ? "corporate" : "individual") as "individual" | "corporate";
+      backendData.customer_type = (
+        data.customerType === "corporate" ? "corporate" : "individual"
+      ) as "individual" | "corporate";
     }
-    if (data.companyName !== undefined) backendData.company_name = data.companyName;
+    if (data.companyName !== undefined)
+      backendData.company_name = data.companyName;
     if (data.taxId !== undefined) backendData.tax_id = data.taxId;
     if (data.address !== undefined) backendData.address = data.address;
     if (data.city !== undefined) backendData.city = data.city;
     if (data.state !== undefined) backendData.state = data.state;
     if (data.country !== undefined) backendData.country = data.country;
-    if (data.postalCode !== undefined) backendData.postal_code = data.postalCode;
+    if (data.postalCode !== undefined)
+      backendData.postal_code = data.postalCode;
     if (data.status !== undefined) backendData.status = data.status;
-    
+
     return await customersApi.updateCustomer(id, backendData);
   },
 

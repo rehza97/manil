@@ -152,6 +152,286 @@ def _cleanup_provisioning_artifacts(customer_id: str, plan_slug: str, subscripti
         logger.warning(f"Could not cleanup volume path {volume_path}: {e}")
 
 
+def _install_docker_in_container(container) -> None:
+    """
+    Install Docker Engine and docker-compose inside a running container.
+    
+    This function:
+    1. Updates apt packages
+    2. Installs prerequisites
+    3. Adds Docker's GPG key and repository
+    4. Installs Docker Engine and docker-compose plugin
+    5. Installs standalone docker-compose
+    6. Verifies installation
+    
+    Args:
+        container: Docker container object (must be running)
+    
+    Raises:
+        Exception: If installation fails
+    """
+    logger.info(f"Starting Docker installation in container {container.name}...")
+
+    # All commands must run as root to have proper permissions
+    exec_kwargs = {"user": "root", "demux": False}
+
+    # Step 1: Wait for any existing apt-get processes to finish (max 2 minutes)
+    # This is important because the container startup may be installing openssh-server
+    logger.info("Checking for existing apt-get processes...")
+    max_wait = 120  # 2 minutes
+    wait_interval = 3  # Check every 3 seconds
+    waited = 0
+
+    while waited < max_wait:
+        # Check for both apt-get/dpkg processes and lock files
+        check_result = container.exec_run(
+            "sh -c 'pgrep -x \"apt-get|dpkg\" > /dev/null 2>&1 && echo running || (fuser /var/lib/dpkg/lock-frontend 2>/dev/null && echo locked || echo none)'",
+            **exec_kwargs
+        )
+        if check_result.exit_code == 0:
+            output = check_result.output.decode('utf-8', errors='replace').strip()
+            if output == "none":
+                logger.info("No existing apt-get processes or locks found, proceeding...")
+                break
+            elif "locked" in output or "running" in output:
+                logger.info(f"apt-get/dpkg is busy, waiting... (waited {waited}s)")
+                time.sleep(wait_interval)
+                waited += wait_interval
+            else:
+                break
+        else:
+            # If check fails, wait a bit and try again
+            if waited < 10:  # Wait at least 10 seconds initially
+                logger.info(f"Waiting for container to fully initialize... (waited {waited}s)")
+                time.sleep(wait_interval)
+                waited += wait_interval
+            else:
+                logger.info("Could not check apt-get status, proceeding...")
+                break
+
+    if waited >= max_wait:
+        logger.warning(f"Timeout waiting for apt-get (waited {waited}s), attempting to clear locks...")
+        # Force clear stuck apt-get processes and locks
+        container.exec_run("pkill -9 apt-get", **exec_kwargs)
+        container.exec_run("pkill -9 dpkg", **exec_kwargs)
+        container.exec_run("rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/lib/apt/lists/lock /var/cache/apt/archives/lock", **exec_kwargs)
+        container.exec_run("dpkg --configure -a", **exec_kwargs)
+        time.sleep(2)
+        logger.info("Cleared apt-get locks, proceeding with installation...")
+
+    # Step 2: Update package index with retry logic
+    logger.info("Updating package index...")
+    max_update_retries = 3
+    update_succeeded = False
+
+    for attempt in range(max_update_retries):
+        result = container.exec_run(
+            "apt-get update -o Acquire::Retries=3",
+            **exec_kwargs
+        )
+
+        if result.exit_code == 0:
+            update_succeeded = True
+            logger.info("Package index updated successfully")
+            break
+        else:
+            error_output = result.output.decode('utf-8', errors='replace') if result.output else "Unknown error"
+
+            # Check if it's a lock error - wait and retry
+            if "lock" in error_output.lower() or "held by process" in error_output.lower():
+                logger.warning(f"Package manager is locked on attempt {attempt + 1}, waiting...")
+                time.sleep(5)
+                continue
+
+            # Check if it's just permission warnings (which we can ignore)
+            if "Operation not permitted" in error_output:
+                # Verify packages are actually available
+                verify_result = container.exec_run(
+                    "sh -c 'apt-cache search curl | head -1'",
+                    **exec_kwargs
+                )
+                if verify_result.exit_code == 0 and verify_result.output:
+                    logger.warning("apt-get update had permission warnings but packages are available")
+                    update_succeeded = True
+                    break
+
+            if attempt < max_update_retries - 1:
+                logger.warning(f"apt-get update attempt {attempt + 1} failed, retrying...")
+                time.sleep(2)
+            else:
+                raise Exception(f"Failed to update package index after {max_update_retries} attempts: {error_output}")
+    
+    # Step 3: Install prerequisites
+    logger.info("Installing prerequisites...")
+    # Use DEBIAN_FRONTEND=noninteractive to prevent any interactive prompts
+    result = container.exec_run(
+        "sh -c 'DEBIAN_FRONTEND=noninteractive apt-get install -y -q ca-certificates curl gnupg lsb-release apt-transport-https'",
+        **exec_kwargs
+    )
+    if result.exit_code != 0:
+        error_output = result.output.decode('utf-8', errors='replace') if result.output else "Unknown error"
+        # Check if it's a lock error
+        if "lock" in error_output.lower() or "held by process" in error_output.lower():
+            raise Exception(f"Package manager is locked. Another process is using apt-get. Please wait and try again. Error: {error_output}")
+        # Provide more helpful error message
+        logger.error(f"Failed to install prerequisites. Output: {error_output}")
+        raise Exception(f"Failed to install prerequisites. This may indicate the Ubuntu container's package repositories are not properly configured. Error: {error_output}")
+    
+    # Step 3: Add Docker's official GPG key
+    logger.info("Adding Docker GPG key...")
+    result = container.exec_run("mkdir -p /etc/apt/keyrings", **exec_kwargs)
+    if result.exit_code != 0:
+        raise Exception(f"Failed to create keyrings directory: {result.output.decode('utf-8', errors='replace')}")
+    
+    result = container.exec_run(
+        "sh -c 'curl -fsSL https://download.docker.com/linux/ubuntu/gpg 2>/dev/null | gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg 2>&1'",
+        **exec_kwargs
+    )
+    if result.exit_code != 0:
+        error_output = result.output.decode('utf-8', errors='replace') if result.output else "Unknown error"
+        # Check if the key file was actually created despite the error
+        check_result = container.exec_run("test -f /etc/apt/keyrings/docker.gpg", **exec_kwargs)
+        if check_result.exit_code != 0:
+            raise Exception(f"Failed to add Docker GPG key: {error_output}")
+        else:
+            logger.warning(f"GPG key creation had warnings but file exists: {error_output}")
+    
+    # Step 4: Set up the Docker repository
+    logger.info("Setting up Docker repository...")
+    result = container.exec_run(
+        'sh -c \'echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list\'',
+        **exec_kwargs
+    )
+    if result.exit_code != 0:
+        error_output = result.output.decode('utf-8', errors='replace') if result.output else "Unknown error"
+        raise Exception(f"Failed to set up Docker repository: {error_output}")
+    
+    # Step 5: Update package index again
+    logger.info("Updating package index with Docker repository...")
+    result = container.exec_run("apt-get update", **exec_kwargs)
+    if result.exit_code != 0:
+        error_output = result.output.decode('utf-8', errors='replace') if result.output else "Unknown error"
+        # Ignore permission warnings if packages are still accessible
+        if "Operation not permitted" not in error_output:
+            raise Exception(f"Failed to update package index: {error_output}")
+        logger.warning("apt-get update had permission warnings, continuing...")
+    
+    # Step 6: Install Docker Engine and docker-compose plugin
+    logger.info("Installing Docker Engine and docker-compose...")
+    result = container.exec_run(
+        "apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin",
+        **exec_kwargs
+    )
+    if result.exit_code != 0:
+        error_output = result.output.decode('utf-8', errors='replace') if result.output else "Unknown error"
+        raise Exception(f"Failed to install Docker: {error_output}")
+    
+    # Step 7: Install standalone docker-compose (for compatibility)
+    logger.info("Installing standalone docker-compose...")
+    # Detect architecture
+    arch_result = container.exec_run("uname -m", **exec_kwargs)
+    arch = arch_result.output.decode('utf-8').strip() if arch_result.exit_code == 0 else "x86_64"
+    compose_arch = "aarch64" if arch in ["aarch64", "arm64"] else "x86_64"
+    
+    result = container.exec_run(
+        f"sh -c 'curl -SL https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-linux-{compose_arch} -o /usr/local/bin/docker-compose'",
+        **exec_kwargs
+    )
+    if result.exit_code != 0:
+        logger.warning(f"Failed to download standalone docker-compose: {result.output.decode('utf-8', errors='replace')}")
+    else:
+        result = container.exec_run("chmod +x /usr/local/bin/docker-compose", **exec_kwargs)
+        if result.exit_code != 0:
+            logger.warning(f"Failed to make docker-compose executable: {result.output.decode('utf-8', errors='replace')}")
+    
+    # Step 8: Verify installation
+    logger.info("Verifying Docker installation...")
+    result = container.exec_run("docker --version", **exec_kwargs)
+    if result.exit_code != 0:
+        raise Exception(f"Docker verification failed: {result.output.decode('utf-8', errors='replace')}")
+    
+    docker_version = result.output.decode('utf-8').strip()
+    logger.info(f"Docker installed successfully: {docker_version}")
+    
+    result = container.exec_run("docker-compose --version", **exec_kwargs)
+    if result.exit_code == 0:
+        compose_version = result.output.decode('utf-8').strip()
+        logger.info(f"docker-compose installed successfully: {compose_version}")
+    else:
+        logger.warning("docker-compose verification failed, but Docker is installed")
+    
+    # Step 9: Configure Docker daemon for VFS storage driver (BEFORE first start)
+    logger.info("Configuring Docker daemon with VFS storage driver for DinD compatibility...")
+    # Create necessary directories
+    container.exec_run("mkdir -p /var/run /var/lib/docker /etc/docker", **exec_kwargs)
+
+    # CRITICAL: Configure VFS storage driver BEFORE starting Docker for the first time
+    # This prevents overlayfs-on-overlayfs issues in Docker-in-Docker scenarios
+    # Use cat with heredoc to avoid quote escaping issues
+    container.exec_run(
+        """sh -c 'cat > /etc/docker/daemon.json << "EOF"
+{
+  "storage-driver": "vfs",
+  "log-level": "info"
+}
+EOF
+'""",
+        **exec_kwargs
+    )
+    logger.info("Configured Docker daemon with VFS storage driver")
+
+    # Create a startup script that ensures dockerd runs with VFS
+    startup_script = """#!/bin/bash
+# Docker daemon startup script with VFS storage driver
+if ! pgrep -x dockerd > /dev/null; then
+    dockerd --storage-driver=vfs > /var/log/dockerd.log 2>&1 &
+    sleep 2
+fi
+"""
+    container.exec_run(
+        f"sh -c 'cat > /usr/local/bin/start-dockerd.sh << \"EOFSCRIPT\"\n{startup_script}EOFSCRIPT\nchmod +x /usr/local/bin/start-dockerd.sh'",
+        **exec_kwargs
+    )
+
+    # Step 10: Start Docker daemon with VFS storage driver
+    logger.info("Starting Docker daemon with VFS storage driver...")
+    check_daemon = container.exec_run("sh -c 'pgrep -x dockerd || echo not_running'", **exec_kwargs)
+    if check_daemon.exit_code == 0:
+        output = check_daemon.output.decode('utf-8', errors='replace').strip()
+        if output == "not_running":
+            # Start dockerd with VFS storage driver
+            start_result = container.exec_run(
+                "sh -c 'dockerd --storage-driver=vfs > /var/log/dockerd.log 2>&1 &'",
+                **exec_kwargs
+            )
+            if start_result.exit_code != 0:
+                logger.warning(f"Failed to start dockerd: {start_result.output.decode('utf-8', errors='replace')}")
+            else:
+                # Wait for dockerd to start
+                time.sleep(3)
+                # Verify dockerd is running
+                verify_result = container.exec_run("sh -c 'pgrep -x dockerd || echo not_running'", **exec_kwargs)
+                if verify_result.exit_code == 0:
+                    verify_output = verify_result.output.decode('utf-8', errors='replace').strip()
+                    if verify_output != "not_running":
+                        logger.info("Docker daemon started successfully with VFS storage driver")
+                        # Verify storage driver
+                        storage_check = container.exec_run("docker info 2>/dev/null | grep -i 'storage driver'", **exec_kwargs)
+                        if storage_check.exit_code == 0:
+                            storage_info = storage_check.output.decode('utf-8', errors='replace').strip()
+                            logger.info(f"Verified: {storage_info}")
+                    else:
+                        logger.warning("Docker daemon may not have started properly")
+                else:
+                    logger.warning("Could not verify Docker daemon status")
+        else:
+            logger.info("Docker daemon is already running")
+    else:
+        logger.warning("Could not check Docker daemon status")
+    
+    logger.info(f"Docker installation complete in container {container.name}")
+
+
 def _create_docker_container(
     db: Session, subscription: VPSSubscription, plan: VPSPlan
 ) -> Dict[str, Any]:
@@ -197,48 +477,92 @@ def _create_docker_container(
         cipher = Fernet(encryption_key.encode())
         encrypted_password = cipher.encrypt(root_password.encode()).decode()
 
-        # Create isolated bridge network with unique subnet per subscription
-        # Use subscription ID hash to ensure unique subnet (avoids overlaps)
-        subnet_octet = _get_unique_subnet_octet(str(subscription.id))
-        try:
-            network = client.networks.create(
-                name=network_name,
-                driver="bridge",
-                ipam=IPAMConfig(
-                    pool_configs=[
-                        IPAMPool(
-                            subnet=f"172.20.{subnet_octet}.0/24",
-                            gateway=f"172.20.{subnet_octet}.1",
-                        )
-                    ]
-                ),
-                internal=False,  # Allow internet access
-            )
-            logger.info(f"Created network: {network_name}")
-        except APIError as e:
-            # Check if network already exists
-            if "already exists" in str(e).lower() or "already in use" in str(e).lower():
-                logger.info(f"Network {network_name} already exists, reusing it")
-                try:
-                    network = client.networks.get(network_name)
-                except NotFound:
-                    # Network was deleted between creation attempt and get, re-raise original error
-                    logger.error(f"Network {network_name} creation failed and network not found: {e}")
-                    raise
-            else:
-                # Other API error during creation, re-raise
+        # Create isolated bridge network with unique subnet per subscription.
+        # NOTE: subnet hash alone isn't enough if existing networks already occupy that /24.
+        # We detect "Pool overlaps" and retry with the next free octet.
+        def _get_used_subnet_octets() -> set[int]:
+            used: set[int] = set()
+            try:
+                for net in client.networks.list():
+                    try:
+                        ipam_cfgs = (net.attrs or {}).get("IPAM", {}).get("Config") or []
+                        for cfg in ipam_cfgs:
+                            subnet = cfg.get("Subnet")
+                            if not subnet:
+                                continue
+                            # Expect form 172.20.X.0/24
+                            if subnet.startswith("172.20.") and subnet.endswith("/24"):
+                                parts = subnet.split(".")
+                                if len(parts) >= 4:
+                                    try:
+                                        used.add(int(parts[2]))
+                                    except Exception:
+                                        pass
+                    except Exception:
+                        continue
+            except Exception:
+                # If listing networks fails, just fall back to retry-on-error.
+                pass
+            return used
+
+        base_octet = _get_unique_subnet_octet(str(subscription.id))
+        used_octets = _get_used_subnet_octets()
+        network = None
+
+        for attempt in range(0, 253):
+            subnet_octet = ((base_octet - 1 + attempt) % 253) + 1  # 1..253
+            if subnet_octet in used_octets:
+                continue
+
+            try:
+                network = client.networks.create(
+                    name=network_name,
+                    driver="bridge",
+                    ipam=IPAMConfig(
+                        pool_configs=[
+                            IPAMPool(
+                                subnet=f"172.20.{subnet_octet}.0/24",
+                                gateway=f"172.20.{subnet_octet}.1",
+                            )
+                        ]
+                    ),
+                    internal=False,  # Allow internet access
+                )
+                logger.info(f"Created network: {network_name} (subnet 172.20.{subnet_octet}.0/24)")
+                break
+            except APIError as e:
+                err = str(e).lower()
+                # Check if network already exists (reuse by name)
+                if "already exists" in err or "already in use" in err:
+                    logger.info(f"Network {network_name} already exists, reusing it")
+                    try:
+                        network = client.networks.get(network_name)
+                        break
+                    except NotFound:
+                        logger.error(f"Network {network_name} reported existing but not found: {e}")
+                        raise
+
+                # Handle overlapping subnet pools by trying the next octet
+                if "pool overlaps" in err or "overlaps with other one" in err or "overlaps" in err:
+                    used_octets.add(subnet_octet)
+                    continue
+
                 logger.error(f"Failed to create network {network_name}: {e}")
                 raise
-        except Exception as e:
-            # Unexpected error, try to get existing network as fallback
-            logger.warning(f"Unexpected error creating network {network_name}: {e}, attempting to get existing network")
-            try:
-                network = client.networks.get(network_name)
-                logger.info(f"Found existing network: {network_name}")
-            except NotFound:
-                # Network doesn't exist, re-raise original error
-                logger.error(f"Network {network_name} does not exist and creation failed: {e}")
-                raise
+            except Exception as e:
+                # Unexpected error, try to get existing network as fallback
+                logger.warning(
+                    f"Unexpected error creating network {network_name}: {e}, attempting to get existing network"
+                )
+                try:
+                    network = client.networks.get(network_name)
+                    logger.info(f"Found existing network: {network_name}")
+                    break
+                except NotFound:
+                    raise
+
+        if network is None:
+            raise Exception("Failed to allocate a non-overlapping network subnet for VPS container")
 
         # Create persistent volume path
         volume_path = ids["volume_path"]
@@ -253,20 +577,32 @@ def _create_docker_container(
         hostname = ids["hostname"]
 
         # Create container with resource limits
-        # Command to keep container running and set up SSH
-        # This will: set root password, install/start SSH, then keep running
+        # Command to keep container running and set up SSH and Docker daemon
+        # This will: set root password, install/start SSH, start Docker daemon with VFS, then keep running
         container_command = [
             "/bin/bash", "-c",
             (
                 "set -e && "
                 f"echo 'root:{root_password}' | chpasswd && "
                 "if ! command -v sshd &> /dev/null; then "
-                "apt-get update -qq && apt-get install -y -qq openssh-server && rm -rf /var/lib/apt/lists/*; "
+                # Don't remove package lists - they're needed for Docker installation later
+                "DEBIAN_FRONTEND=noninteractive apt-get update -qq && "
+                "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq openssh-server; "
                 "fi && "
                 "mkdir -p /var/run/sshd && "
                 "echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && "
                 "echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config && "
                 "/usr/sbin/sshd -D & "
+                # Start Docker daemon if it's installed (with VFS storage driver for DinD)
+                # CRITICAL: VFS prevents overlayfs-on-overlayfs issues in Docker-in-Docker
+                "if command -v dockerd &> /dev/null; then "
+                "mkdir -p /var/run /var/lib/docker /etc/docker && "
+                "echo '{\"storage-driver\":\"vfs\",\"log-level\":\"info\"}' > /etc/docker/daemon.json && "
+                # Clear any existing Docker data to force VFS initialization
+                "rm -rf /var/lib/docker/* 2>/dev/null; "
+                "dockerd --storage-driver=vfs > /var/log/dockerd.log 2>&1 & "
+                "sleep 3; "
+                "fi && "
                 "exec tail -f /dev/null"
             )
         ]
@@ -292,10 +628,19 @@ def _create_docker_container(
                 "ROOT_PASSWORD": root_password,
                 "VPS_SUBSCRIPTION_ID": str(subscription.id),
             },
-            # Security options
-            cap_drop=["ALL"],
-            cap_add=["CHOWN", "DAC_OVERRIDE", "SETGID", "SETUID", "NET_BIND_SERVICE"],
-            security_opt=["no-new-privileges:true"],
+            # Security options for Docker-in-Docker support
+            cap_add=[
+                "CHOWN", "DAC_OVERRIDE", "SETGID", "SETUID", "NET_BIND_SERVICE",
+                "SYS_ADMIN", "NET_ADMIN", "SYS_RESOURCE", "MKNOD", "AUDIT_WRITE", "SYS_CHROOT"
+            ],
+            security_opt=[
+                "apparmor:unconfined",
+                "seccomp:unconfined"
+            ],
+            # Cgroup namespace - allows Docker inside to create cgroups
+            cgroupns="private",
+            # Run as root to allow Docker installation
+            user="root",
             # Auto-restart
             restart_policy={"Name": "unless-stopped"},
             # Detached mode
@@ -305,6 +650,19 @@ def _create_docker_container(
         # Start the container
         container.start()
         logger.info(f"Container {container_name} created and started")
+
+        # Wait a moment for container to fully start
+        time.sleep(5)
+
+        # Install Docker and docker-compose in the container
+        logger.info(f"Installing Docker in container {container_name}...")
+        try:
+            _install_docker_in_container(container)
+            logger.info(f"Docker installed successfully in container {container_name}")
+        except Exception as e:
+            logger.warning(f"Failed to install Docker in container {container_name}: {e}")
+            # Don't fail provisioning if Docker installation fails - user can install manually later
+            # But log it for visibility
 
         return {
             "container_id": container.id,
@@ -832,12 +1190,28 @@ def reconcile_missing_vps_containers(self, limit: int = 100) -> Dict[str, Any]:
                         "VPS_SUBSCRIPTION_ID": str(subscription.id),
                     },
                     cap_drop=["ALL"],
-                    cap_add=["CHOWN", "DAC_OVERRIDE", "SETGID", "SETUID", "NET_BIND_SERVICE"],
+                    cap_add=[
+                        "CHOWN", "DAC_OVERRIDE", "SETGID", "SETUID", "NET_BIND_SERVICE",
+                        "SYS_ADMIN", "NET_ADMIN", "MKNOD"  # Required for Docker installation and operation
+                    ],
                     security_opt=["no-new-privileges:true"],
+                    user="root",  # Run as root to allow Docker installation
                     restart_policy={"Name": "unless-stopped"},
                     detach=True,
                 )
                 container.start()
+                
+                # Wait a moment for container to fully start
+                time.sleep(5)
+                
+                # Install Docker and docker-compose in the container
+                logger.info(f"Installing Docker in container {ids['container_name']}...")
+                try:
+                    _install_docker_in_container(container)
+                    logger.info(f"Docker installed successfully in container {ids['container_name']}")
+                except Exception as e:
+                    logger.warning(f"Failed to install Docker in container {ids['container_name']}: {e}")
+                    # Don't fail reconciliation if Docker installation fails
 
                 now = datetime.utcnow()
 

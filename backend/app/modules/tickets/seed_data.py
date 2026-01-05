@@ -401,8 +401,8 @@ async def seed_tags(db: AsyncSession):
 
     # Get admin user for created_by field
     from app.modules.auth.models import User
-    from sqlalchemy import text
-    admin_query = select(User).where(text("role = 'ADMIN'")).limit(1)
+    from app.modules.auth.schemas import UserRole
+    admin_query = select(User).where(User.role == UserRole.ADMIN).limit(1)
     admin_result = await db.execute(admin_query)
     admin = admin_result.scalar_one_or_none()
 
@@ -435,8 +435,8 @@ async def seed_ticket_categories(db: AsyncSession):
 
     # Get admin user for created_by field
     from app.modules.auth.models import User
-    from sqlalchemy import text
-    admin_query = select(User).where(text("role = 'ADMIN'")).limit(1)
+    from app.modules.auth.schemas import UserRole
+    admin_query = select(User).where(User.role == UserRole.ADMIN).limit(1)
     admin_result = await db.execute(admin_query)
     admin = admin_result.scalar_one_or_none()
 
@@ -486,8 +486,8 @@ async def seed_response_templates(db: AsyncSession):
 
     # Get admin user for created_by field
     from app.modules.auth.models import User
-    from sqlalchemy import text
-    admin_query = select(User).where(text("role = 'ADMIN'")).limit(1)
+    from app.modules.auth.schemas import UserRole
+    admin_query = select(User).where(User.role == UserRole.ADMIN).limit(1)
     admin_result = await db.execute(admin_query)
     admin = admin_result.scalar_one_or_none()
 

@@ -199,7 +199,8 @@ export function KYCDocumentVerification({
                   File
                 </p>
                 <p className="font-medium">
-                  {document.fileName} ({(document.fileSize / 1024).toFixed(2)} KB)
+                  {document.fileName} ({(document.fileSize / 1024).toFixed(2)}{" "}
+                  KB)
                 </p>
               </div>
 
@@ -241,7 +242,9 @@ export function KYCDocumentVerification({
                 name="rejectionReason"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Rejection Reason (Required if rejecting)</FormLabel>
+                    <FormLabel>
+                      Rejection Reason (Required if rejecting)
+                    </FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Explain why this document is being rejected..."
@@ -267,6 +270,7 @@ export function KYCDocumentVerification({
                   variant="destructive"
                   onClick={form.handleSubmit(handleReject)}
                   disabled={verifyDocument.isPending}
+                  className="bg-red-600 hover:bg-red-700 text-white"
                 >
                   {verifyDocument.isPending ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

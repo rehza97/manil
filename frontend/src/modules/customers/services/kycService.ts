@@ -18,6 +18,30 @@ import type {
 } from "../types/kyc.types";
 
 /**
+ * Transform snake_case API response to camelCase
+ */
+function transformKYCDocument(apiDoc: any): KYCDocument {
+  return {
+    id: apiDoc.id,
+    customerId: apiDoc.customer_id,
+    documentType: apiDoc.document_type,
+    documentNumber: apiDoc.document_number,
+    fileName: apiDoc.file_name,
+    fileSize: apiDoc.file_size,
+    mimeType: apiDoc.mime_type,
+    status: apiDoc.status,
+    verifiedAt: apiDoc.verified_at,
+    verifiedBy: apiDoc.verified_by,
+    rejectionReason: apiDoc.rejection_reason,
+    notes: apiDoc.notes,
+    expiresAt: apiDoc.expires_at,
+    createdAt: apiDoc.created_at,
+    updatedAt: apiDoc.updated_at,
+    createdBy: apiDoc.created_by,
+  };
+}
+
+/**
  * KYC service - uses centralized customersApi KYC methods
  * Provides module-specific interface with helper functions
  */
@@ -26,14 +50,33 @@ export const kycService = {
    * Get customer's KYC status and all documents
    */
   async getCustomerKYCStatus(customerId: string): Promise<CustomerKYCStatus> {
-    return await customersApi.getKYCStatus(customerId);
+    const status = await customersApi.getKYCStatus(customerId);
+    return {
+      customerId: status.customer_id || customerId,
+      kycStatus: status.kyc_status,
+      documents: status.documents?.map(transformKYCDocument) || [],
+      summary: {
+        customerId: status.summary?.customer_id || customerId,
+        totalDocuments: status.summary?.total_documents || 0,
+        pendingDocuments: status.summary?.pending_documents || 0,
+        approvedDocuments: status.summary?.approved_documents || 0,
+        rejectedDocuments: status.summary?.rejected_documents || 0,
+        underReviewDocuments: status.summary?.under_review_documents || 0,
+        expiredDocuments: status.summary?.expired_documents || 0,
+        overallStatus: status.summary?.overall_status || "incomplete",
+        canActivate: status.summary?.can_activate || false,
+      },
+      requiredDocuments: status.required_documents || [],
+      missingDocuments: status.missing_documents || [],
+    };
   },
 
   /**
    * Get all KYC documents for a customer
    */
   async getDocuments(customerId: string): Promise<KYCDocument[]> {
-    return await customersApi.getKYCDocuments(customerId);
+    const documents = await customersApi.getKYCDocuments(customerId);
+    return Array.isArray(documents) ? documents.map(transformKYCDocument) : [];
   },
 
   /**
@@ -43,7 +86,8 @@ export const kycService = {
     customerId: string,
     documentId: string
   ): Promise<KYCDocument> {
-    return await customersApi.getKYCDocument(customerId, documentId);
+    const document = await customersApi.getKYCDocument(customerId, documentId);
+    return transformKYCDocument(document);
   },
 
   /**
@@ -68,7 +112,8 @@ export const kycService = {
       formData.append("notes", documentData.notes);
     }
 
-    return await customersApi.uploadKYCDocument(customerId, formData);
+    const document = await customersApi.uploadKYCDocument(customerId, formData);
+    return transformKYCDocument(document);
   },
 
   /**
@@ -79,10 +124,16 @@ export const kycService = {
     documentId: string,
     data: KYCDocumentUpdate
   ): Promise<KYCDocument> {
-    return await customersApi.updateKYCDocument(customerId, documentId, {
-      document_type: data.documentType,
-      notes: data.notes,
-    });
+    const document = await customersApi.updateKYCDocument(
+      customerId,
+      documentId,
+      {
+        document_number: data.documentNumber,
+        expires_at: data.expiresAt,
+        notes: data.notes,
+      }
+    );
+    return transformKYCDocument(document);
   },
 
   /**
@@ -100,11 +151,16 @@ export const kycService = {
     documentId: string,
     action: KYCVerificationAction
   ): Promise<KYCDocument> {
-    return await customersApi.verifyKYCDocument(customerId, documentId, {
-      status: action.status,
-      notes: action.notes,
-      rejection_reason: action.rejectionReason,
-    });
+    const document = await customersApi.verifyKYCDocument(
+      customerId,
+      documentId,
+      {
+        status: action.status,
+        notes: action.notes,
+        rejection_reason: action.rejectionReason,
+      }
+    );
+    return transformKYCDocument(document);
   },
 
   /**

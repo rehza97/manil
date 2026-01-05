@@ -133,6 +133,7 @@ import {
   OrderEditPage,
   OrderStatusPage,
 } from "@/modules/orders/pages";
+import { OrderCreateRedirect } from "@/modules/orders/components/OrderCreateRedirect";
 import {
   InvoiceListPage,
   InvoiceCreatePage,
@@ -168,6 +169,7 @@ import {
   AllDNSZonesPage,
   DNSMonitoringPage,
   DNSTemplatesPage,
+  DNSZoneDetailPage as AdminDNSZoneDetailPage,
 } from "@/modules/dns/pages/admin";
 import {
   CustomerDNSZonesPage,
@@ -246,6 +248,11 @@ export const routes = [
     path: "/redirect",
     element: <RoleBasedRedirect />,
   },
+  // Order create redirect (handles /orders/create)
+  {
+    path: "/orders/create",
+    element: <OrderCreateRedirect />,
+  },
 
   // Client Dashboard Routes (/dashboard)
   {
@@ -318,10 +325,6 @@ export const routes = [
         element: <OrdersListPage />,
       },
       {
-        path: "orders/:orderId",
-        element: <OrderDetailPage />,
-      },
-      {
         path: "orders/create",
         element: <OrderCreatePage />,
       },
@@ -332,6 +335,10 @@ export const routes = [
       {
         path: "orders/:orderId/status",
         element: <OrderStatusPage />,
+      },
+      {
+        path: "orders/:orderId",
+        element: <OrderDetailPage />,
       },
       // Invoices
       {
@@ -511,16 +518,16 @@ export const routes = [
         element: <OrderCreatePage />,
       },
       {
-        path: "orders/:orderId",
-        element: <OrderDetailPage />,
-      },
-      {
         path: "orders/:orderId/edit",
         element: <OrderEditPage />,
       },
       {
         path: "orders/:orderId/status",
         element: <OrderStatusPage />,
+      },
+      {
+        path: "orders/:orderId",
+        element: <OrderDetailPage />,
       },
       // Quote Management
       {
@@ -896,6 +903,27 @@ export const routes = [
         path: "tickets/:id",
         element: <TicketDetailPage backPath="/admin/tickets" />,
       },
+      // Order Management
+      {
+        path: "orders",
+        element: <OrdersListPage />,
+      },
+      {
+        path: "orders/create",
+        element: <OrderCreatePage />,
+      },
+      {
+        path: "orders/:orderId/edit",
+        element: <OrderEditPage />,
+      },
+      {
+        path: "orders/:orderId/status",
+        element: <OrderStatusPage />,
+      },
+      {
+        path: "orders/:orderId",
+        element: <OrderDetailPage />,
+      },
       // Ticket Templates
       {
         path: "tickets/templates",
@@ -963,6 +991,10 @@ export const routes = [
       {
         path: "dns/zones",
         element: <AllDNSZonesPage />,
+      },
+      {
+        path: "dns/zones/:zoneId",
+        element: <AdminDNSZoneDetailPage />,
       },
       {
         path: "dns/monitoring",

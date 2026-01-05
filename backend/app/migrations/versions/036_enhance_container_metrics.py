@@ -17,7 +17,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '036_enhance_container_metrics'
-down_revision = '035'  # Use the actual revision ID, not the filename
+down_revision = '035'  # Matches revision ID from 035_update_response_templates_schema
 branch_labels = None
 depends_on = None
 

@@ -61,6 +61,15 @@ export const ticketsApi = {
     return response.data;
   },
 
+  /**
+   * Get current user's tickets (for clients)
+   * GET /api/v1/tickets/my-tickets
+   */
+  getMyTickets: async (params?: { page?: number; page_size?: number }) => {
+    const response = await apiClient.get("/tickets/my-tickets", { params });
+    return response.data;
+  },
+
   getTicket: async (ticketId: string) => {
     const response = await apiClient.get(`/tickets/${ticketId}`);
     return response.data;
@@ -84,7 +93,7 @@ export const ticketsApi = {
   // Ticket Actions
   assignTicket: async (ticketId: string, userId: string) => {
     const response = await apiClient.post(`/tickets/${ticketId}/assign`, {
-      user_id: userId,
+      assigned_to: userId,
     });
     return response.data;
   },
@@ -242,13 +251,20 @@ export const ticketsApi = {
     return response.data;
   },
 
-  getDailySLAMetrics: async (params?: { start_date?: string; end_date?: string }) => {
-    const response = await apiClient.get("/tickets/sla/metrics/daily", { params });
+  getDailySLAMetrics: async (params?: {
+    start_date?: string;
+    end_date?: string;
+  }) => {
+    const response = await apiClient.get("/tickets/sla/metrics/daily", {
+      params,
+    });
     return response.data;
   },
 
   getAgentSLAMetrics: async (agentId: string) => {
-    const response = await apiClient.get(`/tickets/sla/metrics/agent/${agentId}`);
+    const response = await apiClient.get(
+      `/tickets/sla/metrics/agent/${agentId}`
+    );
     return response.data;
   },
 
@@ -273,12 +289,17 @@ export const ticketsApi = {
 
   // Email Integration
   getEmailAccounts: async () => {
-    const response = await apiClient.get("/tickets/email/api/v1/email-accounts");
+    const response = await apiClient.get(
+      "/tickets/email/api/v1/email-accounts"
+    );
     return response.data;
   },
 
   createEmailAccount: async (data: any) => {
-    const response = await apiClient.post("/tickets/email/api/v1/email-accounts", data);
+    const response = await apiClient.post(
+      "/tickets/email/api/v1/email-accounts",
+      data
+    );
     return response.data;
   },
 

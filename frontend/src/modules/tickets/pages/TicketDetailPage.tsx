@@ -10,6 +10,7 @@ import { useTicket } from "../hooks";
 import { ticketService } from "../services";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/shared/components/ui/card";
+import { useAuth } from "@/modules/auth";
 
 interface TicketDetailPageProps {
   backPath?: string;
@@ -19,6 +20,8 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ backPath }) 
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+  const isClient = user?.role === "client";
   const { data: ticket, isLoading, refetch } = useTicket(id || "");
 
   // Determine back path: use prop, or detect from location, or default to dashboard
@@ -69,8 +72,8 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ backPath }) 
         });
       }
 
-      // Assignment
-      if (ticket.assignedTo) {
+      // Assignment - only show for non-clients
+      if (!isClient && ticket.assignedTo) {
         events.push({
           id: `assignment-${ticket.id}`,
           type: "assignment",
@@ -81,8 +84,12 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ backPath }) 
       }
     }
 
-    // Replies
+    // Replies - filter out internal replies for clients
     replies.forEach((reply: any) => {
+      // Skip internal replies for clients
+      if (isClient && reply.is_internal) {
+        return;
+      }
       events.push({
         id: `reply-${reply.id}`,
         type: "reply",
@@ -120,8 +127,8 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ backPath }) 
           {/* Ticket Detail */}
           <TicketDetail ticketId={id} onStatusChange={refetch} />
 
-          {/* Watchers (if user has permission) */}
-          <WatcherManager ticketId={id} />
+          {/* Watchers (only for non-clients) */}
+          {!isClient && <WatcherManager ticketId={id} />}
 
           {/* Timeline */}
           <div>

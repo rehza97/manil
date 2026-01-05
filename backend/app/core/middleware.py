@@ -42,7 +42,14 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         start_time = time.time()
 
         # Process request
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except RuntimeError as e:
+            # BaseHTTPMiddleware can raise "No response returned." on client disconnects,
+            # especially with streaming responses (SSE). Treat as disconnected client.
+            if "No response returned" in str(e):
+                return Response(status_code=204)
+            raise
 
         # Calculate execution time
         process_time = time.time() - start_time
@@ -93,10 +100,20 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         ]
         # Exclude download-status and stats endpoints (frequent polling)
         if "/download-status" in request.url.path or "/stats" in request.url.path:
-            return await call_next(request)
+            try:
+                return await call_next(request)
+            except RuntimeError as e:
+                if "No response returned" in str(e):
+                    return Response(status_code=204)
+                raise
         
         if request.url.path in excluded_paths:
-            return await call_next(request)
+            try:
+                return await call_next(request)
+            except RuntimeError as e:
+                if "No response returned" in str(e):
+                    return Response(status_code=204)
+                raise
 
         try:
             redis = await get_redis()
@@ -122,7 +139,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     )
 
                 # Add rate limit headers to response
-                response = await call_next(request)
+                try:
+                    response = await call_next(request)
+                except RuntimeError as e:
+                    if "No response returned" in str(e):
+                        return Response(status_code=204)
+                    raise
                 response.headers["X-RateLimit-Limit"] = str(
                     settings.RATE_LIMIT_PER_MINUTE)
                 response.headers["X-RateLimit-Remaining"] = str(
@@ -131,14 +153,24 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             else:
                 # Redis not available, skip rate limiting
                 logger.debug("Redis not available, skipping rate limiting")
-                return await call_next(request)
+                try:
+                    return await call_next(request)
+                except RuntimeError as e:
+                    if "No response returned" in str(e):
+                        return Response(status_code=204)
+                    raise
 
         except HTTPException:
             raise
         except Exception as e:
             # Log error but don't block request
             logger.error(f"Rate limiting error: {e}")
-            return await call_next(request)
+            try:
+                return await call_next(request)
+            except RuntimeError as re:
+                if "No response returned" in str(re):
+                    return Response(status_code=204)
+                raise
 
 
 class CORSHeadersMiddleware(BaseHTTPMiddleware):
@@ -158,7 +190,12 @@ class CORSHeadersMiddleware(BaseHTTPMiddleware):
         Returns:
             HTTP response with security headers
         """
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except RuntimeError as e:
+            if "No response returned" in str(e):
+                return Response(status_code=204)
+            raise
 
         # Security headers
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -210,11 +247,21 @@ class CSRFProtectionMiddleware(BaseHTTPMiddleware):
         """
         # Skip CSRF check for excluded paths
         if request.url.path in self.EXCLUDED_PATHS:
-            return await call_next(request)
+            try:
+                return await call_next(request)
+            except RuntimeError as e:
+                if "No response returned" in str(e):
+                    return Response(status_code=204)
+                raise
 
         # Skip CSRF check for safe methods
         if request.method not in self.PROTECTED_METHODS:
-            return await call_next(request)
+            try:
+                return await call_next(request)
+            except RuntimeError as e:
+                if "No response returned" in str(e):
+                    return Response(status_code=204)
+                raise
 
         # Get CSRF token from header
         csrf_token = request.headers.get("X-CSRF-Token")
@@ -229,7 +276,12 @@ class CSRFProtectionMiddleware(BaseHTTPMiddleware):
                 detail="CSRF token validation failed",
             )
 
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except RuntimeError as e:
+            if "No response returned" in str(e):
+                return Response(status_code=204)
+            raise
 
         # Generate new CSRF token if not present
         if not cookie_token:

@@ -155,7 +155,9 @@ export const customersApi = {
    * GET /api/v1/customers/me
    */
   getMyCustomer: async (): Promise<Customer> => {
-    const response: AxiosResponse<Customer> = await apiClient.get("/customers/me");
+    const response: AxiosResponse<Customer> = await apiClient.get(
+      "/customers/me"
+    );
     return response.data;
   },
 
@@ -190,9 +192,7 @@ export const customersApi = {
    * Delete a customer
    * DELETE /api/v1/customers/{customer_id}
    */
-  deleteCustomer: async (
-    customerId: string
-  ): Promise<{ message: string }> => {
+  deleteCustomer: async (customerId: string): Promise<{ message: string }> => {
     const response = await apiClient.delete(`/customers/${customerId}`);
     return response.data;
   },
@@ -215,9 +215,7 @@ export const customersApi = {
   activateCustomer: async (
     customerId: string
   ): Promise<{ message: string }> => {
-    const response = await apiClient.post(
-      `/customers/${customerId}/activate`
-    );
+    const response = await apiClient.post(`/customers/${customerId}/activate`);
     return response.data;
   },
 
@@ -229,10 +227,9 @@ export const customersApi = {
     customerId: string,
     reason?: string
   ): Promise<{ message: string }> => {
-    const response = await apiClient.post(
-      `/customers/${customerId}/suspend`,
-      { reason }
-    );
+    const response = await apiClient.post(`/customers/${customerId}/suspend`, {
+      reason,
+    });
     return response.data;
   },
 
@@ -300,6 +297,7 @@ export const customersApi = {
         headers: {
           "Content-Type": "multipart/form-data",
         },
+        timeout: 120000, // 2 minutes for file uploads
       }
     );
     return response.data;

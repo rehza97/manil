@@ -1,20 +1,25 @@
 /**
  * VPS Deploy Component
  *
- * Provides file upload and deployment interface for VPS containers with two modes:
+ * Provides file upload and deployment interface for VPS containers with live terminal logs.
  * 1. Direct Deploy: Extract archive and copy files to container's /data directory
  * 2. Build & Deploy: Upload project and trigger Docker image build workflow
  */
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Card } from "@/shared/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { Label } from "@/shared/components/ui/label";
-import { AlertCircle, Upload, Loader2, CheckCircle2, FileArchive } from "lucide-react";
+import { AlertCircle, Upload, Loader2, CheckCircle2, FileArchive, Terminal, X } from "lucide-react";
+import { apiClient } from "@/shared/api/client";
+import { streamSSE } from "@/shared/utils/sse";
 import { vpsService } from "../services/vpsService";
+import { Terminal as XTerm } from "xterm";
+import { FitAddon } from "xterm-addon-fit";
+import "xterm/css/xterm.css";
 
 type VPSDeployProps = {
   subscriptionId: string;
@@ -27,6 +32,7 @@ type DeployResult = {
   archive_size?: number;
   deployed_at?: string;
   error?: string;
+  logs?: string[];
 };
 
 type BuildResult = {
@@ -40,17 +46,197 @@ type BuildResult = {
 };
 
 export const VPSDeploy: React.FC<VPSDeployProps> = ({ subscriptionId }) => {
-  const [mode, setMode] = useState<"direct" | "build">("direct");
+  const [mode, setMode] = useState<"direct" | "build" | "docker">("direct");
   const [file, setFile] = useState<File | null>(null);
   const [targetPath, setTargetPath] = useState("/data");
   const [imageName, setImageName] = useState("");
   const [imageTag, setImageTag] = useState("latest");
   const [dockerfilePath, setDockerfilePath] = useState("Dockerfile");
+  const [composeFile, setComposeFile] = useState("docker-compose.yml");
+  const [composeCommand, setComposeCommand] = useState("up -d");
+  const [composeWorkingDir, setComposeWorkingDir] = useState("/data");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DeployResult | BuildResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [logs, setLogs] = useState<string[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logsEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // xterm.js terminal refs for each tab
+  const directDeployTerminalRef = useRef<HTMLDivElement>(null);
+  const buildDeployTerminalRef = useRef<HTMLDivElement>(null);
+  const dockerSetupTerminalRef = useRef<HTMLDivElement>(null);
+  const directDeployXtermRef = useRef<XTerm | null>(null);
+  const buildDeployXtermRef = useRef<XTerm | null>(null);
+  const dockerSetupXtermRef = useRef<XTerm | null>(null);
+  const directDeployFitRef = useRef<FitAddon | null>(null);
+  const buildDeployFitRef = useRef<FitAddon | null>(null);
+  const dockerSetupFitRef = useRef<FitAddon | null>(null);
+  const directOpenedRef = useRef(false);
+  const buildOpenedRef = useRef(false);
+  const dockerOpenedRef = useRef(false);
+  const prevModeRef = useRef<"direct" | "build" | "docker">(mode);
+
+  const disposeTerminal = (
+    xtermRef: React.MutableRefObject<XTerm | null>,
+    fitRef: React.MutableRefObject<FitAddon | null>,
+    openedRef: React.MutableRefObject<boolean>
+  ) => {
+    try {
+      xtermRef.current?.dispose();
+    } catch {
+      // ignore
+    }
+    xtermRef.current = null;
+    fitRef.current = null;
+    openedRef.current = false;
+  };
+
+  const initTerminalIfVisible = (
+    containerRef: React.RefObject<HTMLDivElement>,
+    xtermRef: React.MutableRefObject<XTerm | null>,
+    fitRef: React.MutableRefObject<FitAddon | null>,
+    openedRef: React.MutableRefObject<boolean>
+  ) => {
+    if (!xtermRef.current) {
+      const term = new XTerm({
+        cursorBlink: false,
+        disableStdin: true, // Read-only terminal for logs
+        theme: {
+          background: "#0d0d0d",
+          foreground: "#ffffff",
+          cursor: "#ffffff",
+          selection: "#264f78",
+          black: "#000000",
+          red: "#cd3131",
+          green: "#0dbc79",
+          yellow: "#e5e510",
+          blue: "#2472c8",
+          magenta: "#bc3fbc",
+          cyan: "#11a8cd",
+          white: "#e5e5e5",
+          brightBlack: "#666666",
+          brightRed: "#f14c4c",
+          brightGreen: "#23d18b",
+          brightYellow: "#f5f543",
+          brightBlue: "#3b8eea",
+          brightMagenta: "#d670d6",
+          brightCyan: "#29b8db",
+          brightWhite: "#e5e5e5",
+        },
+        fontSize: 13,
+        fontFamily: "Menlo, Monaco, 'Courier New', monospace",
+        lineHeight: 1.2,
+        letterSpacing: 0,
+      });
+      const fitAddon = new FitAddon();
+      term.loadAddon(fitAddon);
+      xtermRef.current = term;
+      fitRef.current = fitAddon;
+    }
+
+    const tryOpen = () => {
+      if (openedRef.current) return;
+      const el = containerRef.current;
+      const term = xtermRef.current;
+      const fit = fitRef.current;
+      if (!el || !term || !fit) return;
+
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      if (style.display !== "none" && rect.width > 0 && rect.height > 0) {
+        openedRef.current = true;
+        term.open(el);
+        requestAnimationFrame(() => {
+          try {
+            fit.fit();
+          } catch (err) {
+            console.warn("Error fitting deploy terminal:", err);
+          }
+        });
+        return;
+      }
+      requestAnimationFrame(tryOpen);
+    };
+
+    requestAnimationFrame(tryOpen);
+  };
+
+  // Initialize ONLY the active mode terminal (avoid opening xterm in hidden TabsContent)
+  useEffect(() => {
+    // Dispose the previous mode's terminal to avoid xterm running while hidden (can crash)
+    const prevMode = prevModeRef.current;
+    if (prevMode !== mode) {
+      if (prevMode === "direct") disposeTerminal(directDeployXtermRef, directDeployFitRef, directOpenedRef);
+      if (prevMode === "build") disposeTerminal(buildDeployXtermRef, buildDeployFitRef, buildOpenedRef);
+      if (prevMode === "docker") disposeTerminal(dockerSetupXtermRef, dockerSetupFitRef, dockerOpenedRef);
+      prevModeRef.current = mode;
+    }
+
+    if (mode === "direct") initTerminalIfVisible(directDeployTerminalRef, directDeployXtermRef, directDeployFitRef, directOpenedRef);
+    if (mode === "build") initTerminalIfVisible(buildDeployTerminalRef, buildDeployXtermRef, buildDeployFitRef, buildOpenedRef);
+    if (mode === "docker") initTerminalIfVisible(dockerSetupTerminalRef, dockerSetupXtermRef, dockerSetupFitRef, dockerOpenedRef);
+  }, [mode]);
+
+  // Cleanup terminals on unmount
+  useEffect(() => {
+    const handleResize = () => {
+      if (mode === "direct") directDeployFitRef.current?.fit();
+      if (mode === "build") buildDeployFitRef.current?.fit();
+      if (mode === "docker") dockerSetupFitRef.current?.fit();
+    };
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      disposeTerminal(directDeployXtermRef, directDeployFitRef, directOpenedRef);
+      disposeTerminal(buildDeployXtermRef, buildDeployFitRef, buildOpenedRef);
+      disposeTerminal(dockerSetupXtermRef, dockerSetupFitRef, dockerOpenedRef);
+    };
+  }, [mode]);
+
+  // Fit active terminal shortly after mode changes (once visible)
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      if (mode === "direct") directDeployFitRef.current?.fit();
+      if (mode === "build") buildDeployFitRef.current?.fit();
+      if (mode === "docker") dockerSetupFitRef.current?.fit();
+    }, 100);
+    return () => window.clearTimeout(t);
+  }, [mode]);
+
+  // Helper function to write to terminal based on mode
+  const writeToTerminal = (text: string, isError: boolean = false) => {
+    let term: XTerm | null = null;
+    
+    if (mode === "direct") {
+      term = directDeployXtermRef.current;
+    } else if (mode === "build") {
+      term = buildDeployXtermRef.current;
+    } else if (mode === "docker") {
+      term = dockerSetupXtermRef.current;
+    }
+    
+    if (term) {
+      // Parse ANSI-like colors from emoji/log prefixes
+      if (isError || text.includes("❌") || text.includes("Error")) {
+        term.writeln(`\x1b[31m${text}\x1b[0m`);
+      } else if (text.includes("✅") || text.includes("Success")) {
+        term.writeln(`\x1b[32m${text}\x1b[0m`);
+      } else if (text.includes("⚠️") || text.includes("Warning")) {
+        term.writeln(`\x1b[33m${text}\x1b[0m`);
+      } else if (text.includes("🚀") || text.includes("Starting") || text.includes("🔌")) {
+        term.writeln(`\x1b[36m${text}\x1b[0m`);
+      } else {
+        term.writeln(text);
+      }
+    }
+    
+    // Also keep in state for compatibility
+    setLogs((prev) => [...prev, text]);
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -77,6 +263,7 @@ export const VPSDeploy: React.FC<VPSDeployProps> = ({ subscriptionId }) => {
       setFile(selectedFile);
       setError(null);
       setResult(null);
+      setLogs([]);
     }
   };
 
@@ -89,19 +276,130 @@ export const VPSDeploy: React.FC<VPSDeployProps> = ({ subscriptionId }) => {
     setLoading(true);
     setError(null);
     setResult(null);
+    setLogs([]);
+    setIsStreaming(true);
+    
+    // Clear terminal
+    if (directDeployXtermRef.current) {
+      directDeployXtermRef.current.clear();
+    }
+
+    // Abort any existing stream
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
 
     try {
-      const deployResult = await vpsService.deployFilesAdmin(
-        subscriptionId,
-        file,
-        targetPath
-      );
-      setResult(deployResult as DeployResult);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("target_path", targetPath);
+
+      const baseUrl = (apiClient.defaults.baseURL || "").replace(/\/$/, "");
+      const streamUrl = `${baseUrl}/hosting/instances/${subscriptionId}/deploy/files/stream`;
+      const token = sessionStorage.getItem("access_token") || localStorage.getItem("access_token");
+
+      // Use fetch for multipart/form-data POST with streaming response
+      const response = await fetch(streamUrl, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+        signal: abortControllerRef.current.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Deployment failed: ${response.status} ${response.statusText}`);
+      }
+
+      if (!response.body) {
+        throw new Error("Response has no body");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let buffer = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        buffer = buffer.replace(/\r\n/g, "\n");
+
+        let idx = buffer.indexOf("\n\n");
+        while (idx !== -1) {
+          const frame = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+
+          if (frame.startsWith(":")) {
+            idx = buffer.indexOf("\n\n");
+            continue;
+          }
+
+          let event = "message";
+          const dataLines: string[] = [];
+
+          for (const line of frame.split("\n")) {
+            if (line.startsWith("event:")) {
+              event = line.slice(6).trim();
+            } else if (line.startsWith("data:")) {
+              dataLines.push(line.slice(5).replace(/^ /, ""));
+            }
+          }
+
+          const data = dataLines.join("\n");
+
+          if (event === "open") {
+            writeToTerminal("🔌 Connected to deployment server...");
+          } else if (event === "error" || event === "deploy_error") {
+            try {
+              const errorData = JSON.parse(data);
+              const errorMsg = errorData.error || "Deployment failed";
+              setError(errorMsg);
+              writeToTerminal(`❌ Error: ${errorMsg}`, true);
+            } catch {
+              writeToTerminal(`❌ Error: ${data}`, true);
+            }
+            setIsStreaming(false);
+            setLoading(false);
+            return;
+          } else if (event === "success") {
+            try {
+              const successData = JSON.parse(data);
+              setResult({
+                success: true,
+                target_path: successData.target_path,
+                files_deployed: successData.files_deployed,
+              });
+            } catch {
+              setResult({ success: true });
+            }
+          } else if (event === "close") {
+            setIsStreaming(false);
+            setLoading(false);
+            return;
+          } else if (data) {
+            // Write directly to terminal for real-time display
+            if (directDeployXtermRef.current) {
+              directDeployXtermRef.current.write(data);
+            }
+            // Also keep in state
+            setLogs((prev) => [...prev, data]);
+          }
+
+          idx = buffer.indexOf("\n\n");
+        }
+      }
+
+      setIsStreaming(false);
+      setLoading(false);
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || err.message || "Failed to deploy files";
-      setError(errorMsg);
-      setResult({ success: false, error: errorMsg });
-    } finally {
+      if (err.name === "AbortError") {
+        writeToTerminal("⚠️ Deployment cancelled");
+      } else {
+        const errorMsg = err.message || "Failed to deploy files";
+        setError(errorMsg);
+        writeToTerminal(`❌ ${errorMsg}`, true);
+      }
+      setIsStreaming(false);
       setLoading(false);
     }
   };
@@ -115,31 +413,70 @@ export const VPSDeploy: React.FC<VPSDeployProps> = ({ subscriptionId }) => {
     setLoading(true);
     setError(null);
     setResult(null);
+    setLogs([]);
+    
+    // Clear terminal
+    if (buildDeployXtermRef.current) {
+      buildDeployXtermRef.current.clear();
+    }
 
     try {
-      const buildResult = await vpsService.triggerBuildDeployAdmin(
-        subscriptionId,
-        file,
-        imageName || undefined,
-        imageTag,
-        dockerfilePath
+      const formData = new FormData();
+      formData.append("file", file);
+      if (imageName) formData.append("image_name", imageName);
+      formData.append("image_tag", imageTag);
+      formData.append("dockerfile_path", dockerfilePath);
+
+      const response = await apiClient.post(
+        `/hosting/admin/subscriptions/${subscriptionId}/deploy/build`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
       );
-      setResult(buildResult as BuildResult);
+
+      setResult(response.data as BuildResult);
+      const buildLogs = [`✅ Build process started!`, `Image: ${response.data.image_name}:${response.data.image_tag}`];
+      buildLogs.forEach(log => writeToTerminal(log));
     } catch (err: any) {
       const errorMsg = err.response?.data?.detail || err.message || "Failed to trigger build";
       setError(errorMsg);
-      setResult({ success: false, error: errorMsg });
+      setLogs([`❌ ${errorMsg}`]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const stopDeployment = () => {
+    abortControllerRef.current?.abort();
+    setIsStreaming(false);
+    setLoading(false);
   };
 
   const resetForm = () => {
     setFile(null);
     setError(null);
     setResult(null);
+    setLogs([]);
+    setIsStreaming(false);
+    abortControllerRef.current?.abort();
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+  };
+
+  const clearLogs = () => {
+    setLogs([]);
+    
+    // Clear the appropriate terminal
+    if (mode === "direct" && directDeployXtermRef.current) {
+      directDeployXtermRef.current.clear();
+    } else if (mode === "build" && buildDeployXtermRef.current) {
+      buildDeployXtermRef.current.clear();
+    } else if (mode === "docker" && dockerSetupXtermRef.current) {
+      dockerSetupXtermRef.current.clear();
     }
   };
 
@@ -151,10 +488,11 @@ export const VPSDeploy: React.FC<VPSDeployProps> = ({ subscriptionId }) => {
           <h3 className="text-lg font-semibold">Deploy Files</h3>
         </div>
 
-        <Tabs value={mode} onValueChange={(v) => setMode(v as "direct" | "build")}>
+        <Tabs value={mode} onValueChange={(v) => setMode(v as "direct" | "build" | "docker")}>
           <TabsList>
             <TabsTrigger value="direct">Direct Deploy</TabsTrigger>
             <TabsTrigger value="build">Build & Deploy</TabsTrigger>
+            <TabsTrigger value="docker">Docker Setup</TabsTrigger>
           </TabsList>
 
           <TabsContent value="direct" className="space-y-4 mt-4">
@@ -201,22 +539,29 @@ export const VPSDeploy: React.FC<VPSDeployProps> = ({ subscriptionId }) => {
               </div>
 
               <div className="flex gap-2">
-                <Button
-                  onClick={handleDirectDeploy}
-                  disabled={loading || !file}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Deploying...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Deploy Files
-                    </>
-                  )}
-                </Button>
+                {isStreaming ? (
+                  <Button onClick={stopDeployment} variant="destructive">
+                    <X className="h-4 w-4 mr-2" />
+                    Stop Deployment
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleDirectDeploy}
+                    disabled={loading || !file}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Deploying...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Deploy Files
+                      </>
+                    )}
+                  </Button>
+                )}
                 <Button variant="outline" onClick={resetForm} disabled={loading}>
                   Reset
                 </Button>
@@ -241,15 +586,32 @@ export const VPSDeploy: React.FC<VPSDeployProps> = ({ subscriptionId }) => {
                         {result.files_deployed} files deployed to {result.target_path}
                       </div>
                     )}
-                    {result.archive_size && (
-                      <div className="text-sm text-slate-500">
-                        Archive size: {(result.archive_size / 1024 / 1024).toFixed(2)} MB
-                      </div>
-                    )}
                   </div>
                 </AlertDescription>
               </Alert>
             )}
+
+            {/* Terminal Logs */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Terminal className="h-4 w-4" />
+                  <Label>Deployment Logs</Label>
+                  {logs.length > 0 && (
+                    <span className="text-xs text-slate-500">({logs.length} lines)</span>
+                  )}
+                </div>
+                {logs.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={clearLogs}>
+                    Clear
+                  </Button>
+                )}
+              </div>
+              
+              <div className="bg-slate-900 rounded-md overflow-hidden" style={{ minHeight: "400px" }}>
+                <div ref={directDeployTerminalRef} className="w-full h-full" style={{ minHeight: "400px", padding: "10px" }} />
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="build" className="space-y-4 mt-4">
@@ -372,11 +734,343 @@ export const VPSDeploy: React.FC<VPSDeployProps> = ({ subscriptionId }) => {
                 </AlertDescription>
               </Alert>
             )}
+
+            {/* Build Logs Terminal */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Terminal className="h-4 w-4" />
+                  <Label>Build Logs</Label>
+                  {logs.length > 0 && (
+                    <span className="text-xs text-slate-500">({logs.length} lines)</span>
+                  )}
+                </div>
+                {logs.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={clearLogs}>
+                    Clear
+                  </Button>
+                )}
+              </div>
+              
+              <div className="bg-slate-900 rounded-md overflow-hidden" style={{ minHeight: "300px" }}>
+                <div ref={buildDeployTerminalRef} className="w-full h-full" style={{ minHeight: "300px", padding: "10px" }} />
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="docker" className="space-y-4 mt-4">
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-semibold mb-2">Docker Installation</h4>
+                <p className="text-sm text-slate-500 mb-4">
+                  Install Docker and docker-compose in your VPS container. This is required before running docker-compose commands.
+                </p>
+                <Button
+                  onClick={async () => {
+                    setLoading(true);
+                    setError(null);
+                    setLogs([]);
+                    
+                    // Clear terminal
+                    if (dockerSetupXtermRef.current) {
+                      dockerSetupXtermRef.current.clear();
+                    }
+                    
+                    try {
+                      const result = await vpsService.installDocker(subscriptionId);
+                      if (result.success) {
+                        writeToTerminal(`✅ Docker installed successfully!`);
+                        writeToTerminal(`Docker version: ${result.docker_version || "unknown"}`);
+                        writeToTerminal(`Docker Compose version: ${result.compose_version || "unknown"}`);
+                        if (result.logs) {
+                          result.logs.forEach((log: string) => writeToTerminal(log));
+                        }
+                      } else {
+                        setError("Failed to install Docker");
+                        if (result.logs) {
+                          result.logs.forEach((log: string) => writeToTerminal(log, true));
+                        }
+                      }
+                    } catch (err: any) {
+                      const errorMsg = err.response?.data?.detail || err.message || "Failed to install Docker";
+                      setError(errorMsg);
+                      writeToTerminal(`❌ ${errorMsg}`, true);
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Installing Docker...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Install Docker
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-semibold mb-2">Docker Compose</h4>
+                <p className="text-sm text-slate-500 mb-4">
+                  Run docker-compose commands in your VPS container. Make sure Docker is installed first.
+                </p>
+
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="compose-file">Docker Compose File</Label>
+                    <Input
+                      id="compose-file"
+                      value={composeFile}
+                      onChange={(e) => setComposeFile(e.target.value)}
+                      placeholder="docker-compose.yml"
+                      disabled={loading}
+                      className="mt-2"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="compose-command">Command</Label>
+                    <Input
+                      id="compose-command"
+                      value={composeCommand}
+                      onChange={(e) => setComposeCommand(e.target.value)}
+                      placeholder="up -d"
+                      disabled={loading}
+                      className="mt-2"
+                    />
+                    <p className="text-sm text-slate-500 mt-1">
+                      Common commands: "up -d" (start), "down" (stop), "ps" (list), "logs" (show logs), "restart"
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="compose-working-dir">Working Directory</Label>
+                    <Input
+                      id="compose-working-dir"
+                      value={composeWorkingDir}
+                      onChange={(e) => setComposeWorkingDir(e.target.value)}
+                      placeholder="/data"
+                      disabled={loading}
+                      className="mt-2"
+                    />
+                  </div>
+
+                  <Button
+                    onClick={async () => {
+                      setLoading(true);
+                      setError(null);
+                      setLogs([]);
+                      setIsStreaming(true);
+                      
+                      // Clear terminal
+                      if (dockerSetupXtermRef.current) {
+                        dockerSetupXtermRef.current.clear();
+                      }
+
+                      // Abort any existing stream
+                      abortControllerRef.current?.abort();
+                      abortControllerRef.current = new AbortController();
+
+                      try {
+                        const formData = new FormData();
+                        formData.append("compose_file", composeFile);
+                        formData.append("command", composeCommand);
+                        formData.append("working_dir", composeWorkingDir);
+
+                        const baseUrl = (apiClient.defaults.baseURL || "").replace(/\/$/, "");
+                        const streamUrl = `${baseUrl}/hosting/instances/${subscriptionId}/docker/compose/stream`;
+                        const token = sessionStorage.getItem("access_token") || localStorage.getItem("access_token");
+
+                        const response = await fetch(streamUrl, {
+                          method: "POST",
+                          headers: token ? { Authorization: `Bearer ${token}` } : {},
+                          body: formData,
+                          signal: abortControllerRef.current.signal,
+                        });
+
+                        if (!response.ok) {
+                          throw new Error(`Docker compose failed: ${response.status} ${response.statusText}`);
+                        }
+
+                        if (!response.body) {
+                          throw new Error("Response has no body");
+                        }
+
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder("utf-8");
+                        let buffer = "";
+
+                        while (true) {
+                          const { value, done } = await reader.read();
+                          if (done) break;
+
+                          buffer += decoder.decode(value, { stream: true });
+                          buffer = buffer.replace(/\r\n/g, "\n");
+
+                          // Process complete SSE frames (separated by \n\n)
+                          let frameEnd = buffer.indexOf("\n\n");
+                          while (frameEnd !== -1) {
+                            const frame = buffer.slice(0, frameEnd);
+                            buffer = buffer.slice(frameEnd + 2);
+
+                            // Skip comments
+                            if (frame.startsWith(":")) {
+                              frameEnd = buffer.indexOf("\n\n");
+                              continue;
+                            }
+
+                            let event = "message";
+                            const dataLines: string[] = [];
+
+                            // Parse SSE frame
+                            for (const line of frame.split("\n")) {
+                              if (line.startsWith("event:")) {
+                                event = line.slice(6).trim();
+                              } else if (line.startsWith("data:")) {
+                                const dataContent = line.slice(5).replace(/^ /, "");
+                                dataLines.push(dataContent);
+                              }
+                            }
+
+                            const data = dataLines.join("\n");
+
+                            // Handle different event types
+                            if (event === "open") {
+                              writeToTerminal("🔌 Connected...");
+                            } else if (event === "error" || event === "deploy_error") {
+                              try {
+                                const errorData = JSON.parse(data);
+                                const errorMsg = errorData.error || errorData.message || data;
+                                setError(errorMsg);
+                                writeToTerminal(`❌ ${errorMsg}`, true);
+                              } catch {
+                                writeToTerminal(`❌ ${data}`, true);
+                              }
+                              setIsStreaming(false);
+                              setLoading(false);
+                              return;
+                            } else if (event === "success") {
+                              try {
+                                const successData = JSON.parse(data);
+                                writeToTerminal(`✅ ${successData.message || "Command completed"}`);
+                              } catch {
+                                writeToTerminal(`✅ Command completed`);
+                              }
+                            } else if (event === "close") {
+                              setIsStreaming(false);
+                              setLoading(false);
+                              return;
+                            } else if (data) {
+                              // Write directly to terminal for real-time display
+                              if (dockerSetupXtermRef.current) {
+                                dockerSetupXtermRef.current.write(data);
+                              }
+                              // Also keep in state
+                              const lines = data.split("\n").filter(line => line.trim().length > 0);
+                              if (lines.length > 0) {
+                                lines.forEach((line) => {
+                                  setLogs((prev) => [...prev, line]);
+                                });
+                              }
+                            }
+
+                            frameEnd = buffer.indexOf("\n\n");
+                          }
+                          
+                          // Also check for incomplete frames with just \n (might be a line without \n\n yet)
+                          // This helps process lines faster without waiting for complete SSE frames
+                          if (buffer.length > 0 && !buffer.includes("\n\n")) {
+                            // If we have data but no complete frame, check if it ends with \n
+                            // This means we might have a complete line waiting
+                            const lastNewline = buffer.lastIndexOf("\n");
+                            if (lastNewline > 0 && lastNewline < buffer.length - 1) {
+                              // We have a complete line, process it
+                              const line = buffer.slice(0, lastNewline);
+                              buffer = buffer.slice(lastNewline + 1);
+                              if (line.trim()) {
+                                setLogs((prev) => [...prev, line]);
+                              }
+                            }
+                          }
+                        }
+                        
+                        // Process any remaining buffer content
+                        if (buffer.trim()) {
+                          if (dockerSetupXtermRef.current) {
+                            dockerSetupXtermRef.current.write(buffer);
+                          }
+                          const remainingLines = buffer.split("\n").filter(line => line.trim().length > 0);
+                          if (remainingLines.length > 0) {
+                            setLogs((prev) => [...prev, ...remainingLines]);
+                          }
+                        }
+                      } catch (err: any) {
+                        if (err.name === "AbortError") {
+                          writeToTerminal("⏹️ Stream cancelled");
+                        } else {
+                          const errorMsg = err.message || "Failed to run docker-compose";
+                          setError(errorMsg);
+                          writeToTerminal(`❌ ${errorMsg}`, true);
+                        }
+                        setIsStreaming(false);
+                        setLoading(false);
+                      }
+                    }}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Running...
+                      </>
+                    ) : (
+                      <>
+                        <Terminal className="h-4 w-4 mr-2" />
+                        Run Docker Compose
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Docker Logs Terminal */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Terminal className="h-4 w-4" />
+                  <Label>Docker Logs</Label>
+                  {logs.length > 0 && (
+                    <span className="text-xs text-slate-500">({logs.length} lines)</span>
+                  )}
+                </div>
+                {logs.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={clearLogs}>
+                    Clear
+                  </Button>
+                )}
+              </div>
+              
+              <div className="bg-slate-900 rounded-md overflow-hidden" style={{ minHeight: "400px" }}>
+                <div ref={dockerSetupTerminalRef} className="w-full h-full" style={{ minHeight: "400px", padding: "10px" }} />
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
     </Card>
   );
 };
-
-

@@ -30,6 +30,16 @@ class TicketPriority(str, Enum):
     URGENT = "urgent"
 
 
+class FileType(str, Enum):
+    """Allowed file types for attachments."""
+
+    PDF = "pdf"
+    IMAGE = "image"  # jpg, png, gif, webp
+    DOCUMENT = "document"  # docx, xlsx, txt
+    ARCHIVE = "archive"  # zip, rar, 7z
+    VIDEO = "video"  # mp4, mov, avi
+
+
 class Ticket(Base):
     """Ticket model for support system."""
 
@@ -113,6 +123,51 @@ class Ticket(Base):
 
     def __repr__(self) -> str:
         return f"<Ticket {self.id} - {self.title}>"
+
+
+class TicketAttachment(Base):
+    """Ticket attachment model for files in ticket communication."""
+
+    __tablename__ = "ticket_attachments"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    ticket_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    reply_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("ticket_replies.id", ondelete="CASCADE"), nullable=True
+    )
+
+    # File information
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    file_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)  # In bytes
+    file_path: Mapped[str] = mapped_column(String(500), nullable=False)
+
+    # Metadata
+    uploaded_by: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    download_count: Mapped[int] = mapped_column(Integer, default=0)
+    virus_scanned: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_infected: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    deleted_by: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+
+    # Relationships
+    ticket = relationship("Ticket", back_populates="attachments")
+
+    def __repr__(self) -> str:
+        return f"<TicketAttachment {self.id} - {self.original_filename}>"
 
 
 class TicketReply(Base):
@@ -647,44 +702,9 @@ class AutomationRule(Base):
         return f"<AutomationRule {self.id} - {self.name}>"
 
 
-class TicketAttachment(Base):
-    """File attachment on a ticket."""
-
-    __tablename__ = "ticket_attachments"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    ticket_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    filename: Mapped[str] = mapped_column(String(255), nullable=False)
-    original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
-    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    file_size: Mapped[int] = mapped_column(Integer, nullable=False)  # bytes
-    file_path: Mapped[str] = mapped_column(String(500), nullable=False)  # Storage path
-
-    # Security
-    virus_scanned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    is_safe: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
-    # Metadata
-    is_public: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)  # Visible to customer
-    download_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-
-    # Timestamps
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-    )
-
-    # Audit fields
-    uploaded_by: Mapped[str] = mapped_column(String(36), nullable=False)
-
-    # Relationships
-    ticket = relationship("Ticket", back_populates="attachments")
-
-    def __repr__(self) -> str:
-        return f"<TicketAttachment {self.id} - {self.filename}>"
+# TicketAttachment model is defined in app.modules.tickets.attachments
+# Import it here if needed for type hints, but don't redefine the table
+# The relationship in Ticket model uses string reference "TicketAttachment" which works fine
 
 
 class TicketHistory(Base):

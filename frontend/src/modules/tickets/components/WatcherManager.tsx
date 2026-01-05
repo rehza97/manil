@@ -26,6 +26,7 @@ import {
 import { Checkbox } from '@/shared/components/ui/checkbox';
 import { Label } from '@/shared/components/ui/label';
 import { useWatchers, useUsers } from '../hooks/useWatchers';
+import { useAuth } from '@/modules/auth';
 
 interface WatcherManagerProps {
   ticketId: string;
@@ -36,12 +37,17 @@ export const WatcherManager: React.FC<WatcherManagerProps> = ({
   ticketId,
   onWatchersChange,
 }) => {
+  const { user } = useAuth();
+  const isClient = user?.role === "client";
+  
+  // Don't fetch watchers for clients - explicitly enable only for non-clients
   const {
     data: watchers = [],
     isLoading: watchersLoading,
-  } = useWatchers(ticketId);
-  const { data: users = [], isLoading: usersLoading } = useUsers();
-  const { addWatcher, removeWatcher } = useWatchers(ticketId);
+    addWatcher,
+    removeWatcher,
+  } = useWatchers(ticketId, { enabled: !isClient && !!ticketId });
+  const { data: users = [], isLoading: usersLoading } = useUsers(undefined, { enabled: !isClient });
 
   const [isOpen, setIsOpen] = React.useState(false);
   const [selectedUserId, setSelectedUserId] = React.useState('');

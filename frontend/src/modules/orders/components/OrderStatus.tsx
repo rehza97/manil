@@ -4,7 +4,7 @@
  */
 
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useOrder, useUpdateOrderStatus } from "../hooks/useOrders";
 import type { OrderStatus } from "../types/order.types";
 import { Button } from "@/shared/components/ui/button";
@@ -56,8 +56,23 @@ const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 export function OrderStatus() {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus | "">("");
   const [notes, setNotes] = useState("");
+  
+  // Determine base path based on current location
+  const getBasePath = () => {
+    if (location.pathname.startsWith("/dashboard")) {
+      return "/dashboard/orders";
+    } else if (location.pathname.startsWith("/corporate")) {
+      return "/corporate/orders";
+    } else if (location.pathname.startsWith("/admin")) {
+      return "/admin/orders";
+    }
+    return "/dashboard/orders"; // Default to dashboard for clients
+  };
+  
+  const basePath = getBasePath();
 
   if (!orderId) {
     return (
@@ -83,7 +98,7 @@ export function OrderStatus() {
           notes: notes || undefined,
         },
       });
-      navigate(`/orders/${orderId}`);
+      navigate(`${basePath}/${orderId}`);
     } catch (error) {
       console.error("Failed to update status:", error);
     }
@@ -112,7 +127,7 @@ export function OrderStatus() {
         <Button
           variant="ghost"
           className="mb-4"
-          onClick={() => navigate(`/orders/${orderId}`)}
+          onClick={() => navigate(`${basePath}/${orderId}`)}
         >
           ← Back to Order
         </Button>
@@ -233,7 +248,7 @@ export function OrderStatus() {
                 <div className="flex justify-end gap-3 border-t pt-6">
                   <Button
                     variant="outline"
-                    onClick={() => navigate(`/orders/${orderId}`)}
+                    onClick={() => navigate(`${basePath}/${orderId}`)}
                     disabled={updateStatusMutation.isPending}
                   >
                     Cancel

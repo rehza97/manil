@@ -237,12 +237,6 @@ const UserDashboardLayout: React.FC = () => {
       ],
     },
     {
-      name: "My Orders",
-      href: "/dashboard/orders",
-      icon: ShoppingCart,
-      current: location.pathname.startsWith("/dashboard/orders"),
-    },
-    {
       name: "Invoices",
       icon: FileText,
       current: location.pathname.startsWith("/dashboard/invoices"),

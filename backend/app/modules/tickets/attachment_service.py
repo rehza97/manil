@@ -8,7 +8,8 @@ from typing import Optional, List
 from sqlalchemy import select, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.tickets.attachments import TicketAttachment, AttachmentConfig
+from app.modules.tickets.models import TicketAttachment
+from app.modules.tickets.attachments import AttachmentConfig
 from app.infrastructure.storage.service import StorageService
 from app.core.exceptions import ForbiddenException, ValidationException
 from app.core.logging import logger

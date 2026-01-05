@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useOrder, useCreateOrder, useUpdateOrder } from "../hooks/useOrders";
 import type { CreateOrderDTO, UpdateOrderDTO, OrderStatus } from "../types/order.types";
 import {
@@ -54,7 +54,22 @@ interface OrderFormProps {
 
 export function OrderForm({ orderId, onSuccess, onCancel }: OrderFormProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const isEdit = !!orderId;
+  
+  // Determine base path based on current location
+  const getBasePath = () => {
+    if (location.pathname.startsWith("/dashboard")) {
+      return "/dashboard/orders";
+    } else if (location.pathname.startsWith("/corporate")) {
+      return "/corporate/orders";
+    } else if (location.pathname.startsWith("/admin")) {
+      return "/admin/orders";
+    }
+    return "/dashboard/orders"; // Default to dashboard for clients
+  };
+  
+  const basePath = getBasePath();
   const { data: existingOrder, isLoading: isLoadingOrder } = useOrder(orderId || null);
   const createOrder = useCreateOrder();
   const updateOrder = useUpdateOrder();
@@ -144,7 +159,7 @@ export function OrderForm({ orderId, onSuccess, onCancel }: OrderFormProps) {
       if (onSuccess) {
         onSuccess();
       } else {
-        navigate("/orders");
+        navigate(basePath);
       }
     } catch (error) {
       console.error("Failed to save order:", error);
@@ -155,7 +170,7 @@ export function OrderForm({ orderId, onSuccess, onCancel }: OrderFormProps) {
     if (onCancel) {
       onCancel();
     } else {
-      navigate("/orders");
+      navigate(basePath);
     }
   };
 
@@ -167,7 +182,7 @@ export function OrderForm({ orderId, onSuccess, onCancel }: OrderFormProps) {
         <Button
           variant="ghost"
           className="mb-4"
-          onClick={() => navigate("/orders")}
+          onClick={() => navigate(basePath)}
         >
           ← Back to Orders
         </Button>

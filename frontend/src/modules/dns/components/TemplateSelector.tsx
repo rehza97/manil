@@ -123,12 +123,14 @@ export function TemplateSelector({
                 <SelectValue placeholder="Choose a template..." />
               </SelectTrigger>
               <SelectContent>
-                {templates?.map((template) => (
-                  <SelectItem key={template.id} value={template.id}>
-                    {template.name}
-                    {template.is_default && " (Default)"}
-                  </SelectItem>
-                ))}
+                {templates
+                  ?.filter((template) => template.id && template.id.trim() !== "")
+                  .map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name}
+                      {template.is_default && " (Default)"}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
             {selectedTemplate && (

@@ -1,299 +1,261 @@
-/**
- * VPS Terminal Component
- *
- * Provides command execution interface for VPS containers with two modes:
- * 1. Simple Exec: Execute single command and view output
- * 2. Interactive Terminal: Stream command execution output in real-time
- */
-
-import React, { useState, useRef, useEffect } from "react";
-import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
-import { Card } from "@/shared/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import React, { useEffect, useRef, useState } from "react";
+import { Terminal } from "xterm";
+import { FitAddon } from "xterm-addon-fit";
+import "xterm/css/xterm.css";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
-import { AlertCircle, Terminal, Play, Loader2 } from "lucide-react";
-import { apiClient } from "@/shared/api/client";
-import { streamSSE } from "@/shared/utils/sse";
+import { Button } from "@/shared/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { AlertCircle, Terminal as TerminalIcon, X } from "lucide-react";
+import { attachTerminalSocket } from "../services/terminalSocketManager";
 
-type VPSTerminalProps = {
+interface VPSTerminalProps {
   subscriptionId: string;
   containerId?: string;
   apiBase?: string;
-};
+  className?: string;
+}
 
-type ExecResult = {
-  exit_code: number;
-  output: string;
-  command: string;
-  executed_at: string;
-};
+export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, containerId, apiBase, className }) => {
+  const terminalRef = useRef<HTMLDivElement>(null);
+  const xtermRef = useRef<Terminal | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
+  const socketHandleRef = useRef<ReturnType<typeof attachTerminalSocket> | null>(null);
+  const onDataDisposableRef = useRef<{ dispose: () => void } | null>(null);
+  const [connected, setConnected] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false);
 
-export const VPSTerminal: React.FC<VPSTerminalProps> = ({
-  subscriptionId,
-  containerId,
-  apiBase,
-}) => {
-  const [mode, setMode] = useState<"simple" | "interactive">("simple");
-  const [command, setCommand] = useState("");
-  const [simpleOutput, setSimpleOutput] = useState<string>("");
-  const [simpleLoading, setSimpleLoading] = useState(false);
-  const [simpleError, setSimpleError] = useState<string | null>(null);
-  const [interactiveOutput, setInteractiveOutput] = useState<string[]>([]);
-  const [interactiveLoading, setInteractiveLoading] = useState(false);
-  const [interactiveError, setInteractiveError] = useState<string | null>(null);
-  const [interactiveStatus, setInteractiveStatus] = useState<"idle" | "streaming">("idle");
-  
-  const abortRef = useRef<AbortController | null>(null);
-  const outputEndRef = useRef<HTMLDivElement>(null);
-
-  const baseUrl = apiBase || (apiClient.defaults.baseURL || "").replace(/\/$/, "");
-
-  // Auto-scroll to bottom of interactive output
   useEffect(() => {
-    if (mode === "interactive" && outputEndRef.current) {
-      outputEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [interactiveOutput, mode]);
+    if (!terminalRef.current) return;
 
-  const executeSimpleCommand = async () => {
-    if (!command.trim()) {
-      setSimpleError("Please enter a command");
-      return;
-    }
+    let mounted = true;
+    let term: Terminal | null = null;
+    let fitAddon: FitAddon | null = null;
 
-    setSimpleLoading(true);
-    setSimpleError(null);
-    setSimpleOutput("");
-
-    try {
-      const response = await apiClient.post<ExecResult>(
-        `/hosting/admin/subscriptions/${subscriptionId}/exec`,
-        {
-          command: command.trim(),
-          tty: false,
-        }
-      );
-
-      setSimpleOutput(response.data.output || "(no output)");
-      if (response.data.exit_code !== 0) {
-        setSimpleError(`Command exited with code ${response.data.exit_code}`);
-      }
-    } catch (error: any) {
-      const errorMsg = error.response?.data?.detail || error.message || "Failed to execute command";
-      setSimpleError(errorMsg);
-      setSimpleOutput("");
-    } finally {
-      setSimpleLoading(false);
-    }
-  };
-
-  const executeInteractiveCommand = async () => {
-    if (!command.trim()) {
-      setInteractiveError("Please enter a command");
-      return;
-    }
-
-    // Abort any existing stream
-    abortRef.current?.abort();
-    abortRef.current = new AbortController();
-
-    setInteractiveLoading(true);
-    setInteractiveError(null);
-    setInteractiveOutput([]);
-    setInteractiveStatus("streaming");
-
-    const streamUrl = `${baseUrl}/hosting/admin/subscriptions/${subscriptionId}/exec/stream?command=${encodeURIComponent(command.trim())}&tty=true`;
-    const token = sessionStorage.getItem("access_token") || localStorage.getItem("access_token");
-
-    try {
-      // Connect to SSE stream (GET request with query params)
-      streamSSE(streamUrl, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        signal: abortRef.current.signal,
-        onOpen: () => {
-          setInteractiveStatus("streaming");
+    const initializeTerminal = () => {
+      // Create xterm instance
+      term = new Terminal({
+        cursorBlink: true,
+        fontSize: 14,
+        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+        theme: {
+          background: "#0f172a",
+          foreground: "#e2e8f0",
+          cursor: "#38bdf8",
         },
-        onMessage: (msg) => {
-          if (msg.event === "error") {
-            setInteractiveError(msg.data || "Stream error");
-            setInteractiveStatus("idle");
-            return;
-          }
-          if (msg.event === "open" || msg.event === "close") {
-            return;
-          }
-          // Add output line
-          setInteractiveOutput((prev) => [...prev, msg.data]);
-        },
-        onError: (e) => {
-          setInteractiveError(e instanceof Error ? e.message : "Failed to stream output");
-          setInteractiveStatus("idle");
-        },
-      }).catch((e) => {
-        if (abortRef.current?.signal.aborted) return;
-        setInteractiveError(e instanceof Error ? e.message : "Failed to stream output");
-        setInteractiveStatus("idle");
+        rows: 24,
+        cols: 80,
       });
-    } catch (error: any) {
-      const errorMsg = error.response?.data?.detail || error.message || "Failed to execute command";
-      setInteractiveError(errorMsg);
-      setInteractiveStatus("idle");
-    } finally {
-      setInteractiveLoading(false);
-    }
-  };
 
-  const stopInteractive = () => {
-    abortRef.current?.abort();
-    setInteractiveStatus("idle");
-    setInteractiveLoading(false);
-  };
+      // Create fit addon
+      fitAddon = new FitAddon();
 
-  const clearOutput = () => {
-    if (mode === "simple") {
-      setSimpleOutput("");
-    } else {
-      setInteractiveOutput([]);
+      // Load addon BEFORE opening
+      term.loadAddon(fitAddon);
+
+      // Open terminal only when container is visible & measured.
+      const el = terminalRef.current;
+      if (!el || !term) return;
+
+      // Store refs
+      xtermRef.current = term;
+      fitAddonRef.current = fitAddon;
+
+      let opened = false;
+      const tryOpen = () => {
+        if (!mounted || opened || !terminalRef.current || !term || !fitAddon) return;
+        const rect = terminalRef.current.getBoundingClientRect();
+        // We allow visibility:hidden (still measurable); but avoid display:none.
+        const style = window.getComputedStyle(terminalRef.current);
+        if (rect.width > 0 && rect.height > 0 && style.display !== "none") {
+          opened = true;
+          term.open(terminalRef.current);
+          // Fit after next paint to let xterm measure.
+          requestAnimationFrame(() => {
+            try {
+              fitAddon.fit();
+            } catch (err) {
+              console.warn("Error fitting terminal:", err);
+            }
+            setIsReady(true);
+            connectWebSocket(term);
+          });
+          return;
+        }
+        requestAnimationFrame(tryOpen);
+      };
+
+      requestAnimationFrame(tryOpen);
+    };
+
+    // Initialize terminal
+    initializeTerminal();
+
+    // Handle window resize
+    const handleResize = () => {
+      if (mounted && fitAddonRef.current && terminalRef.current) {
+        requestAnimationFrame(() => {
+          try {
+            const rect = terminalRef.current?.getBoundingClientRect();
+            if (rect && rect.width > 0 && rect.height > 0) {
+              fitAddonRef.current?.fit();
+            }
+          } catch (err) {
+            console.warn("Error resizing terminal:", err);
+          }
+        });
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    // Cleanup
+    return () => {
+      mounted = false;
+      window.removeEventListener("resize", handleResize);
+
+      socketHandleRef.current?.detach();
+      socketHandleRef.current = null;
+      onDataDisposableRef.current?.dispose();
+      onDataDisposableRef.current = null;
+
+      if (term) {
+        try {
+          term.dispose();
+        } catch (err) {
+          console.error("Error disposing terminal:", err);
+        }
+      }
+
+      xtermRef.current = null;
+      fitAddonRef.current = null;
+    };
+  }, [subscriptionId, apiBase]);
+
+  const connectWebSocket = (term: Terminal) => {
+    // Get WebSocket URL
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const host = window.location.hostname;
+    // Use same port as API
+    const apiUrl = apiBase || import.meta.env.VITE_API_URL || "http://localhost:8000";
+    const apiHost = new URL(apiUrl).hostname;
+    const apiPort = new URL(apiUrl).port || (protocol === "wss:" ? "443" : "8000");
+
+    const token = sessionStorage.getItem("access_token") || localStorage.getItem("access_token");
+    const tokenParam = token ? `?token=${encodeURIComponent(token)}` : "";
+    const wsUrl = `${protocol}//${apiHost}:${apiPort}/api/v1/hosting/instances/${subscriptionId}/terminal${tokenParam}`;
+
+    console.log("Connecting to WebSocket:", wsUrl);
+
+    try {
+      // Reuse same socket across tab switches/unmounts.
+      socketHandleRef.current?.detach();
+
+      socketHandleRef.current = attachTerminalSocket(subscriptionId, wsUrl, {
+        onOpen: () => {
+          console.log("WebSocket connected");
+          setConnected(true);
+          setError(null);
+          term.writeln("\x1b[1;32m✓ Connected to VPS terminal\x1b[0m");
+          term.writeln("\x1b[36mType commands and press Enter to execute\x1b[0m");
+          term.writeln("");
+          // Trigger an initial prompt from bash.
+          socketHandleRef.current?.send(JSON.stringify({ type: "input", data: "\n" }));
+        },
+        onMessage: (event) => {
+          try {
+            const message = JSON.parse(event.data as string);
+            if (message.type === "output") {
+              term.write(message.data);
+            } else if (message.type === "error") {
+              term.writeln(`\r\n\x1b[1;31m✗ Error: ${message.message}\x1b[0m\r\n`);
+              setError(message.message);
+            }
+          } catch (err) {
+            console.error("Error parsing WebSocket message:", err);
+          }
+        },
+        onError: (event) => {
+          console.error("WebSocket error:", event);
+          setError("WebSocket connection error");
+        },
+        onClose: () => {
+          setConnected(false);
+          term.writeln("\r\n\x1b[1;33m⚠ Connection closed\x1b[0m\r\n");
+        },
+      });
+
+      // Handle terminal input
+      onDataDisposableRef.current?.dispose();
+      onDataDisposableRef.current = term.onData((data) => {
+        socketHandleRef.current?.send(
+          JSON.stringify({
+            type: "input",
+            data,
+          })
+        );
+      });
+    } catch (err) {
+      console.error("Error connecting to WebSocket:", err);
+      setError("Failed to connect to terminal");
     }
   };
 
   return (
-    <Card className="p-6">
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Terminal className="h-5 w-5" />
-          <h3 className="text-lg font-semibold">Terminal</h3>
-        </div>
-
-        <Tabs value={mode} onValueChange={(v) => setMode(v as "simple" | "interactive")}>
-          <TabsList>
-            <TabsTrigger value="simple">Simple Exec</TabsTrigger>
-            <TabsTrigger value="interactive">Interactive Terminal</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="simple" className="space-y-4 mt-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter command (e.g., ls -la, pwd, whoami)"
-                value={command}
-                onChange={(e) => setCommand(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    executeSimpleCommand();
-                  }
-                }}
-                disabled={simpleLoading}
-                className="flex-1"
-              />
-              <Button
-                onClick={executeSimpleCommand}
-                disabled={simpleLoading || !command.trim()}
-              >
-                {simpleLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Executing...
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-4 w-4 mr-2" />
-                    Execute
-                  </>
-                )}
-              </Button>
-              <Button variant="outline" onClick={clearOutput} disabled={simpleLoading}>
-                Clear
-              </Button>
-            </div>
-
-            {simpleError && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{simpleError}</AlertDescription>
-              </Alert>
-            )}
-
-            <div className="bg-slate-900 text-slate-100 p-4 rounded-md overflow-x-auto text-sm min-h-[200px] max-h-[500px] overflow-y-auto">
-              <pre className="whitespace-pre-wrap font-mono">
-                {simpleOutput || "(No output yet. Enter a command and click Execute.)"}
-              </pre>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="interactive" className="space-y-4 mt-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter command (e.g., tail -f /var/log/syslog)"
-                value={command}
-                onChange={(e) => setCommand(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    if (interactiveStatus === "streaming") {
-                      stopInteractive();
-                    } else {
-                      executeInteractiveCommand();
-                    }
-                  }
-                }}
-                disabled={interactiveLoading}
-                className="flex-1"
-              />
-              {interactiveStatus === "streaming" ? (
-                <Button onClick={stopInteractive} variant="destructive">
-                  Stop
-                </Button>
-              ) : (
-                <Button
-                  onClick={executeInteractiveCommand}
-                  disabled={interactiveLoading || !command.trim()}
-                >
-                  {interactiveLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Starting...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-4 w-4 mr-2" />
-                      Stream
-                    </>
-                  )}
-                </Button>
-              )}
-              <Button variant="outline" onClick={clearOutput} disabled={interactiveLoading}>
-                Clear
-              </Button>
-            </div>
-
-            {interactiveError && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{interactiveError}</AlertDescription>
-              </Alert>
-            )}
-
-            <div className="bg-slate-900 text-slate-100 p-4 rounded-md overflow-x-auto text-sm min-h-[200px] max-h-[500px] overflow-y-auto">
-              <pre className="whitespace-pre-wrap font-mono">
-                {interactiveOutput.length > 0
-                  ? interactiveOutput.join("")
-                  : "(No output yet. Enter a command and click Stream.)"}
-              </pre>
-              <div ref={outputEndRef} />
-            </div>
-
-            {interactiveStatus === "streaming" && (
-              <div className="text-sm text-slate-600 flex items-center gap-2">
-                <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
-                Streaming output...
+    <Card className={className}>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <TerminalIcon className="h-5 w-5" />
+            <CardTitle>Interactive Terminal</CardTitle>
+          </div>
+          <div className="flex items-center gap-2">
+            {connected ? (
+              <div className="flex items-center gap-2 text-sm text-green-600">
+                <div className="h-2 w-2 rounded-full bg-green-600 animate-pulse" />
+                Connected
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <div className="h-2 w-2 rounded-full bg-gray-400" />
+                Disconnected
               </div>
             )}
-          </TabsContent>
-        </Tabs>
-      </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {!isReady && (
+          <div className="flex items-center justify-center h-[500px] bg-slate-900 rounded-md border">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p className="text-slate-400">Initializing terminal...</p>
+            </div>
+          </div>
+        )}
+
+        <div
+          ref={terminalRef}
+          className="rounded-md border"
+          style={{
+            width: "100%",
+            height: "500px",
+            minHeight: "500px",
+            padding: "10px",
+            backgroundColor: "#0f172a",
+            overflow: "hidden",
+            // Keep in layout so xterm can measure dimensions even while "loading".
+            visibility: isReady ? "visible" : "hidden",
+          }}
+        />
+      </CardContent>
     </Card>
   );
 };
-
