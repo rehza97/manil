@@ -38,6 +38,7 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
         cursorBlink: true,
         fontSize: 14,
         fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+        disableStdin: false, // Allow user input
         theme: {
           background: "#0f172a",
           foreground: "#e2e8f0",
@@ -78,6 +79,12 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
               console.warn("Error fitting terminal:", err);
             }
             setIsReady(true);
+            // Focus the terminal to enable input
+            setTimeout(() => {
+              if (term) {
+                term.focus();
+              }
+            }, 100);
             connectWebSocket(term);
           });
           return;
@@ -185,16 +192,26 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
         },
       });
 
-      // Handle terminal input
+      // Handle terminal input - ensure it's enabled
       onDataDisposableRef.current?.dispose();
       onDataDisposableRef.current = term.onData((data) => {
-        socketHandleRef.current?.send(
-          JSON.stringify({
-            type: "input",
-            data,
-          })
-        );
+        // Send input to WebSocket if connected
+        if (socketHandleRef.current) {
+          socketHandleRef.current.send(
+            JSON.stringify({
+              type: "input",
+              data,
+            })
+          );
+        }
       });
+      
+      // Focus the terminal to enable typing
+      setTimeout(() => {
+        if (term) {
+          term.focus();
+        }
+      }, 200);
     } catch (err) {
       console.error("Error connecting to WebSocket:", err);
       setError("Failed to connect to terminal");

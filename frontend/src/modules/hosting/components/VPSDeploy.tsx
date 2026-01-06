@@ -105,8 +105,9 @@ export const VPSDeploy: React.FC<VPSDeployProps> = ({ subscriptionId }) => {
       const term = new XTerm({
         cursorBlink: false,
         disableStdin: true, // Read-only terminal for logs
+        convertEol: true, // Convert line feeds to carriage return + line feed
         theme: {
-          background: "#0d0d0d",
+          background: "#0f172a", // slate-900
           foreground: "#ffffff",
           cursor: "#ffffff",
           selection: "#264f78",
@@ -609,7 +610,16 @@ export const VPSDeploy: React.FC<VPSDeployProps> = ({ subscriptionId }) => {
               </div>
               
               <div className="bg-slate-900 rounded-md overflow-hidden" style={{ minHeight: "400px" }}>
-                <div ref={directDeployTerminalRef} className="w-full h-full" style={{ minHeight: "400px", padding: "10px" }} />
+                <div 
+                  ref={directDeployTerminalRef} 
+                  className="w-full h-full xterm-container" 
+                  style={{ 
+                    minHeight: "400px", 
+                    padding: "10px",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word"
+                  }}
+                />
               </div>
             </div>
           </TabsContent>

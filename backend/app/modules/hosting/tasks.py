@@ -371,7 +371,6 @@ def _install_docker_in_container(container) -> None:
     container.exec_run(
         """sh -c 'cat > /etc/docker/daemon.json << "EOF"
 {
-  "storage-driver": "vfs",
   "log-level": "info"
 }
 EOF
@@ -597,7 +596,7 @@ def _create_docker_container(
                 # CRITICAL: VFS prevents overlayfs-on-overlayfs issues in Docker-in-Docker
                 "if command -v dockerd &> /dev/null; then "
                 "mkdir -p /var/run /var/lib/docker /etc/docker && "
-                "echo '{\"storage-driver\":\"vfs\",\"log-level\":\"info\"}' > /etc/docker/daemon.json && "
+                "echo '{\"log-level\":\"info\"}' > /etc/docker/daemon.json && "
                 # Clear any existing Docker data to force VFS initialization
                 "rm -rf /var/lib/docker/* 2>/dev/null; "
                 "dockerd --storage-driver=vfs > /var/log/dockerd.log 2>&1 & "
@@ -607,7 +606,16 @@ def _create_docker_container(
             )
         ]
         
-        container = client.containers.create(
+        # NOTE: When VPS_DOCKER_ENGINE_MODE=dind, Docker-in-Docker requires writable cgroups.
+        # This typically requires privileged mode + host cgroup namespace.
+        dind_mode = (os.getenv("VPS_DOCKER_ENGINE_MODE", "auto") or "auto").strip().lower() == "dind"
+
+        # For DinD: bind-mount cgroup fs as writable so nested containers can create cgroups.
+        volumes_cfg = {volume_path: {"bind": "/data", "mode": "rw"}}
+        if dind_mode:
+            volumes_cfg["/sys/fs/cgroup"] = {"bind": "/sys/fs/cgroup", "mode": "rw"}
+
+        create_kwargs = dict(
             image=docker_image,
             name=container_name,
             hostname=hostname,
@@ -621,8 +629,8 @@ def _create_docker_container(
             network=network_name,
             # Port mapping (SSH)
             ports={"22/tcp": ssh_port},
-            # Volume mount
-            volumes={volume_path: {"bind": "/data", "mode": "rw"}},
+            # Volume mounts
+            volumes=volumes_cfg,
             # Environment variables
             environment={
                 "ROOT_PASSWORD": root_password,
@@ -637,8 +645,9 @@ def _create_docker_container(
                 "apparmor:unconfined",
                 "seccomp:unconfined"
             ],
-            # Cgroup namespace - allows Docker inside to create cgroups
-            cgroupns="private",
+            # Cgroup namespace - allows Docker inside to create cgroups (DinD).
+            # Docker SDK arg name differs by version; we'll set it below in a compatible way.
+            privileged=True if dind_mode else False,
             # Run as root to allow Docker installation
             user="root",
             # Auto-restart
@@ -646,6 +655,27 @@ def _create_docker_container(
             # Detached mode
             detach=True,
         )
+
+        if dind_mode:
+            # Prefer newer docker SDK arg if supported; fallback to older `cgroupns`.
+            create_kwargs["cgroupns_mode"] = "host"
+
+        try:
+            container = client.containers.create(**create_kwargs)
+        except TypeError as e:
+            msg = str(e)
+            if "cgroupns_mode" in msg:
+                # Older docker SDK
+                create_kwargs.pop("cgroupns_mode", None)
+                create_kwargs["cgroupns"] = "host"
+                container = client.containers.create(**create_kwargs)
+            elif "cgroupns" in msg:
+                # Very old docker SDK: no cgroupns support, run without it.
+                create_kwargs.pop("cgroupns_mode", None)
+                create_kwargs.pop("cgroupns", None)
+                container = client.containers.create(**create_kwargs)
+            else:
+                raise
 
         # Start the container
         container.start()
@@ -1173,7 +1203,12 @@ def reconcile_missing_vps_containers(self, limit: int = 100) -> Dict[str, Any]:
                     )
                 ]
                 
-                container = client.containers.create(
+                dind_mode = (os.getenv("VPS_DOCKER_ENGINE_MODE", "auto") or "auto").strip().lower() == "dind"
+                volumes_cfg = {volume_path: {"bind": "/data", "mode": "rw"}}
+                if dind_mode:
+                    volumes_cfg["/sys/fs/cgroup"] = {"bind": "/sys/fs/cgroup", "mode": "rw"}
+
+                create_kwargs = dict(
                     image=docker_image,
                     name=ids["container_name"],
                     hostname=ids["hostname"],
@@ -1184,7 +1219,7 @@ def reconcile_missing_vps_containers(self, limit: int = 100) -> Dict[str, Any]:
                     storage_opt={"size": f"{plan.storage_gb}g"},
                     network=ids["network_name"],
                     ports={"22/tcp": ssh_port},
-                    volumes={volume_path: {"bind": "/data", "mode": "rw"}},
+                    volumes=volumes_cfg,
                     environment={
                         "ROOT_PASSWORD": new_root_password,
                         "VPS_SUBSCRIPTION_ID": str(subscription.id),
@@ -1194,11 +1229,32 @@ def reconcile_missing_vps_containers(self, limit: int = 100) -> Dict[str, Any]:
                         "CHOWN", "DAC_OVERRIDE", "SETGID", "SETUID", "NET_BIND_SERVICE",
                         "SYS_ADMIN", "NET_ADMIN", "MKNOD"  # Required for Docker installation and operation
                     ],
-                    security_opt=["no-new-privileges:true"],
+                    # In DinD mode we need elevated privileges; otherwise keep it locked down.
+                    security_opt=(["no-new-privileges:true"] if not dind_mode else ["apparmor:unconfined", "seccomp:unconfined"]),
                     user="root",  # Run as root to allow Docker installation
+                    # Cgroup namespace arg name differs by docker SDK version; set below.
+                    privileged=(True if dind_mode else False),
                     restart_policy={"Name": "unless-stopped"},
                     detach=True,
                 )
+
+                if dind_mode:
+                    create_kwargs["cgroupns_mode"] = "host"
+
+                try:
+                    container = client.containers.create(**create_kwargs)
+                except TypeError as e:
+                    msg = str(e)
+                    if "cgroupns_mode" in msg:
+                        create_kwargs.pop("cgroupns_mode", None)
+                        create_kwargs["cgroupns"] = "host"
+                        container = client.containers.create(**create_kwargs)
+                    elif "cgroupns" in msg:
+                        create_kwargs.pop("cgroupns_mode", None)
+                        create_kwargs.pop("cgroupns", None)
+                        container = client.containers.create(**create_kwargs)
+                    else:
+                        raise
                 container.start()
                 
                 # Wait a moment for container to fully start

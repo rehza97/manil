@@ -290,7 +290,11 @@ class DockerManagementService:
             ]
             
             # Create container with HARDENED security configuration
-            container = self.client.containers.create(
+            # NOTE: When VPS_DOCKER_ENGINE_MODE=dind, Docker-in-Docker requires writable cgroups.
+            # On many hosts (notably Docker Desktop) this effectively requires running the VPS container
+            # with elevated privileges + host cgroup namespace.
+            dind_mode = (getattr(settings, "VPS_DOCKER_ENGINE_MODE", "auto") or "auto").strip().lower() == "dind"
+            create_kwargs = dict(
                 image=docker_image,
                 name=container_name,
                 hostname=hostname,
@@ -325,7 +329,14 @@ class DockerManagementService:
 
                 # === VOLUMES ===
                 mounts=[
-                    Mount(target="/data", source=volume_path, type="bind", read_only=False)
+                    Mount(target="/data", source=volume_path, type="bind", read_only=False),
+                    # DinD requires writable cgroups for nested container creation (build/run).
+                    # Bind-mount cgroup fs when in DinD mode.
+                    *(
+                        [Mount(target="/sys/fs/cgroup", source="/sys/fs/cgroup", type="bind", read_only=False)]
+                        if dind_mode
+                        else []
+                    ),
                     # NOTE: Docker socket NOT mounted directly for security
                     # VPS accesses Docker via docker-socket-proxy over TCP (see DOCKER_HOST env var)
                 ] if Mount else None,
@@ -360,13 +371,13 @@ class DockerManagementService:
                     "seccomp:unconfined"    # Required for Docker-in-Docker (use colon, not =)
                 ],
 
-                # Cgroup namespace - gives container its own cgroup view
-                # This allows Docker inside to create cgroups without affecting host
-                cgroupns_mode="private",
+                # Cgroup namespace - gives container its own cgroup view.
+                # Docker SDK arg name differs by version; we set it below in a compatible way.
 
                 # CRITICAL: Never run in privileged mode
                 # We use capabilities instead for better security
-                privileged=False,
+                # DinD typically requires privileged mode to get writable cgroup controllers on Docker Desktop/Linux.
+                privileged=True if dind_mode else False,
 
                 # NOTE: read_only=True disabled to allow SSH installation at runtime
                 # TODO: Use custom image with SSH pre-installed for better security
@@ -421,6 +432,24 @@ class DockerManagementService:
                     "vps.managed": "true"
                 }
             )
+
+            if dind_mode:
+                create_kwargs["cgroupns_mode"] = "host"
+
+            try:
+                container = self.client.containers.create(**create_kwargs)
+            except TypeError as e:
+                msg = str(e)
+                if "cgroupns_mode" in msg:
+                    create_kwargs.pop("cgroupns_mode", None)
+                    create_kwargs["cgroupns"] = "host" if dind_mode else "private"
+                    container = self.client.containers.create(**create_kwargs)
+                elif "cgroupns" in msg:
+                    create_kwargs.pop("cgroupns_mode", None)
+                    create_kwargs.pop("cgroupns", None)
+                    container = self.client.containers.create(**create_kwargs)
+                else:
+                    raise
 
             # Start the container
             container.start()
@@ -1134,254 +1163,233 @@ class DockerManagementService:
             if compose_file:
                 yield from log(f"✅ Found {compose_file} - automatically starting services...")
                 yield from log("")
-                
-                # Prefer using host Docker via docker-socket-proxy (avoids Docker-in-Docker cgroup/overlay issues).
-                # Fallback to DinD only if proxy is unreachable.
-                yield from log("🔍 Checking Docker access via docker-socket-proxy...")
-
-                # Ensure VPS container is connected to cloudmanager-network (so it can reach the proxy).
-                # If already connected without aliases, disconnect/reconnect to enforce aliases.
-                shared_net = None
-                shared_net_name = None
-                proxy_container = None
-                proxy_networks: dict = {}
-                proxy_ip = None
-
-                # Discover proxy container + its networks (also used for IP probing and diagnostics)
-                try:
-                    try:
-                        proxy_container = self.client.containers.get("cloudmanager-docker-proxy")
-                    except Exception:
-                        proxy_container = self.client.containers.get("docker-socket-proxy")
-                    proxy_networks = proxy_container.attrs.get("NetworkSettings", {}).get("Networks", {}) or {}
-                except Exception:
-                    proxy_container = None
-                    proxy_networks = {}
-
-                # Determine the real shared network name.
-                # - Prefer exact "cloudmanager-network"
-                # - Else prefer compose-prefixed network ending with "cloudmanager-network"
-                # - Else fall back to any network containing "cloudmanager"
-                try:
-                    try:
-                        shared_net = self.client.networks.get("cloudmanager-network")
-                        shared_net_name = "cloudmanager-network"
-                    except Exception:
-                        shared_net = None
-
-                    if not shared_net and proxy_networks:
-                        candidates = list(proxy_networks.keys())
-                        preferred = next((n for n in candidates if n.endswith("cloudmanager-network")), None)
-                        if not preferred:
-                            preferred = next((n for n in candidates if "cloudmanager" in n), None)
-                        shared_net_name = preferred or candidates[0]
-                        try:
-                            shared_net = self.client.networks.get(shared_net_name)
-                        except Exception:
-                            shared_net = None
-                except Exception:
-                    shared_net = None
-                    shared_net_name = None
-
-                # Resolve proxy IP on that same shared network, if possible.
-                if proxy_networks:
-                    if shared_net_name and shared_net_name in proxy_networks:
-                        proxy_ip = (proxy_networks.get(shared_net_name) or {}).get("IPAddress")
-                    else:
-                        # fallback to any attached network ip
-                        try:
-                            proxy_ip = next(iter(proxy_networks.values())).get("IPAddress")
-                        except Exception:
-                            proxy_ip = None
-
-                if shared_net and shared_net_name:
-                    try:
-                        # Refresh attrs: Docker SDK does not always keep NetworkSettings up to date.
-                        try:
-                            container.reload()
-                        except Exception:
-                            pass
-                        networks = container.attrs.get("NetworkSettings", {}).get("Networks", {})
-                        existing = networks.get(shared_net_name)
-                        existing_aliases = set((existing or {}).get("Aliases") or [])
-                        desired_aliases = {"docker-socket-proxy", "cloudmanager-docker-proxy"}
-                        if existing and not (desired_aliases & existing_aliases):
-                            try:
-                                shared_net.disconnect(container, force=True)
-                            except Exception:
-                                pass
-                        shared_net.connect(
-                            container,
-                            aliases=list(desired_aliases),
-                        )
-                        try:
-                            container.reload()
-                        except Exception:
-                            pass
-                    except Exception as e:
-                        # If it's already connected, Docker may refuse a second connect with:
-                        # 403 Forbidden (... endpoint with name ... already exists in network ...)
-                        # Treat that as success (the VPS is already on the shared network).
-                        msg = str(e)
-                        if "already exists in network" in msg:
-                            if deploy_debug:
-                                yield from log(f"ℹ️  VPS already connected to '{shared_net_name}' (endpoint exists); continuing")
-                        else:
-                            # already connected / cannot connect - continue probing
-                            yield from log(f"ℹ️  Could not (re)connect VPS to shared network '{shared_net_name}': {e}")
-                else:
-                    # No shared network found; proxy cannot be reachable via DNS.
-                    if proxy_networks:
-                        yield from log(
-                            "ℹ️  Proxy container networks: " + ", ".join(sorted(proxy_networks.keys()))
-                        )
-                    else:
-                        yield from log("ℹ️  Proxy container not found or has no networks; cannot attach VPS for proxy access")
-
-                if deploy_debug:
-                    try:
-                        proxy_name = getattr(proxy_container, "name", None) or "<unknown>"
-                    except Exception:
-                        proxy_name = "<unknown>"
-                    yield from log(f"🧩 Proxy container: {proxy_name}")
-                    yield from log(f"🧩 Shared network resolved: {shared_net_name or '<none>'}")
-                    yield from log(f"🧩 Proxy IP resolved: {proxy_ip or '<none>'}")
-
-                if deploy_debug:
-                    try:
-                        networks_now = container.attrs.get("NetworkSettings", {}).get("Networks", {}) or {}
-                        net_lines = []
-                        for net_name, net_cfg in networks_now.items():
-                            ip = (net_cfg or {}).get("IPAddress")
-                            aliases = (net_cfg or {}).get("Aliases") or []
-                            net_lines.append(f"{net_name}: ip={ip} aliases={aliases}")
-                        if net_lines:
-                            yield from log("🧩 VPS networks: " + " | ".join(net_lines))
-                    except Exception as e:
-                        yield from log(f"🧩 VPS networks: <failed to read: {e}>")
-
-                    # DNS hints
-                    try:
-                        dns_hint = container.exec_run("sh -c 'echo ---/etc/resolv.conf---; cat /etc/resolv.conf 2>/dev/null || true; echo ---/etc/hosts---; tail -n 20 /etc/hosts 2>/dev/null || true'", user="root")
-                        out = dns_hint.output.decode("utf-8", errors="replace") if dns_hint.output else ""
-                        if out.strip():
-                            for line in out.strip().split("\n")[-30:]:
-                                yield f"data: {line}\n\n"
-                    except Exception:
-                        pass
-
-                # Try IP-based proxy host as well (avoids DNS issues)
-                # (proxy_container/proxy_ip already resolved above)
-
-                # Prefer IP first (most reliable), then names.
-                proxy_candidates: list[str] = []
-                if proxy_ip:
-                    proxy_candidates.append(f"tcp://{proxy_ip}:2375")
-                proxy_candidates.extend([
-                    "tcp://cloudmanager-docker-proxy:2375",
-                    "tcp://docker-socket-proxy:2375",
-                ])
-
+                # Engine selection note:
+                # - In dind mode we must NOT even probe docker-socket-proxy because that makes builds happen on the host.
+                # - In auto/proxy mode we prefer proxy and fall back to DinD if unreachable.
                 use_proxy = False
                 proxy_host = None
-                for candidate in proxy_candidates:
-                    # IMPORTANT:
-                    # Don't use a pipeline (`| head`) without preserving the exit code — it can mask failures.
-                    # We run docker version twice: once to capture exit code, once to show a short diagnostic.
-                    check = container.exec_run(
-                        "sh -c '"
-                        f"DOCKER_HOST={candidate} docker version >/dev/null 2>&1; "
-                        "ec=$?; "
-                        f"DOCKER_HOST={candidate} docker version 2>&1 | head -5; "
-                        "exit $ec"
-                        "'",
-                        user="root",
-                    )
-                    if check.exit_code == 0:
-                        use_proxy = True
-                        proxy_host = candidate
-                        break
 
-                    try:
-                        msg = check.output.decode("utf-8", errors="replace").strip()
-                    except Exception:
-                        msg = ""
-                    if msg:
-                        yield from log(f"ℹ️  Proxy check failed for {candidate}: {msg}")
-                    if deploy_debug:
-                        # Provide more actionable diagnostics: DNS resolution + TCP connect to 2375 (if possible)
-                        host_for_dns = candidate.replace("tcp://", "").split(":")[0]
-                        try:
-                            dns_check = container.exec_run(
-                                "sh -c '"
-                                f"echo \"resolving {host_for_dns}\"; "
-                                f"(getent hosts {host_for_dns} 2>/dev/null || echo \"getent not available or no record\"); "
-                                "true"
-                                "'",
-                                user="root",
-                            )
-                            out = dns_check.output.decode("utf-8", errors="replace") if dns_check.output else ""
-                            for line in out.strip().split("\n")[-5:]:
-                                if line.strip():
-                                    yield f"data: {line}\n\n"
-                        except Exception:
-                            pass
-
-                        # Try a quick TCP connect (bash /dev/tcp). Not all images have bash; ignore failures.
-                        try:
-                            tcp_check = container.exec_run(
-                                "sh -c '"
-                                f"(command -v bash >/dev/null 2>&1 && bash -lc \"cat < /dev/null > /dev/tcp/{host_for_dns}/2375\" && echo \"tcp:2375 OK\" ) "
-                                "|| echo \"tcp:2375 CHECK_SKIPPED_OR_FAILED\""
-                                "'",
-                                user="root",
-                            )
-                            out = tcp_check.output.decode("utf-8", errors="replace") if tcp_check.output else ""
-                            for line in out.strip().split("\n")[-3:]:
-                                if line.strip():
-                                    yield f"data: {line}\n\n"
-                        except Exception:
-                            pass
-
-                if use_proxy and proxy_host:
-                    yield from log(f"✅ Using host Docker via {proxy_host}")
+                if engine_mode == "dind":
+                    yield from log("🔧 VPS_DOCKER_ENGINE_MODE=dind: skipping docker-socket-proxy checks; using DinD inside VPS")
                 else:
-                    if engine_mode == "proxy":
-                        yield from log("❌ VPS_DOCKER_ENGINE_MODE=proxy but docker-socket-proxy is not reachable", level="error")
-                        yield "event: deploy_error\ndata: " + json.dumps({"error": "Host Docker proxy required but not reachable from VPS"}) + "\n\n"
-                        return
-                    yield from log("⚠️  docker-socket-proxy not reachable from VPS; falling back to Docker-in-Docker", level="error")
-                    yield from log("🔍 Checking Docker daemon status...")
-                    if not self._ensure_docker_daemon_running(container):
-                        yield from log("❌ Docker daemon is not running and could not be started", level="error")
-                        # Include a short dockerd log tail for actionable debugging.
+                    # Prefer using host Docker via docker-socket-proxy (avoids Docker-in-Docker cgroup/overlay issues).
+                    # Fallback to DinD only if proxy is unreachable.
+                    yield from log("🔍 Checking Docker access via docker-socket-proxy...")
+
+                    # Ensure VPS container is connected to cloudmanager-network (so it can reach the proxy).
+                    # If already connected without aliases, disconnect/reconnect to enforce aliases.
+                    shared_net = None
+                    shared_net_name = None
+                    proxy_container = None
+                    proxy_networks: dict = {}
+                    proxy_ip = None
+
+                    # Discover proxy container + its networks (also used for IP probing and diagnostics)
+                    try:
                         try:
-                            err_log = container.exec_run(
-                                "sh -c 'tail -80 /var/log/dockerd.log 2>/dev/null || echo no_dockerd_logs'",
-                                user="root",
+                            proxy_container = self.client.containers.get("cloudmanager-docker-proxy")
+                        except Exception:
+                            proxy_container = self.client.containers.get("docker-socket-proxy")
+                        proxy_networks = proxy_container.attrs.get("NetworkSettings", {}).get("Networks", {}) or {}
+                    except Exception:
+                        proxy_container = None
+                        proxy_networks = {}
+
+                    # Determine the real shared network name.
+                    # - Prefer exact "cloudmanager-network"
+                    # - Else prefer compose-prefixed network ending with "cloudmanager-network"
+                    # - Else fall back to any network containing "cloudmanager"
+                    try:
+                        try:
+                            shared_net = self.client.networks.get("cloudmanager-network")
+                            shared_net_name = "cloudmanager-network"
+                        except Exception:
+                            shared_net = None
+
+                        if not shared_net and proxy_networks:
+                            candidates = list(proxy_networks.keys())
+                            preferred = next((n for n in candidates if n.endswith("cloudmanager-network")), None)
+                            if not preferred:
+                                preferred = next((n for n in candidates if "cloudmanager" in n), None)
+                            shared_net_name = preferred or candidates[0]
+                            try:
+                                shared_net = self.client.networks.get(shared_net_name)
+                            except Exception:
+                                shared_net = None
+                    except Exception:
+                        shared_net = None
+                        shared_net_name = None
+
+                    # Resolve proxy IP on that same shared network, if possible.
+                    if proxy_networks:
+                        if shared_net_name and shared_net_name in proxy_networks:
+                            proxy_ip = (proxy_networks.get(shared_net_name) or {}).get("IPAddress")
+                        else:
+                            # fallback to any attached network ip
+                            try:
+                                proxy_ip = next(iter(proxy_networks.values())).get("IPAddress")
+                            except Exception:
+                                proxy_ip = None
+
+                    if shared_net and shared_net_name:
+                        try:
+                            # Refresh attrs: Docker SDK does not always keep NetworkSettings up to date.
+                            try:
+                                container.reload()
+                            except Exception:
+                                pass
+                            networks = container.attrs.get("NetworkSettings", {}).get("Networks", {})
+                            existing = networks.get(shared_net_name)
+                            existing_aliases = set((existing or {}).get("Aliases") or [])
+                            desired_aliases = {"docker-socket-proxy", "cloudmanager-docker-proxy"}
+                            if existing and not (desired_aliases & existing_aliases):
+                                try:
+                                    shared_net.disconnect(container, force=True)
+                                except Exception:
+                                    pass
+                            shared_net.connect(
+                                container,
+                                aliases=list(desired_aliases),
                             )
-                            err_out = err_log.output.decode("utf-8", errors="replace") if err_log.output else ""
-                            if err_out.strip():
-                                yield from log("📄 dockerd.log (tail):")
-                                for line in err_out.strip().split("\n")[-80:]:
+                            try:
+                                container.reload()
+                            except Exception:
+                                pass
+                        except Exception as e:
+                            # If it's already connected, Docker may refuse a second connect with:
+                            # 403 Forbidden (... endpoint with name ... already exists in network ...)
+                            # Treat that as success (the VPS is already on the shared network).
+                            msg = str(e)
+                            if "already exists in network" in msg:
+                                if deploy_debug:
+                                    yield from log(f"ℹ️  VPS already connected to '{shared_net_name}' (endpoint exists); continuing")
+                            else:
+                                # already connected / cannot connect - continue probing
+                                yield from log(f"ℹ️  Could not (re)connect VPS to shared network '{shared_net_name}': {e}")
+                    else:
+                        # No shared network found; proxy cannot be reachable via DNS.
+                        if proxy_networks:
+                            yield from log(
+                                "ℹ️  Proxy container networks: " + ", ".join(sorted(proxy_networks.keys()))
+                            )
+                        else:
+                            yield from log("ℹ️  Proxy container not found or has no networks; cannot attach VPS for proxy access")
+
+                    if deploy_debug:
+                        try:
+                            proxy_name = getattr(proxy_container, "name", None) or "<unknown>"
+                        except Exception:
+                            proxy_name = "<unknown>"
+                        yield from log(f"🧩 Proxy container: {proxy_name}")
+                        yield from log(f"🧩 Shared network resolved: {shared_net_name or '<none>'}")
+                        yield from log(f"🧩 Proxy IP resolved: {proxy_ip or '<none>'}")
+
+                    if deploy_debug:
+                        try:
+                            networks_now = container.attrs.get("NetworkSettings", {}).get("Networks", {}) or {}
+                            net_lines = []
+                            for net_name, net_cfg in networks_now.items():
+                                ip = (net_cfg or {}).get("IPAddress")
+                                aliases = (net_cfg or {}).get("Aliases") or []
+                                net_lines.append(f"{net_name}: ip={ip} aliases={aliases}")
+                            if net_lines:
+                                yield from log("🧩 VPS networks: " + " | ".join(net_lines))
+                        except Exception as e:
+                            yield from log(f"🧩 VPS networks: <failed to read: {e}>")
+
+                        # DNS hints
+                        try:
+                            dns_hint = container.exec_run("sh -c 'echo ---/etc/resolv.conf---; cat /etc/resolv.conf 2>/dev/null || true; echo ---/etc/hosts---; tail -n 20 /etc/hosts 2>/dev/null || true'", user="root")
+                            out = dns_hint.output.decode("utf-8", errors="replace") if dns_hint.output else ""
+                            if out.strip():
+                                for line in out.strip().split("\n")[-30:]:
+                                    yield f"data: {line}\n\n"
+                        except Exception:
+                            pass
+
+                    # Try IP-based proxy host as well (avoids DNS issues)
+                    # (proxy_container/proxy_ip already resolved above)
+
+                    # Prefer IP first (most reliable), then names.
+                    proxy_candidates: list[str] = []
+                    if proxy_ip:
+                        proxy_candidates.append(f"tcp://{proxy_ip}:2375")
+                    proxy_candidates.extend([
+                        "tcp://cloudmanager-docker-proxy:2375",
+                        "tcp://docker-socket-proxy:2375",
+                    ])
+
+                    for candidate in proxy_candidates:
+                        # IMPORTANT:
+                        # Don't use a pipeline (`| head`) without preserving the exit code — it can mask failures.
+                        # We run docker version twice: once to capture exit code, once to show a short diagnostic.
+                        check = container.exec_run(
+                            "sh -c '"
+                            f"DOCKER_HOST={candidate} docker version >/dev/null 2>&1; "
+                            "ec=$?; "
+                            f"DOCKER_HOST={candidate} docker version 2>&1 | head -5; "
+                            "exit $ec"
+                            "'",
+                            user="root",
+                        )
+                        if check.exit_code == 0:
+                            use_proxy = True
+                            proxy_host = candidate
+                            break
+
+                        try:
+                            msg = check.output.decode("utf-8", errors="replace").strip()
+                        except Exception:
+                            msg = ""
+                        if msg:
+                            yield from log(f"ℹ️  Proxy check failed for {candidate}: {msg}")
+                        if deploy_debug:
+                            # Provide more actionable diagnostics: DNS resolution + TCP connect to 2375 (if possible)
+                            host_for_dns = candidate.replace("tcp://", "").split(":")[0]
+                            try:
+                                dns_check = container.exec_run(
+                                    "sh -c '"
+                                    f"echo \"resolving {host_for_dns}\"; "
+                                    f"(getent hosts {host_for_dns} 2>/dev/null || echo \"getent not available or no record\"); "
+                                    "true"
+                                    "'",
+                                    user="root",
+                                )
+                                out = dns_check.output.decode("utf-8", errors="replace") if dns_check.output else ""
+                                for line in out.strip().split("\n")[-5:]:
                                     if line.strip():
                                         yield f"data: {line}\n\n"
-                        except Exception:
-                            pass
-                        yield from log("💡 Please install Docker or start the daemon manually")
-                        # terminal failure
-                        yield "event: deploy_error\ndata: " + json.dumps({"error": "Docker not available inside VPS (proxy unreachable and DinD failed)"}) + "\n\n"
-                        return
-                    yield from log("✅ Docker daemon is running")
-                    # Double-check connectivity (pgrep can lie; docker compose needs the socket).
-                    ready_check = container.exec_run(
-                        "sh -c 'DOCKER_HOST=unix:///var/run/docker.sock docker info >/dev/null 2>&1'",
-                        user="root",
-                    )
-                    if ready_check.exit_code != 0:
-                        yield from log("⚠️  Docker daemon process exists but socket is not ready; restarting dockerd...", level="error")
+                            except Exception:
+                                pass
+
+                            # Try a quick TCP connect (bash /dev/tcp). Not all images have bash; ignore failures.
+                            try:
+                                tcp_check = container.exec_run(
+                                    "sh -c '"
+                                    f"(command -v bash >/dev/null 2>&1 && bash -lc \"cat < /dev/null > /dev/tcp/{host_for_dns}/2375\" && echo \"tcp:2375 OK\" ) "
+                                    "|| echo \"tcp:2375 CHECK_SKIPPED_OR_FAILED\""
+                                    "'",
+                                    user="root",
+                                )
+                                out = tcp_check.output.decode("utf-8", errors="replace") if tcp_check.output else ""
+                                for line in out.strip().split("\n")[-3:]:
+                                    if line.strip():
+                                        yield f"data: {line}\n\n"
+                            except Exception:
+                                pass
+
+                    if use_proxy and proxy_host:
+                        yield from log(f"✅ Using host Docker via {proxy_host}")
+                    else:
+                        if engine_mode == "proxy":
+                            yield from log("❌ VPS_DOCKER_ENGINE_MODE=proxy but docker-socket-proxy is not reachable", level="error")
+                            yield "event: deploy_error\ndata: " + json.dumps({"error": "Host Docker proxy required but not reachable from VPS"}) + "\n\n"
+                            return
+                        yield from log("⚠️  docker-socket-proxy not reachable from VPS; falling back to Docker-in-Docker", level="error")
+                        yield from log("🔍 Checking Docker daemon status...")
                         if not self._ensure_docker_daemon_running(container):
-                            yield from log("❌ Docker daemon is still not reachable after restart", level="error")
+                            yield from log("❌ Docker daemon is not running and could not be started", level="error")
+                            # Include a short dockerd log tail for actionable debugging.
                             try:
                                 err_log = container.exec_run(
                                     "sh -c 'tail -80 /var/log/dockerd.log 2>/dev/null || echo no_dockerd_logs'",
@@ -1395,8 +1403,35 @@ class DockerManagementService:
                                             yield f"data: {line}\n\n"
                             except Exception:
                                 pass
-                            yield "event: deploy_error\ndata: " + json.dumps({"error": "Docker daemon is not reachable inside VPS (DinD failed)"}) + "\n\n"
+                            yield from log("💡 Please install Docker or start the daemon manually")
+                            # terminal failure
+                            yield "event: deploy_error\ndata: " + json.dumps({"error": "Docker not available inside VPS (proxy unreachable and DinD failed)"}) + "\n\n"
                             return
+                        yield from log("✅ Docker daemon is running")
+                        # Double-check connectivity (pgrep can lie; docker compose needs the socket).
+                        ready_check = container.exec_run(
+                            "sh -c 'DOCKER_HOST=unix:///var/run/docker.sock docker info >/dev/null 2>&1'",
+                            user="root",
+                        )
+                        if ready_check.exit_code != 0:
+                            yield from log("⚠️  Docker daemon process exists but socket is not ready; restarting dockerd...", level="error")
+                            if not self._ensure_docker_daemon_running(container):
+                                yield from log("❌ Docker daemon is still not reachable after restart", level="error")
+                                try:
+                                    err_log = container.exec_run(
+                                        "sh -c 'tail -80 /var/log/dockerd.log 2>/dev/null || echo no_dockerd_logs'",
+                                        user="root",
+                                    )
+                                    err_out = err_log.output.decode("utf-8", errors="replace") if err_log.output else ""
+                                    if err_out.strip():
+                                        yield from log("📄 dockerd.log (tail):")
+                                        for line in err_out.strip().split("\n")[-80:]:
+                                            if line.strip():
+                                                yield f"data: {line}\n\n"
+                                except Exception:
+                                    pass
+                                yield "event: deploy_error\ndata: " + json.dumps({"error": "Docker daemon is not reachable inside VPS (DinD failed)"}) + "\n\n"
+                                return
 
                 yield from log("")
 
@@ -1444,6 +1479,28 @@ class DockerManagementService:
                     yield from log("🔍 Ensuring Docker daemon is running inside VPS (DinD)...")
                     if not self._ensure_docker_daemon_running(container):
                         yield from log("❌ Docker daemon is not running inside VPS and could not be started", level="error")
+                        # Surface dockerd logs + quick diagnostics (this is the key missing piece).
+                        try:
+                            diag = container.exec_run(
+                                "sh -c '"
+                                "echo ---dockerd.log---; tail -120 /var/log/dockerd.log 2>/dev/null || echo no_dockerd_log; "
+                                "echo ---ps dockerd---; (ps aux 2>/dev/null | grep -E \"[d]ockerd\" || true); "
+                                "echo ---docker.sock---; ls -la /var/run/docker.sock 2>/dev/null || echo no_sock; "
+                                "echo ---cgroup---; (mount | grep cgroup || true); "
+                                "echo ---cgroupfs---; (ls -la /sys/fs/cgroup 2>/dev/null | head -50 || true); "
+                                "echo ---iptables---; (command -v iptables >/dev/null 2>&1 && iptables -L -n 2>/dev/null | head -30 || echo no_iptables_or_denied); "
+                                "true'"
+                                ,
+                                user="root",
+                            )
+                            diag_out = diag.output.decode("utf-8", errors="replace") if diag.output else ""
+                            if diag_out.strip():
+                                yield from log("📄 DinD diagnostics (tail):")
+                                for line in diag_out.strip().split("\n")[-160:]:
+                                    if line.strip():
+                                        yield f"data: {line}\n\n"
+                        except Exception:
+                            pass
                         yield "event: deploy_error\ndata: " + json.dumps({"error": "Docker-in-Docker daemon not available inside VPS"}) + "\n\n"
                         return
                     yield from log("✅ Docker daemon is ready inside VPS")
@@ -1941,7 +1998,6 @@ class DockerManagementService:
                     # Configure Docker daemon for nested Docker (DinD)
                     # Use VFS storage driver instead of overlayfs (avoids overlayfs-on-overlayfs issues)
                     daemon_config = {
-                        "storage-driver": "vfs",
                         "log-level": "info",
                         "insecure-registries": []
                     }
@@ -2021,9 +2077,24 @@ class DockerManagementService:
             except Exception:
                 return False
 
+        def _cgroup_is_read_only() -> bool:
+            """
+            Detect the common Docker Desktop / nested-container limitation:
+            cgroup2 mounted read-only inside the VPS container. In that case, DinD cannot create cgroups
+            and any docker build/run will fail with mkdir /sys/fs/cgroup/docker: read-only file system.
+            """
+            try:
+                res = container.exec_run(
+                    "sh -c 'mount | grep -E \"cgroup2 on /sys/fs/cgroup\" || true'",
+                    user="root",
+                )
+                out = res.output.decode("utf-8", errors="replace") if res.output else ""
+                return ("cgroup2 on /sys/fs/cgroup" in out) and ("(ro," in out or " ro," in out)
+            except Exception:
+                return False
+
         def _write_daemon_json_vfs() -> None:
             daemon_config = {
-                "storage-driver": "vfs",
                 "log-level": "info",
                 "insecure-registries": [],
             }
@@ -2039,6 +2110,19 @@ class DockerManagementService:
         def _start_dockerd_vfs(clear_graph: bool = False) -> bool:
             try:
                 container.exec_run("sh -c 'mkdir -p /var/run /var/lib/docker /etc/docker'", user="root")
+                # Best-effort: make cgroup writable inside the VPS container (required for nested containers).
+                # This may fail depending on how the VPS container itself is configured; we still try to proceed.
+                container.exec_run("sh -c 'mount -o remount,rw /sys/fs/cgroup 2>/dev/null || true'", user="root")
+                # If cgroup2 is still read-only, DinD cannot work on this host/runtime.
+                if _cgroup_is_read_only():
+                    try:
+                        container.exec_run(
+                            "sh -c 'echo \"cgroup2 is mounted read-only at /sys/fs/cgroup; DinD is not supported on this host/runtime\" >> /var/log/dockerd.log 2>/dev/null || true'",
+                            user="root",
+                        )
+                    except Exception:
+                        pass
+                    return False
                 _write_daemon_json_vfs()
                 if clear_graph:
                     container.exec_run("sh -c 'rm -rf /var/lib/docker/* 2>/dev/null || true'", user="root")
