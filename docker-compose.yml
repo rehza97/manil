@@ -204,6 +204,8 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       # Docker Configuration
       - DOCKER_HOST=unix:///var/run/docker.sock
+      # VPS Docker Engine Mode: auto|proxy|dind
+      - VPS_DOCKER_ENGINE_MODE=${VPS_DOCKER_ENGINE_MODE:-auto}
     volumes:
       - ./backend:/app
       - storage_data:/app/storage

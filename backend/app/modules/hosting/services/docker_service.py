@@ -1026,6 +1026,29 @@ class DockerManagementService:
         
         temp_dir = None
         
+        # Get VPS container to access IP and port info for service URLs
+        try:
+            vps_container = self.client.containers.get(container_id)
+            vps_ip = None
+            vps_ssh_port = None
+            try:
+                # Try to get IP from container networks
+                networks = vps_container.attrs.get("NetworkSettings", {}).get("Networks", {})
+                if networks:
+                    # Get first network's IP
+                    first_net = next(iter(networks.values()))
+                    vps_ip = first_net.get("IPAddress")
+                # Get SSH port mapping
+                port_bindings = vps_container.attrs.get("NetworkSettings", {}).get("Ports", {})
+                if "22/tcp" in port_bindings and port_bindings["22/tcp"]:
+                    vps_ssh_port = port_bindings["22/tcp"][0].get("HostPort")
+            except Exception:
+                pass
+        except Exception:
+            vps_container = None
+            vps_ip = None
+            vps_ssh_port = None
+        
         def log(message: str, level: str = "info"):
             """Yield a log message with timestamp."""
             timestamp = datetime.now().strftime("%H:%M:%S")
@@ -1163,12 +1186,80 @@ class DockerManagementService:
             if compose_file:
                 yield from log(f"✅ Found {compose_file} - automatically starting services...")
                 yield from log("")
-                # Engine selection note:
-                # - In dind mode we must NOT even probe docker-socket-proxy because that makes builds happen on the host.
-                # - In auto/proxy mode we prefer proxy and fall back to DinD if unreachable.
                 use_proxy = False
                 proxy_host = None
 
+                # Best-effort: normalize permissions for common entrypoint scripts in the deployed project.
+                # Archives (especially ZIP) often lose executable bits, and docker-compose bind mounts can
+                # override image layers that previously `chmod +x`'d the script. This causes:
+                #   exec: "/app/entrypoint.sh": permission denied
+                yield from log("🛠 Normalizing script permissions (chmod +x) in deployed project...")
+                try:
+                    normalize_cmd = (
+                        "sh -c 'set +e; "
+                        f"cd {compose_dir} 2>/dev/null || exit 0; "
+                        # Emit a short note if the compose file appears to bind-mount into /app.
+                        f"if grep -Eq \":/app(/|\\s|$)\" {compose_file} 2>/dev/null; then "
+                        "  echo \"ℹ️  Note: compose appears to mount a volume into /app; executable bits may come from uploaded files.\"; "
+                        "fi; "
+                        # chmod +x for entrypoint.sh and *.sh up to a reasonable depth
+                        "find . -maxdepth 6 -type f \\( -name \"entrypoint.sh\" -o -name \"*.sh\" \\) -print0 2>/dev/null "
+                        "| xargs -0 -r sh -c '"
+                        "for f in \"$@\"; do "
+                        "  chmod +x \"$f\" 2>/dev/null || true; "
+                        "  sed -i \"s/\\r$//\" \"$f\" 2>/dev/null || true; "
+                        "done' _; "
+                        "true'"
+                    )
+                    norm_res = container.exec_run(normalize_cmd, user="root", workdir=compose_dir)
+                    if norm_res.output:
+                        out = norm_res.output.decode("utf-8", errors="replace").strip()
+                        if out:
+                            for line in out.splitlines()[-5:]:
+                                if line.strip():
+                                    yield f"data: {line}\n\n"
+                except Exception:
+                    pass
+
+                # IMPORTANT:
+                # Ensure the Docker CLI exists BEFORE any proxy reachability checks.
+                # Otherwise `docker version` fails with "docker: not found", and we incorrectly fall back to DinD.
+                yield from log("🔍 Ensuring Docker CLI is available in VPS...")
+                docker_cli_check = container.exec_run(
+                    "sh -c 'command -v docker >/dev/null 2>&1'",
+                    user="root",
+                )
+                if docker_cli_check.exit_code != 0:
+                    yield from log("⚙️ Installing Docker CLI inside VPS (required for docker compose)...")
+                    install_cmd = (
+                        "sh -c 'set -e; "
+                        # wait for dpkg/apt locks (SSH install / other tasks may be running)
+                        "for i in $(seq 1 90); do "
+                        "  if pgrep -x apt-get >/dev/null 2>&1 || pgrep -x dpkg >/dev/null 2>&1 || "
+                        "     lsof /var/lib/dpkg/lock-frontend >/dev/null 2>&1; then "
+                        "    sleep 2; "
+                        "  else "
+                        "    break; "
+                        "  fi; "
+                        "done; "
+                        "export DEBIAN_FRONTEND=noninteractive; "
+                        "apt-get update -qq; "
+                        # Prefer compose plugin; fallback to docker-compose package.
+                        "apt-get install -y -qq docker.io docker-compose-plugin || apt-get install -y -qq docker.io docker-compose; "
+                        "docker --version; "
+                        "(docker compose version || docker-compose --version) 2>/dev/null || true"
+                        "'"
+                    )
+                    install_res = container.exec_run(install_cmd, user="root")
+                    if install_res.exit_code != 0:
+                        out = install_res.output.decode("utf-8", errors="replace") if install_res.output else ""
+                        yield from log(f"❌ Failed to install Docker CLI: {out[-500:]}", level="error")
+                        yield "event: deploy_error\ndata: " + json.dumps({"error": "Failed to install Docker CLI in VPS. Try again once apt/dpkg locks clear."}) + "\n\n"
+                        return
+
+                # Engine selection note:
+                # - In dind mode we must NOT even probe docker-socket-proxy because that makes builds happen on the host.
+                # - In auto/proxy mode we prefer proxy and fall back to DinD if unreachable.
                 if engine_mode == "dind":
                     yield from log("🔧 VPS_DOCKER_ENGINE_MODE=dind: skipping docker-socket-proxy checks; using DinD inside VPS")
                 else:
@@ -1385,6 +1476,33 @@ class DockerManagementService:
                             yield from log("❌ VPS_DOCKER_ENGINE_MODE=proxy but docker-socket-proxy is not reachable", level="error")
                             yield "event: deploy_error\ndata: " + json.dumps({"error": "Host Docker proxy required but not reachable from VPS"}) + "\n\n"
                             return
+
+                        # Safety guard:
+                        # Falling back to DinD only works if the VPS container was CREATED to support DinD
+                        # (privileged + writable cgroups). A normal unprivileged container will have
+                        # /sys/fs/cgroup mounted read-only, and nested docker build/run will fail with:
+                        #   mkdir /sys/fs/cgroup/docker: read-only file system
+                        try:
+                            container.reload()
+                        except Exception:
+                            pass
+                        is_privileged = bool((container.attrs.get("HostConfig", {}) or {}).get("Privileged"))
+                        if not is_privileged:
+                            yield from log(
+                                "❌ Cannot fall back to Docker-in-Docker: this VPS was not created with DinD privileges "
+                                "(container is not privileged; cgroups are typically read-only).",
+                                level="error",
+                            )
+                            yield from log(
+                                "💡 Fix: either restore docker-socket-proxy connectivity (recommended), "
+                                "or recreate the VPS with VPS_DOCKER_ENGINE_MODE=dind so it is created privileged with writable cgroups.",
+                                level="error",
+                            )
+                            yield "event: deploy_error\ndata: " + json.dumps({
+                                "error": "Proxy unreachable and DinD fallback is not possible for this VPS (not DinD-capable). Recreate with VPS_DOCKER_ENGINE_MODE=dind or fix proxy."
+                            }) + "\n\n"
+                            return
+
                         yield from log("⚠️  docker-socket-proxy not reachable from VPS; falling back to Docker-in-Docker", level="error")
                         yield from log("🔍 Checking Docker daemon status...")
                         if not self._ensure_docker_daemon_running(container):
@@ -1435,43 +1553,28 @@ class DockerManagementService:
 
                 yield from log("")
 
-                # Ensure Docker CLI exists inside the VPS. When using docker-socket-proxy, we only need the client,
-                # not dockerd. Without it, compose fails with exit code 127 ("docker: not found").
-                yield from log("🔍 Ensuring Docker CLI is available in VPS...")
-                docker_cli_check = container.exec_run(
-                    "sh -c 'command -v docker >/dev/null 2>&1'",
-                    user="root",
-                )
-                if docker_cli_check.exit_code != 0:
-                    yield from log("⚙️ Installing Docker CLI inside VPS (required for docker compose)...")
-                    install_cmd = (
-                        "sh -c 'set -e; "
-                        # wait for dpkg/apt locks (SSH install / other tasks may be running)
-                        "for i in $(seq 1 90); do "
-                        "  if pgrep -x apt-get >/dev/null 2>&1 || pgrep -x dpkg >/dev/null 2>&1 || "
-                        "     lsof /var/lib/dpkg/lock-frontend >/dev/null 2>&1; then "
-                        "    sleep 2; "
-                        "  else "
-                        "    break; "
-                        "  fi; "
-                        "done; "
-                        "export DEBIAN_FRONTEND=noninteractive; "
-                        "apt-get update -qq; "
-                        # Prefer compose plugin; fallback to docker-compose package.
-                        "apt-get install -y -qq docker.io docker-compose-plugin || apt-get install -y -qq docker.io docker-compose; "
-                        "docker --version; "
-                        "(docker compose version || docker-compose --version) 2>/dev/null || true"
-                        "'"
-                    )
-                    install_res = container.exec_run(install_cmd, user="root")
-                    if install_res.exit_code != 0:
-                        out = install_res.output.decode("utf-8", errors="replace") if install_res.output else ""
-                        yield from log(f"❌ Failed to install Docker CLI: {out[-500:]}", level="error")
-                        yield "event: deploy_error\ndata: " + json.dumps({"error": "Failed to install Docker CLI in VPS. Try again once apt/dpkg locks clear."}) + "\n\n"
-                        return
-
                 # If forced DinD, ensure we run against local dockerd (inside the VPS) even if proxy is reachable.
                 if engine_mode == "dind":
+                    # Hard requirement: DinD needs a DinD-capable VPS container.
+                    try:
+                        container.reload()
+                    except Exception:
+                        pass
+                    is_privileged = bool((container.attrs.get("HostConfig", {}) or {}).get("Privileged"))
+                    if not is_privileged:
+                        yield from log(
+                            "❌ VPS_DOCKER_ENGINE_MODE=dind but this VPS container is not privileged. DinD cannot work with read-only cgroups.",
+                            level="error",
+                        )
+                        yield from log(
+                            "💡 Recreate the VPS after setting VPS_DOCKER_ENGINE_MODE=dind on the CloudManager host.",
+                            level="error",
+                        )
+                        yield "event: deploy_error\ndata: " + json.dumps({
+                            "error": "DinD requested but VPS is not DinD-capable (not privileged). Recreate VPS with VPS_DOCKER_ENGINE_MODE=dind."
+                        }) + "\n\n"
+                        return
+
                     if use_proxy:
                         yield from log("🔧 VPS_DOCKER_ENGINE_MODE=dind: ignoring host Docker proxy; using DinD inside VPS")
                     use_proxy = False
@@ -1637,6 +1740,103 @@ class DockerManagementService:
                             exit_code = result_retry.exit_code
                             output = result_retry.output.decode('utf-8', errors='replace') if result_retry.output else ""
 
+                # If compose failed due to entrypoint permission denied, this is very commonly caused by bind-mounting
+                # project sources over /app (e.g. `- ./backend:/app`). That bind mount overwrites the image layer where
+                # Dockerfile did `chmod +x /app/entrypoint.sh`, so runc can't exec it.
+                #
+                # We already try to normalize permissions above, but some projects may still fail (CRLF, missing exec bit,
+                # or different entrypoint path). As a last resort, retry once with /app bind mounts removed.
+                if exit_code != 0:
+                    out_l = (output or "").lower()
+                    if ("permission denied" in out_l) and ("/app/entrypoint" in out_l or "entrypoint.sh" in out_l):
+                        yield from log("")
+                        yield from log(
+                            "🩹 Detected entrypoint permission issue (likely due to bind-mount into /app). "
+                            "Retrying once with /app bind mounts removed...",
+                            level="error",
+                        )
+                        try:
+                            compose_path = f"{compose_dir}/{compose_file}"
+                            read_compose = container.exec_run(f"sh -c 'cat {compose_path} 2>/dev/null'", user="root")
+                            compose_text = read_compose.output.decode("utf-8", errors="replace") if read_compose.output else ""
+                        except Exception:
+                            compose_text = ""
+
+                        if compose_text.strip():
+                            # Line-based patch (safe for simple compose files):
+                            # remove volume entries that bind-mount into /app and the common dev-only /app/node_modules
+                            lines = compose_text.splitlines()
+                            keep = [True] * len(lines)
+
+                            app_bind = re.compile(r'^\s*-\s*["\']?\./[^"\']*:/app(?:/|\s|$)', re.IGNORECASE)
+                            node_modules = re.compile(r'^\s*-\s*["\']?/app/node_modules["\']?\s*$', re.IGNORECASE)
+                            for i, ln in enumerate(lines):
+                                if app_bind.search(ln) or node_modules.search(ln):
+                                    keep[i] = False
+
+                            # If a `volumes:` key ends up with no list items, remove it too.
+                            vol_key = re.compile(r'^(\s*)volumes:\s*$', re.IGNORECASE)
+                            for i, ln in enumerate(lines):
+                                if not keep[i]:
+                                    continue
+                                m = vol_key.match(ln)
+                                if not m:
+                                    continue
+                                indent = len(m.group(1))
+                                j = i + 1
+                                has_item = False
+                                while j < len(lines):
+                                    if not keep[j]:
+                                        j += 1
+                                        continue
+                                    nxt = lines[j]
+                                    if not nxt.strip() or nxt.lstrip().startswith("#"):
+                                        j += 1
+                                        continue
+                                    nxt_indent = len(re.match(r'^(\s*)', nxt).group(1))
+                                    if nxt_indent <= indent:
+                                        break
+                                    if re.match(r'^\s*-\s+', nxt):
+                                        has_item = True
+                                    break
+                                if not has_item:
+                                    keep[i] = False
+
+                            patched_lines = [lines[i] for i in range(len(lines)) if keep[i]]
+                            patched_text = "\n".join(patched_lines).rstrip() + "\n"
+
+                            # Only retry if we actually changed something.
+                            if patched_text != compose_text:
+                                patched_name = ".cloudmanager.compose.noappbind.yml"
+                                patched_path = f"{compose_dir}/{patched_name}"
+
+                                tar_bytes = io.BytesIO()
+                                with tarfile.open(fileobj=tar_bytes, mode="w") as tf:
+                                    data = patched_text.encode("utf-8")
+                                    info = tarfile.TarInfo(name=patched_name)
+                                    info.size = len(data)
+                                    info.mtime = int(time.time())
+                                    tf.addfile(info, io.BytesIO(data))
+                                tar_bytes.seek(0)
+                                container.put_archive(path=compose_dir, data=tar_bytes.read())
+
+                                yield from log(f"📝 Retrying with patched compose file (no /app bind mounts): {patched_path}")
+
+                                patched_command = f"cd {compose_dir} && (docker compose -f {patched_name} up -d || docker-compose -f {patched_name} up -d)"
+                                patched_runner = (
+                                    "sh -c '"
+                                    f"{export_env} cd {compose_dir} && "
+                                    f"({patched_command}) > {compose_log_path} 2>&1; "
+                                    "ec=$?; "
+                                    "echo __CM_EXIT_CODE__:$ec; "
+                                    f"tail -n 400 {compose_log_path} 2>/dev/null || true; "
+                                    "exit $ec"
+                                    "'"
+                                )
+                                result_retry = container.exec_run(patched_runner, user="root", workdir=compose_dir, stream=False)
+                                exit_code = result_retry.exit_code
+                                output = result_retry.output.decode('utf-8', errors='replace') if result_retry.output else ""
+
                 # If DinD was selected and compose failed due to a dead socket, try one restart + retry.
                 if (not use_proxy) and exit_code != 0 and ("Cannot connect to the Docker daemon" in output):
                     yield from log("")
@@ -1743,6 +1943,73 @@ class DockerManagementService:
                 yield from log("")
                 if exit_code == 0:
                     yield from log("✅ Docker Compose deployment completed successfully")
+                    
+                    # Extract service routes/URLs for successful deployments
+                    service_routes = []
+                    if compose_file and exit_code == 0:
+                        try:
+                            # Get service ports from docker compose ps
+                            routes_result = container.exec_run(
+                                f"sh -c 'cd {compose_dir} && ({ps_prefix}docker compose -f {compose_file} ps --format json 2>/dev/null || {ps_prefix}docker-compose -f {compose_file} ps --format json 2>/dev/null || echo \"[]\")'",
+                                user="root",
+                                workdir=compose_dir
+                            )
+                            
+                            if routes_result.exit_code == 0 and routes_result.output:
+                                try:
+                                    routes_json = routes_result.output.decode('utf-8', errors='replace').strip()
+                                    # Handle both single JSON object and array
+                                    if routes_json.startswith('['):
+                                        services_data = json.loads(routes_json)
+                                    elif routes_json.startswith('{'):
+                                        services_data = [json.loads(routes_json)]
+                                    else:
+                                        services_data = []
+                                    
+                                    # Also get port mappings from docker ps inside VPS
+                                    ports_result = container.exec_run(
+                                        f"sh -c '{ps_prefix}docker ps --format \"{{{{.Names}}}}\\t{{{{.Ports}}}}\" 2>/dev/null'",
+                                        user="root"
+                                    )
+                                    
+                                    ports_map = {}
+                                    if ports_result.exit_code == 0 and ports_result.output:
+                                        ports_output = ports_result.output.decode('utf-8', errors='replace').strip()
+                                        for line in ports_output.split('\n'):
+                                            if '\t' in line:
+                                                name, ports_str = line.split('\t', 1)
+                                                ports_map[name] = ports_str
+                                    
+                                    # Build service routes
+                                    for service in services_data:
+                                        service_name = service.get('Service', service.get('Name', ''))
+                                        service_state = service.get('State', service.get('Status', ''))
+                                        
+                                        if 'Up' in service_state or 'running' in service_state.lower():
+                                            # Get ports for this service
+                                            service_ports = ports_map.get(service_name, '')
+                                            if service_ports:
+                                                # Parse port mappings like "0.0.0.0:8000->8000/tcp, 0.0.0.0:5173->5173/tcp"
+                                                port_matches = re.findall(r'0\.0\.0\.0:(\d+)->\d+/tcp', service_ports)
+                                                for host_port in port_matches:
+                                                    # Use VPS IP if available, otherwise use localhost
+                                                    base_url = f"http://{vps_ip}" if vps_ip else "http://localhost"
+                                                    service_routes.append({
+                                                        "service": service_name,
+                                                        "port": int(host_port),
+                                                        "url": f"{base_url}:{host_port}",
+                                                        "internal_port": None  # Could extract from mapping if needed
+                                                    })
+                                except Exception as e:
+                                    logger.debug(f"Failed to parse service routes: {e}")
+                        except Exception as e:
+                            logger.debug(f"Failed to extract service routes: {e}")
+                    
+                    if service_routes:
+                        yield from log("")
+                        yield from log("🌐 Service Routes:")
+                        for route in service_routes:
+                            yield from log(f"  • {route['service']}: {route['url']}")
                 else:
                     yield from log("⚠️  Docker Compose deployment completed with warnings/errors", level="error")
                     # Emit a single terminal failure event at the end (after logs are streamed),
@@ -1753,7 +2020,15 @@ class DockerManagementService:
             else:
                 yield from log("ℹ️  No docker-compose.yml found - skipping automatic startup")
             
-            yield f"event: success\ndata: {json.dumps({'files_deployed': file_count, 'target_path': target_path, 'docker_compose_run': compose_file is not None})}\n\n"
+            success_data = {
+                'files_deployed': file_count,
+                'target_path': target_path,
+                'docker_compose_run': compose_file is not None
+            }
+            if compose_file and exit_code == 0:
+                success_data['service_routes'] = service_routes
+            
+            yield f"event: success\ndata: {json.dumps(success_data)}\n\n"
             
         except Exception as e:
             error_msg = str(e)
@@ -2084,12 +2359,15 @@ class DockerManagementService:
             and any docker build/run will fail with mkdir /sys/fs/cgroup/docker: read-only file system.
             """
             try:
+                # `mount` output is typically:
+                #   cgroup on /sys/fs/cgroup type cgroup2 (ro,nosuid,nodev,noexec,relatime)
+                # NOT "cgroup2 on /sys/fs/cgroup", so detect via "type cgroup2".
                 res = container.exec_run(
-                    "sh -c 'mount | grep -E \"cgroup2 on /sys/fs/cgroup\" || true'",
+                    "sh -c 'mount | grep -E \"on /sys/fs/cgroup .*type cgroup2\" || true'",
                     user="root",
                 )
                 out = res.output.decode("utf-8", errors="replace") if res.output else ""
-                return ("cgroup2 on /sys/fs/cgroup" in out) and ("(ro," in out or " ro," in out)
+                return ("type cgroup2" in out) and ("(ro," in out or " ro," in out or "(ro)" in out)
             except Exception:
                 return False
 

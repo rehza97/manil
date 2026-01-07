@@ -21,6 +21,12 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
   const fitAddonRef = useRef<FitAddon | null>(null);
   const socketHandleRef = useRef<ReturnType<typeof attachTerminalSocket> | null>(null);
   const onDataDisposableRef = useRef<{ dispose: () => void } | null>(null);
+  const reconnectTimeoutRef = useRef<number | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const focusListenerRef = useRef<(() => void) | null>(null);
+  const clickListenerRef = useRef<(() => void) | null>(null);
+  const isConnectingRef = useRef(false);
+  const maxReconnectAttempts = 10;
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
@@ -85,7 +91,10 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
                 term.focus();
               }
             }, 100);
-            connectWebSocket(term);
+            // Only connect if not already connecting or connected
+            if (!isConnectingRef.current && (!socketHandleRef.current || socketHandleRef.current.ws.readyState !== WebSocket.OPEN)) {
+              connectWebSocket(term);
+            }
           });
           return;
         }
@@ -120,6 +129,22 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
     return () => {
       mounted = false;
       window.removeEventListener("resize", handleResize);
+      
+      // Clear reconnect timeout
+      if (reconnectTimeoutRef.current) {
+        window.clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      
+      // Cleanup focus and click listeners
+      if (focusListenerRef.current) {
+        focusListenerRef.current();
+        focusListenerRef.current = null;
+      }
+      if (clickListenerRef.current) {
+        clickListenerRef.current();
+        clickListenerRef.current = null;
+      }
 
       socketHandleRef.current?.detach();
       socketHandleRef.current = null;
@@ -140,6 +165,20 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
   }, [subscriptionId, apiBase]);
 
   const connectWebSocket = (term: Terminal) => {
+    // Prevent multiple simultaneous connection attempts
+    if (isConnectingRef.current) {
+      console.log("Connection already in progress, skipping...");
+      return;
+    }
+    
+    // If already connected, don't reconnect
+    if (socketHandleRef.current && socketHandleRef.current.ws.readyState === WebSocket.OPEN) {
+      console.log("WebSocket already connected, skipping...");
+      return;
+    }
+    
+    isConnectingRef.current = true;
+    
     // Get WebSocket URL
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const host = window.location.hostname;
@@ -161,11 +200,24 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
       socketHandleRef.current = attachTerminalSocket(subscriptionId, wsUrl, {
         onOpen: () => {
           console.log("WebSocket connected");
+          isConnectingRef.current = false;
           setConnected(true);
           setError(null);
+          // Reset reconnect attempts on successful connection
+          reconnectAttemptsRef.current = 0;
+          if (reconnectTimeoutRef.current) {
+            window.clearTimeout(reconnectTimeoutRef.current);
+            reconnectTimeoutRef.current = null;
+          }
           term.writeln("\x1b[1;32m✓ Connected to VPS terminal\x1b[0m");
           term.writeln("\x1b[36mType commands and press Enter to execute\x1b[0m");
           term.writeln("");
+          // Ensure terminal is focused and input is enabled
+          setTimeout(() => {
+            if (term) {
+              term.focus();
+            }
+          }, 100);
           // Trigger an initial prompt from bash.
           socketHandleRef.current?.send(JSON.stringify({ type: "input", data: "\n" }));
         },
@@ -184,36 +236,110 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
         },
         onError: (event) => {
           console.error("WebSocket error:", event);
+          isConnectingRef.current = false;
           setError("WebSocket connection error");
         },
-        onClose: () => {
+        onClose: (event) => {
           setConnected(false);
           term.writeln("\r\n\x1b[1;33m⚠ Connection closed\x1b[0m\r\n");
+          
+          // Auto-reconnect if not a normal closure and we haven't exceeded max attempts
+          if (event.code !== 1000 && reconnectAttemptsRef.current < maxReconnectAttempts) {
+            reconnectAttemptsRef.current += 1;
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current - 1), 30000); // Exponential backoff, max 30s
+            term.writeln(`\x1b[36mReconnecting in ${delay / 1000}s... (attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts})\x1b[0m\r\n`);
+            
+            reconnectTimeoutRef.current = window.setTimeout(() => {
+              if (xtermRef.current) {
+                connectWebSocket(xtermRef.current);
+              }
+            }, delay);
+          } else if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
+            term.writeln("\x1b[1;31m✗ Max reconnection attempts reached. Please refresh the page.\x1b[0m\r\n");
+            setError("Connection lost. Please refresh the page to reconnect.");
+          }
         },
       });
 
       // Handle terminal input - ensure it's enabled
       onDataDisposableRef.current?.dispose();
       onDataDisposableRef.current = term.onData((data) => {
-        // Send input to WebSocket if connected
-        if (socketHandleRef.current) {
-          socketHandleRef.current.send(
-            JSON.stringify({
-              type: "input",
-              data,
-            })
-          );
+        // Send input to WebSocket if connected and socket is open
+        if (socketHandleRef.current && socketHandleRef.current.ws.readyState === WebSocket.OPEN) {
+          try {
+            socketHandleRef.current.send(
+              JSON.stringify({
+                type: "input",
+                data,
+              })
+            );
+          } catch (err) {
+            console.error("Error sending input:", err);
+            // If send fails, try to reconnect
+            if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+              setConnected(false);
+              reconnectAttemptsRef.current += 1;
+              const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current - 1), 30000);
+              term.writeln(`\r\n\x1b[33m⚠ Connection lost. Reconnecting in ${delay / 1000}s...\x1b[0m\r\n`);
+              reconnectTimeoutRef.current = window.setTimeout(() => {
+                if (xtermRef.current) {
+                  connectWebSocket(xtermRef.current);
+                }
+              }, delay);
+            }
+          }
+        } else {
+          // Show feedback that connection is not ready
+          term.write("\x07"); // Bell sound
         }
       });
       
-      // Focus the terminal to enable typing
-      setTimeout(() => {
+      // Focus the terminal to enable typing - do this multiple times to ensure it works
+      const focusTerminal = () => {
+        if (term) {
+          term.focus();
+          // Also click on the terminal element to ensure it receives focus
+          if (terminalRef.current) {
+            terminalRef.current.click();
+          }
+        }
+      };
+      setTimeout(focusTerminal, 100);
+      setTimeout(focusTerminal, 500);
+      setTimeout(focusTerminal, 1000);
+      
+      // Re-focus on window focus (when user clicks back to tab)
+      const handleWindowFocus = () => {
+        if (term && connected) {
+          term.focus();
+        }
+      };
+      window.addEventListener("focus", handleWindowFocus);
+      
+      // Store cleanup function to remove focus listener
+      focusListenerRef.current = () => {
+        window.removeEventListener("focus", handleWindowFocus);
+      };
+      
+      // Also add click handler to terminal container to ensure focus
+      const handleTerminalClick = () => {
         if (term) {
           term.focus();
         }
-      }, 200);
+      };
+      if (terminalRef.current) {
+        terminalRef.current.addEventListener("click", handleTerminalClick);
+      }
+      
+      // Store cleanup for click listener
+      clickListenerRef.current = () => {
+        if (terminalRef.current) {
+          terminalRef.current.removeEventListener("click", handleTerminalClick);
+        }
+      };
     } catch (err) {
       console.error("Error connecting to WebSocket:", err);
+      isConnectingRef.current = false;
       setError("Failed to connect to terminal");
     }
   };
@@ -233,9 +359,23 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
                 Connected
               </div>
             ) : (
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <div className="h-2 w-2 rounded-full bg-gray-400" />
-                Disconnected
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <div className="h-2 w-2 rounded-full bg-gray-400" />
+                  Disconnected
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    if (xtermRef.current) {
+                      reconnectAttemptsRef.current = 0;
+                      connectWebSocket(xtermRef.current);
+                    }
+                  }}
+                >
+                  Reconnect
+                </Button>
               </div>
             )}
           </div>
@@ -260,7 +400,7 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
 
         <div
           ref={terminalRef}
-          className="rounded-md border"
+          className="rounded-md border cursor-text"
           style={{
             width: "100%",
             height: "500px",
@@ -271,6 +411,13 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
             // Keep in layout so xterm can measure dimensions even while "loading".
             visibility: isReady ? "visible" : "hidden",
           }}
+          onClick={() => {
+            // Ensure terminal gets focus when clicking on container
+            if (xtermRef.current) {
+              xtermRef.current.focus();
+            }
+          }}
+          tabIndex={-1}
         />
       </CardContent>
     </Card>

@@ -13,7 +13,7 @@ import { Card } from "@/shared/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { Label } from "@/shared/components/ui/label";
-import { AlertCircle, Upload, Loader2, CheckCircle2, FileArchive, Terminal, X } from "lucide-react";
+import { AlertCircle, Upload, Loader2, CheckCircle2, FileArchive, Terminal, X, Info } from "lucide-react";
 import { apiClient } from "@/shared/api/client";
 import { streamSSE } from "@/shared/utils/sse";
 import { vpsService } from "../services/vpsService";
@@ -25,6 +25,13 @@ type VPSDeployProps = {
   subscriptionId: string;
 };
 
+type ServiceRoute = {
+  service: string;
+  port: number;
+  url: string;
+  internal_port?: number | null;
+};
+
 type DeployResult = {
   success: boolean;
   target_path?: string;
@@ -33,6 +40,7 @@ type DeployResult = {
   deployed_at?: string;
   error?: string;
   logs?: string[];
+  service_routes?: ServiceRoute[];
 };
 
 type BuildResult = {
@@ -369,6 +377,7 @@ export const VPSDeploy: React.FC<VPSDeployProps> = ({ subscriptionId }) => {
                 success: true,
                 target_path: successData.target_path,
                 files_deployed: successData.files_deployed,
+                service_routes: successData.service_routes || [],
               });
             } catch {
               setResult({ success: true });
@@ -539,6 +548,33 @@ export const VPSDeploy: React.FC<VPSDeployProps> = ({ subscriptionId }) => {
                 </p>
               </div>
 
+              {/* Deployment Best Practices & Auto-Fix Info */}
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  <div className="space-y-2">
+                    <div className="font-semibold">Automatic Fixes & Best Practices</div>
+                    <div className="text-sm space-y-1.5">
+                      <div>
+                        <strong>Auto-fix behavior:</strong> CloudManager automatically fixes common deployment issues:
+                        <ul className="list-disc list-inside mt-1 ml-2 space-y-0.5">
+                          <li>Sets executable permissions on <code className="text-xs bg-slate-100 px-1 rounded">entrypoint.sh</code> and <code className="text-xs bg-slate-100 px-1 rounded">*.sh</code> scripts before running docker compose</li>
+                          <li>If deployment fails with permission errors, automatically retries with a patched compose file that removes problematic bind mounts</li>
+                        </ul>
+                      </div>
+                      <div className="mt-2">
+                        <strong>Best practices for production deploys:</strong>
+                        <ul className="list-disc list-inside mt-1 ml-2 space-y-0.5">
+                          <li>Avoid bind mounts like <code className="text-xs bg-slate-100 px-1 rounded">./backend:/app</code> in production (these are for development only)</li>
+                          <li>Ensure <code className="text-xs bg-slate-100 px-1 rounded">entrypoint.sh</code> is executable in your repository (<code className="text-xs bg-slate-100 px-1 rounded">chmod +x entrypoint.sh</code>)</li>
+                          <li>Include a proper shebang in entrypoint scripts (<code className="text-xs bg-slate-100 px-1 rounded">#!/bin/sh</code> or <code className="text-xs bg-slate-100 px-1 rounded">#!/bin/bash</code>)</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </AlertDescription>
+              </Alert>
+
               <div className="flex gap-2">
                 {isStreaming ? (
                   <Button onClick={stopDeployment} variant="destructive">
@@ -580,11 +616,35 @@ export const VPSDeploy: React.FC<VPSDeployProps> = ({ subscriptionId }) => {
               <Alert>
                 <CheckCircle2 className="h-4 w-4" />
                 <AlertDescription>
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     <div>Files deployed successfully!</div>
                     {result.files_deployed !== undefined && (
                       <div className="text-sm">
                         {result.files_deployed} files deployed to {result.target_path}
+                      </div>
+                    )}
+                    {result.service_routes && result.service_routes.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-slate-200">
+                        <div className="font-semibold text-sm mb-2">🌐 Service Routes:</div>
+                        <div className="space-y-1.5">
+                          {result.service_routes.map((route, idx) => (
+                            <div key={idx} className="text-sm flex items-center gap-2">
+                              <span className="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded">
+                                {route.service}
+                              </span>
+                              <span className="text-slate-500">→</span>
+                              <a
+                                href={route.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 hover:underline font-mono text-xs"
+                              >
+                                {route.url}
+                              </a>
+                              <span className="text-slate-400 text-xs">(port {route.port})</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>

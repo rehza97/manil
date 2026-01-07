@@ -1,0 +1,30 @@
+++ echo ===KERNEL===
+===KERNEL===
+++ uname -a
+Linux fetho-Aspire-ES1-571 6.8.0-90-generic #91~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Thu Nov 20 15:20:45 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
+++ echo ===IN_DOCKER===
+===IN_DOCKER===
+++ '[' -f /.dockerenv ']'
+++ echo no
+no
+++ echo ===CGROUP_MOUNTS===
+===CGROUP_MOUNTS===
+++ mount
+++ grep --color=auto -E 'cgroup|/sys/fs/cgroup'
+cgroup2 on /sys/fs/cgroup type cgroup2 (rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot)
+++ echo ===CGROUP_FS_TYPE===
+===CGROUP_FS_TYPE===
+++ stat -fc %T /sys/fs/cgroup
+cgroup2fs
+++ echo ===DOCKER_INFO_CGROUP===
+===DOCKER_INFO_CGROUP===
+++ docker info
+++ grep --color=auto -Ei 'Cgroup|rootless|Driver|Operating System|Server Version'
+ Server Version: 29.1.3
+ Storage Driver: overlayfs
+  driver-type: io.containerd.snapshotter.v1
+ Logging Driver: json-file
+ Cgroup Driver: systemd
+ Cgroup Version: 2
+  cgroupns
+ Operating System: Ubuntu 22.04.5 LTS
