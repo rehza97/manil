@@ -1,6 +1,8 @@
 # Logs
-logs
+/logs
 *.log
+# Exception: allow source code directory
+!src/modules/admin/pages/logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
