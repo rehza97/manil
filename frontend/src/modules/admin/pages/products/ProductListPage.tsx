@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { apiClient } from "@/shared/api/client";
+import { formatDZD } from "@/shared/utils/formatters";
 
 interface Product {
   id: string;
@@ -201,15 +202,15 @@ const ProductListPage: React.FC = () => {
                         {product.sale_price ? (
                           <>
                             <span className="line-through text-gray-400 text-sm">
-                              ${product.regular_price.toFixed(2)}
+                              {formatDZD(product.regular_price)}
                             </span>
                             <span className="ml-2 text-green-600 font-semibold">
-                              ${product.sale_price.toFixed(2)}
+                              {formatDZD(product.sale_price)}
                             </span>
                           </>
                         ) : (
                           <span className="font-semibold">
-                            ${product.regular_price.toFixed(2)}
+                            {formatDZD(product.regular_price)}
                           </span>
                         )}
                       </div>

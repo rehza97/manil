@@ -47,6 +47,7 @@ class VPSPlanCreate(VPSPlanBase):
 class VPSPlanUpdate(BaseModel):
     """Schema for updating VPS plans."""
     name: Optional[str] = Field(None, min_length=1, max_length=100)
+    slug: Optional[str] = Field(None, min_length=1, max_length=50)
     description: Optional[str] = None
     cpu_cores: Optional[float] = Field(None, gt=0)
     ram_gb: Optional[int] = Field(None, gt=0)

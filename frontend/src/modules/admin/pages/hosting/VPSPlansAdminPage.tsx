@@ -528,7 +528,7 @@ export const VPSPlansAdminPage: React.FC = () => {
                       setFormData({ ...formData, slug: e.target.value })
                     }
                     placeholder="e.g., starter-vps"
-                    pattern="^[a-z-]+$"
+                    pattern="[a-z\-]+"
                     required
                   />
                 </div>

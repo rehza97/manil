@@ -3,7 +3,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import axios from "axios";
 import { useLogin } from "../hooks";
@@ -33,28 +33,66 @@ export const LoginForm = () => {
       setFormData((prev) => ({ ...prev, [field]: e.target.value }));
     };
 
-  // Extract error message from axios error response
+  // Extract and format user-friendly error message from axios error response
   const getErrorMessage = () => {
     if (!loginMutation.error) return "";
+
+    let errorMessage = "";
+
     if (axios.isAxiosError(loginMutation.error)) {
-      return (
+      errorMessage =
         loginMutation.error.response?.data?.detail ||
         loginMutation.error.response?.data?.error ||
         loginMutation.error.response?.data?.message ||
         loginMutation.error.message ||
-        "Login failed. Please try again."
-      );
+        "";
+    } else if (loginMutation.error instanceof Error) {
+      errorMessage = loginMutation.error.message;
     }
-    if (loginMutation.error instanceof Error) {
-      return loginMutation.error.message;
+
+    // Provide user-friendly error messages
+    if (!errorMessage) {
+      return "Unable to sign in. Please check your credentials and try again.";
     }
-    return "Login failed. Please try again.";
+
+    // Map backend error messages to user-friendly messages
+    const errorMessageLower = errorMessage.toLowerCase();
+
+    if (errorMessageLower.includes("email not found")) {
+      return "The email address you entered is not registered. Please check your email or sign up for a new account.";
+    }
+
+    if (errorMessageLower.includes("wrong password")) {
+      return "The password you entered is incorrect. Please try again or use 'Forgot your password?' to reset it.";
+    }
+
+    if (errorMessageLower.includes("locked")) {
+      // Keep the backend message as it contains important timing information
+      return errorMessage;
+    }
+
+    if (errorMessageLower.includes("inactive")) {
+      return "Your account is currently inactive. Please contact support for assistance.";
+    }
+
+    if (errorMessageLower.includes("invalid") || errorMessageLower.includes("expired")) {
+      return errorMessage;
+    }
+
+    // For network errors
+    if (errorMessage.includes("Network Error") || errorMessage.includes("timeout")) {
+      return "Unable to connect to the server. Please check your internet connection and try again.";
+    }
+
+    // For other errors, return the message as-is if it's clear, otherwise provide a generic message
+    return errorMessage || "Unable to sign in. Please check your credentials and try again.";
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {loginMutation.error && (
         <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
           <AlertDescription>{getErrorMessage()}</AlertDescription>
         </Alert>
       )}

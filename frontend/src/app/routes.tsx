@@ -253,6 +253,11 @@ export const routes = [
     path: "/orders/create",
     element: <OrderCreateRedirect />,
   },
+  // Public Product Detail Route
+  {
+    path: "/products/:id",
+    element: <ProductPage />,
+  },
 
   // Client Dashboard Routes (/dashboard)
   {
