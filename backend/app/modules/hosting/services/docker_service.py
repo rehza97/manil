@@ -32,6 +32,12 @@ except ImportError:
     NotFound = Exception
     Mount = None
 
+try:
+    import yaml
+except ImportError:
+    # PyYAML not installed - will fall back to line-based patching
+    yaml = None
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.hosting.models import VPSSubscription, ContainerInstance, ContainerStatus
@@ -1763,50 +1769,19 @@ class DockerManagementService:
                             compose_text = ""
 
                         if compose_text.strip():
-                            # Line-based patch (safe for simple compose files):
-                            # remove volume entries that bind-mount into /app and the common dev-only /app/node_modules
-                            lines = compose_text.splitlines()
-                            keep = [True] * len(lines)
-
-                            app_bind = re.compile(r'^\s*-\s*["\']?\./[^"\']*:/app(?:/|\s|$)', re.IGNORECASE)
-                            node_modules = re.compile(r'^\s*-\s*["\']?/app/node_modules["\']?\s*$', re.IGNORECASE)
-                            for i, ln in enumerate(lines):
-                                if app_bind.search(ln) or node_modules.search(ln):
-                                    keep[i] = False
-
-                            # If a `volumes:` key ends up with no list items, remove it too.
-                            vol_key = re.compile(r'^(\s*)volumes:\s*$', re.IGNORECASE)
-                            for i, ln in enumerate(lines):
-                                if not keep[i]:
-                                    continue
-                                m = vol_key.match(ln)
-                                if not m:
-                                    continue
-                                indent = len(m.group(1))
-                                j = i + 1
-                                has_item = False
-                                while j < len(lines):
-                                    if not keep[j]:
-                                        j += 1
-                                        continue
-                                    nxt = lines[j]
-                                    if not nxt.strip() or nxt.lstrip().startswith("#"):
-                                        j += 1
-                                        continue
-                                    nxt_indent = len(re.match(r'^(\s*)', nxt).group(1))
-                                    if nxt_indent <= indent:
-                                        break
-                                    if re.match(r'^\s*-\s+', nxt):
-                                        has_item = True
-                                    break
-                                if not has_item:
-                                    keep[i] = False
-
-                            patched_lines = [lines[i] for i in range(len(lines)) if keep[i]]
-                            patched_text = "\n".join(patched_lines).rstrip() + "\n"
-
-                            # Only retry if we actually changed something.
-                            if patched_text != compose_text:
+                            # Use YAML-based patching to safely remove /app bind mounts
+                            # This preserves YAML structure and prevents corruption
+                            patched_text = self._patch_compose_remove_app_binds(compose_text)
+                            
+                            # Log if patching failed or no changes were needed
+                            if not patched_text:
+                                if yaml is None:
+                                    yield from log("⚠️  PyYAML not available, cannot patch compose file safely", level="error")
+                                else:
+                                    yield from log("⚠️  Failed to patch compose file or no /app bind mounts found", level="error")
+                            
+                            # Only retry if patching succeeded and actually changed something
+                            if patched_text and patched_text != compose_text:
                                 patched_name = ".cloudmanager.compose.noappbind.yml"
                                 patched_path = f"{compose_dir}/{patched_name}"
 
@@ -2836,6 +2811,160 @@ class DockerManagementService:
         return health_summary
 
     # Helper methods
+
+    def _patch_compose_remove_app_binds(self, compose_text: str) -> Optional[str]:
+        """
+        Patch docker-compose YAML to remove /app bind mounts using proper YAML parsing.
+        
+        Removes volume entries that bind-mount into /app to avoid permission issues
+        with entrypoint scripts. Uses YAML parsing to preserve structure.
+        
+        Args:
+            compose_text: Original docker-compose YAML content
+            
+        Returns:
+            Patched YAML string if successful, None if patching failed or YAML unavailable
+        """
+        if not yaml:
+            logger.warning("PyYAML not available, cannot patch compose file with YAML parsing")
+            return None
+            
+        try:
+            # Parse YAML into dict structure
+            compose_data = yaml.safe_load(compose_text)
+            if not isinstance(compose_data, dict):
+                logger.warning("Compose file is not a valid YAML dictionary")
+                return None
+            
+            # Track if any changes were made
+            changes_made = False
+            
+            # Get services section
+            services = compose_data.get('services', {})
+            if not isinstance(services, dict):
+                logger.warning("Services section is not a dictionary")
+                return None
+            
+            # Process each service
+            for service_name, service_config in services.items():
+                if not isinstance(service_config, dict):
+                    continue
+                
+                # Get volumes for this service
+                volumes = service_config.get('volumes', [])
+                if not isinstance(volumes, list):
+                    continue
+                
+                # Filter out /app bind mounts and /app/node_modules
+                original_count = len(volumes)
+                filtered_volumes = []
+                
+                for vol in volumes:
+                    if isinstance(vol, str):
+                        # Handle string format: "./path:/app" or "./path:/app/..."
+                        if re.match(r'^\./[^:]*:/app(?:/|\s|$)', vol, re.IGNORECASE):
+                            changes_made = True
+                            continue
+                        if re.match(r'^/app/node_modules\s*$', vol, re.IGNORECASE):
+                            changes_made = True
+                            continue
+                    elif isinstance(vol, dict):
+                        # Handle dict format: {"type": "bind", "source": "./path", "target": "/app"}
+                        target = vol.get('target', '')
+                        if isinstance(target, str) and target.startswith('/app'):
+                            changes_made = True
+                            continue
+                        # Check for /app/node_modules
+                        source = vol.get('source', '')
+                        if isinstance(source, str) and '/app/node_modules' in source:
+                            changes_made = True
+                            continue
+                    
+                    filtered_volumes.append(vol)
+                
+                # Update volumes if changed
+                if len(filtered_volumes) != original_count:
+                    if filtered_volumes:
+                        service_config['volumes'] = filtered_volumes
+                    else:
+                        # Remove volumes key if empty
+                        service_config.pop('volumes', None)
+            
+            # Only proceed if changes were made
+            if not changes_made:
+                return None
+            
+            # Validate patched YAML structure
+            if not self._validate_compose_structure(compose_data):
+                logger.warning("Patched compose file failed validation")
+                return None
+            
+            # Convert back to YAML string
+            # Use default_flow_style=False to preserve block style formatting
+            patched_text = yaml.dump(compose_data, default_flow_style=False, sort_keys=False)
+            return patched_text
+            
+        except yaml.YAMLError as e:
+            logger.error(f"Failed to parse compose file YAML: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error patching compose file: {e}", exc_info=True)
+            return None
+    
+    def _validate_compose_structure(self, compose_data: dict) -> bool:
+        """
+        Validate docker-compose YAML structure after patching.
+        
+        Ensures that:
+        - services section contains only service mappings
+        - volumes section (if present) contains only volume definitions
+        - No structural corruption occurred
+        
+        Args:
+            compose_data: Parsed compose YAML as dict
+            
+        Returns:
+            True if structure is valid, False otherwise
+        """
+        try:
+            # Validate services section
+            services = compose_data.get('services')
+            if services is not None:
+                if not isinstance(services, dict):
+                    logger.warning("Services section is not a dictionary")
+                    return False
+                
+                # Each service should be a mapping
+                for service_name, service_config in services.items():
+                    if not isinstance(service_config, dict):
+                        logger.warning(f"Service '{service_name}' is not a mapping")
+                        return False
+            
+            # Validate volumes section (top-level named volumes)
+            volumes = compose_data.get('volumes')
+            if volumes is not None:
+                if not isinstance(volumes, dict):
+                    logger.warning("Volumes section is not a dictionary")
+                    return False
+                
+                # Each volume should be a mapping or None (for default settings)
+                for vol_name, vol_config in volumes.items():
+                    if vol_config is not None and not isinstance(vol_config, dict):
+                        logger.warning(f"Volume '{vol_name}' is not a mapping")
+                        return False
+            
+            # Validate networks section (top-level named networks)
+            networks = compose_data.get('networks')
+            if networks is not None:
+                if not isinstance(networks, dict):
+                    logger.warning("Networks section is not a dictionary")
+                    return False
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error validating compose structure: {e}", exc_info=True)
+            return False
 
     def _generate_password(self, length: int = 16) -> str:
         """Generate a secure random password."""
