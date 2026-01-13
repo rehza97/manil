@@ -11,6 +11,7 @@ export { VPSPlanCard } from "./VPSPlanCard";
 export { VPSControlPanel } from "./VPSControlPanel";
 export { VPSStatsDashboard } from "./VPSStatsDashboard";
 export { ConnectionInfoPanel } from "./ConnectionInfoPanel";
+export { ServiceDomainsPanel } from "./ServiceDomainsPanel";
 export { UpgradePanel } from "./UpgradePanel";
 export { PendingRequestCard } from "./PendingRequestCard";
 export { SubscriptionActionsMenu } from "./SubscriptionActionsMenu";

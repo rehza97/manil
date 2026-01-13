@@ -12,6 +12,7 @@ from datetime import datetime
 from pathlib import Path
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import status
 
 from app.modules.hosting.dns_repository import DNSZoneRepository, DNSSyncLogRepository
 from app.modules.hosting.models import (
@@ -20,7 +21,8 @@ from app.modules.hosting.models import (
     DNSRecordType,
     DNSZoneStatus,
     DNSSyncType,
-    DNSSyncStatus
+    DNSSyncStatus,
+    DNSSyncLog
 )
 from app.core.exceptions import CloudManagerException, NotFoundException
 
@@ -306,9 +308,15 @@ class CoreDNSConfigService:
                     }
 
         except httpx.TimeoutException:
-            raise CloudManagerException(f"CoreDNS reload timeout after {timeout} seconds")
+            raise CloudManagerException(
+                f"CoreDNS reload timeout after {timeout} seconds",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         except Exception as e:
-            raise CloudManagerException(f"Failed to reload CoreDNS: {str(e)}")
+            raise CloudManagerException(
+                f"Failed to reload CoreDNS: {str(e)}",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     async def check_coredns_health(self, timeout: int = 5) -> Dict[str, Any]:
         """
@@ -356,12 +364,13 @@ class CoreDNSConfigService:
         start_time = datetime.utcnow()
 
         # Log sync event
-        sync_log = await self.sync_log_repo.create({
-            "zone_id": None,
-            "sync_type": DNSSyncType.FULL_RELOAD,
-            "status": DNSSyncStatus.PENDING,
-            "triggered_by_id": triggered_by_id
-        })
+        sync_log = DNSSyncLog(
+            zone_id=None,
+            sync_type=DNSSyncType.FULL_RELOAD,
+            status=DNSSyncStatus.PENDING,
+            triggered_by_id=triggered_by_id
+        )
+        sync_log = await self.sync_log_repo.create(sync_log)
         await self.db.commit()
 
         try:
@@ -412,7 +421,10 @@ class CoreDNSConfigService:
             await self.sync_log_repo.update(sync_log)
             await self.db.commit()
 
-            raise CloudManagerException(f"Full zone regeneration failed: {str(e)}")
+            raise CloudManagerException(
+                f"Full zone regeneration failed: {str(e)}",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     async def sync_zone_to_coredns(
         self,
@@ -436,12 +448,13 @@ class CoreDNSConfigService:
             raise NotFoundException(f"Zone {zone_id} not found")
 
         # Log sync event
-        sync_log = await self.sync_log_repo.create({
-            "zone_id": zone_id,
-            "sync_type": DNSSyncType.ZONE_UPDATE,
-            "status": DNSSyncStatus.PENDING,
-            "triggered_by_id": triggered_by_id
-        })
+        sync_log = DNSSyncLog(
+            zone_id=zone_id,
+            sync_type=DNSSyncType.ZONE_UPDATE,
+            status=DNSSyncStatus.PENDING,
+            triggered_by_id=triggered_by_id
+        )
+        sync_log = await self.sync_log_repo.create(sync_log)
         await self.db.commit()
 
         try:

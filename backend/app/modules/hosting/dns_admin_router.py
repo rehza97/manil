@@ -351,7 +351,7 @@ async def get_coredns_status(
 
 @router.post("/coredns/reload", response_model=CoreDNSReloadResponse)
 async def reload_coredns(
-    reload_request: CoreDNSReloadRequest = Body(default=CoreDNSReloadRequest(force=False)),
+    reload_request: CoreDNSReloadRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_permission(Permission.DNS_ADMIN)),
 ):
@@ -360,23 +360,32 @@ async def reload_coredns(
 
     Forces CoreDNS to re-read all zone files and reload configuration.
     """
-    coredns_service = CoreDNSConfigService(db)
+    logger.info(f"[DNS Admin] reload_coredns endpoint called by user {current_user.id}")
+    logger.info(f"[DNS Admin] Request body: force={reload_request.force}")
+    
+    try:
+        coredns_service = CoreDNSConfigService(db)
 
-    import time
-    start_time = time.time()
+        import time
+        start_time = time.time()
 
-    reload_result = await coredns_service.reload_coredns()
+        reload_result = await coredns_service.reload_coredns()
 
-    reload_time_ms = int((time.time() - start_time) * 1000)
+        reload_time_ms = int((time.time() - start_time) * 1000)
 
-    logger.info(f"CoreDNS reload triggered by admin {current_user.id}")
+        logger.info(f"CoreDNS reload triggered by admin {current_user.id}, success: {reload_result.get('success', False)}")
 
-    return CoreDNSReloadResponse(
-        success=reload_result.get("success", False),
-        message=reload_result.get("message", "Unknown"),
-        zones_reloaded=0,  # TODO: Track from reload result
-        reload_time_ms=reload_time_ms
-    )
+        response = CoreDNSReloadResponse(
+            success=reload_result.get("success", False),
+            message=reload_result.get("message", "Unknown"),
+            zones_reloaded=0,  # TODO: Track from reload result
+            reload_time_ms=reload_time_ms
+        )
+        logger.info(f"[DNS Admin] reload_coredns endpoint completed successfully")
+        return response
+    except Exception as e:
+        logger.error(f"[DNS Admin] Error in reload_coredns endpoint: {e}", exc_info=True)
+        raise
 
 
 @router.post("/coredns/regenerate-config", response_model=CoreDNSReloadResponse)
@@ -390,21 +399,29 @@ async def regenerate_all_zones(
     This is a full configuration regeneration from the database.
     Use this to fix configuration drift or after bulk changes.
     """
-    coredns_service = CoreDNSConfigService(db)
+    logger.info(f"[DNS Admin] regenerate_all_zones endpoint called by user {current_user.id}")
+    
+    try:
+        coredns_service = CoreDNSConfigService(db)
 
-    result = await coredns_service.regenerate_all_zones(triggered_by_id=current_user.id)
+        result = await coredns_service.regenerate_all_zones(triggered_by_id=current_user.id)
 
-    logger.info(
-        f"Full DNS config regeneration by admin {current_user.id}: "
-        f"{result['zones_generated']} zones, {result['zones_failed']} errors"
-    )
+        logger.info(
+            f"Full DNS config regeneration by admin {current_user.id}: "
+            f"{result['zones_generated']} zones, {result['zones_failed']} errors"
+        )
 
-    return CoreDNSReloadResponse(
-        success=result.get("success", False),
-        message=f"Generated {result['zones_generated']} zones, {result['zones_failed']} failed",
-        zones_reloaded=result.get("zones_generated", 0),
-        reload_time_ms=result.get("duration_ms", 0)
-    )
+        response = CoreDNSReloadResponse(
+            success=result.get("success", False),
+            message=f"Generated {result['zones_generated']} zones, {result['zones_failed']} failed",
+            zones_reloaded=result.get("zones_generated", 0),
+            reload_time_ms=result.get("duration_ms", 0)
+        )
+        logger.info(f"[DNS Admin] regenerate_all_zones endpoint completed successfully")
+        return response
+    except Exception as e:
+        logger.error(f"[DNS Admin] Error in regenerate_all_zones endpoint: {e}", exc_info=True)
+        raise
 
 
 # ============================================================================

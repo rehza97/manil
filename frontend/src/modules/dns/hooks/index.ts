@@ -48,3 +48,7 @@ export {
 
 // Statistics Hooks
 export { useDNSStatistics, useDNSMetrics } from "./useDNSStatistics";
+
+// Container Hooks
+export { useSubscriptionContainers } from "./useContainers";
+export type { ContainerInfo } from "./useContainers";

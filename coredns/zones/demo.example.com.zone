@@ -1,0 +1,19 @@
+$ORIGIN demo.example.com.
+$TTL 3600
+
+@	IN	SOA	ns1.demo.example.com admin.demo.example.com (
+			1 ; Serial
+			7200 ; Refresh
+			3600 ; Retry
+			1209600 ; Expire
+			3600 ) ; Minimum TTL
+
+@	IN	NS	ns1.cloudmanager.local.
+@	IN	NS	ns2.cloudmanager.local.
+
+; A Records
+@	3600	IN	A	192.168.1.100
+www	3600	IN	A	192.168.1.100
+
+; TXT Records
+@	3600	IN	TXT	"v=spf1 a mx ~all"

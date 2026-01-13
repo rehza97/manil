@@ -105,6 +105,9 @@ class DNSManagementService:
         zone = await self.zone_repo.create(zone)
         await self.db.commit()
 
+        # Create default SOA and NS records automatically
+        await self._create_default_zone_records(zone, created_by_id)
+
         # Log sync event
         await self._log_sync_event(
             zone_id=zone.id,
@@ -158,6 +161,9 @@ class DNSManagementService:
 
         zone = await self.zone_repo.create(zone)
         await self.db.commit()
+
+        # Create default SOA and NS records automatically
+        await self._create_default_zone_records(zone, created_by_id)
 
         # Log sync event
         await self._log_sync_event(
@@ -813,6 +819,60 @@ class DNSManagementService:
             "expire": 1209600,
             "minimum": 3600
         }
+
+    async def _create_default_zone_records(
+        self,
+        zone: DNSZone,
+        created_by_id: Optional[str] = None
+    ) -> None:
+        """
+        Create default SOA and NS records for a zone.
+
+        Args:
+            zone: DNSZone instance
+            created_by_id: User ID creating the records
+        """
+        soa = zone.soa_record or {}
+        soa_mname = soa.get("mname", f"ns1.{zone.zone_name}")
+        soa_rname = soa.get("rname", f"admin.{zone.zone_name}")
+        soa_serial = soa.get("serial", 1)
+        soa_refresh = soa.get("refresh", 7200)
+        soa_retry = soa.get("retry", 3600)
+        soa_expire = soa.get("expire", 1209600)
+        soa_minimum = soa.get("minimum", 3600)
+
+        # Format SOA record value: "mname rname serial refresh retry expire minimum"
+        soa_value = f"{soa_mname} {soa_rname} {soa_serial} {soa_refresh} {soa_retry} {soa_expire} {soa_minimum}"
+
+        # Create SOA record
+        soa_record = DNSRecord(
+            zone_id=zone.id,
+            record_name="@",
+            record_type=DNSRecordType.SOA,
+            record_value=soa_value,
+            ttl=zone.ttl_default,
+            is_system_managed=True,
+            created_by_id=created_by_id,
+            last_modified_by_id=created_by_id
+        )
+        await self.record_repo.create(soa_record)
+
+        # Create NS records for each nameserver
+        nameservers = zone.nameservers or ["ns1.cloudmanager.local", "ns2.cloudmanager.local"]
+        for ns in nameservers:
+            ns_record = DNSRecord(
+                zone_id=zone.id,
+                record_name="@",
+                record_type=DNSRecordType.NS,
+                record_value=ns,
+                ttl=zone.ttl_default,
+                is_system_managed=True,
+                created_by_id=created_by_id,
+                last_modified_by_id=created_by_id
+            )
+            await self.record_repo.create(ns_record)
+
+        await self.db.commit()
 
     async def _log_sync_event(
         self,

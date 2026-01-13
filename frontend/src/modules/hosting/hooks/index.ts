@@ -5,6 +5,7 @@ export * from "./useVPSStats";
 export * from "./useVPSAdmin";
 export * from "./useCustomImages";
 export * from "./useExecCommand";
+export * from "./useServiceDomains";
 
 
 

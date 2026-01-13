@@ -18,6 +18,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
@@ -321,7 +322,7 @@ export default function DNSZoneDetailPage() {
               </div>
               <div>
                 <h4 className="mb-2 text-sm font-medium">Zone Status</h4>
-                <p className="text-sm text-muted-foreground">
+                <div className="text-sm text-muted-foreground">
                   This zone is currently <DNSStatusBadge status={zone.status} />.
                   {zone.status === "ACTIVE" &&
                     " All DNS records are being served by our nameservers."}
@@ -329,7 +330,7 @@ export default function DNSZoneDetailPage() {
                     " The zone is being provisioned and will be active shortly."}
                   {zone.status === "SUSPENDED" &&
                     " This zone has been suspended and records are not being served."}
-                </p>
+                </div>
               </div>
               <div>
                 <h4 className="mb-2 text-sm font-medium">Zone Type</h4>
@@ -391,6 +392,9 @@ export default function DNSZoneDetailPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Add DNS Record</DialogTitle>
+            <DialogDescription>
+              Create a new DNS record for {zone.zone_name}. Configure the record type, name, and value.
+            </DialogDescription>
           </DialogHeader>
           <DNSRecordForm
             onSubmit={handleCreateRecord}

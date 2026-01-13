@@ -17,7 +17,7 @@ import io
 import re
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, Dict, Iterator, BinaryIO
+from typing import Optional, Dict, Iterator, BinaryIO, List, Any
 from cryptography.fernet import Fernet, InvalidToken
 
 try:
@@ -2002,7 +2002,57 @@ class DockerManagementService:
             }
             if compose_file and exit_code == 0:
                 success_data['service_routes'] = service_routes
-            
+
+                # Auto-create domains for discovered services
+                if service_routes:
+                    try:
+                        import asyncio
+                        from app.modules.hosting.services.service_domain_service import ServiceDomainService
+
+                        domain_service = ServiceDomainService(self.db)
+                        base_domain = os.getenv("VPS_BASE_DOMAIN", "vps.localhost")
+
+                        yield from log("🌐 Creating service domains...")
+
+                        # Run async code synchronously within sync generator
+                        try:
+                            loop = asyncio.get_event_loop()
+                        except RuntimeError:
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+
+                        created_domains = loop.run_until_complete(
+                            domain_service.auto_create_domains_for_deployment(
+                                subscription_id=subscription.id,
+                                service_routes=service_routes,
+                                base_domain=base_domain
+                            )
+                        )
+
+                        if created_domains:
+                            # Add domain info to response
+                            success_data['domains_created'] = [
+                                {
+                                    'service': d.service_name,
+                                    'domain': d.domain_name,
+                                    'url': f"http://{d.domain_name}",
+                                    'active': d.is_active,
+                                    'proxy_configured': d.proxy_configured
+                                }
+                                for d in created_domains
+                            ]
+
+                            yield from log(f"✅ Created {len(created_domains)} domain(s)")
+                            for d in created_domains:
+                                status = "✓" if d.proxy_configured else "⚠"
+                                yield from log(f"  {status} {d.service_name}: http://{d.domain_name}")
+                        else:
+                            yield from log("ℹ️  No new domains created (may already exist)")
+
+                    except Exception as e:
+                        logger.warning(f"Failed to auto-create domains: {e}", exc_info=True)
+                        yield from log(f"⚠️  Domain creation failed: {str(e)}", level="warning")
+
             yield f"event: success\ndata: {json.dumps(success_data)}\n\n"
             
         except Exception as e:
@@ -2662,6 +2712,105 @@ class DockerManagementService:
         if subscription and subscription.container:
             return subscription.container.container_id
         return None
+
+    async def list_containers_in_vps(self, subscription_id: str) -> List[Dict[str, Any]]:
+        """
+        List all containers running inside a VPS subscription container.
+        
+        Executes 'docker ps' inside the VPS container to get all running containers
+        and their port mappings.
+        
+        Args:
+            subscription_id: VPS subscription ID
+            
+        Returns:
+            List of dictionaries with container information:
+            - id: Container ID (short)
+            - name: Container name
+            - image: Image name/ID
+            - status: Container status
+            - ports: Port mappings string (docker ps format)
+            - ports_parsed: Parsed port mappings list
+        """
+        container_id = await self.get_container_id(subscription_id)
+        if not container_id:
+            return []
+            
+        if not self.docker_available:
+            return []
+
+        try:
+            container = self.client.containers.get(container_id)
+            
+            # Check if docker is available inside the VPS container
+            # Try with docker command first, then docker compose/docker-compose
+            ps_prefix = ""
+            for cmd in ["docker", "docker compose", "docker-compose"]:
+                check_result = container.exec_run(f"which {cmd.split()[0]}", user="root")
+                if check_result.exit_code == 0:
+                    ps_prefix = cmd.split()[0] + " "
+                    break
+            
+            if not ps_prefix:
+                logger.warning(f"Docker not found inside VPS container {container_id}")
+                return []
+            
+            # Execute docker ps with formatted output
+            # Format: ID, Image, Status, Ports, Names
+            ps_result = container.exec_run(
+                f"sh -c '{ps_prefix}docker ps --format \"{{{{.ID}}}}\\t{{{{.Image}}}}\\t{{{{.Status}}}}\\t{{{{.Ports}}}}\\t{{{{.Names}}}}\" 2>/dev/null'",
+                user="root"
+            )
+            
+            if ps_result.exit_code != 0 or not ps_result.output:
+                return []
+            
+            output = ps_result.output.decode('utf-8', errors='replace').strip()
+            if not output:
+                return []
+            
+            containers = []
+            for line in output.split('\n'):
+                if not line.strip() or line.startswith('CONTAINER'):
+                    continue
+                    
+                parts = line.split('\t')
+                if len(parts) >= 5:
+                    container_id_short = parts[0][:12]  # Short ID
+                    image = parts[1]
+                    status = parts[2]
+                    ports = parts[3]
+                    name = parts[4]
+                    
+                    # Parse port mappings
+                    ports_parsed = []
+                    if ports and ports != '<none>':
+                        # Parse format: "0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp"
+                        port_pattern = r'(\d+\.\d+\.\d+\.\d+):(\d+)->(\d+)/(tcp|udp)'
+                        matches = re.findall(port_pattern, ports)
+                        for match in matches:
+                            ports_parsed.append({
+                                'host_ip': match[0],
+                                'host_port': int(match[1]),
+                                'container_port': int(match[2]),
+                                'protocol': match[3],
+                                'display': f"{match[0]}:{match[1]}->{match[2]}/{match[3]}"
+                            })
+                    
+                    containers.append({
+                        'id': container_id_short,
+                        'name': name,
+                        'image': image,
+                        'status': status,
+                        'ports': ports,
+                        'ports_parsed': ports_parsed
+                    })
+            
+            return containers
+            
+        except Exception as e:
+            logger.error(f"Failed to list containers in VPS {subscription_id}: {e}", exc_info=True)
+            return []
 
     async def get_container_logs(self, container_id: str, tail: int = 100) -> Optional[str]:
         """Get container logs."""

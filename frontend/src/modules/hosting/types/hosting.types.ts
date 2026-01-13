@@ -464,3 +464,45 @@ export interface CustomImageUploadRequest {
   subscription_id?: string;
 }
 
+// ============================================================================
+// Service Domain Types
+// ============================================================================
+
+export interface VPSServiceDomain {
+  id: string;
+  subscription_id: string;
+  service_name: string;
+  service_port: number;
+  domain_type: "AUTO" | "CUSTOM";
+  domain_name: string;
+  is_active: boolean;
+  proxy_configured: boolean;
+  dns_zone_id?: string;
+  dns_record_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ServiceDomainCreate {
+  subscription_id: string;
+  service_name: string;
+  custom_domain: string;
+}
+
+export interface ServiceDomainUpdate {
+  is_active?: boolean;
+}
+
+export interface ServiceDomainListResponse {
+  items: VPSServiceDomain[];
+  total: number;
+}
+
+export interface ServiceDomainStatistics {
+  total_domains: number;
+  active: number;
+  inactive: number;
+  auto_generated: number;
+  custom: number;
+}
+

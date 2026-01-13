@@ -48,6 +48,8 @@ from app.modules.hosting.routes.custom_images import router as custom_images_rou
 from app.modules.hosting.routes.plan_admin import router as plan_admin_router
 from app.modules.hosting.dns_client_router import router as dns_client_router
 from app.modules.hosting.dns_admin_router import router as dns_admin_router
+from app.modules.hosting.routes.service_domains_client import router as service_domains_client_router
+from app.modules.hosting.routes.service_domains_admin import router as service_domains_admin_router
 
 settings = get_settings()
 
@@ -266,3 +268,5 @@ app.include_router(custom_images_router, prefix="/api/v1/hosting")  # Custom Doc
 app.include_router(plan_admin_router)  # VPS Plan admin router already has /api/v1/hosting/admin/plans prefix
 app.include_router(dns_client_router, prefix="/api/v1")  # DNS client router has /hosting/dns prefix
 app.include_router(dns_admin_router, prefix="/api/v1")  # DNS admin router has /hosting/admin/dns prefix
+app.include_router(service_domains_client_router, prefix="/api/v1")  # Service domains client router has /hosting/service-domains prefix
+app.include_router(service_domains_admin_router, prefix="/api/v1")  # Service domains admin router has /hosting/admin/service-domains prefix

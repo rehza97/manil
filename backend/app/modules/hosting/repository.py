@@ -18,7 +18,9 @@ from app.modules.hosting.models import (
     SubscriptionTimeline,
     SubscriptionStatus,
     ContainerStatus,
-    TimelineEventType
+    TimelineEventType,
+    VPSServiceDomain,
+    DomainType
 )
 
 
@@ -483,3 +485,121 @@ class SubscriptionTimelineRepository:
         )
 
         return await self.create(event)
+
+
+class VPSServiceDomainRepository:
+    """Repository for VPS Service Domain database operations."""
+
+    def __init__(self, db: AsyncSession):
+        """Initialize repository with database session."""
+        self.db = db
+
+    async def get_all(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        subscription_id: Optional[str] = None,
+        is_active: Optional[bool] = None
+    ) -> Tuple[List[VPSServiceDomain], int]:
+        """Get all service domains with filters and pagination."""
+        query = select(VPSServiceDomain)
+
+        # Apply filters
+        if subscription_id:
+            query = query.where(VPSServiceDomain.subscription_id == subscription_id)
+        if is_active is not None:
+            query = query.where(VPSServiceDomain.is_active == is_active)
+
+        # Get total count
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await self.db.execute(count_query)
+        total = total_result.scalar_one()
+
+        # Apply pagination and ordering
+        query = query.offset(skip).limit(limit).order_by(desc(VPSServiceDomain.created_at))
+
+        result = await self.db.execute(query)
+        domains = result.scalars().all()
+
+        return list(domains), total
+
+    async def get_by_id(self, domain_id: str) -> Optional[VPSServiceDomain]:
+        """Get service domain by ID."""
+        query = select(VPSServiceDomain).where(VPSServiceDomain.id == domain_id)
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
+    async def get_by_domain_name(self, domain_name: str) -> Optional[VPSServiceDomain]:
+        """Get service domain by domain name."""
+        query = select(VPSServiceDomain).where(VPSServiceDomain.domain_name == domain_name)
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
+    async def get_by_subscription(
+        self,
+        subscription_id: str,
+        is_active: Optional[bool] = None
+    ) -> List[VPSServiceDomain]:
+        """Get all service domains for a subscription."""
+        query = select(VPSServiceDomain).where(
+            VPSServiceDomain.subscription_id == subscription_id
+        )
+
+        if is_active is not None:
+            query = query.where(VPSServiceDomain.is_active == is_active)
+
+        query = query.order_by(VPSServiceDomain.service_name)
+
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
+    async def get_by_subscription_and_service(
+        self,
+        subscription_id: str,
+        service_name: str
+    ) -> Optional[VPSServiceDomain]:
+        """Get service domain by subscription and service name."""
+        query = select(VPSServiceDomain).where(
+            and_(
+                VPSServiceDomain.subscription_id == subscription_id,
+                VPSServiceDomain.service_name == service_name
+            )
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
+    async def domain_exists(self, domain_name: str) -> bool:
+        """Check if domain name already exists."""
+        query = select(func.count()).where(VPSServiceDomain.domain_name == domain_name)
+        result = await self.db.execute(query)
+        count = result.scalar_one()
+        return count > 0
+
+    async def create(self, domain: VPSServiceDomain) -> VPSServiceDomain:
+        """Create a new service domain."""
+        self.db.add(domain)
+        await self.db.flush()
+        await self.db.refresh(domain)
+        return domain
+
+    async def update(self, domain: VPSServiceDomain) -> VPSServiceDomain:
+        """Update service domain."""
+        await self.db.flush()
+        await self.db.refresh(domain)
+        return domain
+
+    async def delete(self, domain: VPSServiceDomain) -> None:
+        """Delete service domain."""
+        await self.db.delete(domain)
+        await self.db.flush()
+
+    async def get_active_domains_with_subscription(self) -> List[VPSServiceDomain]:
+        """Get all active domains with their subscription info loaded."""
+        query = (
+            select(VPSServiceDomain)
+            .where(VPSServiceDomain.is_active == True)
+            .options(selectinload(VPSServiceDomain.subscription))
+            .order_by(VPSServiceDomain.domain_name)
+        )
+        result = await self.db.execute(query)
+        return list(result.scalars().all())

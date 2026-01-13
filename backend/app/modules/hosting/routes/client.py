@@ -3,7 +3,7 @@ VPS Hosting Client API routes.
 
 Customer-facing endpoints for managing VPS subscriptions.
 """
-from typing import Optional, List, AsyncGenerator
+from typing import Optional, List, AsyncGenerator, Dict, Any
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query, status, UploadFile, File, Form, WebSocket, WebSocketDisconnect
@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 import asyncio
 import threading
+import queue
 
 from app.config.database import get_db
 from app.core.dependencies import get_current_user, require_permission
@@ -988,7 +989,7 @@ async def websocket_terminal(
         }))
         
         # Queues for communication
-        input_queue = asyncio.Queue()
+        input_queue = queue.Queue()
         output_queue = asyncio.Queue()
         stop_event = threading.Event()
         loop = asyncio.get_running_loop()
@@ -1027,13 +1028,8 @@ async def websocket_terminal(
         
         # Thread to write to Docker exec socket
         def write_to_docker():
-            import concurrent.futures
             import socket as socket_module
             import time
-
-            # Helper async function to try getting from queue
-            async def try_get_nowait():
-                return input_queue.get_nowait()
 
             try:
                 logger.info(f"[Terminal WS] Write thread started for subscription {subscription_id}")
@@ -1043,9 +1039,8 @@ async def websocket_terminal(
                     if iteration % 1000 == 0:  # Log every 1000 iterations to avoid spam
                         logger.info(f"[Terminal WS] Write thread loop iteration {iteration}, queue size: {input_queue.qsize()}")
                     try:
-                        # Use get_nowait to avoid leaving dangling coroutines
-                        fut = asyncio.run_coroutine_threadsafe(try_get_nowait(), loop)
-                        data = fut.result(timeout=0.05)
+                        # Get data from queue with timeout
+                        data = input_queue.get(timeout=0.1)
                         if data is None:
                             logger.info(f"[Terminal WS] Received None, exiting write thread")
                             break
@@ -1054,13 +1049,8 @@ async def websocket_terminal(
                         docker_sock.settimeout(5.0)
                         docker_sock.sendall(data)
                         logger.info(f"[Terminal WS] ✓ Data sent to Docker successfully")
-                    except asyncio.QueueEmpty:
-                        # Normal - queue is empty, sleep briefly to avoid busy-waiting
-                        time.sleep(0.01)
-                        continue
-                    except concurrent.futures.TimeoutError:
-                        # Shouldn't happen with get_nowait, but handle it
-                        logger.warning(f"[Terminal WS] Future timeout on get_nowait (unexpected)")
+                    except queue.Empty:
+                        # Normal - queue is empty, continue loop
                         continue
                     except socket_module.timeout:
                         logger.warning(f"[Terminal WS] Socket send timeout, continuing...")
@@ -1087,7 +1077,7 @@ async def websocket_terminal(
         # Send this AFTER threads are started so the read thread can capture the response
         try:
             logger.debug(f"[Terminal WS] Sending initial newline to trigger bash prompt")
-            await input_queue.put(b"\n")
+            await asyncio.to_thread(input_queue.put, b"\n")
             logger.debug(f"[Terminal WS] Initial newline queued for Docker")
         except Exception as e:
             logger.warning(f"[Terminal WS] Failed to queue initial newline: {e}")
@@ -1139,7 +1129,7 @@ async def websocket_terminal(
                                 # Send input to Docker
                                 input_data = data.get("data", "").encode('utf-8')
                                 logger.info(f"[Terminal WS] Queuing input data: {repr(input_data[:50])}")
-                                await input_queue.put(input_data)
+                                await asyncio.to_thread(input_queue.put, input_data)
                                 logger.info(f"[Terminal WS] Input data queued successfully")
                             elif data.get("type") == "resize":
                                 # Handle terminal resize
@@ -1148,7 +1138,7 @@ async def websocket_terminal(
                         except json.JSONDecodeError as json_err:
                             # If not JSON, treat as raw input
                             logger.warning(f"[Terminal WS] JSON decode error: {json_err}, treating as raw input")
-                            await input_queue.put(message.encode('utf-8'))
+                            await asyncio.to_thread(input_queue.put, message.encode('utf-8'))
                         except Exception as process_err:
                             logger.error(f"[Terminal WS] Error processing message: {process_err}", exc_info=True)
 
@@ -1170,7 +1160,7 @@ async def websocket_terminal(
         finally:
             # Cleanup
             stop_event.set()
-            await input_queue.put(None)
+            await asyncio.to_thread(input_queue.put, None)
             output_task.cancel()
             try:
                 await output_task
@@ -1938,3 +1928,55 @@ async def get_subscription_timeline(
     timeline = await timeline_repo.get_by_subscription_id(subscription_id, limit=100)
 
     return [SubscriptionTimelineResponse.model_validate(event) for event in timeline]
+
+
+@router.get(
+    "/subscriptions/{subscription_id}/containers",
+    response_model=List[Dict[str, Any]],
+    summary="List Containers in VPS",
+    description="""
+    List all Docker containers running inside a VPS subscription container.
+    
+    Executes 'docker ps' inside the VPS container to retrieve all running containers
+    and their port mappings. Useful for DNS configuration to link domain names to
+    specific containers and ports.
+    
+    **Permissions Required:** `hosting:view`
+    
+    **Response:** List of container objects with id, name, image, status, and port mappings.
+    """
+)
+async def list_subscription_containers(
+    subscription_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.HOSTING_VIEW))
+):
+    """
+    List all containers running inside a VPS subscription.
+    
+    Args:
+        subscription_id: VPS subscription ID
+        db: Database session
+        current_user: Authenticated user (requires hosting:view permission)
+    
+    Returns:
+        List of container dictionaries with id, name, image, status, ports
+    
+    Raises:
+        404: If subscription not found or doesn't belong to user
+        403: If user lacks hosting:view permission
+    """
+    repo = VPSSubscriptionRepository(db)
+    subscription = await repo.get_by_id(subscription_id)
+    
+    if not subscription:
+        raise NotFoundException(f"Subscription {subscription_id} not found")
+    
+    # Security: only own subscriptions
+    if subscription.customer_id != current_user.id:
+        raise NotFoundException(f"Subscription {subscription_id} not found")
+    
+    docker_service = DockerManagementService(db)
+    containers = await docker_service.list_containers_in_vps(subscription_id)
+    
+    return containers

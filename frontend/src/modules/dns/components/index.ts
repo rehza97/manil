@@ -7,6 +7,7 @@
 export { DNSStatusBadge } from "./DNSStatusBadge";
 export { RecordTypeBadge } from "./RecordTypeBadge";
 export { DNSZoneForm } from "./DNSZoneForm";
+export { SystemDNSZoneForm } from "./SystemDNSZoneForm";
 export { DNSRecordForm } from "./DNSRecordForm";
 export { DNSRecordsTable } from "./DNSRecordsTable";
 export { CoreDNSStatusIndicator } from "./CoreDNSStatusIndicator";

@@ -31,6 +31,11 @@ import type {
   CustomImageListResponse,
   ImageBuildLog,
   ImageBuildStatus,
+  VPSServiceDomain,
+  ServiceDomainCreate,
+  ServiceDomainUpdate,
+  ServiceDomainListResponse,
+  ServiceDomainStatistics,
 } from "../types";
 
 /**
@@ -153,6 +158,27 @@ export const vpsService = {
    */
   async getSubscription(subscriptionId: string): Promise<VPSSubscriptionDetail> {
     const response = await apiClient.get(`/hosting/subscriptions/${subscriptionId}`);
+    return response.data;
+  },
+
+  /**
+   * Get containers running inside a VPS subscription
+   */
+  async getSubscriptionContainers(subscriptionId: string): Promise<Array<{
+    id: string;
+    name: string;
+    image: string;
+    status: string;
+    ports: string;
+    ports_parsed: Array<{
+      host_ip: string;
+      host_port: number;
+      container_port: number;
+      protocol: string;
+      display: string;
+    }>;
+  }>> {
+    const response = await apiClient.get(`/hosting/subscriptions/${subscriptionId}/containers`);
     return response.data;
   },
 
@@ -765,6 +791,62 @@ export const vpsService = {
         },
       }
     );
+    return response.data;
+  },
+
+  // ============================================================================
+  // Service Domains (Customer)
+  // ============================================================================
+
+  /**
+   * Get service domains for a subscription
+   */
+  async getServiceDomainsBySubscription(
+    subscriptionId: string,
+    isActive?: boolean
+  ): Promise<ServiceDomainListResponse> {
+    const params: any = {};
+    if (isActive !== undefined) {
+      params.is_active = isActive;
+    }
+    const response = await apiClient.get(
+      `/hosting/service-domains/subscription/${subscriptionId}`,
+      { params }
+    );
+    return response.data;
+  },
+
+  /**
+   * Create custom domain
+   */
+  async createCustomDomain(data: ServiceDomainCreate): Promise<VPSServiceDomain> {
+    const response = await apiClient.post("/hosting/service-domains/custom", data);
+    return response.data;
+  },
+
+  /**
+   * Update service domain (toggle active status)
+   */
+  async updateServiceDomain(
+    domainId: string,
+    data: ServiceDomainUpdate
+  ): Promise<VPSServiceDomain> {
+    const response = await apiClient.put(`/hosting/service-domains/${domainId}`, data);
+    return response.data;
+  },
+
+  /**
+   * Delete service domain
+   */
+  async deleteServiceDomain(domainId: string): Promise<void> {
+    await apiClient.delete(`/hosting/service-domains/${domainId}`);
+  },
+
+  /**
+   * Get service domain statistics
+   */
+  async getServiceDomainStatistics(): Promise<ServiceDomainStatistics> {
+    const response = await apiClient.get("/hosting/service-domains/statistics");
     return response.data;
   },
 };

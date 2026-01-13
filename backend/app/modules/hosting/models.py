@@ -144,6 +144,12 @@ class DNSTemplateType(str, PyEnum):
     CUSTOM = "CUSTOM"  # Custom template
 
 
+class DomainType(str, PyEnum):
+    """VPS Service Domain type enumeration."""
+    AUTO = "AUTO"  # System-generated subdomain
+    CUSTOM = "CUSTOM"  # User-provided custom domain
+
+
 class VPSPlan(Base):
     """VPS Plan database model - defines available hosting plans."""
 
@@ -301,6 +307,10 @@ class VPSSubscription(Base):
         "Invoice",
         back_populates="vps_subscription"
     )
+    service_domains: Mapped[list["VPSServiceDomain"]] = relationship(
+        "VPSServiceDomain",
+        back_populates="subscription"
+    )
 
 
 class ContainerInstance(Base):
@@ -375,6 +385,81 @@ class ContainerInstance(Base):
     metrics: Mapped[list["ContainerMetrics"]] = relationship(
         "ContainerMetrics",
         back_populates="container"
+    )
+
+
+class VPSServiceDomain(Base):
+    """VPS Service Domain database model - maps VPS services to custom domains."""
+
+    __tablename__ = "vps_service_domains"
+
+    # Primary Key
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4())
+    )
+
+    # Foreign Key
+    subscription_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("vps_subscriptions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    # Service Information
+    service_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    service_port: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    # Domain Configuration
+    domain_type: Mapped[DomainType] = mapped_column(
+        SQLEnum(DomainType, name='domain_type'),
+        nullable=False
+    )
+    domain_name: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+        unique=True,
+        index=True
+    )
+
+    # Status Flags
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    proxy_configured: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # DNS Integration (nullable for custom domains with external DNS)
+    dns_zone_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("dns_zones.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    dns_record_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("dns_records.id", ondelete="SET NULL"),
+        nullable=True
+    )
+
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.utcnow())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.utcnow(),
+        onupdate=lambda: datetime.utcnow()
+    )
+
+    # Relationships
+    subscription: Mapped["VPSSubscription"] = relationship(
+        "VPSSubscription",
+        back_populates="service_domains"
+    )
+    dns_zone: Mapped["DNSZone | None"] = relationship(
+        "DNSZone",
+        foreign_keys=[dns_zone_id]
+    )
+    dns_record: Mapped["DNSRecord | None"] = relationship(
+        "DNSRecord",
+        foreign_keys=[dns_record_id]
     )
 
 

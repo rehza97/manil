@@ -21,6 +21,7 @@ import {
   VPSControlPanel,
   VPSStatsDashboard,
   ConnectionInfoPanel,
+  ServiceDomainsPanel,
   UpgradePanel,
   SubscriptionTimeline,
   LiveContainerLogs,
@@ -306,6 +307,11 @@ export const VPSInstancePage: React.FC = () => {
           {/* Connection Info */}
           {subscription.container && (
             <ConnectionInfoPanel container={subscription.container} subscriptionId={id!} />
+          )}
+
+          {/* Service Domains */}
+          {subscription.container && (
+            <ServiceDomainsPanel subscriptionId={id!} />
           )}
 
           {/* Upgrade Panel */}

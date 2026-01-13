@@ -15,6 +15,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { CheckCircle2, XCircle, RefreshCw } from "lucide-react";
 import type { DNSSyncLog } from "../types";
+import { DNSSyncStatus } from "../types";
 import { format } from "date-fns";
 
 interface SyncLogViewerProps {
@@ -44,7 +45,7 @@ export function SyncLogViewer({ logs, isLoading }: SyncLogViewerProps) {
   }
 
   // Show failed syncs alert if any
-  const failedLogs = logs.filter((log) => !log.success);
+  const failedLogs = logs.filter((log) => log.status === DNSSyncStatus.FAILED);
 
   return (
     <div className="space-y-4">
@@ -71,25 +72,52 @@ export function SyncLogViewer({ logs, isLoading }: SyncLogViewerProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {logs.map((log) => (
+            {logs.map((log) => {
+              // Calculate duration if both timestamps are available
+              const duration = 
+                log.triggered_at && log.completed_at
+                  ? Math.round(
+                      (new Date(log.completed_at).getTime() - 
+                       new Date(log.triggered_at).getTime())
+                    )
+                  : null;
+
+              // Format timestamp with validation
+              const timestamp = log.triggered_at 
+                ? (() => {
+                    try {
+                      const date = new Date(log.triggered_at);
+                      return isNaN(date.getTime()) ? null : date;
+                    } catch {
+                      return null;
+                    }
+                  })()
+                : null;
+
+              return (
               <TableRow key={log.id}>
                 <TableCell>
-                  {log.success ? (
+                  {log.status === DNSSyncStatus.SUCCESS ? (
                     <Badge className="bg-green-100 text-green-800">
                       <CheckCircle2 className="mr-1 h-3 w-3" />
                       Success
                     </Badge>
-                  ) : (
+                  ) : log.status === DNSSyncStatus.FAILED ? (
                     <Badge className="bg-red-100 text-red-800">
                       <XCircle className="mr-1 h-3 w-3" />
                       Failed
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-yellow-100 text-yellow-800">
+                      <RefreshCw className="mr-1 h-3 w-3" />
+                      Pending
                     </Badge>
                   )}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <RefreshCw className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-mono text-sm">{log.operation}</span>
+                    <span className="font-mono text-sm">{log.sync_type}</span>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -100,10 +128,10 @@ export function SyncLogViewer({ logs, isLoading }: SyncLogViewerProps) {
                   )}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {log.duration_ms ? `${log.duration_ms}ms` : "-"}
+                  {duration !== null ? `${duration}ms` : "-"}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {format(new Date(log.created_at), "MMM d, HH:mm:ss")}
+                  {timestamp ? format(timestamp, "MMM d, HH:mm:ss") : "-"}
                 </TableCell>
                 <TableCell>
                   {log.error_message ? (
@@ -115,7 +143,8 @@ export function SyncLogViewer({ logs, isLoading }: SyncLogViewerProps) {
                   )}
                 </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       </div>

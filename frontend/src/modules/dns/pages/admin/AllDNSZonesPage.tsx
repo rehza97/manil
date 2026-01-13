@@ -43,13 +43,17 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
-import { DNSStatusBadge } from "../../components";
+import {
+  DialogDescription,
+} from "@/shared/components/ui/dialog";
+import { DNSStatusBadge, SystemDNSZoneForm } from "../../components";
 import {
   useAllDNSZones,
   useActivateDNSZone,
   useSuspendDNSZone,
   useCreateSystemZone,
 } from "../../hooks";
+import type { CreateSystemZoneFormData } from "../../utils/validation";
 import { DNSZoneStatus, DNSZoneType } from "../../types";
 import { format } from "date-fns";
 import { exportRecordsToCSV } from "../../utils/export";
@@ -74,6 +78,7 @@ export default function AllDNSZonesPage() {
   // Mutations
   const activateMutation = useActivateDNSZone();
   const suspendMutation = useSuspendDNSZone();
+  const createSystemZoneMutation = useCreateSystemZone();
 
   const handleActivate = (zoneId: string) => {
     activateMutation.mutate(zoneId);
@@ -90,6 +95,14 @@ export default function AllDNSZonesPage() {
     // In a real implementation, this would fetch all records
     // For now, just show a placeholder
     alert("Export functionality will download all zone data as CSV");
+  };
+
+  const handleCreateSystemZone = (data: CreateSystemZoneFormData) => {
+    createSystemZoneMutation.mutate(data, {
+      onSuccess: () => {
+        setShowCreateSystemDialog(false);
+      },
+    });
   };
 
   return (
@@ -238,7 +251,7 @@ export default function AllDNSZonesPage() {
                             >
                               View Details
                             </DropdownMenuItem>
-                            {zone.status === DNSZoneStatus.SUSPENDED && (
+                            {(zone.status === DNSZoneStatus.PENDING || zone.status === DNSZoneStatus.SUSPENDED) && (
                               <DropdownMenuItem
                                 onClick={() => handleActivate(zone.id)}
                               >
@@ -265,7 +278,7 @@ export default function AllDNSZonesPage() {
         </CardContent>
       </Card>
 
-      {/* Create System Zone Dialog (Placeholder) */}
+      {/* Create System Zone Dialog */}
       <Dialog
         open={showCreateSystemDialog}
         onOpenChange={setShowCreateSystemDialog}
@@ -273,12 +286,15 @@ export default function AllDNSZonesPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Create System DNS Zone</DialogTitle>
+            <DialogDescription>
+              Create a system DNS zone that is not linked to any VPS subscription. System zones are managed by administrators only.
+            </DialogDescription>
           </DialogHeader>
-          <div className="rounded-lg border border-dashed p-8 text-center">
-            <p className="text-sm text-muted-foreground">
-              System zone creation form will be implemented here
-            </p>
-          </div>
+          <SystemDNSZoneForm
+            onSubmit={handleCreateSystemZone}
+            onCancel={() => setShowCreateSystemDialog(false)}
+            isLoading={createSystemZoneMutation.isPending}
+          />
         </DialogContent>
       </Dialog>
     </div>

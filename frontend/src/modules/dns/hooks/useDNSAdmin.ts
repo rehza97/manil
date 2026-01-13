@@ -16,6 +16,60 @@ import type {
 } from "../types";
 
 // ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Format DNS admin error messages to be user-friendly
+ * @param error - The error object from axios/react-query
+ * @returns User-friendly error message
+ */
+function formatDNSAdminError(error: any): string {
+  const errorMessage = error?.response?.data?.detail || error?.message || "";
+  const statusCode = error?.response?.status;
+
+  // Check for connection errors
+  if (
+    errorMessage.toLowerCase().includes("connection attempts failed") ||
+    errorMessage.toLowerCase().includes("connecterror") ||
+    errorMessage.toLowerCase().includes("connection refused") ||
+    errorMessage.toLowerCase().includes("network error")
+  ) {
+    return "CoreDNS service is currently unavailable. Please check the service status.";
+  }
+
+  // Check for timeout errors
+  if (
+    errorMessage.toLowerCase().includes("timeout") ||
+    errorMessage.toLowerCase().includes("timed out")
+  ) {
+    return "Request timed out. Please try again.";
+  }
+
+  // Handle by HTTP status code
+  if (statusCode === 500) {
+    return "Service unavailable. The CoreDNS service encountered an error.";
+  }
+
+  if (statusCode === 400) {
+    return "Invalid request. Please check your input and try again.";
+  }
+
+  if (statusCode === 503) {
+    return "Service unavailable. Please try again later.";
+  }
+
+  // Fallback: return the error message if it's reasonably user-friendly,
+  // otherwise return a generic message
+  if (errorMessage && errorMessage.length > 0 && errorMessage.length < 200) {
+    // If the message is short and doesn't look too technical, use it
+    return errorMessage;
+  }
+
+  return "An unexpected error occurred. Please try again.";
+}
+
+// ============================================================================
 // Query Hooks
 // ============================================================================
 
@@ -71,9 +125,7 @@ export const useReloadCoreDNS = () => {
     onError: (error: any) => {
       toast({
         title: "Reload Failed",
-        description:
-          error.response?.data?.detail ||
-          "An error occurred while reloading CoreDNS",
+        description: formatDNSAdminError(error),
         variant: "destructive",
       });
     },
@@ -101,9 +153,7 @@ export const useRegenerateCoreDNSConfig = () => {
     onError: (error: any) => {
       toast({
         title: "Regeneration Failed",
-        description:
-          error.response?.data?.detail ||
-          "An error occurred while regenerating configuration",
+        description: formatDNSAdminError(error),
         variant: "destructive",
       });
     },

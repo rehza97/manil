@@ -152,6 +152,9 @@ services:
       - DOCKER_HOST=unix:///var/run/docker.sock
       # VPS Docker Engine Mode: auto|proxy|dind
       - VPS_DOCKER_ENGINE_MODE=${VPS_DOCKER_ENGINE_MODE:-auto}
+      # VPS Service Domain Configuration
+      - VPS_BASE_DOMAIN=${VPS_BASE_DOMAIN:-vps.localhost}
+      - HOST_PUBLIC_IP=${HOST_PUBLIC_IP:-127.0.0.1}
     volumes:
       - ./backend:/app
       - storage_data:/app/storage
@@ -286,6 +289,27 @@ services:
       start_period: 40s
     restart: unless-stopped
 
+  # Nginx Proxy - Routes custom domains to VPS services
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: cloudmanager-nginx-proxy
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/sites-enabled:/etc/nginx/sites-enabled:ro
+      - nginx_logs:/var/log/nginx
+    ports:
+      - "80:80"
+    networks:
+      - cloudmanager-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    depends_on:
+      - backend
+
 # NOTE: cPanel/WHM cannot be containerized. Run it on a separate VM/host
 # (AlmaLinux/Rocky/CloudLinux), then set CPANEL_* env vars above and allow
 # outbound access from the backend to ports 2087 (WHM) and 2083 (cPanel).
@@ -301,6 +325,8 @@ volumes:
   logs_data:
     driver: local
   coredns_data:
+    driver: local
+  nginx_logs:
     driver: local
 
 # Networks

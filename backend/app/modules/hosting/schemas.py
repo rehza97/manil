@@ -522,6 +522,55 @@ class CustomImageListResponse(BaseModel):
     total_pages: int
 
 
+# ============================================================================
+# Service Domain Schemas
+# ============================================================================
+
+class ServiceDomainBase(BaseModel):
+    """Base schema for VPS Service Domain."""
+    service_name: str = Field(..., description="Service name (e.g., 'web', 'api')")
+    service_port: int = Field(..., ge=1, le=65535, description="Service port number")
+    domain_name: str = Field(..., description="Domain name (e.g., 'web.customer.vps.example.com')")
+    is_active: bool = Field(True, description="Whether domain is active")
+
+
+class ServiceDomainCreate(BaseModel):
+    """Schema for creating a custom service domain."""
+    subscription_id: str = Field(..., description="VPS subscription ID")
+    service_name: str = Field(..., description="Service name")
+    custom_domain: str = Field(
+        ...,
+        description="Custom domain name",
+        pattern=r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$'
+    )
+
+
+class ServiceDomainUpdate(BaseModel):
+    """Schema for updating a service domain."""
+    is_active: Optional[bool] = Field(None, description="Toggle domain active status")
+
+
+class ServiceDomainResponse(ServiceDomainBase):
+    """Response schema for VPS Service Domain."""
+    id: str
+    subscription_id: str
+    domain_type: str  # "AUTO" or "CUSTOM"
+    proxy_configured: bool
+    dns_zone_id: Optional[str]
+    dns_record_id: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ServiceDomainListResponse(BaseModel):
+    """Paginated list response for service domains."""
+    items: List[ServiceDomainResponse]
+    total: int
+
+
 # Forward references resolution
 VPSSubscriptionResponse.model_rebuild()
 VPSSubscriptionDetailResponse.model_rebuild()
