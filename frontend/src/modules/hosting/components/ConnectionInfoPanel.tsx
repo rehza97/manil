@@ -9,22 +9,35 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/components/ui/collapsible";
-import { Clipboard, ChevronDown, AlertTriangle } from "lucide-react";
+import { Clipboard, ChevronDown, AlertTriangle, Eye, EyeOff, Loader2 } from "lucide-react";
 import type { ContainerInstance } from "../types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/shared/components/ui/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import { vpsService } from "../services";
 
 interface ConnectionInfoPanelProps {
   container: ContainerInstance;
+  subscriptionId: string;
 }
 
 export function ConnectionInfoPanel({
   container,
+  subscriptionId,
 }: ConnectionInfoPanelProps) {
   const { toast } = useToast();
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Fetch credentials including password
+  const { data: credentials, isLoading: credentialsLoading } = useQuery({
+    queryKey: ["vps", "credentials", subscriptionId],
+    queryFn: () => vpsService.getContainerCredentials(subscriptionId),
+    enabled: !!subscriptionId && !!container,
+  });
 
   const sshCommand = `ssh root@${container.ip_address} -p ${container.ssh_port}`;
+  const sshLocalhostCommand = `ssh root@localhost -p ${container.ssh_port}`;
 
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -92,9 +105,9 @@ export function ConnectionInfoPanel({
           </div>
         </div>
 
-        {/* SSH Command */}
+        {/* SSH Command (IP) */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">SSH Command</label>
+          <label className="text-sm font-medium">SSH Command (IP)</label>
           <div className="flex gap-2">
             <Input value={sshCommand} readOnly className="font-mono text-xs" />
             <Button
@@ -102,6 +115,22 @@ export function ConnectionInfoPanel({
               size="icon"
               onClick={() => copyToClipboard(sshCommand, "SSH command")}
               aria-label="Copy SSH command"
+            >
+              <Clipboard className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* SSH Command (Localhost) */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">SSH Command (Localhost)</label>
+          <div className="flex gap-2">
+            <Input value={sshLocalhostCommand} readOnly className="font-mono text-xs" />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => copyToClipboard(sshLocalhostCommand, "SSH localhost command")}
+              aria-label="Copy SSH localhost command"
             >
               <Clipboard className="h-4 w-4" />
             </Button>
@@ -119,15 +148,50 @@ export function ConnectionInfoPanel({
         ) : (
           <div className="space-y-2">
             <label className="text-sm font-medium">Root Password</label>
-            <div className="p-3 bg-muted rounded-md">
-              <p className="text-sm text-muted-foreground">
-                Your root password was sent to your email when the VPS was provisioned.
-                Please check your email for the initial password.
-              </p>
-              <p className="text-xs text-muted-foreground mt-2">
-                For security reasons, the password is not displayed here. Change it after first login.
-              </p>
-            </div>
+            {credentialsLoading ? (
+              <div className="flex items-center justify-center p-3 bg-muted rounded-md">
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <span className="text-sm text-muted-foreground">Loading password...</span>
+              </div>
+            ) : credentials?.root_password ? (
+              <div className="flex gap-2">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  value={credentials.root_password}
+                  readOnly
+                  className="font-mono"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => copyToClipboard(credentials.root_password, "Root password")}
+                  aria-label="Copy root password"
+                >
+                  <Clipboard className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="p-3 bg-muted rounded-md">
+                <p className="text-sm text-muted-foreground">
+                  Unable to load password. Please check your email for the initial password.
+                </p>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Change this password after first login for security.
+            </p>
           </div>
         )}
 
@@ -159,7 +223,10 @@ export function ConnectionInfoPanel({
               <ol className="list-decimal list-inside space-y-1 ml-2">
                 <li>Open your terminal or SSH client</li>
                 <li>
-                  Run: <code className="bg-background px-1 rounded">{sshCommand}</code>
+                  From the host machine (localhost): <code className="bg-background px-1 rounded">{sshLocalhostCommand}</code>
+                </li>
+                <li>
+                  From external network (IP): <code className="bg-background px-1 rounded">{sshCommand}</code>
                 </li>
                 <li>Enter your root password when prompted</li>
                 <li>

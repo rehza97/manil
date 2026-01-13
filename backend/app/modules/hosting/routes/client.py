@@ -52,7 +52,8 @@ from app.modules.hosting.schemas import (
     ContainerActionResponse,
     ContainerStatsResponse,
     SubscriptionTimelineResponse,
-    UpgradeResponseSchema
+    UpgradeResponseSchema,
+    ContainerCredentialsResponse
 )
 from app.modules.quotes.schemas import QuoteResponse
 
@@ -322,6 +323,83 @@ async def get_subscription_details(
     response.recent_metrics = recent_metrics_response
     
     return response
+
+
+@router.get(
+    "/instances/{subscription_id}/credentials",
+    response_model=ContainerCredentialsResponse,
+    summary="Get Container Credentials",
+    description="""
+    Retrieve SSH credentials for the VPS container including decrypted root password.
+    
+    Returns complete connection information including IP address, SSH port, hostname,
+    and the decrypted root password. Only accessible by the subscription owner.
+    
+    **Permissions Required:** `hosting:view`
+    
+    **Security:** Users can only access credentials for their own subscriptions.
+    
+    **Response:** Container credentials with decrypted password and SSH connection string.
+    """
+)
+async def get_container_credentials(
+    subscription_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.HOSTING_VIEW))
+):
+    """
+    Get container SSH credentials including decrypted password.
+    
+    Args:
+        subscription_id: Unique identifier of the subscription
+        db: Database session
+        current_user: Authenticated user (requires hosting:view permission)
+    
+    Returns:
+        Container credentials with decrypted password
+    
+    Raises:
+        404: If subscription not found or doesn't belong to user
+        403: If user lacks hosting:view permission
+    """
+    repo = VPSSubscriptionRepository(db)
+    subscription = await repo.get_by_id(subscription_id)
+    
+    if not subscription:
+        raise NotFoundException(f"Subscription {subscription_id} not found")
+    
+    # Security: only own subscriptions
+    if subscription.customer_id != current_user.id:
+        raise NotFoundException(f"Subscription {subscription_id} not found")
+    
+    if not subscription.container:
+        raise NotFoundException(f"Container not found for subscription {subscription_id}")
+    
+    # Decrypt password
+    docker_service = DockerManagementService(db)
+    try:
+        decrypted_password = docker_service.decrypt_password(subscription.container.root_password)
+    except ValueError as e:
+        # Password decryption failed (likely due to encryption key change)
+        raise BadRequestException(
+            "Unable to retrieve password. The encryption key may have changed. "
+            "Please contact support or reset the password through SSH."
+        ) from e
+    except Exception as e:
+        logger.error(f"Unexpected error decrypting password for subscription {subscription_id}: {e}")
+        raise BadRequestException(
+            "Unable to retrieve password due to an encryption error. Please contact support."
+        ) from e
+    
+    ssh_connection_string = f"ssh root@{subscription.container.ip_address} -p {subscription.container.ssh_port}"
+    
+    return ContainerCredentialsResponse(
+        ip_address=subscription.container.ip_address,
+        ssh_port=subscription.container.ssh_port,
+        hostname=subscription.container.hostname,
+        root_password=decrypted_password,
+        ssh_connection_string=ssh_connection_string
+    )
 
 
 @router.post(
@@ -887,9 +965,11 @@ async def websocket_terminal(
         
         # Get container and create exec instance
         container = docker_service.client.containers.get(container_id)
-        
+        logger.info(f"[Terminal WS] Container {container_id} retrieved successfully")
+
         # Create interactive shell session (docker-py Container does not expose exec_create/exec_start)
         # Use exec_run with socket=True to get a raw socket for bidirectional I/O.
+        logger.debug(f"[Terminal WS] Creating interactive bash session in container")
         exec_result = container.exec_run(
             cmd="/bin/bash -i",
             tty=True,
@@ -899,6 +979,7 @@ async def websocket_terminal(
             user="root",
         )
         exec_socket = getattr(exec_result, "output", exec_result)
+        logger.info(f"[Terminal WS] Interactive bash session created, exec_socket type: {type(exec_socket)}")
         
         # Send welcome message
         await websocket.send_text(json.dumps({
@@ -914,98 +995,173 @@ async def websocket_terminal(
         
         # Get the actual socket from the exec_socket object
         docker_sock = exec_socket._sock if hasattr(exec_socket, "_sock") else exec_socket
+        logger.info(f"[Terminal WS] Docker socket acquired for subscription {subscription_id}, type: {type(docker_sock)}")
 
-        # Trigger initial prompt/output (bash often won't print until it receives input)
-        try:
-          docker_sock.sendall(b"\n")
-        except Exception:
-          pass
-        
         # Thread to read from Docker exec socket
         def read_from_docker():
             try:
+                logger.info(f"[Terminal WS] Read thread started for subscription {subscription_id}")
                 while not stop_event.is_set():
                     try:
                         # Read from socket (non-blocking with timeout)
                         docker_sock.settimeout(0.1)
                         chunk = docker_sock.recv(4096)
                         if chunk == b"":
+                            logger.info(f"[Terminal WS] Socket closed (received empty chunk)")
                             break  # socket closed
                         if chunk:
+                            logger.info(f"[Terminal WS] Received from Docker: {len(chunk)} bytes")
                             asyncio.run_coroutine_threadsafe(output_queue.put(chunk), loop)
                     except Exception as e:
                         # Timeout or other error - check if we should continue
                         if stop_event.is_set():
                             break
                         if "timed out" not in str(e).lower():
-                            logger.debug(f"Socket read: {e}")
+                            logger.debug(f"[Terminal WS] Socket read: {e}")
                         continue
             except Exception as e:
-                logger.error(f"Error reading from Docker: {e}")
+                logger.error(f"[Terminal WS] Error reading from Docker: {e}", exc_info=True)
             finally:
+                logger.debug(f"[Terminal WS] Read thread ending, signaling output queue")
                 asyncio.run_coroutine_threadsafe(output_queue.put(None), loop)  # Signal end
         
         # Thread to write to Docker exec socket
         def write_to_docker():
             import concurrent.futures
+            import socket as socket_module
+            import time
+
+            # Helper async function to try getting from queue
+            async def try_get_nowait():
+                return input_queue.get_nowait()
+
             try:
+                logger.info(f"[Terminal WS] Write thread started for subscription {subscription_id}")
+                iteration = 0
                 while not stop_event.is_set():
+                    iteration += 1
+                    if iteration % 1000 == 0:  # Log every 1000 iterations to avoid spam
+                        logger.info(f"[Terminal WS] Write thread loop iteration {iteration}, queue size: {input_queue.qsize()}")
                     try:
-                        fut = asyncio.run_coroutine_threadsafe(input_queue.get(), loop)
-                        data = fut.result(timeout=0.1)
+                        # Use get_nowait to avoid leaving dangling coroutines
+                        fut = asyncio.run_coroutine_threadsafe(try_get_nowait(), loop)
+                        data = fut.result(timeout=0.05)
                         if data is None:
+                            logger.info(f"[Terminal WS] Received None, exiting write thread")
                             break
+                        logger.info(f"[Terminal WS] ✓ Got data from queue: {repr(data[:50])}, sending to Docker...")
+                        # Set a timeout for the send operation to prevent blocking indefinitely
+                        docker_sock.settimeout(5.0)
                         docker_sock.sendall(data)
+                        logger.info(f"[Terminal WS] ✓ Data sent to Docker successfully")
+                    except asyncio.QueueEmpty:
+                        # Normal - queue is empty, sleep briefly to avoid busy-waiting
+                        time.sleep(0.01)
+                        continue
                     except concurrent.futures.TimeoutError:
+                        # Shouldn't happen with get_nowait, but handle it
+                        logger.warning(f"[Terminal WS] Future timeout on get_nowait (unexpected)")
+                        continue
+                    except socket_module.timeout:
+                        logger.warning(f"[Terminal WS] Socket send timeout, continuing...")
                         continue
                     except Exception as e:
                         if not stop_event.is_set():
-                            logger.error(f"Error writing to Docker: {e}")
+                            logger.error(f"[Terminal WS] Error writing to Docker: {e}", exc_info=True)
                         break
+                logger.info(f"[Terminal WS] Write thread exiting after {iteration} iterations")
             except Exception as e:
-                logger.error(f"Error in write thread: {e}")
+                logger.error(f"[Terminal WS] Fatal error in write thread: {e}", exc_info=True)
         
         # Start threads
         read_thread = threading.Thread(target=read_from_docker, daemon=True)
         write_thread = threading.Thread(target=write_to_docker, daemon=True)
         read_thread.start()
         write_thread.start()
-        
+        logger.info(f"[Terminal WS] Read and write threads started for subscription {subscription_id}")
+
+        # Give threads a moment to initialize
+        await asyncio.sleep(0.1)
+
+        # Trigger initial prompt/output (bash often won't print until it receives input)
+        # Send this AFTER threads are started so the read thread can capture the response
+        try:
+            logger.debug(f"[Terminal WS] Sending initial newline to trigger bash prompt")
+            await input_queue.put(b"\n")
+            logger.debug(f"[Terminal WS] Initial newline queued for Docker")
+        except Exception as e:
+            logger.warning(f"[Terminal WS] Failed to queue initial newline: {e}")
+
         # Handle output from Docker
         async def handle_output():
+            logger.info(f"[Terminal WS] Output handler started for subscription {subscription_id}")
             while True:
                 chunk = await output_queue.get()
                 if chunk is None:
+                    logger.info(f"[Terminal WS] Output handler received None, exiting")
                     break
                 try:
                     text = chunk.decode('utf-8', errors='replace')
+                    logger.info(f"[Terminal WS] Sending output to client: {len(text)} chars, first 50: {repr(text[:50])}")
                     await websocket.send_text(json.dumps({
                         "type": "output",
                         "data": text
                     }))
                 except Exception as e:
-                    logger.error(f"Error sending output: {e}")
+                    logger.error(f"[Terminal WS] Error sending output: {e}", exc_info=True)
                     break
         
         output_task = asyncio.create_task(handle_output())
-        
+
         # Handle WebSocket messages
+        logger.info(f"[Terminal WS] Starting message receive loop for subscription {subscription_id}")
         try:
+            message_count = 0
             while True:
-                message = await websocket.receive_text()
+                logger.debug(f"[Terminal WS] Waiting for WebSocket message (received {message_count} so far)...")
                 try:
-                    data = json.loads(message)
-                    
-                    if data.get("type") == "input":
-                        # Send input to Docker
-                        input_data = data.get("data", "").encode('utf-8')
-                        await input_queue.put(input_data)
-                    elif data.get("type") == "resize":
-                        # Handle terminal resize (optional)
-                        pass
-                except json.JSONDecodeError:
-                    # If not JSON, treat as raw input
-                    await input_queue.put(message.encode('utf-8'))
+                    # Try to receive any type of message
+                    raw_message = await websocket.receive()
+                    message_count += 1
+                    logger.info(f"[Terminal WS] ✓ Received message #{message_count}, type: {raw_message.get('type')}")
+
+                    # Extract text from message
+                    if raw_message.get("type") == "websocket.receive":
+                        message = raw_message.get("text") or raw_message.get("bytes", b"").decode('utf-8')
+                        logger.info(f"[Terminal WS] Message content: {message[:100]}")
+
+                        # Process the message
+                        try:
+                            data = json.loads(message)
+                            logger.info(f"[Terminal WS] Parsed JSON, message type: {data.get('type')}")
+
+                            if data.get("type") == "input":
+                                # Send input to Docker
+                                input_data = data.get("data", "").encode('utf-8')
+                                logger.info(f"[Terminal WS] Queuing input data: {repr(input_data[:50])}")
+                                await input_queue.put(input_data)
+                                logger.info(f"[Terminal WS] Input data queued successfully")
+                            elif data.get("type") == "resize":
+                                # Handle terminal resize
+                                logger.info(f"[Terminal WS] Received resize request: cols={data.get('cols')}, rows={data.get('rows')}")
+                                # TODO: Implement PTY resize
+                        except json.JSONDecodeError as json_err:
+                            # If not JSON, treat as raw input
+                            logger.warning(f"[Terminal WS] JSON decode error: {json_err}, treating as raw input")
+                            await input_queue.put(message.encode('utf-8'))
+                        except Exception as process_err:
+                            logger.error(f"[Terminal WS] Error processing message: {process_err}", exc_info=True)
+
+                    elif raw_message.get("type") == "websocket.disconnect":
+                        logger.info(f"[Terminal WS] Received disconnect message")
+                        break
+                    else:
+                        logger.warning(f"[Terminal WS] Unknown message type: {raw_message}")
+                        continue
+
+                except Exception as recv_err:
+                    logger.error(f"[Terminal WS] Error in receive(): {recv_err}", exc_info=True)
+                    break
                     
         except WebSocketDisconnect:
             logger.info(f"WebSocket disconnected for subscription {subscription_id}")

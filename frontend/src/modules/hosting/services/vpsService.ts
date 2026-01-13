@@ -263,6 +263,24 @@ export const vpsService = {
     return response.data;
   },
 
+  /**
+   * Get container credentials including decrypted password
+   */
+  async getContainerCredentials(
+    subscriptionId: string
+  ): Promise<{
+    ip_address: string;
+    ssh_port: number;
+    hostname: string;
+    root_password: string;
+    ssh_connection_string: string;
+  }> {
+    const response = await apiClient.get(
+      `/hosting/instances/${subscriptionId}/credentials`
+    );
+    return response.data;
+  },
+
   // ============================================================================
   // Docker Management (Client)
   // ============================================================================

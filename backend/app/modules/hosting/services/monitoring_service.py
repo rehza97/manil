@@ -134,27 +134,53 @@ class ContainerMonitoringService:
                 logger.warning(f"Failed to collect cgroup metrics for {container.container_id[:12]}: {e}")
 
         # Calculate storage usage
-        # TODO: Replace exec with Docker volume API in future iteration
+        # Use du to calculate actual disk usage of the container's filesystem
         storage_used_mb = 0
         storage_percent = 0.0
+        storage_limit_mb = container.storage_limit_gb * 1024  # Convert GB to MB
+        
         try:
-            # Improved exec: sanitized command, timeout, error handling
+            # Use du to get actual disk usage of root filesystem (excluding virtual filesystems)
+            # This gives us the real disk space used by the container
+            # Calculate size of / excluding /proc, /sys, /dev, /run which are virtual filesystems
             storage_result = await self.docker_service.exec_command(
                 container.container_id,
-                "df -B1 /data 2>/dev/null | tail -1 | awk '{print $3, $2}' || echo '0 0'"
+                "du -sb / 2>/dev/null | awk '{print $1}' || (du -sb /bin /boot /etc /home /lib /lib64 /opt /root /sbin /srv /tmp /usr /var 2>/dev/null | awk '{sum+=$1} END {print sum+0}') || echo '0'"
             )
             if storage_result and storage_result.get('exit_code') == 0:
                 output = storage_result.get('output', '').strip()
-                if output and output != '0 0':
-                    parts = output.split()
-                    if len(parts) >= 2 and parts[0].isdigit() and parts[1].isdigit():
-                        storage_used = int(parts[0])
-                        storage_total = int(parts[1])
-                        storage_used_mb = round(storage_used / (1024 * 1024), 2)
-                        if storage_total > 0:
-                            storage_percent = round((storage_used / storage_total) * 100.0, 2)
+                if output and output.isdigit():
+                    storage_used_bytes = int(output)
+                    storage_used_mb = round(storage_used_bytes / (1024 * 1024), 2)
+                    
+                    # Calculate percentage based on container's storage limit
+                    if storage_limit_mb > 0:
+                        storage_percent = round((storage_used_mb / storage_limit_mb) * 100.0, 2)
+                        # Cap at 100% if somehow usage exceeds limit
+                        if storage_percent > 100.0:
+                            storage_percent = 100.0
+                    else:
+                        logger.warning(f"Storage limit is 0 for container {container.container_id[:12]}")
+                else:
+                    logger.debug(f"Storage output not numeric for container {container.container_id[:12]}: {output}")
+            else:
+                # Fallback: try simpler df command if du fails
+                logger.debug(f"du command failed, trying df fallback for container {container.container_id[:12]}")
+                fallback_result = await self.docker_service.exec_command(
+                    container.container_id,
+                    "df -B1 / 2>/dev/null | tail -1 | awk '{print $3}' || echo '0'"
+                )
+                if fallback_result and fallback_result.get('exit_code') == 0:
+                    output = fallback_result.get('output', '').strip()
+                    if output and output.isdigit():
+                        storage_used_bytes = int(output)
+                        storage_used_mb = round(storage_used_bytes / (1024 * 1024), 2)
+                        if storage_limit_mb > 0:
+                            storage_percent = round((storage_used_mb / storage_limit_mb) * 100.0, 2)
+                            if storage_percent > 100.0:
+                                storage_percent = 100.0
         except Exception as e:
-            logger.warning(f"Failed to get storage usage for container {container.container_id}: {e}")
+            logger.warning(f"Failed to get storage usage for container {container.container_id[:12]}: {e}")
 
         # Calculate network I/O rates
         network_rx_bytes = stats.get('network_rx_bytes', 0)

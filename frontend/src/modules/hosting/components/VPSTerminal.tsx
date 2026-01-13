@@ -115,6 +115,21 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
             const rect = terminalRef.current?.getBoundingClientRect();
             if (rect && rect.width > 0 && rect.height > 0) {
               fitAddonRef.current?.fit();
+              // Send resize event to backend
+              if (socketHandleRef.current && socketHandleRef.current.ws.readyState === WebSocket.OPEN && term) {
+                const cols = term.cols;
+                const rows = term.rows;
+                console.log(`[Terminal] Sending resize event: ${cols}x${rows}`);
+                try {
+                  socketHandleRef.current.send(JSON.stringify({
+                    type: "resize",
+                    cols,
+                    rows
+                  }));
+                } catch (e) {
+                  console.error("[Terminal] Failed to send resize event:", e);
+                }
+              }
             }
           } catch (err) {
             console.warn("Error resizing terminal:", err);
@@ -125,17 +140,18 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
 
     window.addEventListener("resize", handleResize);
 
-    // Cleanup
+    // Cleanup - ONLY dispose terminal and resources, but keep WebSocket alive for tab switches
     return () => {
+      console.log("[Terminal] Component unmounting - keeping WebSocket alive");
       mounted = false;
       window.removeEventListener("resize", handleResize);
-      
+
       // Clear reconnect timeout
       if (reconnectTimeoutRef.current) {
         window.clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
       }
-      
+
       // Cleanup focus and click listeners
       if (focusListenerRef.current) {
         focusListenerRef.current();
@@ -146,16 +162,24 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
         clickListenerRef.current = null;
       }
 
-      socketHandleRef.current?.detach();
-      socketHandleRef.current = null;
+      // Detach from socket manager - this decrements ref count but doesn't close the socket immediately
+      // The socket manager will keep it alive for 10 minutes in case we remount
+      if (socketHandleRef.current) {
+        console.log("[Terminal] Detaching from socket on unmount, socket state:", socketHandleRef.current.ws.readyState);
+        socketHandleRef.current.detach();
+        socketHandleRef.current = null;
+      }
+
+      // Dispose the onData handler to prevent memory leaks
       onDataDisposableRef.current?.dispose();
       onDataDisposableRef.current = null;
 
+      // Dispose terminal UI
       if (term) {
         try {
           term.dispose();
         } catch (err) {
-          console.error("Error disposing terminal:", err);
+          console.error("[Terminal] Error disposing terminal:", err);
         }
       }
 
@@ -165,18 +189,15 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
   }, [subscriptionId, apiBase]);
 
   const connectWebSocket = (term: Terminal) => {
+    console.log("[Terminal] connectWebSocket called, current socket state:", socketHandleRef.current?.ws.readyState);
+
     // Prevent multiple simultaneous connection attempts
     if (isConnectingRef.current) {
-      console.log("Connection already in progress, skipping...");
+      console.log("[Terminal] Connection already in progress, skipping...");
       return;
     }
-    
-    // If already connected, don't reconnect
-    if (socketHandleRef.current && socketHandleRef.current.ws.readyState === WebSocket.OPEN) {
-      console.log("WebSocket already connected, skipping...");
-      return;
-    }
-    
+
+    console.log("[Terminal] Attempting to attach to WebSocket (will reuse if exists)...");
     isConnectingRef.current = true;
     
     // Get WebSocket URL
@@ -194,12 +215,17 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
     console.log("Connecting to WebSocket:", wsUrl);
 
     try {
-      // Reuse same socket across tab switches/unmounts.
-      socketHandleRef.current?.detach();
+      // Detach old socket handle (doesn't close the socket, just removes this component's listener)
+      if (socketHandleRef.current) {
+        console.log("[Terminal] Detaching old socket handle");
+        socketHandleRef.current.detach();
+      }
 
+      // Attach to socket (will reuse existing socket if available)
+      console.log("[Terminal] Attaching to terminal socket for subscription:", subscriptionId);
       socketHandleRef.current = attachTerminalSocket(subscriptionId, wsUrl, {
         onOpen: () => {
-          console.log("WebSocket connected");
+          console.log("[Terminal WS] WebSocket connected successfully, readyState:", socketHandleRef.current?.ws.readyState);
           isConnectingRef.current = false;
           setConnected(true);
           setError(null);
@@ -212,14 +238,23 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
           term.writeln("\x1b[1;32m✓ Connected to VPS terminal\x1b[0m");
           term.writeln("\x1b[36mType commands and press Enter to execute\x1b[0m");
           term.writeln("");
+
           // Ensure terminal is focused and input is enabled
           setTimeout(() => {
             if (term) {
               term.focus();
+              console.log("[Terminal] Terminal focused after connection");
             }
           }, 100);
+
           // Trigger an initial prompt from bash.
-          socketHandleRef.current?.send(JSON.stringify({ type: "input", data: "\n" }));
+          console.log("[Terminal WS] Sending initial newline to trigger prompt");
+          try {
+            socketHandleRef.current?.send(JSON.stringify({ type: "input", data: "\n" }));
+            console.log("[Terminal WS] Initial newline sent");
+          } catch (e) {
+            console.error("[Terminal WS] Failed to send initial newline:", e);
+          }
         },
         onMessage: (event) => {
           try {
@@ -235,14 +270,17 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
           }
         },
         onError: (event) => {
-          console.error("WebSocket error:", event);
+          console.error("[Terminal WS] WebSocket error:", event);
           isConnectingRef.current = false;
+          setConnected(false);
           setError("WebSocket connection error");
         },
         onClose: (event) => {
+          console.log("[Terminal WS] WebSocket closed, code:", event.code, "reason:", event.reason);
+          isConnectingRef.current = false;
           setConnected(false);
           term.writeln("\r\n\x1b[1;33m⚠ Connection closed\x1b[0m\r\n");
-          
+
           // Auto-reconnect if not a normal closure and we haven't exceeded max attempts
           if (event.code !== 1000 && reconnectAttemptsRef.current < maxReconnectAttempts) {
             reconnectAttemptsRef.current += 1;
@@ -264,17 +302,16 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
       // Handle terminal input - ensure it's enabled
       onDataDisposableRef.current?.dispose();
       onDataDisposableRef.current = term.onData((data) => {
+        console.log("[Terminal Input] User typed:", data.length, "chars, socket state:", socketHandleRef.current?.ws.readyState);
         // Send input to WebSocket if connected and socket is open
         if (socketHandleRef.current && socketHandleRef.current.ws.readyState === WebSocket.OPEN) {
           try {
-            socketHandleRef.current.send(
-              JSON.stringify({
-                type: "input",
-                data,
-              })
-            );
+            const message = JSON.stringify({ type: "input", data });
+            console.log("[Terminal Input] Sending to WebSocket:", message.substring(0, 100));
+            socketHandleRef.current.send(message);
+            console.log("[Terminal Input] Message sent successfully");
           } catch (err) {
-            console.error("Error sending input:", err);
+            console.error("[Terminal Input] Error sending input:", err);
             // If send fails, try to reconnect
             if (reconnectAttemptsRef.current < maxReconnectAttempts) {
               setConnected(false);
@@ -289,8 +326,10 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
             }
           }
         } else {
+          console.warn("[Terminal Input] Cannot send - socket not ready. State:", socketHandleRef.current?.ws.readyState);
           // Show feedback that connection is not ready
           term.write("\x07"); // Bell sound
+          term.writeln("\r\n\x1b[31m✗ Not connected. Click Reconnect to restore connection.\x1b[0m\r\n");
         }
       });
       
@@ -338,8 +377,9 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
         }
       };
     } catch (err) {
-      console.error("Error connecting to WebSocket:", err);
+      console.error("[Terminal] Error connecting to WebSocket:", err);
       isConnectingRef.current = false;
+      setConnected(false);
       setError("Failed to connect to terminal");
     }
   };
@@ -368,8 +408,39 @@ export const VPSTerminal: React.FC<VPSTerminalProps> = ({ subscriptionId, contai
                   size="sm"
                   variant="outline"
                   onClick={() => {
+                    console.log("[Terminal] Manual reconnect triggered");
                     if (xtermRef.current) {
+                      // Clear all existing state
+                      if (reconnectTimeoutRef.current) {
+                        window.clearTimeout(reconnectTimeoutRef.current);
+                        reconnectTimeoutRef.current = null;
+                      }
+
+                      // Reset connecting flag to allow new connection
+                      isConnectingRef.current = false;
+
+                      // Detach and force close old socket
+                      if (socketHandleRef.current) {
+                        try {
+                          console.log("[Terminal] Closing old socket, state:", socketHandleRef.current.ws.readyState);
+                          socketHandleRef.current.ws.close();
+                        } catch (e) {
+                          console.warn("[Terminal] Error closing old socket:", e);
+                        }
+                        socketHandleRef.current.detach();
+                        socketHandleRef.current = null;
+                      }
+
+                      // Clear terminal
+                      xtermRef.current.clear();
+
+                      // Reset reconnect attempts
                       reconnectAttemptsRef.current = 0;
+                      setConnected(false);
+                      setError(null);
+
+                      // Create fresh connection
+                      console.log("[Terminal] Calling connectWebSocket for manual reconnect");
                       connectWebSocket(xtermRef.current);
                     }
                   }}

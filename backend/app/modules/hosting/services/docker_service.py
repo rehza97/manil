@@ -18,7 +18,7 @@ import re
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, Iterator, BinaryIO
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 
 try:
     import docker
@@ -2976,7 +2976,23 @@ class DockerManagementService:
 
     def decrypt_password(self, encrypted_password: str) -> str:
         """Decrypt password using Fernet."""
-        return self.cipher.decrypt(encrypted_password.encode()).decode()
+        try:
+            return self.cipher.decrypt(encrypted_password.encode()).decode()
+        except Exception as e:
+            # Check if this is an InvalidToken error (key mismatch)
+            if isinstance(e, InvalidToken):
+                logger.error(
+                    f"Failed to decrypt password: InvalidToken. "
+                    f"This usually means the VPS_PASSWORD_ENCRYPTION_KEY has changed. "
+                    f"Passwords encrypted with a different key cannot be decrypted."
+                )
+                raise ValueError(
+                    "Unable to decrypt password. The encryption key may have changed. "
+                    "Please contact support to reset the password."
+                ) from e
+            # Re-raise other exceptions
+            logger.error(f"Failed to decrypt password: {e}")
+            raise
 
     async def _cleanup_failed_container(self, container_name: str, network_name: str):
         """Cleanup resources after failed container creation."""

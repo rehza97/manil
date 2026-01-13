@@ -4,6 +4,7 @@ export * from "./useVPSControl";
 export * from "./useVPSStats";
 export * from "./useVPSAdmin";
 export * from "./useCustomImages";
+export * from "./useExecCommand";
 
 
 

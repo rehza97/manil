@@ -75,17 +75,26 @@ export const LoginForm = () => {
       return "Your account is currently inactive. Please contact support for assistance.";
     }
 
-    if (errorMessageLower.includes("invalid") || errorMessageLower.includes("expired")) {
+    if (
+      errorMessageLower.includes("invalid") ||
+      errorMessageLower.includes("expired")
+    ) {
       return errorMessage;
     }
 
     // For network errors
-    if (errorMessage.includes("Network Error") || errorMessage.includes("timeout")) {
+    if (
+      errorMessage.includes("Network Error") ||
+      errorMessage.includes("timeout")
+    ) {
       return "Unable to connect to the server. Please check your internet connection and try again.";
     }
 
     // For other errors, return the message as-is if it's clear, otherwise provide a generic message
-    return errorMessage || "Unable to sign in. Please check your credentials and try again.";
+    return (
+      errorMessage ||
+      "Unable to sign in. Please check your credentials and try again."
+    );
   };
 
   return (

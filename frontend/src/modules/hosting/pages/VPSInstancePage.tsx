@@ -15,6 +15,7 @@ import {
   useRebootContainer,
   useVPSPlans,
   useUpgradeSubscription,
+  useCancelSubscription,
 } from "../hooks";
 import {
   VPSControlPanel,
@@ -25,6 +26,7 @@ import {
   LiveContainerLogs,
   VPSTerminal,
   VPSDeploy,
+  DockerInfo,
 } from "../components";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
@@ -57,6 +59,7 @@ export const VPSInstancePage: React.FC = () => {
   const stopContainer = useStopContainer();
   const rebootContainer = useRebootContainer();
   const upgradeSubscription = useUpgradeSubscription();
+  const cancelSubscription = useCancelSubscription();
 
   const handleStart = () => {
     if (id) startContainer.mutate(id);
@@ -68,6 +71,22 @@ export const VPSInstancePage: React.FC = () => {
 
   const handleReboot = () => {
     if (id) rebootContainer.mutate(id);
+  };
+
+  const handleDelete = () => {
+    if (id) {
+      cancelSubscription.mutate({
+        subscriptionId: id,
+        body: {
+          immediate: true,
+          reason: "Container deleted by user",
+        },
+      });
+      // Navigate back to subscriptions list after deletion
+      setTimeout(() => {
+        navigate("/dashboard/vps/subscriptions");
+      }, 2000);
+    }
   };
 
   const handleUpgrade = (newPlanId: string) => {
@@ -158,7 +177,7 @@ export const VPSInstancePage: React.FC = () => {
   }
 
   const isLoading =
-    startContainer.isPending || stopContainer.isPending || rebootContainer.isPending;
+    startContainer.isPending || stopContainer.isPending || rebootContainer.isPending || cancelSubscription.isPending;
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -211,6 +230,7 @@ export const VPSInstancePage: React.FC = () => {
         onStart={handleStart}
         onStop={handleStop}
         onReboot={handleReboot}
+        onDelete={handleDelete}
         isLoading={isLoading}
       />
 
@@ -280,9 +300,12 @@ export const VPSInstancePage: React.FC = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Docker Info */}
+          <DockerInfo subscriptionId={id!} />
+
           {/* Connection Info */}
           {subscription.container && (
-            <ConnectionInfoPanel container={subscription.container} />
+            <ConnectionInfoPanel container={subscription.container} subscriptionId={id!} />
           )}
 
           {/* Upgrade Panel */}

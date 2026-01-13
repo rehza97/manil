@@ -23,6 +23,7 @@ export { ImageBuildProgressIndicator } from "./ImageBuildProgressIndicator";
 export { LiveContainerLogs } from "./LiveContainerLogs";
 export { VPSTerminal } from "./VPSTerminal";
 export { VPSDeploy } from "./VPSDeploy";
+export { DockerInfo } from "./DockerInfo";
 
 
 

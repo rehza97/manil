@@ -136,6 +136,14 @@ export interface ContainerInstance {
   updated_at: string;
 }
 
+export interface ContainerCredentials {
+  ip_address: string;
+  ssh_port: number;
+  hostname: string;
+  root_password: string;
+  ssh_connection_string: string;
+}
+
 export interface ContainerMetrics {
   id: string;
   subscription_id: string;
