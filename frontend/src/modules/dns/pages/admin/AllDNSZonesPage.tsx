@@ -43,9 +43,7 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
-import {
-  DialogDescription,
-} from "@/shared/components/ui/dialog";
+import { DialogDescription } from "@/shared/components/ui/dialog";
 import { DNSStatusBadge, SystemDNSZoneForm } from "../../components";
 import {
   useAllDNSZones,
@@ -62,7 +60,9 @@ import { MoreVertical } from "lucide-react";
 export default function AllDNSZonesPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<DNSZoneStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<DNSZoneStatus | "all">(
+    "all"
+  );
   const [showCreateSystemDialog, setShowCreateSystemDialog] = useState(false);
   const [suspendingZone, setSuspendingZone] = useState<string | null>(null);
 
@@ -146,7 +146,9 @@ export default function AllDNSZonesPage() {
           </div>
           <Select
             value={statusFilter}
-            onValueChange={(value) => setStatusFilter(value as DNSZoneStatus | "all")}
+            onValueChange={(value) =>
+              setStatusFilter(value as DNSZoneStatus | "all")
+            }
           >
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Filter by status" />
@@ -174,15 +176,16 @@ export default function AllDNSZonesPage() {
       <Card>
         <CardHeader>
           <CardTitle>DNS Zones ({totalCount})</CardTitle>
-          <CardDescription>
-            All DNS zones across the system
-          </CardDescription>
+          <CardDescription>All DNS zones across the system</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-16 animate-pulse rounded-lg bg-muted" />
+                <div
+                  key={i}
+                  className="h-16 animate-pulse rounded-lg bg-muted"
+                />
               ))}
             </div>
           ) : zones.length === 0 ? (
@@ -247,11 +250,14 @@ export default function AllDNSZonesPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={() => navigate(`/admin/dns/zones/${zone.id}`)}
+                              onClick={() =>
+                                navigate(`/admin/dns/zones/${zone.id}`)
+                              }
                             >
                               View Details
                             </DropdownMenuItem>
-                            {(zone.status === DNSZoneStatus.PENDING || zone.status === DNSZoneStatus.SUSPENDED) && (
+                            {(zone.status === DNSZoneStatus.PENDING ||
+                              zone.status === DNSZoneStatus.SUSPENDED) && (
                               <DropdownMenuItem
                                 onClick={() => handleActivate(zone.id)}
                               >
@@ -287,7 +293,8 @@ export default function AllDNSZonesPage() {
           <DialogHeader>
             <DialogTitle>Create System DNS Zone</DialogTitle>
             <DialogDescription>
-              Create a system DNS zone that is not linked to any VPS subscription. System zones are managed by administrators only.
+              Create a system DNS zone that is not linked to any VPS
+              subscription. System zones are managed by administrators only.
             </DialogDescription>
           </DialogHeader>
           <SystemDNSZoneForm

@@ -12,6 +12,7 @@ from sqlalchemy import String, DateTime, Enum as SQLEnum, Text, Numeric, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.config.database import Base
+from app.modules.products.models import Product
 
 
 class QuoteStatus(str, PyEnum):
@@ -161,7 +162,7 @@ class QuoteItem(Base):
 
     # Relationships
     quote = relationship("Quote", back_populates="items")
-    product = relationship("Product")
+    product = relationship(Product, foreign_keys=[product_id])
 
     def __repr__(self) -> str:
         return f"<QuoteItem {self.item_name} x{self.quantity}>"

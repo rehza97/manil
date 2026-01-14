@@ -24,7 +24,10 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { Textarea } from "@/shared/components/ui/textarea";
-import { createSystemZoneSchema, type CreateSystemZoneFormData } from "../utils/validation";
+import {
+  createSystemZoneSchema,
+  type CreateSystemZoneFormData,
+} from "../utils/validation";
 import { DNSZoneType } from "../types";
 import { Loader2 } from "lucide-react";
 
@@ -34,7 +37,11 @@ interface SystemDNSZoneFormProps {
   onCancel?: () => void;
 }
 
-export function SystemDNSZoneForm({ onSubmit, isLoading, onCancel }: SystemDNSZoneFormProps) {
+export function SystemDNSZoneForm({
+  onSubmit,
+  isLoading,
+  onCancel,
+}: SystemDNSZoneFormProps) {
   const form = useForm<CreateSystemZoneFormData>({
     resolver: zodResolver(createSystemZoneSchema),
     defaultValues: {
@@ -88,12 +95,17 @@ export function SystemDNSZoneForm({ onSubmit, isLoading, onCancel }: SystemDNSZo
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value={DNSZoneType.FORWARD}>Forward Zone</SelectItem>
-                  <SelectItem value={DNSZoneType.REVERSE}>Reverse Zone</SelectItem>
+                  <SelectItem value={DNSZoneType.FORWARD}>
+                    Forward Zone
+                  </SelectItem>
+                  <SelectItem value={DNSZoneType.REVERSE}>
+                    Reverse Zone
+                  </SelectItem>
                 </SelectContent>
               </Select>
               <FormDescription>
-                Forward zones resolve domain names to IPs. Reverse zones resolve IPs to domain names.
+                Forward zones resolve domain names to IPs. Reverse zones resolve
+                IPs to domain names.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -112,12 +124,15 @@ export function SystemDNSZoneForm({ onSubmit, isLoading, onCancel }: SystemDNSZo
                   type="number"
                   placeholder="3600"
                   {...field}
-                  onChange={(e) => field.onChange(parseInt(e.target.value) || 3600)}
+                  onChange={(e) =>
+                    field.onChange(parseInt(e.target.value) || 3600)
+                  }
                   disabled={isLoading}
                 />
               </FormControl>
               <FormDescription>
-                Time-to-live for DNS records (60-86400 seconds). Default: 3600 (1 hour)
+                Time-to-live for DNS records (60-86400 seconds). Default: 3600
+                (1 hour)
               </FormDescription>
               <FormMessage />
             </FormItem>

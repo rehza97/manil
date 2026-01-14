@@ -43,7 +43,7 @@ services:
   docker-socket-proxy:
     image: tecnativa/docker-socket-proxy:latest
     container_name: cloudmanager-docker-proxy
-    privileged: true  # Required to access Docker socket
+    privileged: true # Required to access Docker socket
     environment:
       # === SECURITY: Only allow safe Docker operations ===
       # Disable dangerous operations
@@ -51,31 +51,31 @@ services:
       - TASKS=0
       - SWARM=0
       - NODES=0
-      - NETWORKS=1       # Allow network operations (needed for docker-compose)
-      - VOLUMES=1        # Allow volume operations (needed for docker-compose)
-      - IMAGES=1         # Allow image operations (pull, list)
-      - CONTAINERS=1     # Allow container operations (create, start, stop, logs)
-      - INFO=1           # Allow Docker info
-      - VERSION=1        # Allow version info
-      - PING=1           # Allow ping
-      - EVENTS=0         # Disable events API
-      - AUTH=0           # Disable auth operations
-      - SECRETS=0        # Disable secrets API
-      - POST=1           # Allow POST requests (needed for container creation)
-      - BUILD=1          # Allow build operations (needed for docker-compose build)
-      - COMMIT=0         # Disable container commits
-      - CONFIGS=0        # Disable configs API
-      - DISTRIBUTION=0   # Disable distribution API
-      - EXEC=1           # Allow exec operations (needed for interactive commands)
-      - PLUGINS=0        # Disable plugin operations
-      - SESSION=0        # Disable session API
-      - SYSTEM=1         # Allow system operations (df, prune)
+      - NETWORKS=1 # Allow network operations (needed for docker-compose)
+      - VOLUMES=1 # Allow volume operations (needed for docker-compose)
+      - IMAGES=1 # Allow image operations (pull, list)
+      - CONTAINERS=1 # Allow container operations (create, start, stop, logs)
+      - INFO=1 # Allow Docker info
+      - VERSION=1 # Allow version info
+      - PING=1 # Allow ping
+      - EVENTS=0 # Disable events API
+      - AUTH=0 # Disable auth operations
+      - SECRETS=0 # Disable secrets API
+      - POST=1 # Allow POST requests (needed for container creation)
+      - BUILD=1 # Allow build operations (needed for docker-compose build)
+      - COMMIT=0 # Disable container commits
+      - CONFIGS=0 # Disable configs API
+      - DISTRIBUTION=0 # Disable distribution API
+      - EXEC=1 # Allow exec operations (needed for interactive commands)
+      - PLUGINS=0 # Disable plugin operations
+      - SESSION=0 # Disable session API
+      - SYSTEM=1 # Allow system operations (df, prune)
       # Restrictions
       - ALLOW_RESTARTS=1
       - ALLOW_START=1
       - ALLOW_STOP=1
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro  # Read-only access to host Docker
+      - /var/run/docker.sock:/var/run/docker.sock:ro # Read-only access to host Docker
     networks:
       - cloudmanager-network
     restart: unless-stopped
@@ -96,7 +96,7 @@ services:
     ports:
       - "53:53/udp"
       - "53:53/tcp"
-      - "8080:8080"  # Health check and reload endpoint
+      - "8080:8080" # Health check and reload endpoint
     networks:
       - cloudmanager-network
     # healthcheck:
@@ -113,7 +113,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: cloudmanager-backend
-    user: root  # Run as root to access Docker socket for VPS stats/logs
+    user: root # Run as root to access Docker socket for VPS stats/logs
     environment:
       # Database Configuration
       - DATABASE_URL=postgresql+asyncpg://cloudmanager:${DB_PASSWORD:-cloudmanager_password}@postgres:5432/cloudmanager
@@ -133,12 +133,13 @@ services:
       - JWT_ALGORITHM=HS256
       - ACCESS_TOKEN_EXPIRE_MINUTES=30
       - REFRESH_TOKEN_EXPIRE_DAYS=7
+      - VPS_PASSWORD_ENCRYPTION_KEY=${VPS_PASSWORD_ENCRYPTION_KEY:-NT_sTD8Vq6rayGquAu2w95PPHJTN24Y--4sWHUyyU2Y=}
       # cPanel/WHM Integration (external service; does not run in Docker)
       # Point these to your cPanel/WHM server to enable API calls from the backend.
-      - CPANEL_HOST=${CPANEL_HOST:-cpanel.example.com}       # e.g., host.yourdomain.com or IP
-      - CPANEL_USERNAME=${CPANEL_USERNAME:-root}             # WHM user (usually root for WHM API)
-      - WHM_API_TOKEN=${WHM_API_TOKEN:-change-me}            # Create in WHM: Development -> Manage API Tokens
-      - CPANEL_SSL_VERIFY=${CPANEL_SSL_VERIFY:-true}         # set to false only for lab/self-signed
+      - CPANEL_HOST=${CPANEL_HOST:-cpanel.example.com} # e.g., host.yourdomain.com or IP
+      - CPANEL_USERNAME=${CPANEL_USERNAME:-root} # WHM user (usually root for WHM API)
+      - WHM_API_TOKEN=${WHM_API_TOKEN:-change-me} # Create in WHM: Development -> Manage API Tokens
+      - CPANEL_SSL_VERIFY=${CPANEL_SSL_VERIFY:-true} # set to false only for lab/self-signed
       # Application Configuration
       - DEBUG=${DEBUG:-True}
       - ENVIRONMENT=${ENVIRONMENT:-development}
@@ -160,7 +161,7 @@ services:
       - storage_data:/app/storage
       - logs_data:/app/logs
       - ./coredns:/app/coredns
-      - /var/run/docker.sock:/var/run/docker.sock  # Access to Docker for VPS stats/logs
+      - /var/run/docker.sock:/var/run/docker.sock # Access to Docker for VPS stats/logs
     ports:
       - "8000:8000"
     networks:
@@ -185,7 +186,7 @@ services:
       dockerfile: Dockerfile
     container_name: cloudmanager-celery-worker
     command: celery -A app.core.celery_app worker --loglevel=info --concurrency=2
-    user: root  # Run as root to access Docker socket for VPS provisioning
+    user: root # Run as root to access Docker socket for VPS provisioning
     environment:
       # Database Configuration
       - DATABASE_URL=postgresql+asyncpg://cloudmanager:${DB_PASSWORD:-cloudmanager_password}@postgres:5432/cloudmanager
@@ -201,6 +202,7 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
       # Security Configuration
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-secret-key-change-in-production}
+      - VPS_PASSWORD_ENCRYPTION_KEY=${VPS_PASSWORD_ENCRYPTION_KEY:-NT_sTD8Vq6rayGquAu2w95PPHJTN24Y--4sWHUyyU2Y=}
       # Application Configuration
       - DEBUG=${DEBUG:-True}
       - ENVIRONMENT=${ENVIRONMENT:-development}
@@ -213,8 +215,8 @@ services:
       - ./backend:/app
       - storage_data:/app/storage
       - logs_data:/app/logs
-      - /var/run/docker.sock:/var/run/docker.sock  # Access to Docker for VPS provisioning
-      - /var/lib/vps-volumes:/var/lib/vps-volumes  # VPS container volumes
+      - /var/run/docker.sock:/var/run/docker.sock # Access to Docker for VPS provisioning
+      - /var/lib/vps-volumes:/var/lib/vps-volumes # VPS container volumes
     networks:
       - cloudmanager-network
     depends_on:
@@ -246,6 +248,7 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
       # Security Configuration
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-secret-key-change-in-production}
+      - VPS_PASSWORD_ENCRYPTION_KEY=${VPS_PASSWORD_ENCRYPTION_KEY:-NT_sTD8Vq6rayGquAu2w95PPHJTN24Y--4sWHUyyU2Y=}
       # Application Configuration
       - DEBUG=${DEBUG:-True}
       - ENVIRONMENT=${ENVIRONMENT:-development}

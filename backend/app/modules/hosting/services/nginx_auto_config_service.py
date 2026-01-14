@@ -70,9 +70,10 @@ server {{
     server_name {domain};
 
     location / {{
-        # Proxy to docker-compose service by name
-        # Docker's internal DNS resolves service names
-        proxy_pass http://{service_name}:{port};
+        # Proxy to localhost since docker-compose services expose ports with 0.0.0.0
+        # This makes them accessible via localhost inside the VPS container
+        # Each VPS has isolated network namespace, so localhost:PORT is unique per VPS
+        proxy_pass http://localhost:{port};
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

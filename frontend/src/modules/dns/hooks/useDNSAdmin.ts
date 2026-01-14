@@ -115,7 +115,9 @@ export const useReloadCoreDNS = () => {
     mutationFn: () => dnsService.reloadCoreDNS(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dns", "admin", "coredns"] });
-      queryClient.invalidateQueries({ queryKey: ["dns", "admin", "sync-logs"] });
+      queryClient.invalidateQueries({
+        queryKey: ["dns", "admin", "sync-logs"],
+      });
 
       toast({
         title: "CoreDNS Reloaded",
@@ -143,7 +145,9 @@ export const useRegenerateCoreDNSConfig = () => {
     mutationFn: () => dnsService.regenerateCoreDNSConfig(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dns", "admin", "coredns"] });
-      queryClient.invalidateQueries({ queryKey: ["dns", "admin", "sync-logs"] });
+      queryClient.invalidateQueries({
+        queryKey: ["dns", "admin", "sync-logs"],
+      });
 
       toast({
         title: "Configuration Regenerated",
