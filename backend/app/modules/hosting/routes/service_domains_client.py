@@ -294,6 +294,41 @@ async def delete_service_domain(
         )
 
 
+@router.post("/subscription/{subscription_id}/auto-detect", response_model=ServiceDomainListResponse)
+async def auto_detect_services(
+    subscription_id: str = Path(..., description="VPS Subscription ID"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.HOSTING_MANAGE)),
+):
+    """
+    Auto-detect services from docker ps inside the VPS and create domains for them.
+    
+    Scans running containers inside the VPS and automatically creates service domains
+    for any containers with exposed ports.
+    
+    Validates that the customer owns the subscription.
+    """
+    # Validate subscription ownership
+    await _validate_subscription_ownership(subscription_id, current_user.id, db)
+    
+    # Detect and create domains
+    service = ServiceDomainService(db)
+    
+    try:
+        created_domains = await service.detect_and_create_domains(subscription_id)
+        
+        return ServiceDomainListResponse(
+            items=[ServiceDomainResponse.model_validate(d) for d in created_domains],
+            total=len(created_domains)
+        )
+    except Exception as e:
+        logger.error(f"Failed to auto-detect services: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to auto-detect services: {str(e)}"
+        )
+
+
 # ============================================================================
 # Statistics
 # ============================================================================

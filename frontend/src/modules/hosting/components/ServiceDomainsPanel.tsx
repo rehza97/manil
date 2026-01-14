@@ -43,6 +43,7 @@ import {
   XCircle,
   Loader2,
   AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/shared/components/ui/use-toast";
@@ -51,6 +52,7 @@ import {
   useCreateCustomDomain,
   useUpdateServiceDomain,
   useDeleteServiceDomain,
+  useAutoDetectServices,
 } from "../hooks/useServiceDomains";
 import type { VPSServiceDomain } from "../types";
 
@@ -69,6 +71,7 @@ export function ServiceDomainsPanel({ subscriptionId }: ServiceDomainsPanelProps
   const createDomain = useCreateCustomDomain();
   const updateDomain = useUpdateServiceDomain();
   const deleteDomain = useDeleteServiceDomain();
+  const autoDetect = useAutoDetectServices();
 
   const domains = domainsData?.items || [];
 
@@ -154,14 +157,29 @@ export function ServiceDomainsPanel({ subscriptionId }: ServiceDomainsPanelProps
               <CardTitle>Service Domains</CardTitle>
               <CardDescription>Manage domains for your VPS services</CardDescription>
             </div>
-            <Button
-              size="sm"
-              onClick={() => setIsAddDialogOpen(true)}
-              disabled={availableServices.length === 0}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Domain
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => autoDetect.mutate(subscriptionId)}
+                disabled={autoDetect.isPending}
+              >
+                {autoDetect.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Auto-Detect Services
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setIsAddDialogOpen(true)}
+                disabled={availableServices.length === 0}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Domain
+              </Button>
+            </div>
           </div>
         </CardHeader>
 

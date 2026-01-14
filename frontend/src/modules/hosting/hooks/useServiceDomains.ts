@@ -131,3 +131,31 @@ export const useServiceDomainStatistics = () => {
     queryFn: () => vpsService.getServiceDomainStatistics(),
   });
 };
+
+/**
+ * Auto-detect services mutation
+ */
+export const useAutoDetectServices = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (subscriptionId: string) => vpsService.autoDetectServices(subscriptionId),
+    onSuccess: (data, subscriptionId) => {
+      queryClient.invalidateQueries({
+        queryKey: ["vps", "service-domains", subscriptionId],
+      });
+      toast({
+        title: "Services Detected",
+        description: `Found ${data.total} service${data.total !== 1 ? "s" : ""} and created domain${data.total !== 1 ? "s" : ""} for ${data.total !== 1 ? "them" : "it"}.`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Auto-Detection Failed",
+        description: error.response?.data?.detail || error.message || "Failed to auto-detect services",
+        variant: "destructive",
+      });
+    },
+  });
+};

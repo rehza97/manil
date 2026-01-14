@@ -23,6 +23,7 @@ from app.modules.hosting.repository import VPSServiceDomainRepository
 from app.modules.hosting.services.nginx_proxy_service import NginxProxyService
 from app.modules.hosting.services.dns_management_service import DNSManagementService
 from app.modules.hosting.dns_repository import DNSZoneRepository, DNSRecordRepository
+from app.modules.hosting.dns_schemas import DNSZoneCreate
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +123,8 @@ class ServiceDomainService:
         self,
         domain: str,
         target_ip: str,
-        subscription_id: str
+        subscription_id: str,
+        customer_id: str
     ) -> Tuple[Optional[DNSZone], Optional[DNSRecord]]:
         """
         Create DNS zone and A record for domain.
@@ -131,6 +133,7 @@ class ServiceDomainService:
             domain: Domain name
             target_ip: Target IP address (host public IP)
             subscription_id: VPS subscription ID
+            customer_id: Customer ID for zone ownership
 
         Returns:
             Tuple of (DNSZone, DNSRecord) or (None, None) if failed
@@ -140,12 +143,16 @@ class ServiceDomainService:
             zone = await self.dns_zone_repo.get_by_name(domain)
 
             if not zone:
-                # Create new zone
-                zone = await self.dns_service.create_zone(
+                # Create new zone using DNSZoneCreate schema
+                zone_data = DNSZoneCreate(
                     zone_name=domain,
                     subscription_id=subscription_id,
-                    ttl=300,
-                    notes=f"Auto-created for VPS service domain"
+                    ttl_default=300,
+                    notes="Auto-created for VPS service domain"
+                )
+                zone = await self.dns_service.create_zone(
+                    zone_data=zone_data,
+                    customer_id=customer_id
                 )
                 logger.info(f"Created DNS zone: {domain}")
 
@@ -253,7 +260,7 @@ class ServiceDomainService:
 
                 # Create DNS records
                 dns_zone, dns_record = await self._create_dns_records(
-                    domain_name, host_public_ip, subscription_id
+                    domain_name, host_public_ip, subscription_id, customer_id
                 )
 
                 # Note: Nginx configuration is now handled after all domains are created
@@ -347,6 +354,94 @@ class ServiceDomainService:
             # Continue - don't fail entire operation if nginx config fails
 
         return created_domains
+
+    async def detect_and_create_domains(
+        self,
+        subscription_id: str
+    ) -> List[VPSServiceDomain]:
+        """
+        Detect services from docker ps inside the VPS container and create domains for them.
+        
+        Args:
+            subscription_id: VPS subscription ID
+            
+        Returns:
+            List of created VPSServiceDomain objects
+        """
+        # Get container instance
+        from app.modules.hosting.repository import ContainerInstanceRepository
+        container_repo = ContainerInstanceRepository(self.db)
+        container_instance = await container_repo.get_by_subscription_id(subscription_id)
+        
+        if not container_instance:
+            logger.warning(f"No container found for subscription {subscription_id}")
+            return []
+            
+        if not container_instance.http_port:
+            logger.warning(f"Container {container_instance.container_name} has no HTTP port configured")
+            return []
+        
+        # Get Docker client and VPS container
+        import docker
+        try:
+            docker_client = docker.from_env()
+            vps_container = docker_client.containers.get(container_instance.container_name)
+        except docker.errors.NotFound:
+            logger.error(f"VPS container not found: {container_instance.container_name}")
+            return []
+        except Exception as e:
+            logger.error(f"Failed to get Docker client: {e}")
+            return []
+        
+        # Detect services from docker ps
+        service_routes = []
+        
+        try:
+            # Run docker ps inside the VPS container
+            ps_result = vps_container.exec_run(
+                "sh -c 'docker ps --format \"{{.Names}}\\t{{.Ports}}\" 2>/dev/null'",
+                user="root"
+            )
+            
+            if ps_result.exit_code == 0 and ps_result.output:
+                ports_output = ps_result.output.decode('utf-8', errors='replace').strip()
+                vps_ip = container_instance.ip_address
+                
+                # Parse docker ps output
+                for line in ports_output.split('\n'):
+                    if '\t' not in line:
+                        continue
+                        
+                    container_name, ports_str = line.split('\t', 1)
+                    if not ports_str or ports_str.strip() == '':
+                        continue
+                    
+                    # Parse port mappings like "0.0.0.0:8000->8000/tcp, 0.0.0.0:5173->5173/tcp"
+                    port_matches = re.findall(r'0\.0\.0\.0:(\d+)->\d+/tcp', ports_str)
+                    for host_port in port_matches:
+                        service_routes.append({
+                            "service": container_name,
+                            "port": int(host_port),
+                            "url": f"http://{vps_ip}:{host_port}",
+                            "internal_port": None
+                        })
+        except Exception as e:
+            logger.error(f"Failed to detect services from docker ps: {e}", exc_info=True)
+            return []
+        
+        if not service_routes:
+            logger.info(f"No services detected for subscription {subscription_id}")
+            return []
+        
+        # Get base domain from environment
+        base_domain = os.getenv("VPS_BASE_DOMAIN", "vps.localhost")
+        
+        # Create domains for detected services
+        return await self.auto_create_domains_for_deployment(
+            subscription_id=subscription_id,
+            service_routes=service_routes,
+            base_domain=base_domain
+        )
 
     async def create_custom_domain(
         self,

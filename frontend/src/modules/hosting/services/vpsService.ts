@@ -843,6 +843,16 @@ export const vpsService = {
   },
 
   /**
+   * Auto-detect services from docker ps and create domains
+   */
+  async autoDetectServices(subscriptionId: string): Promise<ServiceDomainListResponse> {
+    const response = await apiClient.post(
+      `/hosting/service-domains/subscription/${subscriptionId}/auto-detect`
+    );
+    return response.data;
+  },
+
+  /**
    * Get service domain statistics
    */
   async getServiceDomainStatistics(): Promise<ServiceDomainStatistics> {

@@ -4,6 +4,7 @@ Automatic Nginx Configuration Service for VPS Service Domains
 This service automatically configures nginx inside VPS containers to route
 traffic from service domains to docker-compose services.
 """
+import base64
 import logging
 from typing import Dict, List, Any
 
@@ -137,9 +138,12 @@ server {
             # Write config to temporary file in container
             config_path = "/etc/nginx/sites-available/vps-services.conf"
 
-            # Create config file using heredoc
+            # Encode config to base64 to avoid shell parsing issues with quotes/special characters
+            config_b64 = base64.b64encode(nginx_config.encode('utf-8')).decode('utf-8')
+            
+            # Write config file using base64 decoding
             exec_result = container.exec_run(
-                f"bash -c 'cat > {config_path} << \"EOF\"\n{nginx_config}\nEOF\n'",
+                f"bash -c 'echo {config_b64} | base64 -d > {config_path}'",
                 user="root"
             )
 
