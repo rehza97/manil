@@ -54,7 +54,7 @@ htmlcov/
 .tox/
 
 # Storage
-storage/
+/storage/
 uploads/
 
 # OS

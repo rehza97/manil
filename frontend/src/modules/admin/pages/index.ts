@@ -11,9 +11,7 @@ export { SystemSettingsPage } from "./SystemSettingsPage";
 export { RoleManagementPage } from "./RoleManagementPage";
 export { ReportsPage } from "./ReportsPage";
 export { SecurityLogsPage } from "./SecurityLogsPage";
-export { TicketsPage } from "./TicketsPage";
-
-// Settings Pages
+export { TicketsPage } from "./TicketsPage";// Settings Pages
 export {
   GeneralSettingsPage,
   SecuritySettingsPage,
