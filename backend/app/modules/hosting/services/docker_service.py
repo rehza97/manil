@@ -160,6 +160,8 @@ class DockerManagementService:
             # Allocate unique IP and SSH port
             ip_address = await self.repository.get_next_available_ip()
             ssh_port = await self.repository.get_next_available_ssh_port()
+            http_port = await self.repository.get_next_available_http_port()
+            logger.info(f"Allocated ports - SSH: {ssh_port}, HTTP: {http_port}")
 
             # Generate root password
             root_password = self._generate_password()
@@ -279,11 +281,11 @@ class DockerManagementService:
                 (
                     "set -e && "
                     f"echo 'root:{root_password}' | chpasswd && "
-                    "if ! command -v sshd &> /dev/null; then "
-                    # Install SSH with lock file to prevent conflicts
+                    "if ! command -v sshd &> /dev/null || ! command -v nginx &> /dev/null; then "
+                    # Install SSH and Nginx with lock file to prevent conflicts
                     "flock -x /var/lock/apt-setup.lock -c '"
                     "DEBIAN_FRONTEND=noninteractive apt-get update -qq && "
-                    "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq openssh-server && "
+                    "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq openssh-server nginx && "
                     "rm -rf /var/lib/apt/lists/*"
                     "'; "
                     "fi && "
@@ -330,8 +332,12 @@ class DockerManagementService:
                 network=network_name,
 
                 # === PORT MAPPING ===
-                # Map container port 22 to unique host port
-                ports={'22/tcp': ssh_port},
+                # Map container port 22 to unique host port (SSH)
+                # Map container port 80 to unique host port (HTTP for service domains)
+                ports={
+                    '22/tcp': ssh_port,
+                    '80/tcp': http_port
+                },
 
                 # === VOLUMES ===
                 mounts=[
@@ -491,6 +497,7 @@ class DockerManagementService:
                 network_name=network_name,
                 hostname=hostname,
                 ssh_port=ssh_port,
+                http_port=http_port,
                 root_password=encrypted_password,
                 status=ContainerStatus.RUNNING,
                 cpu_limit=subscription.plan.cpu_cores,

@@ -320,6 +320,25 @@ class ContainerInstanceRepository:
             return 2222
         return max_port + 1
 
+    async def get_next_available_http_port(self) -> int:
+        """
+        Get next available HTTP port starting from 8100.
+        Uses database-level advisory lock to prevent race conditions.
+        """
+        from sqlalchemy import text
+
+        # Acquire PostgreSQL advisory lock (lock ID: 999003)
+        # Lock is automatically released at transaction end
+        await self.db.execute(text("SELECT pg_advisory_xact_lock(999003)"))
+
+        query = select(func.max(ContainerInstance.http_port))
+        result = await self.db.execute(query)
+        max_port = result.scalar_one_or_none()
+
+        if max_port is None:
+            return 8100
+        return max_port + 1
+
     async def get_next_available_ip(self) -> str:
         """
         Get next available IP address from 172.20.0.0/16 range.

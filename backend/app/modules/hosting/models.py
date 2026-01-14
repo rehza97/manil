@@ -342,6 +342,7 @@ class ContainerInstance(Base):
     network_name: Mapped[str] = mapped_column(String(255), nullable=False)
     hostname: Mapped[str] = mapped_column(String(255), nullable=False)
     ssh_port: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)
+    http_port: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
 
     # Credentials (Encrypted at rest)
     root_password: Mapped[str] = mapped_column(String(255), nullable=False)

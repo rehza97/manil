@@ -463,9 +463,10 @@ def _create_docker_container(
         container_name = ids["container_name"]
         network_name = ids["network_name"]
 
-        # Allocate unique IP and SSH port
+        # Allocate unique IP and ports
         ip_address = _get_next_available_ip(db)
         ssh_port = _get_next_available_ssh_port(db)
+        http_port = _get_next_available_http_port(db)
 
         # Generate and encrypt root password
         root_password = secrets.token_urlsafe(16)
@@ -576,17 +577,20 @@ def _create_docker_container(
         hostname = ids["hostname"]
 
         # Create container with resource limits
-        # Command to keep container running and set up SSH and Docker daemon
-        # This will: set root password, install/start SSH, start Docker daemon with VFS, then keep running
+        # Command to keep container running and set up SSH, Nginx, and Docker daemon
+        # This will: set root password, install/start SSH, install Nginx, start Docker daemon with VFS, then keep running
         container_command = [
             "/bin/bash", "-c",
             (
                 "set -e && "
                 f"echo 'root:{root_password}' | chpasswd && "
-                "if ! command -v sshd &> /dev/null; then "
-                # Don't remove package lists - they're needed for Docker installation later
+                "if ! command -v sshd &> /dev/null || ! command -v nginx &> /dev/null; then "
+                # Install SSH and Nginx with lock file to prevent conflicts
+                "flock -x /var/lock/apt-setup.lock -c '"
                 "DEBIAN_FRONTEND=noninteractive apt-get update -qq && "
-                "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq openssh-server; "
+                "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq openssh-server nginx && "
+                "rm -rf /var/lib/apt/lists/*"
+                "'; "
                 "fi && "
                 "mkdir -p /var/run/sshd && "
                 "echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && "
@@ -627,8 +631,11 @@ def _create_docker_container(
             storage_opt={"size": f"{plan.storage_gb}g"},
             # Network configuration
             network=network_name,
-            # Port mapping (SSH)
-            ports={"22/tcp": ssh_port},
+            # Port mapping (SSH and HTTP)
+            ports={
+                "22/tcp": ssh_port,
+                "80/tcp": http_port
+            },
             # Volume mounts
             volumes=volumes_cfg,
             # Environment variables
@@ -701,6 +708,7 @@ def _create_docker_container(
             "network_name": network_name,
             "hostname": hostname,
             "ssh_port": ssh_port,
+            "http_port": http_port,
             "encrypted_password": encrypted_password,
             "data_volume_path": volume_path,
             "cpu_limit": float(plan.cpu_cores),
@@ -753,6 +761,22 @@ def _get_next_available_ssh_port(db: Session) -> int:
     if not max_port:
         # First container
         return 2222
+
+    return max_port + 1
+
+
+def _get_next_available_http_port(db: Session) -> int:
+    """Get next available HTTP port starting from 8100."""
+    # Prevent concurrent allocations (match async repo lock ID)
+    db.execute(text("SELECT pg_advisory_xact_lock(999003)"))
+
+    # Find max HTTP port in use
+    stmt = select(func.max(ContainerInstance.http_port))
+    max_port = db.execute(stmt).scalar()
+
+    if not max_port:
+        # First container
+        return 8100
 
     return max_port + 1
 
@@ -864,6 +888,7 @@ def provision_vps_async(self, subscription_id: str) -> Dict[str, Any]:
                 network_name=container_data["network_name"],
                 hostname=container_data["hostname"],
                 ssh_port=container_data["ssh_port"],
+                http_port=container_data["http_port"],
                 root_password=container_data["encrypted_password"],
                 status=ContainerStatus.RUNNING,
                 cpu_limit=container_data["cpu_limit"],
@@ -910,6 +935,7 @@ def provision_vps_async(self, subscription_id: str) -> Dict[str, Any]:
                 "container_name": container_instance.container_name,
                 "ip_address": container_instance.ip_address,
                 "ssh_port": container_instance.ssh_port,
+                "http_port": container_instance.http_port,
             }
 
     except Exception as exc:

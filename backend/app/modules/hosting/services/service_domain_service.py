@@ -187,11 +187,22 @@ class ServiceDomainService:
         """
         created_domains = []
 
-        # Get VPS IP
-        vps_ip = await self._get_vps_ip(subscription_id)
-        if not vps_ip:
-            logger.error(f"Cannot create domains: VPS IP not found for {subscription_id}")
+        # Get container instance to find container name and HTTP port
+        from app.modules.hosting.repository import ContainerInstanceRepository
+        from app.modules.hosting.models import ContainerInstance
+
+        container_repo = ContainerInstanceRepository(self.db)
+        container = await container_repo.get_by_subscription_id(subscription_id)
+
+        if not container:
+            logger.warning(f"No container found for subscription {subscription_id}")
             return []
+
+        if not container.http_port:
+            logger.warning(f"Container {container.container_name} has no HTTP port configured")
+            return []
+
+        vps_ip = container.ip_address  # Keep for backward compatibility if needed
 
         # Get host public IP from environment
         host_public_ip = os.getenv("HOST_PUBLIC_IP", "127.0.0.1")
@@ -206,6 +217,12 @@ class ServiceDomainService:
             return []
 
         customer_id = subscription.customer_id
+
+        # Import NginxAutoConfigService
+        from app.modules.hosting.services.nginx_auto_config_service import NginxAutoConfigService
+
+        # Initialize nginx auto-config service
+        nginx_service = NginxAutoConfigService()
 
         for route in service_routes:
             service_name = route.get("service", "")
@@ -239,10 +256,9 @@ class ServiceDomainService:
                     domain_name, host_public_ip, subscription_id
                 )
 
-                # Create nginx configuration
-                nginx_success = await self.nginx_service.add_service_route(
-                    domain_name, vps_ip, service_port
-                )
+                # Note: Nginx configuration is now handled after all domains are created
+                # (see Phase 5.3-5.5) to configure nginx inside VPS and external proxy
+                nginx_success = True  # Will be updated after nginx configuration
 
                 # Create database record
                 service_domain = VPSServiceDomain(
@@ -254,7 +270,7 @@ class ServiceDomainService:
                     is_active=True,
                     dns_zone_id=dns_zone.id if dns_zone else None,
                     dns_record_id=dns_record.id if dns_record else None,
-                    proxy_configured=nginx_success
+                    proxy_configured=False  # Will be updated to True after nginx configuration completes
                 )
 
                 created_domain = await self.domain_repo.create(service_domain)
@@ -267,6 +283,68 @@ class ServiceDomainService:
                 logger.error(f"Failed to create domain for {service_name}: {e}", exc_info=True)
                 await self.db.rollback()
                 continue
+
+        # NEW: Configure nginx inside VPS
+        try:
+            # Generate customer hash for subdomains (reuse from existing code if available)
+            import hashlib
+            customer_hash = hashlib.md5(str(subscription.customer_id).encode()).hexdigest()[:8]
+
+            # Configure nginx inside VPS
+            nginx_configured = await nginx_service.configure_nginx_in_vps(
+                container_name=container.container_name,
+                service_routes=service_routes,
+                base_domain=base_domain,
+                customer_hash=customer_hash
+            )
+
+            if not nginx_configured:
+                logger.warning(f"Failed to configure nginx inside VPS {container.container_name}")
+                # Continue anyway - domains are created, just nginx config failed
+            else:
+                # Update external nginx configurations
+                nginx_config_dir = os.getenv("NGINX_CONFIG_DIR", "/Users/fathallah/projects/manil/nginx/sites-enabled")
+
+                for domain in created_domains:
+                    external_config = nginx_service.update_external_nginx_config(
+                        domain_name=domain.domain_name,
+                        vps_http_port=container.http_port
+                    )
+
+                    # Write external nginx config
+                    config_file_path = os.path.join(nginx_config_dir, f"{domain.domain_name}.conf")
+                    try:
+                        with open(config_file_path, 'w') as f:
+                            f.write(external_config)
+                        logger.info(f"Created external nginx config: {config_file_path}")
+                    except Exception as e:
+                        logger.error(f"Failed to write nginx config to {config_file_path}: {e}")
+
+                # Reload external nginx
+                import docker
+                try:
+                    docker_client = docker.from_env()
+                    nginx_proxy = docker_client.containers.get("cloudmanager-nginx-proxy")
+                    reload_result = nginx_proxy.exec_run("nginx -s reload")
+                    if reload_result.exit_code == 0:
+                        logger.info("Reloaded external nginx")
+                    else:
+                        logger.warning(f"Failed to reload external nginx: {reload_result.output.decode()}")
+                except docker.errors.NotFound:
+                    logger.warning("nginx-proxy container not found, skipping reload")
+                except Exception as e:
+                    logger.warning(f"Failed to reload external nginx: {e}")
+
+                # Mark domains as proxy_configured
+                for domain in created_domains:
+                    domain.proxy_configured = True
+                await self.db.commit()
+
+                logger.info(f"Successfully configured nginx for {len(created_domains)} domains")
+
+        except Exception as e:
+            logger.error(f"Error configuring nginx inside VPS: {e}", exc_info=True)
+            # Continue - don't fail entire operation if nginx config fails
 
         return created_domains
 
