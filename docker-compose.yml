@@ -156,11 +156,13 @@ services:
       # VPS Service Domain Configuration
       - VPS_BASE_DOMAIN=${VPS_BASE_DOMAIN:-vps.localhost}
       - HOST_PUBLIC_IP=${HOST_PUBLIC_IP:-127.0.0.1}
+      - NGINX_CONFIG_DIR=/app/nginx/sites-enabled
     volumes:
       - ./backend:/app
       - storage_data:/app/storage
       - logs_data:/app/logs
       - ./coredns:/app/coredns
+      - ./nginx/sites-enabled:/app/nginx/sites-enabled
       - /var/run/docker.sock:/var/run/docker.sock # Access to Docker for VPS stats/logs
     ports:
       - "8000:8000"

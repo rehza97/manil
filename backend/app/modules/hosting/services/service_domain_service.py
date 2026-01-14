@@ -8,7 +8,7 @@ import os
 import re
 import hashlib
 import logging
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -71,18 +71,18 @@ class ServiceDomainService:
     def _generate_subdomain(
         self,
         service_name: str,
-        customer_id: str,
+        subscription_id: str,
         base_domain: str
     ) -> str:
         """
         Generate auto subdomain for a service.
 
-        Pattern: {service}.{customer_hash}.vps.{base_domain}
+        Pattern: {service}.{subscription_hash}.vps.{base_domain}
         Example: web.a1b2c3d4.vps.example.com
 
         Args:
             service_name: Name of the service
-            customer_id: Customer ID
+            subscription_id: VPS subscription ID (used for uniqueness)
             base_domain: Base domain for subdomains
 
         Returns:
@@ -91,11 +91,11 @@ class ServiceDomainService:
         # Sanitize service name
         safe_service = self._sanitize_service_name(service_name)
 
-        # Generate customer hash (8 chars)
-        customer_hash = hashlib.md5(customer_id.encode()).hexdigest()[:8]
+        # Generate subscription hash (8 chars) - unique per subscription
+        subscription_hash = hashlib.md5(subscription_id.encode()).hexdigest()[:8]
 
         # Build subdomain
-        subdomain = f"{safe_service}.{customer_hash}.vps.{base_domain}"
+        subdomain = f"{safe_service}.{subscription_hash}.vps.{base_domain}"
 
         return subdomain
 
@@ -192,22 +192,65 @@ class ServiceDomainService:
             True if all configs were written successfully, False otherwise
         """
         if not created_domains:
+            logger.info("No domains to configure, skipping external nginx config")
             return True
             
         if not container.http_port:
             logger.warning(f"Container {container.container_name} has no HTTP port, skipping external nginx config")
             return False
         
+        logger.info(f"Starting external nginx configuration for {len(created_domains)} domains in container {container.container_name}")
+        logger.info(f"Container HTTP port: {container.http_port}, IP: {container.ip_address}")
+        
         try:
             # Import NginxAutoConfigService for external config generation
             from app.modules.hosting.services.nginx_auto_config_service import NginxAutoConfigService
             nginx_service = NginxAutoConfigService()
             
-            nginx_config_dir = os.getenv("NGINX_CONFIG_DIR", "/Users/fathallah/projects/manil/nginx/sites-enabled")
+            # Get nginx config directory from environment variable
+            # Default to relative path from project root (works in dev)
+            # In Docker, this should be set via environment variable
+            nginx_config_dir = os.getenv("NGINX_CONFIG_DIR")
+            if not nginx_config_dir:
+                # Check if running in Docker with volume mount
+                if os.path.exists("/app/nginx/sites-enabled"):
+                    # Running in Docker with volume mount
+                    nginx_config_dir = "/app/nginx/sites-enabled"
+                else:
+                    # Running outside Docker (dev mode)
+                    # Calculate path relative to project root
+                    # File structure: backend/app/modules/hosting/services/service_domain_service.py
+                    # Go up 5 levels: services -> hosting -> modules -> app -> backend -> project root
+                    from pathlib import Path
+                    file_path = Path(__file__).resolve()
+                    project_root = file_path.parents[5]  # Go up to project root (manil/)
+                    nginx_config_dir = str(project_root / "nginx" / "sites-enabled")
+            
+            logger.info(f"Using nginx config directory: {nginx_config_dir}")
+            
+            # Validate directory exists and is writable
+            try:
+                os.makedirs(nginx_config_dir, exist_ok=True)
+                # Test write permission
+                test_file = os.path.join(nginx_config_dir, ".write_test")
+                try:
+                    with open(test_file, 'w') as f:
+                        f.write("test")
+                    os.remove(test_file)
+                    logger.info(f"Verified nginx config directory is writable: {nginx_config_dir}")
+                except Exception as e:
+                    logger.error(f"Nginx config directory is not writable: {nginx_config_dir}, error: {e}")
+                    return False
+            except Exception as e:
+                logger.error(f"Failed to create or validate nginx config directory {nginx_config_dir}: {e}", exc_info=True)
+                return False
+            
             configs_written = 0
+            written_config_files = []
             
             # Write external nginx config for each domain
             for domain in created_domains:
+                logger.info(f"Generating external nginx config for domain: {domain.domain_name} (port: {container.http_port})")
                 external_config = nginx_service.update_external_nginx_config(
                     domain_name=domain.domain_name,
                     vps_http_port=container.http_port
@@ -218,36 +261,97 @@ class ServiceDomainService:
                 try:
                     with open(config_file_path, 'w') as f:
                         f.write(external_config)
-                    logger.info(f"Created external nginx config: {config_file_path}")
+                    
+                    # Verify file was written and is readable
+                    if not os.path.exists(config_file_path):
+                        logger.error(f"Config file was not created: {config_file_path}")
+                        continue
+                    
+                    # Verify file is readable
+                    with open(config_file_path, 'r') as f:
+                        content = f.read()
+                        if not content or len(content) < 50:  # Basic sanity check
+                            logger.error(f"Config file appears to be empty or too small: {config_file_path}")
+                            continue
+                    
+                    logger.info(f"Successfully created external nginx config: {config_file_path} ({len(content)} bytes)")
                     configs_written += 1
+                    written_config_files.append(config_file_path)
                 except Exception as e:
-                    logger.error(f"Failed to write nginx config to {config_file_path}: {e}")
+                    logger.error(f"Failed to write nginx config to {config_file_path}: {e}", exc_info=True)
             
             if configs_written == 0:
-                logger.warning("No external nginx configs were written")
+                logger.error("No external nginx configs were written successfully")
                 return False
             
-            # Reload external nginx proxy container
-            import docker
-            try:
-                docker_client = docker.from_env()
-                nginx_proxy = docker_client.containers.get("cloudmanager-nginx-proxy")
-                reload_result = nginx_proxy.exec_run("nginx -s reload")
-                if reload_result.exit_code == 0:
-                    logger.info("Reloaded external nginx proxy")
-                else:
-                    logger.warning(f"Failed to reload external nginx: {reload_result.output.decode()}")
-            except docker.errors.NotFound:
-                logger.warning("nginx-proxy container not found, skipping reload")
-            except Exception as e:
-                logger.warning(f"Failed to reload external nginx: {e}")
+            logger.info(f"Successfully wrote {configs_written} external nginx config files")
             
-            # Mark domains as proxy_configured
+            # Reload external nginx proxy container with retry logic
+            import docker
+            import time
+            nginx_reloaded = False
+            max_retries = 3
+            retry_delay = 1
+            
+            for attempt in range(1, max_retries + 1):
+                try:
+                    logger.info(f"Attempting to reload external nginx proxy (attempt {attempt}/{max_retries})")
+                    docker_client = docker.from_env()
+                    nginx_proxy = docker_client.containers.get("cloudmanager-nginx-proxy")
+                    
+                    # Test nginx config before reload
+                    test_result = nginx_proxy.exec_run("nginx -t")
+                    if test_result.exit_code != 0:
+                        error_output = test_result.output.decode() if test_result.output else "Unknown error"
+                        logger.error(f"Nginx config test failed: {error_output}")
+                        if attempt < max_retries:
+                            logger.info(f"Retrying in {retry_delay} seconds...")
+                            time.sleep(retry_delay)
+                            retry_delay *= 2  # Exponential backoff
+                            continue
+                        return False
+                    
+                    # Reload nginx
+                    reload_result = nginx_proxy.exec_run("nginx -s reload")
+                    if reload_result.exit_code == 0:
+                        logger.info("Successfully reloaded external nginx proxy")
+                        nginx_reloaded = True
+                        break
+                    else:
+                        error_output = reload_result.output.decode() if reload_result.output else "Unknown error"
+                        logger.warning(f"Failed to reload external nginx (attempt {attempt}): {error_output}")
+                        if attempt < max_retries:
+                            logger.info(f"Retrying in {retry_delay} seconds...")
+                            time.sleep(retry_delay)
+                            retry_delay *= 2
+                except docker.errors.NotFound:
+                    logger.error("nginx-proxy container not found")
+                    return False
+                except Exception as e:
+                    logger.warning(f"Failed to reload external nginx (attempt {attempt}): {e}")
+                    if attempt < max_retries:
+                        logger.info(f"Retrying in {retry_delay} seconds...")
+                        time.sleep(retry_delay)
+                        retry_delay *= 2
+                    else:
+                        logger.error(f"All retry attempts failed for nginx reload: {e}")
+            
+            if not nginx_reloaded:
+                logger.error("Failed to reload external nginx after all retry attempts")
+                return False
+            
+            # Final validation: verify all config files still exist
+            for config_file_path in written_config_files:
+                if not os.path.exists(config_file_path):
+                    logger.error(f"Config file disappeared after reload: {config_file_path}")
+                    return False
+            
+            # Only mark domains as proxy_configured if all validations passed
             for domain in created_domains:
                 domain.proxy_configured = True
             await self.db.commit()
             
-            logger.info(f"Successfully wrote external nginx configs for {configs_written} domains")
+            logger.info(f"Successfully configured external nginx for {configs_written} domains")
             return True
             
         except Exception as e:
@@ -333,7 +437,7 @@ class ServiceDomainService:
                     continue
 
                 # Generate subdomain
-                domain_name = self._generate_subdomain(service_name, customer_id, base_domain)
+                domain_name = self._generate_subdomain(service_name, subscription_id, base_domain)
 
                 # Check if domain name is taken
                 if await self.domain_repo.domain_exists(domain_name):
@@ -375,36 +479,60 @@ class ServiceDomainService:
 
         # Always write external nginx configs (independent of internal nginx configuration)
         # External nginx routes traffic from internet → VPS HTTP port
-        await self._write_external_nginx_configs(created_domains, container)
+        logger.info(f"Configuring external nginx for {len(created_domains)} domains")
+        external_nginx_success = await self._write_external_nginx_configs(created_domains, container)
+        
+        if not external_nginx_success:
+            logger.error("Failed to configure external nginx - domains will not be accessible")
+            # Don't mark as configured if external nginx failed
+            return created_domains
 
-        # Optionally configure internal nginx inside VPS (can fail without blocking external configs)
+        # Configure internal nginx inside VPS (required for full functionality)
         # Internal nginx routes traffic within VPS container between services
+        logger.info(f"Configuring internal nginx for {len(created_domains)} domains in VPS {container.container_name}")
+        internal_nginx_success = False
+        
         try:
-            # Generate customer hash for subdomains (reuse from existing code if available)
-            import hashlib
-            customer_hash = hashlib.md5(str(subscription.customer_id).encode()).hexdigest()[:8]
-
             # Import NginxAutoConfigService for internal nginx configuration
             from app.modules.hosting.services.nginx_auto_config_service import NginxAutoConfigService
             nginx_auto_service = NginxAutoConfigService()
 
-            # Configure nginx inside VPS
-            nginx_configured = await nginx_auto_service.configure_nginx_in_vps(
+            # Build domain-port mappings from created domains (use actual domain names from database)
+            domain_port_mappings = [
+                {
+                    'domain_name': domain.domain_name,
+                    'port': domain.service_port
+                }
+                for domain in created_domains
+            ]
+
+            logger.info(f"Domain-port mappings for internal nginx: {domain_port_mappings}")
+
+            # Configure nginx inside VPS using actual domain names
+            internal_nginx_success = await nginx_auto_service.configure_nginx_in_vps(
                 container_name=container.container_name,
-                service_routes=service_routes,
-                base_domain=base_domain,
-                customer_hash=customer_hash
+                domain_port_mappings=domain_port_mappings
             )
 
-            if not nginx_configured:
-                logger.warning(f"Failed to configure nginx inside VPS {container.container_name}")
-                # Continue anyway - external nginx configs are already written
+            if not internal_nginx_success:
+                logger.error(f"Failed to configure internal nginx inside VPS {container.container_name}")
+                logger.error("Domains may be partially accessible (external nginx works, but internal routing may fail)")
             else:
                 logger.info(f"Successfully configured internal nginx for {len(created_domains)} domains")
 
         except Exception as e:
             logger.error(f"Error configuring nginx inside VPS: {e}", exc_info=True)
-            # Continue - external nginx configs are already written, internal nginx is optional
+            internal_nginx_success = False
+
+        # Only mark domains as fully configured if both external and internal nginx are working
+        # Note: External nginx is already marked as configured in _write_external_nginx_configs
+        # We don't unmark it here, but we log the status
+        if not internal_nginx_success:
+            logger.warning("Internal nginx configuration failed - domains may have limited functionality")
+            # External nginx is configured, so domains are partially accessible
+            # Internal nginx failure means service routing within VPS may not work
+        else:
+            logger.info("Both external and internal nginx are configured successfully")
 
         return created_domains
 
@@ -658,3 +786,153 @@ class ServiceDomainService:
             logger.error(f"Failed to update domain status: {e}", exc_info=True)
             await self.db.rollback()
             return None
+
+    async def fix_nginx_configuration(
+        self,
+        subscription_id: str
+    ) -> Dict[str, Any]:
+        """
+        Fix/repair nginx configuration for an existing VPS subscription.
+        
+        This method re-runs both external and internal nginx configuration
+        for all active domains in a subscription. Useful for fixing broken
+        or missing nginx configurations.
+        
+        Args:
+            subscription_id: VPS subscription ID
+            
+        Returns:
+            Dictionary with:
+            - success: bool
+            - external_nginx_fixed: bool
+            - internal_nginx_fixed: bool
+            - domains_fixed: int
+            - errors: List[str]
+        """
+        errors = []
+        domains_fixed = 0
+        external_nginx_fixed = False
+        internal_nginx_fixed = False
+        
+        logger.info(f"Starting nginx configuration fix for subscription: {subscription_id}")
+        
+        try:
+            # Get container instance
+            from app.modules.hosting.repository import ContainerInstanceRepository
+            container_repo = ContainerInstanceRepository(self.db)
+            container = await container_repo.get_by_subscription_id(subscription_id)
+            
+            if not container:
+                error_msg = f"Container not found for subscription: {subscription_id}"
+                logger.error(error_msg)
+                return {
+                    "success": False,
+                    "external_nginx_fixed": False,
+                    "internal_nginx_fixed": False,
+                    "domains_fixed": 0,
+                    "errors": [error_msg]
+                }
+            
+            if not container.http_port:
+                error_msg = f"Container {container.container_name} has no HTTP port configured"
+                logger.error(error_msg)
+                return {
+                    "success": False,
+                    "external_nginx_fixed": False,
+                    "internal_nginx_fixed": False,
+                    "domains_fixed": 0,
+                    "errors": [error_msg]
+                }
+            
+            # Get all active domains for this subscription
+            domains = await self.domain_repo.get_by_subscription(
+                subscription_id=subscription_id,
+                is_active=True
+            )
+            
+            if not domains:
+                error_msg = f"No active domains found for subscription: {subscription_id}"
+                logger.warning(error_msg)
+                return {
+                    "success": False,
+                    "external_nginx_fixed": False,
+                    "internal_nginx_fixed": False,
+                    "domains_fixed": 0,
+                    "errors": [error_msg]
+                }
+            
+            logger.info(f"Found {len(domains)} active domains to fix")
+            
+            # Reset proxy_configured flag before fixing
+            for domain in domains:
+                domain.proxy_configured = False
+            await self.db.commit()
+            
+            # Fix external nginx configuration
+            logger.info("Fixing external nginx configuration...")
+            external_nginx_fixed = await self._write_external_nginx_configs(domains, container)
+            
+            if not external_nginx_fixed:
+                error_msg = "Failed to fix external nginx configuration"
+                logger.error(error_msg)
+                errors.append(error_msg)
+            else:
+                logger.info("External nginx configuration fixed successfully")
+                domains_fixed = len(domains)
+            
+            # Fix internal nginx configuration
+            logger.info("Fixing internal nginx configuration...")
+            try:
+                from app.modules.hosting.services.nginx_auto_config_service import NginxAutoConfigService
+                nginx_auto_service = NginxAutoConfigService()
+                
+                # Build domain-port mappings
+                domain_port_mappings = [
+                    {
+                        'domain_name': domain.domain_name,
+                        'port': domain.service_port
+                    }
+                    for domain in domains
+                ]
+                
+                internal_nginx_fixed = await nginx_auto_service.configure_nginx_in_vps(
+                    container_name=container.container_name,
+                    domain_port_mappings=domain_port_mappings
+                )
+                
+                if not internal_nginx_fixed:
+                    error_msg = "Failed to fix internal nginx configuration"
+                    logger.error(error_msg)
+                    errors.append(error_msg)
+                else:
+                    logger.info("Internal nginx configuration fixed successfully")
+            except Exception as e:
+                error_msg = f"Error fixing internal nginx: {str(e)}"
+                logger.error(error_msg, exc_info=True)
+                errors.append(error_msg)
+            
+            success = external_nginx_fixed and internal_nginx_fixed
+            
+            if success:
+                logger.info(f"Successfully fixed nginx configuration for {len(domains)} domains")
+            else:
+                logger.warning(f"Partially fixed nginx configuration. External: {external_nginx_fixed}, Internal: {internal_nginx_fixed}")
+            
+            return {
+                "success": success,
+                "external_nginx_fixed": external_nginx_fixed,
+                "internal_nginx_fixed": internal_nginx_fixed,
+                "domains_fixed": domains_fixed,
+                "errors": errors
+            }
+            
+        except Exception as e:
+            error_msg = f"Unexpected error fixing nginx configuration: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            return {
+                "success": False,
+                "external_nginx_fixed": False,
+                "internal_nginx_fixed": False,
+                "domains_fixed": domains_fixed,
+                "errors": errors + [error_msg]
+            }

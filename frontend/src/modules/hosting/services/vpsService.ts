@@ -852,6 +852,19 @@ export const vpsService = {
     return response.data;
   },
 
+  async fixNginxConfiguration(subscriptionId: string): Promise<{
+    success: boolean;
+    external_nginx_fixed: boolean;
+    internal_nginx_fixed: boolean;
+    domains_fixed: number;
+    errors: string[];
+  }> {
+    const response = await apiClient.post(
+      `/hosting/service-domains/subscription/${subscriptionId}/fix-nginx`
+    );
+    return response.data;
+  },
+
   /**
    * Get service domain statistics
    */

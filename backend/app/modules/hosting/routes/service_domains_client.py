@@ -329,6 +329,49 @@ async def auto_detect_services(
         )
 
 
+@router.post("/subscription/{subscription_id}/fix-nginx", status_code=status.HTTP_200_OK)
+async def fix_nginx_configuration(
+    subscription_id: str = Path(..., description="VPS Subscription ID"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.HOSTING_MANAGE)),
+):
+    """
+    Fix/repair nginx configuration for an existing VPS subscription.
+    
+    Re-runs both external and internal nginx configuration for all active domains
+    in the subscription. Useful for fixing broken or missing nginx configurations
+    that prevent domains from being accessible.
+    
+    This endpoint:
+    - Recreates external nginx config files in nginx/sites-enabled/
+    - Reloads the external nginx proxy
+    - Reconfigures internal nginx inside the VPS container
+    - Updates domain proxy_configured status
+    
+    Validates that the customer owns the subscription.
+    """
+    # Validate subscription ownership
+    await _validate_subscription_ownership(subscription_id, current_user.id, db)
+    
+    # Fix nginx configuration
+    service = ServiceDomainService(db)
+    
+    try:
+        result = await service.fix_nginx_configuration(subscription_id)
+        
+        if not result["success"]:
+            # Return 200 but with error details in response
+            return result
+        
+        return result
+    except Exception as e:
+        logger.error(f"Failed to fix nginx configuration: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fix nginx configuration: {str(e)}"
+        )
+
+
 # ============================================================================
 # Statistics
 # ============================================================================

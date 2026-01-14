@@ -159,3 +159,41 @@ export const useAutoDetectServices = () => {
     },
   });
 };
+
+/**
+ * Fix nginx configuration mutation
+ */
+export const useFixNginxConfiguration = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (subscriptionId: string) => vpsService.fixNginxConfiguration(subscriptionId),
+    onSuccess: (data, subscriptionId) => {
+      queryClient.invalidateQueries({
+        queryKey: ["vps", "service-domains", subscriptionId],
+      });
+      
+      if (data.success) {
+        toast({
+          title: "Nginx Configuration Fixed",
+          description: `Successfully fixed nginx configuration for ${data.domains_fixed} domain${data.domains_fixed !== 1 ? "s" : ""}.`,
+        });
+      } else {
+        const errors = data.errors.length > 0 ? data.errors.join(", ") : "Unknown error";
+        toast({
+          title: "Partial Fix",
+          description: `Nginx configuration partially fixed. External: ${data.external_nginx_fixed ? "✓" : "✗"}, Internal: ${data.internal_nginx_fixed ? "✓" : "✗"}. Errors: ${errors}`,
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Fix Failed",
+        description: error.response?.data?.detail || error.message || "Failed to fix nginx configuration",
+        variant: "destructive",
+      });
+    },
+  });
+};
