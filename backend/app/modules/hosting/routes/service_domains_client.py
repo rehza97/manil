@@ -372,6 +372,45 @@ async def fix_nginx_configuration(
         )
 
 
+@router.post("/subscription/{subscription_id}/update-urls", status_code=status.HTTP_200_OK)
+async def update_urls_in_container_configs(
+    subscription_id: str = Path(..., description="VPS Subscription ID"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.HOSTING_MANAGE)),
+):
+    """
+    Update URLs in configuration files inside VPS container.
+    
+    Scans common config files (docker-compose.yml, .env files, etc.) and replaces
+    localhost/default URLs with generated domain names. This helps services inside
+    the VPS container connect to each other using domain names instead of localhost.
+    
+    This endpoint:
+    - Scans config files in common directories (/root, /home, /app, /var/www)
+    - Finds docker-compose.yml, .env, and other config files
+    - Replaces localhost:PORT URLs with domain names based on port mapping
+    - Updates files with new URLs
+    
+    Validates that the customer owns the subscription.
+    """
+    # Validate subscription ownership
+    await _validate_subscription_ownership(subscription_id, current_user.id, db)
+    
+    # Update URLs in container configs
+    service = ServiceDomainService(db)
+    
+    try:
+        result = await service.update_urls_in_container_configs(subscription_id)
+        
+        return result
+    except Exception as e:
+        logger.error(f"Failed to update URLs: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update URLs: {str(e)}"
+        )
+
+
 # ============================================================================
 # Statistics
 # ============================================================================

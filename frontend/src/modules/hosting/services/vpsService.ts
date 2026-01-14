@@ -865,6 +865,21 @@ export const vpsService = {
     return response.data;
   },
 
+  async updateUrlsInContainerConfigs(subscriptionId: string): Promise<{
+    success: boolean;
+    files_updated: number;
+    replacements: Array<{
+      file: string;
+      replacements: string[];
+    }>;
+    errors: string[];
+  }> {
+    const response = await apiClient.post(
+      `/hosting/service-domains/subscription/${subscriptionId}/update-urls`
+    );
+    return response.data;
+  },
+
   /**
    * Get service domain statistics
    */

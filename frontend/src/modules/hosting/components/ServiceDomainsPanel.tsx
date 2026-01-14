@@ -45,6 +45,7 @@ import {
   AlertCircle,
   RefreshCw,
   Wrench,
+  Link,
 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/shared/components/ui/use-toast";
@@ -55,6 +56,7 @@ import {
   useDeleteServiceDomain,
   useAutoDetectServices,
   useFixNginxConfiguration,
+  useUpdateUrlsInContainerConfigs,
 } from "../hooks/useServiceDomains";
 import type { VPSServiceDomain } from "../types";
 
@@ -75,6 +77,7 @@ export function ServiceDomainsPanel({ subscriptionId }: ServiceDomainsPanelProps
   const deleteDomain = useDeleteServiceDomain();
   const autoDetect = useAutoDetectServices();
   const fixNginx = useFixNginxConfiguration();
+  const updateUrls = useUpdateUrlsInContainerConfigs();
 
   const domains = domainsData?.items || [];
 
@@ -186,6 +189,19 @@ export function ServiceDomainsPanel({ subscriptionId }: ServiceDomainsPanelProps
                   <Wrench className="h-4 w-4 mr-2" />
                 )}
                 Fix Nginx
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => updateUrls.mutate(subscriptionId)}
+                disabled={updateUrls.isPending}
+              >
+                {updateUrls.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Link className="h-4 w-4 mr-2" />
+                )}
+                Update URLs
               </Button>
               <Button
                 size="sm"

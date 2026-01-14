@@ -197,3 +197,41 @@ export const useFixNginxConfiguration = () => {
     },
   });
 };
+
+/**
+ * Update URLs in container configs mutation
+ */
+export const useUpdateUrlsInContainerConfigs = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (subscriptionId: string) => vpsService.updateUrlsInContainerConfigs(subscriptionId),
+    onSuccess: (data, subscriptionId) => {
+      queryClient.invalidateQueries({
+        queryKey: ["vps", "service-domains", subscriptionId],
+      });
+      
+      if (data.success) {
+        toast({
+          title: "URLs Updated",
+          description: `Successfully updated URLs in ${data.files_updated} file${data.files_updated !== 1 ? "s" : ""}.`,
+        });
+      } else {
+        const errors = data.errors.length > 0 ? data.errors.join(", ") : "No files updated";
+        toast({
+          title: "Update Failed",
+          description: errors,
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update Failed",
+        description: error.response?.data?.detail || error.message || "Failed to update URLs",
+        variant: "destructive",
+      });
+    },
+  });
+};

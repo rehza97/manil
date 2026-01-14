@@ -8,6 +8,7 @@ import os
 import re
 import hashlib
 import logging
+import base64
 from typing import List, Dict, Optional, Tuple, Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -934,5 +935,258 @@ class ServiceDomainService:
                 "external_nginx_fixed": False,
                 "internal_nginx_fixed": False,
                 "domains_fixed": domains_fixed,
+                "errors": errors + [error_msg]
+            }
+
+    async def update_urls_in_container_configs(
+        self,
+        subscription_id: str
+    ) -> Dict[str, Any]:
+        """
+        Update URLs in configuration files inside VPS container.
+        
+        Scans common config files (docker-compose.yml, .env files, etc.) and
+        replaces localhost/default URLs with generated domain names.
+        
+        Args:
+            subscription_id: VPS subscription ID
+            
+        Returns:
+            Dictionary with:
+            - success: bool
+            - files_updated: int
+            - replacements: List[Dict] (file path, old URL, new URL)
+            - errors: List[str]
+        """
+        errors = []
+        files_updated = 0
+        replacements = []
+        
+        logger.info(f"Starting URL update for subscription: {subscription_id}")
+        
+        try:
+            # Get container instance
+            from app.modules.hosting.repository import ContainerInstanceRepository
+            container_repo = ContainerInstanceRepository(self.db)
+            container = await container_repo.get_by_subscription_id(subscription_id)
+            
+            if not container:
+                error_msg = f"Container not found for subscription: {subscription_id}"
+                logger.error(error_msg)
+                return {
+                    "success": False,
+                    "files_updated": 0,
+                    "replacements": [],
+                    "errors": [error_msg]
+                }
+            
+            # Get all active domains for this subscription
+            domains = await self.domain_repo.get_by_subscription(
+                subscription_id=subscription_id,
+                is_active=True
+            )
+            
+            if not domains:
+                error_msg = f"No active domains found for subscription: {subscription_id}"
+                logger.warning(error_msg)
+                return {
+                    "success": False,
+                    "files_updated": 0,
+                    "replacements": [],
+                    "errors": [error_msg]
+                }
+            
+            # Build service name to domain mapping and port to domain mapping
+            service_to_domain = {}
+            port_to_domain = {}
+            for domain in domains:
+                if domain.is_active:
+                    service_to_domain[domain.service_name] = domain.domain_name
+                    port_to_domain[domain.service_port] = domain.domain_name
+            
+            if not service_to_domain:
+                error_msg = "No active domains to use for URL replacement"
+                logger.warning(error_msg)
+                return {
+                    "success": False,
+                    "files_updated": 0,
+                    "replacements": [],
+                    "errors": [error_msg]
+                }
+            
+            logger.info(f"Service to domain mapping: {service_to_domain}")
+            logger.info(f"Port to domain mapping: {port_to_domain}")
+            
+            # Get Docker client and container
+            import docker
+            try:
+                docker_client = docker.from_env()
+                vps_container = docker_client.containers.get(container.container_name)
+            except docker.errors.NotFound:
+                error_msg = f"VPS container not found: {container.container_name}"
+                logger.error(error_msg)
+                return {
+                    "success": False,
+                    "files_updated": 0,
+                    "replacements": [],
+                    "errors": [error_msg]
+                }
+            except Exception as e:
+                error_msg = f"Failed to get Docker client: {str(e)}"
+                logger.error(error_msg, exc_info=True)
+                return {
+                    "success": False,
+                    "files_updated": 0,
+                    "replacements": [],
+                    "errors": [error_msg]
+                }
+            
+            # Use Python script to find and update files
+            python_script = "import os\n"
+            python_script += "import re\n"
+            python_script += "from pathlib import Path\n\n"
+            
+            # Build port to domain mapping (use port to match URLs)
+            python_script += "port_to_domain = {\n"
+            for port, domain_name in port_to_domain.items():
+                python_script += f"    {port}: '{domain_name}',\n"
+            python_script += "}\n\n"
+            
+            python_script += """
+print("Starting URL update script...")
+print(f"Port to domain mapping: {port_to_domain}")
+
+# Common directories to search
+search_dirs = ['/root', '/home', '/app', '/var/www', '/data']
+if os.path.exists('/workspace'):
+    search_dirs.append('/workspace')
+
+files_to_update = []
+replacements_made = []
+
+# Find config files
+print("Searching for config files...")
+for search_dir in search_dirs:
+    if os.path.exists(search_dir):
+        print(f"Searching in: {search_dir}")
+        for root, dirs, files in os.walk(search_dir):
+            # Skip hidden directories and common exclusions
+            dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ['node_modules', '__pycache__', '.git']]
+            for file in files:
+                if file in ['docker-compose.yml', 'docker-compose.yaml', '.env', '.env.local', '.env.production']:
+                    filepath = os.path.join(root, file)
+                    files_to_update.append(filepath)
+                    print(f"Found config file: {filepath}")
+    else:
+        print(f"Directory does not exist: {search_dir}")
+
+print(f"Total config files found: {len(files_to_update)}")
+
+# Update each file
+for filepath in files_to_update:
+    try:
+        with open(filepath, 'r') as f:
+            content = f.read()
+        
+        original_content = content
+        file_replacements = []
+        
+        # Replace localhost URLs with domain names based on port
+        for port, domain_name in port_to_domain.items():
+            # Pattern: http://localhost:PORT -> http://domain_name
+            patterns = [
+                (f'http://localhost:{port}', f'http://{domain_name}'),
+                (f'http://127.0.0.1:{port}', f'http://{domain_name}'),
+                (f'localhost:{port}', domain_name),
+                (f'127.0.0.1:{port}', domain_name),
+            ]
+            
+            for old_url, new_url in patterns:
+                if old_url in content:
+                    content = content.replace(old_url, new_url)
+                    file_replacements.append(f"Replaced '{old_url}' with '{new_url}'")
+                    print(f"  Found pattern '{old_url}' in {filepath}")
+        
+        # Write back if changed
+        if content != original_content:
+            with open(filepath, 'w') as f:
+                f.write(content)
+            replacements_made.append({
+                'file': filepath,
+                'replacements': file_replacements
+            })
+            print(f"UPDATED: {filepath}")
+        else:
+            print(f"  No changes needed in {filepath}")
+    
+    except Exception as e:
+        print(f"ERROR updating {filepath}: {e}")
+
+print(f"FILES_UPDATED: {len(replacements_made)}")
+for rep in replacements_made:
+    print(f"FILE: {rep['file']}")
+    for r in rep['replacements']:
+        print(f"  - {r}")
+"""
+            
+            # Execute Python script in container
+            script_b64 = base64.b64encode(python_script.encode('utf-8')).decode('utf-8')
+            exec_result = vps_container.exec_run(
+                f"bash -c 'echo {script_b64} | base64 -d | python3'",
+                user="root"
+            )
+            
+            script_output = exec_result.output.decode() if exec_result.output else ""
+            logger.info(f"Python script output: {script_output}")
+            
+            if exec_result.exit_code != 0:
+                error_msg = f"Failed to update URLs: {script_output}"
+                logger.error(error_msg)
+                return {
+                    "success": False,
+                    "files_updated": 0,
+                    "replacements": [],
+                    "errors": [error_msg]
+                }
+            
+            # Parse output
+            current_file = None
+            for line in script_output.split('\n'):
+                if line.startswith('UPDATED:'):
+                    files_updated += 1
+                    file_path = line.split('UPDATED:', 1)[1].strip()
+                    replacements.append({"file": file_path, "replacements": []})
+                    current_file = file_path
+                elif line.startswith('FILE:'):
+                    current_file = line.split('FILE:', 1)[1].strip()
+                elif line.startswith('  - ') and current_file:
+                    replacement_info = line.split('  - ', 1)[1].strip()
+                    # Find the replacement entry for current_file
+                    for rep in replacements:
+                        if rep.get("file") == current_file:
+                            rep["replacements"].append(replacement_info)
+                            break
+            
+            success = files_updated > 0
+            
+            if success:
+                logger.info(f"Successfully updated URLs in {files_updated} file(s)")
+            else:
+                logger.warning("No files were updated (may be no matching patterns found)")
+            
+            return {
+                "success": success,
+                "files_updated": files_updated,
+                "replacements": replacements,
+                "errors": errors
+            }
+            
+        except Exception as e:
+            error_msg = f"Unexpected error updating URLs: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            return {
+                "success": False,
+                "files_updated": files_updated,
+                "replacements": replacements,
                 "errors": errors + [error_msg]
             }
