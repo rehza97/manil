@@ -1,3 +1,7 @@
+# Docker Compose configuration for CloudManager
+# Cross-platform support: Linux, Windows 10/11, macOS
+# Note: On Windows, ensure Docker Desktop is using Linux containers (default)
+
 services:
   # PostgreSQL Database
   postgres:
@@ -40,10 +44,11 @@ services:
     restart: unless-stopped
 
   # Docker Socket Proxy - Secure access to Docker for VPS containers
+  # Cross-platform: Docker socket path works on Linux, macOS, and Windows Docker Desktop
   docker-socket-proxy:
     image: tecnativa/docker-socket-proxy:latest
     container_name: cloudmanager-docker-proxy
-    privileged: true # Required to access Docker socket
+    privileged: true # Required to access Docker socket (works on all platforms)
     environment:
       # === SECURITY: Only allow safe Docker operations ===
       # Disable dangerous operations
@@ -75,6 +80,8 @@ services:
       - ALLOW_START=1
       - ALLOW_STOP=1
     volumes:
+      # Docker socket path works on Linux, macOS, and Windows Docker Desktop
+      # Windows Docker Desktop maps this automatically to the named pipe
       - /var/run/docker.sock:/var/run/docker.sock:ro # Read-only access to host Docker
     networks:
       - cloudmanager-network
@@ -86,10 +93,12 @@ services:
       retries: 5
 
   # CoreDNS - Local DNS Server
+  # Cross-platform: Volume mounts use relative paths (work on all platforms)
   coredns:
     image: coredns/coredns:1.11.1
     container_name: cloudmanager-coredns
     volumes:
+      # Relative paths work on Linux, macOS, and Windows Docker Desktop
       - ./coredns/Corefile:/etc/coredns/Corefile:ro
       - ./coredns/zones:/etc/coredns/zones:rw
       - coredns_data:/var/lib/coredns
@@ -105,15 +114,16 @@ services:
     #   timeout: 5s
     #   retries: 5
     restart: unless-stopped
-    # user: "1000:1000"  # Commented out for macOS compatibility
+    # user: "1000:1000"  # Commented out for cross-platform compatibility (Linux/macOS/Windows)
 
   # FastAPI Backend
+  # Cross-platform: All volume mounts use relative paths for compatibility
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: cloudmanager-backend
-    user: root # Run as root to access Docker socket for VPS stats/logs
+    user: root # Run as root to access Docker socket for VPS stats/logs (works on all platforms)
     environment:
       # Database Configuration
       - DATABASE_URL=postgresql+asyncpg://cloudmanager:${DB_PASSWORD:-cloudmanager_password}@postgres:5432/cloudmanager
@@ -158,11 +168,13 @@ services:
       - HOST_PUBLIC_IP=${HOST_PUBLIC_IP:-127.0.0.1}
       - NGINX_CONFIG_DIR=/app/nginx/sites-enabled
     volumes:
+      # Relative paths work on Linux, macOS, and Windows Docker Desktop
       - ./backend:/app
       - storage_data:/app/storage
       - logs_data:/app/logs
       - ./coredns:/app/coredns
       - ./nginx/sites-enabled:/app/nginx/sites-enabled
+      # Docker socket path works on all platforms (Windows Docker Desktop maps automatically)
       - /var/run/docker.sock:/var/run/docker.sock # Access to Docker for VPS stats/logs
     ports:
       - "8000:8000"
@@ -182,13 +194,14 @@ services:
     restart: unless-stopped
 
   # Celery Worker - Background Tasks
+  # Cross-platform: Command format works on all platforms
   celery-worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: cloudmanager-celery-worker
     command: celery -A app.core.celery_app worker --loglevel=info --concurrency=2
-    user: root # Run as root to access Docker socket for VPS provisioning
+    user: root # Run as root to access Docker socket for VPS provisioning (works on all platforms)
     environment:
       # Database Configuration
       - DATABASE_URL=postgresql+asyncpg://cloudmanager:${DB_PASSWORD:-cloudmanager_password}@postgres:5432/cloudmanager
@@ -214,10 +227,13 @@ services:
       # VPS Docker Engine Mode: auto|proxy|dind
       - VPS_DOCKER_ENGINE_MODE=${VPS_DOCKER_ENGINE_MODE:-auto}
     volumes:
+      # Relative paths work on all platforms
       - ./backend:/app
       - storage_data:/app/storage
       - logs_data:/app/logs
+      # Docker socket path works on all platforms
       - /var/run/docker.sock:/var/run/docker.sock # Access to Docker for VPS provisioning
+      # VPS volumes path (works on all platforms)
       - /var/lib/vps-volumes:/var/lib/vps-volumes # VPS container volumes
     networks:
       - cloudmanager-network
@@ -229,6 +245,7 @@ services:
     restart: unless-stopped
 
   # Celery Beat - Scheduled Tasks
+  # Cross-platform: Command format works on all platforms
   celery-beat:
     build:
       context: ./backend
@@ -268,6 +285,7 @@ services:
     restart: unless-stopped
 
   # React Frontend (Development Mode)
+  # Cross-platform: Volume mounts use relative paths and anonymous volumes
   frontend:
     build:
       context: ./frontend
@@ -277,7 +295,9 @@ services:
       - VITE_API_URL=http://localhost:8000
       - VITE_APP_NAME=CloudManager
     volumes:
+      # Relative path works on all platforms
       - ./frontend:/app
+      # Anonymous volume preserves node_modules (works on all platforms)
       - /app/node_modules
     ports:
       - "5173:5173"
@@ -295,10 +315,12 @@ services:
     restart: unless-stopped
 
   # Nginx Proxy - Routes custom domains to VPS services
+  # Cross-platform: Volume mounts use relative paths
   nginx-proxy:
     image: nginx:alpine
     container_name: cloudmanager-nginx-proxy
     volumes:
+      # Relative paths work on Linux, macOS, and Windows Docker Desktop
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/sites-enabled:/etc/nginx/sites-enabled:ro
       - nginx_logs:/var/log/nginx
@@ -320,6 +342,7 @@ services:
 # outbound access from the backend to ports 2087 (WHM) and 2083 (cPanel).
 
 # Volumes
+# Cross-platform: Local driver works on Linux, macOS, and Windows Docker Desktop
 volumes:
   postgres_data:
     driver: local
@@ -335,6 +358,7 @@ volumes:
     driver: local
 
 # Networks
+# Cross-platform: Bridge driver works on all platforms
 networks:
   cloudmanager-network:
     driver: bridge
