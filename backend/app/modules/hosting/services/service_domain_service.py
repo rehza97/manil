@@ -29,6 +29,249 @@ from app.modules.hosting.dns_schemas import DNSZoneCreate
 
 logger = logging.getLogger(__name__)
 
+# Inline script body for update_urls_in_container_configs (runs inside VPS container).
+# Uses: port_to_domain, ports_excluded_from_url_replace, db_service_name, config_basenames, env_basenames, compose_basenames.
+_INLINE_SCRIPT_BODY = r'''
+print("Starting URL update script...")
+print("Port to domain mapping:", port_to_domain)
+print("DB service name:", db_service_name)
+print("Excluded ports from URL replace:", ports_excluded_from_url_replace)
+
+search_dirs = ["/root", "/home", "/app", "/var/www", "/data"]
+if os.path.exists("/workspace"):
+    search_dirs.append("/workspace")
+
+files_to_update = []
+replacements_made = []
+modified_dirs = set()
+
+for search_dir in search_dirs:
+    if not os.path.exists(search_dir):
+        print("Directory does not exist:", search_dir)
+        continue
+    print("Searching in:", search_dir)
+    for root, dirs, files in os.walk(search_dir):
+        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in ["node_modules", "__pycache__", ".git"]]
+        for f in files:
+            if f in config_basenames:
+                filepath = os.path.join(root, f)
+                files_to_update.append(filepath)
+                print("Found config file:", filepath)
+
+print("Total config files found:", len(files_to_update))
+
+def update_database_url_host(val, db_host):
+    if not val or not db_host or urlparse is None:
+        return val
+    try:
+        val = val.strip().strip('"').strip("'")
+        u = urlparse(val)
+        if not u.hostname:
+            return val
+        port = u.port if u.port is not None else 5432
+        user = u.username or ""
+        passwd = u.password or ""
+        path = u.path or "/"
+        if user and passwd:
+            netloc = "{}:{}@{}:{}".format(user, passwd, db_host, port)
+        elif user:
+            netloc = "{}@{}:{}".format(user, db_host, port)
+        else:
+            netloc = "{}:{}".format(db_host, port)
+        out = "{}://{}{}".format(u.scheme, netloc, path)
+        if u.query:
+            out += "?" + u.query
+        return out
+    except Exception as e:
+        print("WARN: DATABASE_URL parse failed:", e)
+        return val
+
+CORS_KEYS = {"CORS_ORIGINS", "CORS_ALLOWED_ORIGINS", "ALLOWED_ORIGINS", "ALLOWED_HOSTS"}
+
+def parse_cors_value(val, is_allowed_hosts):
+    val = val.strip().strip('"').strip("'").strip()
+    if not val:
+        return [], False
+    json_like = val.startswith("[") and val.endswith("]")
+    inner = val[1:-1].strip() if json_like else val
+    if is_allowed_hosts:
+        parts = [p.strip().strip('"').strip("'") for p in re.split(r"[\s,]+", inner) if p.strip()]
+    else:
+        parts = [p.strip().strip('"').strip("'") for p in inner.split(",") if p.strip()]
+    return [p for p in parts if p], json_like
+
+def serialize_cors_value(parts, json_like, is_allowed_hosts):
+    if json_like:
+        return "[" + ",".join('"' + p + '"' for p in parts) + "]"
+    return (" " if is_allowed_hosts else ",").join(parts)
+
+def update_cors_value(val, port_to_domain, excluded, is_allowed_hosts):
+    try:
+        origins, json_like = parse_cors_value(val, is_allowed_hosts)
+    except Exception as e:
+        print("WARN: CORS parse failed:", e)
+        return val, []
+    seen = set()
+    out = []
+    repl_log = []
+    first_domain = None
+    for port, domain in port_to_domain.items():
+        if port not in excluded:
+            first_domain = domain
+            break
+    for o in origins:
+        x = o
+        replaced = False
+        if is_allowed_hosts:
+            if o in ("localhost", "127.0.0.1") and first_domain:
+                x = first_domain
+                repl_log.append("Replaced " + o + " with " + first_domain)
+                replaced = True
+        else:
+            for port, domain in port_to_domain.items():
+                if port in excluded:
+                    continue
+                for scheme in ["http", "https"]:
+                    for host in ["localhost", "127.0.0.1"]:
+                        old = scheme + "://" + host + ":" + str(port)
+                        if o == old or o == old + "/" or (o.startswith(old) and (len(o) == len(old) or (len(o) > len(old) and o[len(old)] == "/"))):
+                            x = scheme + "://" + domain
+                            repl_log.append("Replaced " + old + " with " + x)
+                            replaced = True
+                            break
+                    if replaced:
+                        break
+                if replaced:
+                    break
+        if x not in seen:
+            seen.add(x)
+            out.append(x)
+    added = []
+    for port, domain in port_to_domain.items():
+        if port in excluded:
+            continue
+        u = domain if is_allowed_hosts else "http://" + domain
+        if u not in seen:
+            seen.add(u)
+            out.append(u)
+            added.append(u)
+    if added:
+        repl_log.append("Added domains: " + ", ".join(added))
+    if not repl_log:
+        return val, []
+    return serialize_cors_value(out, json_like, is_allowed_hosts), repl_log
+
+for filepath in files_to_update:
+    try:
+        with open(filepath, "r") as f:
+            content = f.read()
+    except Exception as e:
+        print("ERROR reading", filepath, ":", e)
+        continue
+
+    original = content
+    file_replacements = []
+    basename = os.path.basename(filepath)
+    is_env_file = basename in env_basenames
+
+    for port, domain_name in port_to_domain.items():
+        if port in ports_excluded_from_url_replace:
+            continue
+        patterns = [
+            ("http://localhost:" + str(port), "http://" + domain_name),
+            ("http://127.0.0.1:" + str(port), "http://" + domain_name),
+            ("localhost:" + str(port), domain_name),
+            ("127.0.0.1:" + str(port), domain_name),
+        ]
+        for old_url, new_url in patterns:
+            if old_url in content:
+                content = content.replace(old_url, new_url)
+                file_replacements.append("Replaced '" + old_url + "' with '" + new_url + "'")
+                print("  Found pattern", old_url, "in", filepath)
+
+    if is_env_file:
+        lines = content.splitlines()
+        new_lines = []
+        for line in lines:
+            s = line.strip()
+            if s.startswith("DB_PASSWORD="):
+                new_lines.append(line)
+                continue
+            if db_service_name and urlparse:
+                if s.startswith("DB_HOST="):
+                    new_lines.append("DB_HOST=" + db_service_name)
+                    file_replacements.append("Set DB_HOST to " + db_service_name)
+                    continue
+                if s.startswith("DATABASE_URL="):
+                    rest = line.split("=", 1)[1].strip().strip('"').strip("'")
+                    updated = update_database_url_host(rest, db_service_name)
+                    if updated != rest:
+                        file_replacements.append("Updated DATABASE_URL host to " + db_service_name + " (password preserved)")
+                    new_lines.append("DATABASE_URL=" + updated)
+                    continue
+            if "=" in s:
+                key = s.split("=", 1)[0].strip()
+                if key.upper() in CORS_KEYS:
+                    rest = s.split("=", 1)[1].strip()
+                    is_ah = key.upper() == "ALLOWED_HOSTS"
+                    updated_val, cors_log = update_cors_value(rest, port_to_domain, ports_excluded_from_url_replace, is_ah)
+                    if cors_log:
+                        for msg in cors_log:
+                            file_replacements.append("CORS: " + msg)
+                        new_lines.append(key + "=" + updated_val)
+                    else:
+                        new_lines.append(line)
+                    continue
+            new_lines.append(line)
+        content = "\n".join(new_lines) + ("\n" if content.endswith("\n") else "")
+
+    if content != original:
+        try:
+            with open(filepath, "w") as f:
+                f.write(content)
+            replacements_made.append({"file": filepath, "replacements": file_replacements})
+            print("UPDATED:", filepath)
+            modified_dirs.add(os.path.dirname(filepath))
+        except Exception as e:
+            print("ERROR writing", filepath, ":", e)
+    else:
+        print("  No changes needed in", filepath)
+
+print("FILES_UPDATED:", len(replacements_made))
+for rep in replacements_made:
+    print("FILE:", rep["file"])
+    for r in rep["replacements"]:
+        print("  -", r)
+
+compose_dirs = set()
+for d in modified_dirs:
+    if not os.path.isdir(d):
+        continue
+    try:
+        for f in os.listdir(d):
+            if f in compose_basenames:
+                compose_dirs.add(d)
+                break
+    except Exception:
+        pass
+
+for compose_dir in sorted(compose_dirs):
+    restarted = False
+    last_err = ""
+    for cmd in ["docker compose up -d", "docker-compose up -d"]:
+        try:
+            r = subprocess.run(cmd, shell=True, cwd=compose_dir, capture_output=True, text=True, timeout=300)
+            if r.returncode == 0:
+                print("RESTART_OK:", compose_dir)
+                restarted = True
+                break
+            last_err = (r.stderr or r.stdout or "")[:500].replace("\n", " ").replace("|", " ")
+        except Exception as e:
+            last_err = str(e)[:500].replace("\n", " ").replace("|", " ")
+    if not restarted:
+        print("RESTART_FAIL:", compose_dir + "|" + (last_err or "all compose commands failed"))
+'''
+
 
 class ServiceDomainService:
     """Service for managing VPS service domains."""
@@ -1016,6 +1259,24 @@ class ServiceDomainService:
             
             logger.info(f"Service to domain mapping: {service_to_domain}")
             logger.info(f"Port to domain mapping: {port_to_domain}")
+
+            # Detect DB service: prefer port 5432, else service_name containing 'db' or 'postgres'
+            db_service_name = None
+            for d in domains:
+                if not d.is_active:
+                    continue
+                if d.service_port == 5432:
+                    db_service_name = d.service_name
+                    break
+            if db_service_name is None:
+                for d in domains:
+                    if not d.is_active:
+                        continue
+                    sn = (d.service_name or "").lower()
+                    if "db" in sn or "postgres" in sn:
+                        db_service_name = d.service_name
+                        break
+            logger.info(f"DB service name: {db_service_name}")
             
             # Get Docker client and container
             import docker
@@ -1041,93 +1302,31 @@ class ServiceDomainService:
                     "errors": [error_msg]
                 }
             
+            # Config files: Docker, Django, React, Next.js
+            config_basenames = [
+                "docker-compose.yml", "docker-compose.yaml", "docker-compose.override.yml",
+                ".env", ".env.local", ".env.production", ".env.development", ".env.test",
+                ".env.docker", ".env.django",
+            ]
+            env_basenames = {".env", ".env.local", ".env.production", ".env.development", ".env.test", ".env.docker", ".env.django"}
+            compose_basenames = {"docker-compose.yml", "docker-compose.yaml", "docker-compose.override.yml"}
+
             # Use Python script to find and update files
             python_script = "import os\n"
             python_script += "import re\n"
-            python_script += "from pathlib import Path\n\n"
-            
-            # Build port to domain mapping (use port to match URLs)
+            python_script += "import subprocess\n"
+            python_script += "from pathlib import Path\n"
+            python_script += "try:\n    from urllib.parse import urlparse, urlunparse\nexcept ImportError:\n    urlparse = urlunparse = None\n\n"
             python_script += "port_to_domain = {\n"
             for port, domain_name in port_to_domain.items():
                 python_script += f"    {port}: '{domain_name}',\n"
-            python_script += "}\n\n"
-            
-            python_script += """
-print("Starting URL update script...")
-print(f"Port to domain mapping: {port_to_domain}")
-
-# Common directories to search
-search_dirs = ['/root', '/home', '/app', '/var/www', '/data']
-if os.path.exists('/workspace'):
-    search_dirs.append('/workspace')
-
-files_to_update = []
-replacements_made = []
-
-# Find config files
-print("Searching for config files...")
-for search_dir in search_dirs:
-    if os.path.exists(search_dir):
-        print(f"Searching in: {search_dir}")
-        for root, dirs, files in os.walk(search_dir):
-            # Skip hidden directories and common exclusions
-            dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ['node_modules', '__pycache__', '.git']]
-            for file in files:
-                if file in ['docker-compose.yml', 'docker-compose.yaml', '.env', '.env.local', '.env.production']:
-                    filepath = os.path.join(root, file)
-                    files_to_update.append(filepath)
-                    print(f"Found config file: {filepath}")
-    else:
-        print(f"Directory does not exist: {search_dir}")
-
-print(f"Total config files found: {len(files_to_update)}")
-
-# Update each file
-for filepath in files_to_update:
-    try:
-        with open(filepath, 'r') as f:
-            content = f.read()
-        
-        original_content = content
-        file_replacements = []
-        
-        # Replace localhost URLs with domain names based on port
-        for port, domain_name in port_to_domain.items():
-            # Pattern: http://localhost:PORT -> http://domain_name
-            patterns = [
-                (f'http://localhost:{port}', f'http://{domain_name}'),
-                (f'http://127.0.0.1:{port}', f'http://{domain_name}'),
-                (f'localhost:{port}', domain_name),
-                (f'127.0.0.1:{port}', domain_name),
-            ]
-            
-            for old_url, new_url in patterns:
-                if old_url in content:
-                    content = content.replace(old_url, new_url)
-                    file_replacements.append(f"Replaced '{old_url}' with '{new_url}'")
-                    print(f"  Found pattern '{old_url}' in {filepath}")
-        
-        # Write back if changed
-        if content != original_content:
-            with open(filepath, 'w') as f:
-                f.write(content)
-            replacements_made.append({
-                'file': filepath,
-                'replacements': file_replacements
-            })
-            print(f"UPDATED: {filepath}")
-        else:
-            print(f"  No changes needed in {filepath}")
-    
-    except Exception as e:
-        print(f"ERROR updating {filepath}: {e}")
-
-print(f"FILES_UPDATED: {len(replacements_made)}")
-for rep in replacements_made:
-    print(f"FILE: {rep['file']}")
-    for r in rep['replacements']:
-        print(f"  - {r}")
-"""
+            python_script += "}\n"
+            python_script += f"ports_excluded_from_url_replace = {{5432, 6379}}\n"
+            python_script += f"db_service_name = {repr(db_service_name)}\n"
+            python_script += f"config_basenames = {config_basenames}\n"
+            python_script += "env_basenames = set(" + repr(list(env_basenames)) + ")\n"
+            python_script += "compose_basenames = set(" + repr(list(compose_basenames)) + ")\n\n"
+            python_script += _INLINE_SCRIPT_BODY
             
             # Execute Python script in container
             script_b64 = base64.b64encode(python_script.encode('utf-8')).decode('utf-8')
@@ -1151,22 +1350,26 @@ for rep in replacements_made:
             
             # Parse output
             current_file = None
-            for line in script_output.split('\n'):
-                if line.startswith('UPDATED:'):
+            for line in script_output.split("\n"):
+                if line.startswith("UPDATED:"):
                     files_updated += 1
-                    file_path = line.split('UPDATED:', 1)[1].strip()
+                    file_path = line.split("UPDATED:", 1)[1].strip()
                     replacements.append({"file": file_path, "replacements": []})
                     current_file = file_path
-                elif line.startswith('FILE:'):
-                    current_file = line.split('FILE:', 1)[1].strip()
-                elif line.startswith('  - ') and current_file:
-                    replacement_info = line.split('  - ', 1)[1].strip()
-                    # Find the replacement entry for current_file
+                elif line.startswith("FILE:"):
+                    current_file = line.split("FILE:", 1)[1].strip()
+                elif line.startswith("  - ") and current_file:
+                    replacement_info = line.split("  - ", 1)[1].strip()
                     for rep in replacements:
                         if rep.get("file") == current_file:
                             rep["replacements"].append(replacement_info)
                             break
-            
+                elif line.startswith("RESTART_FAIL:"):
+                    parts = line.split("RESTART_FAIL:", 1)[1].strip().split("|", 1)
+                    dir_path = parts[0].strip() if parts else ""
+                    msg = parts[1].strip() if len(parts) > 1 else "restart failed"
+                    errors.append(f"Restart failed in {dir_path}: {msg}")
+
             success = files_updated > 0
             
             if success:

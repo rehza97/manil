@@ -19,16 +19,12 @@ export {
   SMSConfigPage,
   StorageConfigPage,
   BackupSettingsPage,
-} from "./settings";
-
-// Overview Pages
+} from "./settings";// Overview Pages
 export {
   SystemHealthPage,
   PerformanceMetricsPage,
   SystemAlertsPage,
-} from "./overview";
-
-// Reports Pages
+} from "./overview";// Reports Pages
 export {
   UserReportsPage,
   ActivityReportsPage,
