@@ -71,7 +71,7 @@ export function KYCPanel({
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Failed to load KYC status. Please try again.
+              Impossible de charger le statut KYC. Veuillez réessayer.
             </AlertDescription>
           </Alert>
         </CardContent>
@@ -83,29 +83,28 @@ export function KYCPanel({
     switch (kycStatus.summary.overallStatus) {
       case "complete":
         return {
-          label: "KYC Complete",
+          label: "KYC complet",
           variant: "default" as const,
           icon: CheckCircle2,
           className: "bg-green-100 text-green-800",
         };
       case "incomplete":
         return {
-          label: "KYC Incomplete",
+          label: "KYC incomplet",
           variant: "destructive" as const,
           icon: XCircle,
           className: "bg-red-100 text-red-800",
         };
       case "pending_review":
         return {
-          label: "Pending Review",
+          label: "En attente de vérification",
           variant: "secondary" as const,
           icon: AlertCircle,
           className: "bg-yellow-100 text-yellow-800",
         };
       default:
-        // Default fallback for unknown status values
         return {
-          label: "KYC Incomplete",
+          label: "KYC incomplet",
           variant: "destructive" as const,
           icon: XCircle,
           className: "bg-red-100 text-red-800",
@@ -123,9 +122,9 @@ export function KYCPanel({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>KYC Status Overview</CardTitle>
+              <CardTitle>Vue d&apos;ensemble KYC</CardTitle>
               <CardDescription>
-                Customer verification and document status
+                Vérification client et statut des documents
               </CardDescription>
             </div>
             <Badge variant={statusConfig.variant} className={statusConfig.className}>
@@ -141,28 +140,28 @@ export function KYCPanel({
               <p className="text-2xl font-bold">
                 {kycStatus.summary.totalDocuments}
               </p>
-              <p className="text-sm text-gray-600">Total Documents</p>
+              <p className="text-sm text-gray-600">Documents au total</p>
             </div>
             <div className="text-center p-4 bg-green-50 rounded-lg">
               <CheckCircle2 className="mx-auto h-6 w-6 text-green-600 mb-2" />
               <p className="text-2xl font-bold text-green-700">
                 {kycStatus.summary.approvedDocuments}
               </p>
-              <p className="text-sm text-gray-600">Approved</p>
+              <p className="text-sm text-gray-600">Approuvés</p>
             </div>
             <div className="text-center p-4 bg-yellow-50 rounded-lg">
               <AlertCircle className="mx-auto h-6 w-6 text-yellow-600 mb-2" />
               <p className="text-2xl font-bold text-yellow-700">
                 {kycStatus.summary.pendingDocuments}
               </p>
-              <p className="text-sm text-gray-600">Pending</p>
+              <p className="text-sm text-gray-600">En attente</p>
             </div>
             <div className="text-center p-4 bg-red-50 rounded-lg">
               <XCircle className="mx-auto h-6 w-6 text-red-600 mb-2" />
               <p className="text-2xl font-bold text-red-700">
                 {kycStatus.summary.rejectedDocuments}
               </p>
-              <p className="text-sm text-gray-600">Rejected</p>
+              <p className="text-sm text-gray-600">Rejetés</p>
             </div>
           </div>
 
@@ -193,7 +192,7 @@ export function KYCPanel({
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="upload">
             <Upload className="mr-2 h-4 w-4" />
-            Upload New
+            Nouveau téléversement
           </TabsTrigger>
         </TabsList>
 

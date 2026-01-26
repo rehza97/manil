@@ -4,7 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db, get_sync_db
-from app.core.dependencies import require_role
+from app.core.dependencies import require_permission, require_any_permission
+from app.core.permissions import Permission
 from app.core.exceptions import NotFoundException, ConflictException
 from app.modules.auth.models import User
 from app.modules.products.service import CategoryService, ProductService
@@ -21,6 +22,8 @@ from app.modules.products.schemas import (
     ProductImageResponse,
     ProductVariantCreate,
     ProductVariantResponse,
+    ServiceType,
+    BillingCycle,
 )
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -40,12 +43,19 @@ async def list_products(
     max_price: float = Query(None),
     search: str = Query(None),
     is_featured: bool = Query(None),
-    in_stock: bool = Query(None),
+    service_type: ServiceType = Query(None, description="Filter by service type"),
+    billing_cycle: BillingCycle = Query(None, description="Filter by billing cycle"),
+    is_recurring: bool = Query(None, description="Filter recurring services"),
+    in_stock: bool = Query(None, description="DEPRECATED: Not applicable for digital services. Kept for backward compatibility."),
     sort_by: str = Query("created_at", pattern="^(name|price|created_at|rating|view_count)$"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$"),
     db: AsyncSession = Depends(get_db),
 ):
-    """List products with filtering, searching, and sorting."""
+    """List products (digital services) with filtering, searching, and sorting.
+    
+    Products represent digital services such as DNS, SSL certificates, email hosting, etc.
+    Use service_type, billing_cycle, and is_recurring filters for service-specific filtering.
+    """
     skip = (page - 1) * page_size
 
     products, total = await ProductService.list_products(
@@ -57,6 +67,9 @@ async def list_products(
         max_price=max_price,
         search=search,
         is_featured=is_featured,
+        service_type=service_type.value if service_type else None,
+        billing_cycle=billing_cycle.value if billing_cycle else None,
+        is_recurring=is_recurring,
         in_stock=in_stock,
         sort_by=sort_by,
         sort_order=sort_order,
@@ -75,9 +88,12 @@ async def list_products(
 def create_product(
     product_data: ProductCreate,
     db: Session = Depends(get_sync_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.PRODUCTS_CREATE, Permission.PRODUCTS_EDIT]))
 ):
-    """Create a new product.
+    """Create a new product (digital service).
+
+    Products represent digital services. Required fields include service_type and billing_cycle.
+    Inventory fields (stock_quantity, barcode, cost_price) are deprecated and not applicable for services.
 
     Security:
     - Requires admin or corporate role
@@ -96,7 +112,7 @@ def get_product_by_slug(
     slug: str,
     db: Session = Depends(get_sync_db),
 ):
-    """Get product by URL slug."""
+    """Get product (digital service) by URL slug."""
     try:
         product = ProductService.get_product_by_slug(db, slug)
         return ProductDetailResponse.model_validate(product)
@@ -129,7 +145,11 @@ def get_featured_products(
 def get_product_statistics(
     db: Session = Depends(get_sync_db),
 ):
-    """Get product catalogue statistics."""
+    """Get product catalogue statistics.
+    
+    Returns service type distribution, billing cycle distribution, and recurring services count.
+    Inventory-related stats (out_of_stock) have been removed as products are digital services.
+    """
     return ProductService.get_product_statistics(db)
 
 
@@ -143,7 +163,7 @@ def add_product_image(
     product_id: str,
     image_data: ProductImageCreate,
     db: Session = Depends(get_sync_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.PRODUCTS_CREATE, Permission.PRODUCTS_EDIT]))
 ):
     """Add an image to a product.
 
@@ -163,7 +183,7 @@ def update_product_image(
     image_id: str,
     image_data: ProductImageCreate,
     db: Session = Depends(get_sync_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.PRODUCTS_CREATE, Permission.PRODUCTS_EDIT]))
 ):
     """Update a product image.
 
@@ -182,7 +202,7 @@ def delete_product_image(
     product_id: str,
     image_id: str,
     db: Session = Depends(get_sync_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.PRODUCTS_CREATE, Permission.PRODUCTS_EDIT]))
 ):
     """Delete a product image.
 
@@ -205,9 +225,12 @@ def add_product_variant(
     product_id: str,
     variant_data: ProductVariantCreate,
     db: Session = Depends(get_sync_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.PRODUCTS_CREATE, Permission.PRODUCTS_EDIT]))
 ):
-    """Add a variant to a product.
+    """Add a variant (service tier/plan) to a product.
+
+    Variants represent service tiers (e.g., Basic, Professional, Enterprise) rather than physical variants.
+    Use tier_name and tier_level to organize service tiers.
 
     Security:
     - Requires admin or corporate role
@@ -227,7 +250,7 @@ def update_product_variant(
     variant_id: str,
     variant_data: ProductVariantCreate,
     db: Session = Depends(get_sync_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.PRODUCTS_CREATE, Permission.PRODUCTS_EDIT]))
 ):
     """Update a product variant.
 
@@ -248,7 +271,7 @@ def delete_product_variant(
     product_id: str,
     variant_id: str,
     db: Session = Depends(get_sync_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.PRODUCTS_CREATE, Permission.PRODUCTS_EDIT]))
 ):
     """Delete a product variant.
 
@@ -270,7 +293,7 @@ def delete_product_variant(
 def create_category(
     category_data: ProductCategoryCreate,
     db: Session = Depends(get_sync_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.PRODUCTS_CREATE, Permission.PRODUCTS_EDIT]))
 ):
     """Create a new product category.
 
@@ -332,7 +355,7 @@ def update_category(
     category_id: str,
     category_data: ProductCategoryUpdate,
     db: Session = Depends(get_sync_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.PRODUCTS_CREATE, Permission.PRODUCTS_EDIT]))
 ):
     """Update a product category.
 
@@ -352,7 +375,7 @@ def update_category(
 def delete_category(
     category_id: str,
     db: Session = Depends(get_sync_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.PRODUCTS_CREATE, Permission.PRODUCTS_EDIT]))
 ):
     """Delete a product category.
 
@@ -366,18 +389,18 @@ def delete_category(
 
 
 @router.get("/categories/{category_id}/products", response_model=ProductListResponse)
-def get_category_products(
+async def get_category_products(
     category_id: str,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     sort_by: str = Query("created_at", pattern="^(name|price|created_at|rating|view_count)$"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$"),
-    db: Session = Depends(get_sync_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Get products in a specific category."""
     skip = (page - 1) * page_size
 
-    products, total = ProductService.list_products(
+    products, total = await ProductService.list_products(
         db,
         skip=skip,
         limit=page_size,
@@ -418,7 +441,7 @@ def update_product(
     product_id: str,
     product_data: ProductUpdate,
     db: Session = Depends(get_sync_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.PRODUCTS_CREATE, Permission.PRODUCTS_EDIT]))
 ):
     """Update an existing product.
 
@@ -438,7 +461,7 @@ def update_product(
 def delete_product(
     product_id: str,
     db: Session = Depends(get_sync_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.PRODUCTS_CREATE, Permission.PRODUCTS_EDIT]))
 ):
     """Delete a product.
 

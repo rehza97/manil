@@ -76,12 +76,16 @@ export function CustomerDetail({
   };
 
   const handleActivate = async () => {
-    await activateCustomer.mutateAsync(customerId);
+    const reason = prompt("Enter reason for activation:");
+    if (reason) {
+      await activateCustomer.mutateAsync({ id: customerId, reason });
+    }
   };
 
   const handleSuspend = async () => {
-    if (window.confirm("Are you sure you want to suspend this customer?")) {
-      await suspendCustomer.mutateAsync(customerId);
+    const reason = prompt("Enter reason for suspension:");
+    if (reason && window.confirm("Are you sure you want to suspend this customer?")) {
+      await suspendCustomer.mutateAsync({ id: customerId, reason });
     }
   };
 

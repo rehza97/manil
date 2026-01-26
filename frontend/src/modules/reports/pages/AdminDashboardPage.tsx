@@ -1,19 +1,20 @@
 /**
  * Admin Dashboard Page
-import { formatCurrency } from "@/shared/utils/formatters";
  *
  * System-wide metrics and analytics for administrators.
  */
 
 import React, { useState } from 'react';
 import {
-  UserGroupIcon,
-  TicketIcon,
-  ShoppingBagIcon,
-  CubeIcon,
-  CurrencyDollarIcon,
-  ChartBarIcon,
-} from '@heroicons/react/24/outline';
+  Users,
+  Ticket,
+  ShoppingCart,
+  Package,
+  DollarSign,
+  BarChart3,
+  Box as CubeIcon,
+  Users as UserGroupIcon,
+} from 'lucide-react';
 import { useAdminDashboard } from '../hooks/useReports';
 import { StatCard, LineChart, BarChart, PieChart, DateRangePicker } from '../components';
 import type { DateRange } from '../types/report.types';
@@ -21,6 +22,12 @@ import type { DateRange } from '../types/report.types';
 export const AdminDashboardPage: React.FC = () => {
   const [period, setPeriod] = useState('month');
   const { data: dashboard, isLoading, error } = useAdminDashboard(period);
+
+  // Fetch revenue overview for consistent revenue display
+  const { data: revenueOverview } = useQuery({
+    queryKey: ["revenue", "overview", period],
+    queryFn: () => revenueService.getOverview(period),
+  });
 
   if (error) {
     return (
@@ -65,7 +72,7 @@ export const AdminDashboardPage: React.FC = () => {
           title="Total Customers"
           value={metrics?.total_customers || 0}
           subtitle={`${metrics?.active_customers || 0} active`}
-          icon={<UserGroupIcon className="h-6 w-6" />}
+          icon={<Users className="h-6 w-6" />}
           color="blue"
           loading={isLoading}
         />
@@ -73,7 +80,7 @@ export const AdminDashboardPage: React.FC = () => {
           title="Total Tickets"
           value={metrics?.total_tickets || 0}
           subtitle={`${metrics?.open_tickets || 0} open`}
-          icon={<TicketIcon className="h-6 w-6" />}
+          icon={<Ticket className="h-6 w-6" />}
           color="purple"
           loading={isLoading}
         />
@@ -81,17 +88,16 @@ export const AdminDashboardPage: React.FC = () => {
           title="Total Orders"
           value={metrics?.total_orders || 0}
           subtitle={`${metrics?.completed_orders || 0} completed`}
-          icon={<ShoppingBagIcon className="h-6 w-6" />}
+          icon={<ShoppingCart className="h-6 w-6" />}
           color="green"
           loading={isLoading}
         />
-        <StatCard
+        <RevenueCard
           title="Total Revenue"
-          value={`${(metrics?.total_revenue || 0).toLocaleString()} DZD`}
-          subtitle="From completed orders"
-          icon={<CurrencyDollarIcon className="h-6 w-6" />}
-          color="green"
-          loading={isLoading}
+          value={Number(revenueOverview?.metrics.booked_revenue || metrics?.total_revenue || 0)}
+          type={RevenueType.BOOKED}
+          subtitle="From delivered orders"
+          icon={<DollarSign className="h-6 w-6" />}
         />
         <StatCard
           title="Total Products"
@@ -105,7 +111,7 @@ export const AdminDashboardPage: React.FC = () => {
           title="Pending Customers"
           value={metrics?.pending_customers || 0}
           subtitle="Awaiting verification"
-          icon={<UserGroupIcon className="h-6 w-6" />}
+          icon={<Users className="h-6 w-6" />}
           color="yellow"
           loading={isLoading}
         />
@@ -173,7 +179,7 @@ export const AdminDashboardPage: React.FC = () => {
         {/* Recent Activity */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
-            <ChartBarIcon className="h-5 w-5 mr-2 text-gray-500" />
+            <BarChart3 className="h-5 w-5 mr-2 text-gray-500" />
             Recent Activity
           </h3>
           <div className="space-y-3 max-h-[300px] overflow-y-auto">
@@ -245,7 +251,7 @@ export const AdminDashboardPage: React.FC = () => {
                 %
               </p>
             </div>
-            <TicketIcon className="h-12 w-12 text-blue-600 opacity-50" />
+            <Ticket className="h-12 w-12 text-blue-600 opacity-50" />
           </div>
         </div>
 
@@ -262,7 +268,7 @@ export const AdminDashboardPage: React.FC = () => {
                 %
               </p>
             </div>
-            <ShoppingBagIcon className="h-12 w-12 text-green-600 opacity-50" />
+            <ShoppingCart className="h-12 w-12 text-green-600 opacity-50" />
           </div>
         </div>
 

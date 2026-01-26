@@ -63,7 +63,7 @@ export const LiveContainerLogs: React.FC<LiveContainerLogsProps> = ({
         if (paused) return;
         if (msg.event === "error") {
           setStatus("error");
-          setError(msg.data || "Stream error");
+          setError(msg.data || "Erreur de flux");
           return;
         }
         if (msg.event === "open") return;
@@ -75,7 +75,7 @@ export const LiveContainerLogs: React.FC<LiveContainerLogsProps> = ({
       onError: (e) => {
         if (!abortRef.current?.signal.aborted) {
           setStatus("error");
-          setError(e instanceof Error ? e.message : "Failed to stream logs");
+          setError(e instanceof Error ? e.message : "Impossible de récupérer les logs");
         }
       },
       onClose: () => {
@@ -87,7 +87,7 @@ export const LiveContainerLogs: React.FC<LiveContainerLogsProps> = ({
     }).catch((e) => {
       if (abortRef.current?.signal.aborted) return;
       setStatus("error");
-      setError(e instanceof Error ? e.message : "Failed to stream logs");
+      setError(e instanceof Error ? e.message : "Impossible de récupérer les logs");
     });
   };
 
@@ -104,7 +104,7 @@ export const LiveContainerLogs: React.FC<LiveContainerLogsProps> = ({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2">
-          <div className="text-sm text-slate-600">Tail</div>
+          <div className="text-sm text-slate-600">Dernières lignes</div>
           <Input
             className="w-24"
             type="number"
@@ -122,7 +122,7 @@ export const LiveContainerLogs: React.FC<LiveContainerLogsProps> = ({
             onClick={() => setPaused((p) => !p)}
           >
             {paused ? <Play className="h-4 w-4 mr-2" /> : <Pause className="h-4 w-4 mr-2" />}
-            {paused ? "Resume" : "Pause"}
+            {paused ? "Reprendre" : "Pause"}
           </Button>
           <Button
             variant="outline"
@@ -130,15 +130,15 @@ export const LiveContainerLogs: React.FC<LiveContainerLogsProps> = ({
             onClick={() => setLines([])}
           >
             <Trash2 className="h-4 w-4 mr-2" />
-            Clear
+            Effacer
           </Button>
           <Button variant="outline" size="sm" onClick={connect}>
-            Reconnect
+            Reconnecter
           </Button>
         </div>
 
         <div className="ml-auto text-sm text-slate-600">
-          Status: {status}
+          Statut : {status === "idle" ? "inactif" : status === "connecting" ? "connexion…" : status === "connected" ? "connecté" : "erreur"}
         </div>
       </div>
 

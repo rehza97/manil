@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
-from app.core.dependencies import get_current_user, require_permission, require_role
+from app.core.dependencies import get_current_user, require_permission, require_any_permission
 from app.core.permissions import Permission
 from app.core.exceptions import ForbiddenException
 from app.modules.auth.models import User
@@ -113,7 +113,7 @@ async def get_quote(
 async def create_quote(
     quote_data: QuoteCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT]))
 ):
     """Create a new quote.
 
@@ -130,7 +130,7 @@ async def update_quote(
     quote_id: str,
     quote_data: QuoteUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT]))
 ):
     """Update a quote.
 
@@ -153,7 +153,7 @@ async def update_quote(
 async def delete_quote(
     quote_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["admin"]))
+    current_user: User = Depends(require_permission(Permission.QUOTES_DELETE))
 ):
     """Delete a quote (soft delete).
 
@@ -180,7 +180,7 @@ async def delete_quote(
 async def submit_for_approval(
     quote_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT]))
 ):
     """Submit quote for approval.
 
@@ -196,7 +196,7 @@ async def approve_quote(
     quote_id: str,
     approval_data: QuoteApprovalRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT]))
 ):
     """Approve or reject a quote.
 
@@ -212,7 +212,7 @@ async def send_quote(
     quote_id: str,
     send_data: QuoteSendRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT]))
 ):
     """Send quote to customer.
 
@@ -285,7 +285,7 @@ async def create_new_version(
     quote_id: str,
     version_data: QuoteVersionRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT]))
 ):
     """Create a new version of a quote.
 
@@ -416,7 +416,7 @@ async def generate_quote_pdf(
 @router.post("/expire-old-quotes")
 async def expire_old_quotes(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["admin"]))
+    current_user: User = Depends(require_permission(Permission.QUOTES_DELETE))
 ):
     """Expire old quotes.
 

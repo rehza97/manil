@@ -21,10 +21,27 @@ else
     echo "  ⚠ Redis not available (non-critical)"
 fi
 
-# Run database migrations
-echo "[3/4] Running database migrations..."
-alembic upgrade head
-echo "  ✓ Migrations applied!"
+# Run database migrations with advisory lock to prevent race conditions
+echo "[3/4] Running database migrations with lock coordination..."
+echo "  📍 Working directory: $(pwd)"
+echo "  📍 Script path: /app/scripts/run_migrations_with_lock.py"
+
+# Ensure we're in the right directory
+cd /app || {
+    echo "  ✗ Failed to change to /app directory"
+    exit 1
+}
+
+# Run migration script with error capture
+if python /app/scripts/run_migrations_with_lock.py 2>&1; then
+    echo "  ✓ Migrations applied!"
+else
+    exit_code=$?
+    echo "  ✗ Migration script exited with code: $exit_code"
+    echo "  ⚠ Migration failed or was skipped - check logs above for details"
+    # Don't exit here - allow the service to start even if migrations failed
+    # The migration script will have logged the reason
+fi
 
 # Verify schema
 echo "[4/4] Verifying database schema..."

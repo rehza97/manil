@@ -27,12 +27,12 @@ export const ImageUploadPage: React.FC = () => {
       <div className="flex items-center gap-4">
         <Button variant="outline" size="sm" onClick={handleCancel}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
+          Retour
         </Button>
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Upload Custom Docker Image</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Téléverser une image Docker</h1>
           <p className="text-slate-600 mt-1">
-            Upload a Docker project archive to build a custom image
+            Téléversez une archive de projet Docker pour créer une image personnalisée
           </p>
         </div>
       </div>

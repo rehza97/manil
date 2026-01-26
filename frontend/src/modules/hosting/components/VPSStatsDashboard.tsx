@@ -44,7 +44,7 @@ export function VPSStatsDashboard({
       <Card>
         <CardContent className="py-12">
           <div className="text-center text-slate-600">
-            Stats not available
+            Statistiques non disponibles
           </div>
         </CardContent>
       </Card>
@@ -101,9 +101,9 @@ export function VPSStatsDashboard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Resource Usage</CardTitle>
+        <CardTitle>Utilisation des ressources</CardTitle>
         <CardDescription>
-          Last updated: {format(new Date(stats.current.last_updated), "HH:mm:ss")}
+          Dernière mise à jour : {format(new Date(stats.current.last_updated), "HH:mm:ss")}
         </CardDescription>
       </CardHeader>
 
@@ -135,8 +135,8 @@ export function VPSStatsDashboard({
           <Tabs defaultValue="cpu" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="cpu">CPU</TabsTrigger>
-              <TabsTrigger value="memory">Memory</TabsTrigger>
-              <TabsTrigger value="network">Network</TabsTrigger>
+              <TabsTrigger value="memory">Mémoire</TabsTrigger>
+              <TabsTrigger value="network">Réseau</TabsTrigger>
             </TabsList>
 
             <TabsContent value="cpu" className="mt-4">
@@ -227,7 +227,7 @@ export function VPSStatsDashboard({
           </Tabs>
         ) : (
           <div className="text-center text-muted-foreground py-8">
-            No historical data available yet
+            Aucune donnée historique pour le moment
           </div>
         )}
       </CardContent>

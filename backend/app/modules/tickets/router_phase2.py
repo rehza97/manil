@@ -1,5 +1,6 @@
 """Phase 2 ticket features router - category, template, and filtering endpoints."""
 import uuid
+import re
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy import select, and_, or_, func
@@ -26,6 +27,18 @@ from app.modules.tickets.response_templates import (
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
 
+# ========== HELPER FUNCTIONS ==========
+
+
+def generate_slug(name: str) -> str:
+    """Generate a URL-friendly slug from category name."""
+    slug = name.lower().strip()
+    slug = re.sub(r'[^a-z0-9_]+', '_', slug)  # Replace non-alphanumeric with underscore
+    slug = re.sub(r'^_+|_+$', '', slug)  # Remove leading/trailing underscores
+    slug = re.sub(r'_+', '_', slug)  # Replace multiple underscores with single
+    return slug[:100]  # Ensure it fits in VARCHAR(100)
+
+
 # ========== TICKET CATEGORIES ==========
 
 
@@ -42,14 +55,30 @@ async def create_ticket_category(
 ):
     """Create a new ticket category."""
     try:
+        # Generate slug from name
+        slug = generate_slug(category_data.name)
+        
+        # Ensure uniqueness
+        base_slug = slug
+        counter = 1
+        while True:
+            existing = await db.execute(
+                select(TicketCategory).where(TicketCategory.slug == slug)
+            )
+            if existing.scalar_one_or_none() is None:
+                break
+            slug = f"{base_slug}_{counter}"
+            counter += 1
+        
         category = TicketCategory(
             id=str(uuid.uuid4()),
+            slug=slug,
             **category_data.model_dump(),
         )
         db.add(category)
         await db.commit()
         await db.refresh(category)
-        logger.info(f"Category created: {category.id}")
+        logger.info(f"Category created: {category.id} with slug: {slug}")
         return category
     except Exception as e:
         await db.rollback()

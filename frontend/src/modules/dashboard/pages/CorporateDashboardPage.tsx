@@ -22,71 +22,53 @@ import {
   Plus,
   Eye,
   Building2,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/modules/auth";
+import { useCorporateDashboard } from "../hooks/useDashboard";
+import { RevenueCard } from "@/modules/revenue/components";
+import { useQuery } from "@tanstack/react-query";
+import { revenueService } from "@/modules/revenue/services/revenueService";
 
 const CorporateDashboardPage: React.FC = () => {
   const { user } = useAuth();
+  const { data, isLoading, error } = useCorporateDashboard("month");
 
-  // Mock data - in real app, this would come from API
-  const stats = {
-    totalCustomers: 45,
-    activeTickets: 12,
-    pendingOrders: 8,
-    monthlyRevenue: 15750,
-    kycPending: 3,
+  // Fetch revenue overview for consistent revenue display
+  const { data: revenueOverview } = useQuery({
+    queryKey: ["revenue", "overview", "month"],
+    queryFn: () => revenueService.getOverview("month"),
+  });
+
+  const stats = data?.stats ?? {
+    totalCustomers: 0,
+    activeTickets: 0,
+    pendingOrders: 0,
+    monthlyRevenue: 0,
+    kycPending: 0,
   };
+  const recentCustomers = data?.recentCustomers ?? [];
+  const recentTickets = data?.recentTickets ?? [];
+  const recentOrders = data?.recentOrders ?? [];
 
-  const recentCustomers = [
-    {
-      id: "C-001",
-      name: "TechCorp Solutions",
-      email: "contact@techcorp.com",
-      status: "active",
-      kycStatus: "verified",
-      lastActivity: "2024-01-15",
-    },
-    {
-      id: "C-002",
-      name: "StartupXYZ",
-      email: "admin@startupxyz.com",
-      status: "pending",
-      kycStatus: "pending",
-      lastActivity: "2024-01-14",
-    },
-  ];
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
-  const recentTickets = [
-    {
-      id: "T-001",
-      customer: "TechCorp Solutions",
-      subject: "Server migration request",
-      status: "in_progress",
-      priority: "high",
-      assignedTo: "John Doe",
-      createdAt: "2024-01-15",
-    },
-    {
-      id: "T-002",
-      customer: "StartupXYZ",
-      subject: "Billing inquiry",
-      status: "open",
-      priority: "medium",
-      assignedTo: "Jane Smith",
-      createdAt: "2024-01-14",
-    },
-  ];
-
-  const recentOrders = [
-    {
-      id: "O-001",
-      customer: "TechCorp Solutions",
-      service: "Enterprise VPS Package",
-      status: "processing",
-      amount: 299.99,
-      createdAt: "2024-01-15",
-    },
-  ];
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
+          <p className="text-destructive">Failed to load dashboard data</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -141,22 +123,13 @@ const CorporateDashboardPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Monthly Revenue
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ${stats.monthlyRevenue.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              +12% from last month
-            </p>
-          </CardContent>
-        </Card>
+        <RevenueCard
+          title="Monthly Revenue"
+          value={Number(revenueOverview?.metrics.monthly_revenue || stats.monthlyRevenue || 0)}
+          growth={revenueOverview?.metrics.revenue_growth}
+          subtitle="Recognized revenue (paid invoices)"
+          icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
+        />
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -278,7 +251,8 @@ const CorporateDashboardPage: React.FC = () => {
                       {ticket.customer}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {ticket.subject} • Assigned to {ticket.assignedTo}
+                      {ticket.subject}
+                      {ticket.assignedTo ? ` • Assigned to ${ticket.assignedTo}` : ""}
                     </p>
                   </div>
                   <Button variant="ghost" size="sm" asChild>

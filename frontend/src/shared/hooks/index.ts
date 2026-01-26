@@ -6,3 +6,4 @@
 
 export * from "./useRoutePermissions";
 export * from "./use-toast";
+export * from "./useNotifications";

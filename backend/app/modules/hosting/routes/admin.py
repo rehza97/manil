@@ -1132,11 +1132,11 @@ async def get_monitoring_overview(
         status=SubscriptionStatus.ACTIVE
     )
     
-    # Total monthly revenue
-    total_monthly_revenue = Decimal("0.00")
-    for sub in active_subs:
-        if sub.plan:
-            total_monthly_revenue += sub.plan.monthly_price
+    # Total monthly revenue using RevenueService for consistency
+    from app.modules.revenue.service import RevenueService
+    revenue_service = RevenueService(db)
+    recurring_revenue = await revenue_service.repository.get_recurring_revenue()
+    total_monthly_revenue = recurring_revenue
     
     # Average resource usage (from recent metrics)
     metrics_repo = ContainerMetricsRepository(db)

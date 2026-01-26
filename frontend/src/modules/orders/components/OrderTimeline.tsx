@@ -43,10 +43,10 @@ export function OrderTimeline({ orderId, className }: OrderTimelineProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Order Timeline</CardTitle>
+          <CardTitle className="text-base">Chronologie</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-500">No order selected</p>
+          <p className="text-sm text-gray-500">Aucune commande sélectionnée</p>
         </CardContent>
       </Card>
     );
@@ -56,11 +56,11 @@ export function OrderTimeline({ orderId, className }: OrderTimelineProps) {
     return (
       <Card className="border-red-200 bg-red-50">
         <CardHeader>
-          <CardTitle className="text-red-800">Error Loading Timeline</CardTitle>
+          <CardTitle className="text-red-800">Erreur lors du chargement</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-red-700">
-            {error instanceof Error ? error.message : "Unable to load timeline"}
+            {error instanceof Error ? error.message : "Impossible de charger la chronologie"}
           </p>
         </CardContent>
       </Card>
@@ -71,7 +71,7 @@ export function OrderTimeline({ orderId, className }: OrderTimelineProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Order Timeline</CardTitle>
+          <CardTitle className="text-base">Chronologie</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {Array(3)
@@ -94,10 +94,10 @@ export function OrderTimeline({ orderId, className }: OrderTimelineProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Order Timeline</CardTitle>
+          <CardTitle className="text-base">Chronologie</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-500">No timeline events yet</p>
+          <p className="text-sm text-gray-500">Aucun événement</p>
         </CardContent>
       </Card>
     );
@@ -117,8 +117,8 @@ export function OrderTimeline({ orderId, className }: OrderTimelineProps) {
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle className="text-base">Order Timeline</CardTitle>
-        <CardDescription>{timeline.total} event(s)</CardDescription>
+        <CardTitle className="text-base">Chronologie</CardTitle>
+        <CardDescription>{timeline.total} événement(s)</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -131,29 +131,26 @@ export function OrderTimeline({ orderId, className }: OrderTimelineProps) {
 
             return (
               <div key={entry.id} className="relative flex gap-4 pb-4">
-                {/* Timeline line */}
                 {index < timeline.data.length - 1 && (
                   <div className="absolute left-1 top-8 h-12 w-px bg-gray-200" />
                 )}
 
-                {/* Timeline dot with icon */}
                 <div className="relative z-10 mt-1 flex h-6 w-6 items-center justify-center rounded-full bg-white text-lg">
                   {icon}
                 </div>
 
-                {/* Event content */}
                 <div className="flex-1 pt-0.5">
                   <div className="space-y-1">
                     {isStatusChange ? (
                       <p className="text-sm font-medium">
-                        Status changed from{" "}
+                        Statut :{" "}
                         <Badge
                           variant="outline"
                           className="text-xs"
                         >
                           {entry.previous_status}
                         </Badge>{" "}
-                        to{" "}
+                        →{" "}
                         <Badge
                           className={`text-xs ${
                             STATUS_COLORS[
@@ -185,7 +182,7 @@ export function OrderTimeline({ orderId, className }: OrderTimelineProps) {
                     <p className="text-xs text-gray-500">
                       <span>{formatDate(entry.created_at)}</span>
                       {entry.performed_by && (
-                        <span> • by {entry.performed_by}</span>
+                        <span> — {entry.performed_by}</span>
                       )}
                     </p>
                   </div>

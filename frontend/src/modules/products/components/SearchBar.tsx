@@ -11,7 +11,7 @@ interface SearchBarProps {
 export const SearchBar: React.FC<SearchBarProps> = ({
   onSearch,
   onSelectProduct,
-  placeholder = "Search products...",
+  placeholder = "Rechercher des produits…",
   debounceMs = 300,
 }) => {
   const [query, setQuery] = useState("");
@@ -126,7 +126,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         <div className="absolute top-full left-0 right-0 z-10 mt-2 rounded-lg border border-gray-200 bg-white shadow-lg">
           {results.length === 0 && query ? (
             <div className="px-4 py-3 text-sm text-gray-500 text-center">
-              No products found for "{query}"
+              Aucun produit pour « {query} »
             </div>
           ) : (
             <ul className="max-h-96 overflow-y-auto">

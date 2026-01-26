@@ -24,11 +24,12 @@ import {
 } from "@/shared/components/ui/tabs";
 import {
   useCustomer,
-  useActivateCustomer,
-  useSuspendCustomer,
 } from "@/modules/customers/hooks";
 import { CustomerDetail } from "@/modules/customers/components/CustomerDetail";
 import { KYCPanel } from "@/modules/customers/components/KYCPanel";
+import { StatusTransition } from "@/modules/customers/components/StatusTransition";
+import { ApprovalWorkflow } from "@/modules/customers/components/ApprovalWorkflow";
+import { StatusHistory } from "@/modules/customers/components/StatusHistory";
 import { format } from "date-fns";
 
 export const CustomerDetailsPage: React.FC = () => {
@@ -108,15 +109,6 @@ export const CustomerDetailsPage: React.FC = () => {
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
-          {customer.status === "active" ? (
-            <Button variant="outline" onClick={handleSuspend}>
-              Suspend
-            </Button>
-          ) : (
-            <Button variant="outline" onClick={handleActivate}>
-              Activate
-            </Button>
-          )}
         </div>
       </div>
 
@@ -127,12 +119,26 @@ export const CustomerDetailsPage: React.FC = () => {
       />
 
       {/* Tabs for Additional Information */}
-      <Tabs defaultValue="kyc" className="space-y-4">
+      <Tabs defaultValue="status" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="status">Status Management</TabsTrigger>
+          <TabsTrigger value="approval">Approval Workflow</TabsTrigger>
+          <TabsTrigger value="history">Status History</TabsTrigger>
           <TabsTrigger value="kyc">KYC Management</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
-          <TabsTrigger value="activity">Activity</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="status">
+          <StatusTransition customerId={id || ""} />
+        </TabsContent>
+
+        <TabsContent value="approval">
+          <ApprovalWorkflow customerId={id || ""} />
+        </TabsContent>
+
+        <TabsContent value="history">
+          <StatusHistory customerId={id || ""} />
+        </TabsContent>
 
         <TabsContent value="kyc">
           <KYCPanel customerId={id || ""} showVerificationControls={true} />
@@ -151,27 +157,6 @@ export const CustomerDetailsPage: React.FC = () => {
                 <FileText className="h-12 w-12 mx-auto mb-4 text-slate-300" />
                 <p>Customer notes feature will be available soon</p>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="activity">
-          <Card>
-            <CardHeader>
-              <CardTitle>Customer Activity</CardTitle>
-              <CardDescription>
-                Recent activity and actions for this customer
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button
-                variant="outline"
-                onClick={() =>
-                  navigate(`/admin/logs/users/${customer.user_id || id}`)
-                }
-              >
-                View Full Activity Logs
-              </Button>
             </CardContent>
           </Card>
         </TabsContent>

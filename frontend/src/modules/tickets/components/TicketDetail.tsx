@@ -45,11 +45,11 @@ const priorityColors: Record<string, string> = {
 const formatDateSafe = (dateString: string | null | undefined, formatString: string): string => {
   if (!dateString) return "N/A";
   const date = new Date(dateString);
-  if (isNaN(date.getTime())) return "Invalid date";
+  if (isNaN(date.getTime())) return "Date invalide";
   try {
     return format(date, formatString);
   } catch (error) {
-    return "Invalid date";
+    return "Date invalide";
   }
 };
 
@@ -239,9 +239,9 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
               </div>
             </div>
             <div className="text-right text-sm text-gray-500">
-              <div>Ticket #{ticket.id.slice(0, 8)}</div>
+              <div>Ticket n° {ticket.id.slice(0, 8)}</div>
               <div>
-                Created {formatDateSafe(ticket.createdAt, "MMM dd, yyyy")}
+                Créé le {formatDateSafe(ticket.createdAt, "dd MMM yyyy")}
               </div>
             </div>
           </div>
@@ -252,27 +252,26 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
           {!isClient && (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className="text-sm font-medium text-gray-600">Customer ID</div>
+                <div className="text-sm font-medium text-gray-600">ID client</div>
                 <div className="text-sm">{ticket.customerId}</div>
               </div>
               <div>
-                <div className="text-sm font-medium text-gray-600">Assigned To</div>
-                <div className="text-sm">{ticket.assignedTo || "Unassigned"}</div>
+                <div className="text-sm font-medium text-gray-600">Assigné à</div>
+                <div className="text-sm">{ticket.assignedTo || "Non assigné"}</div>
               </div>
             </div>
           )}
 
-          {/* Assignment Interface - Hide for clients */}
           {!isClient && (
             <div className="border-t pt-6">
-              <h3 className="font-medium mb-3">Assign Ticket</h3>
+              <h3 className="font-medium mb-3">Assigner le ticket</h3>
               <div className="flex gap-2">
                 <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
                   <SelectTrigger className="w-64">
-                    <SelectValue placeholder="Select agent to assign" />
+                    <SelectValue placeholder="Choisir un agent" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Unassign</SelectItem>
+                    <SelectItem value="none">Désassigner</SelectItem>
                     {staffUsers.map((user: any) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.full_name || user.email}
@@ -281,37 +280,35 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
                   </SelectContent>
                 </Select>
                 <Button onClick={handleAssignTicket} disabled={!selectedAssignee || selectedAssignee === "none"}>
-                  Assign
+                  Assigner
                 </Button>
               </div>
             </div>
           )}
 
-          {/* Response Times */}
           {(ticket.firstResponseAt || ticket.resolvedAt) && (
             <div className="border-t pt-6 space-y-3">
               {ticket.firstResponseAt && (
                 <div>
                   <div className="text-sm font-medium text-gray-600">
-                    First Response
+                    Première réponse
                   </div>
                   <div className="text-sm">
-                    {formatDateSafe(ticket.firstResponseAt, "MMM dd, yyyy HH:mm")}
+                    {formatDateSafe(ticket.firstResponseAt, "dd MMM yyyy HH:mm")}
                   </div>
                 </div>
               )}
               {ticket.resolvedAt && (
                 <div>
-                  <div className="text-sm font-medium text-gray-600">Resolved At</div>
+                  <div className="text-sm font-medium text-gray-600">Résolu le</div>
                   <div className="text-sm">
-                    {formatDateSafe(ticket.resolvedAt, "MMM dd, yyyy HH:mm")}
+                    {formatDateSafe(ticket.resolvedAt, "dd MMM yyyy HH:mm")}
                   </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* Description */}
           <div>
             <h3 className="font-medium mb-2">Description</h3>
             <div className="bg-gray-50 p-4 rounded-lg whitespace-pre-wrap">
@@ -319,42 +316,40 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
             </div>
           </div>
 
-          {/* Status Management - Hide for clients */}
           {!isClient && (
             <div className="border-t pt-6">
-              <h3 className="font-medium mb-3">Update Status</h3>
+              <h3 className="font-medium mb-3">Mettre à jour le statut</h3>
               <div className="flex gap-2">
                 <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                   <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Select new status" />
+                    <SelectValue placeholder="Nouveau statut" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="open">Open</SelectItem>
-                    <SelectItem value="answered">Answered</SelectItem>
-                    <SelectItem value="waiting_for_response">Waiting for Response</SelectItem>
-                    <SelectItem value="on_hold">On Hold</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="resolved">Resolved</SelectItem>
-                    <SelectItem value="closed">Closed</SelectItem>
+                    <SelectItem value="open">Ouvert</SelectItem>
+                    <SelectItem value="answered">Répondu</SelectItem>
+                    <SelectItem value="waiting_for_response">En attente de réponse</SelectItem>
+                    <SelectItem value="on_hold">En pause</SelectItem>
+                    <SelectItem value="in_progress">En cours</SelectItem>
+                    <SelectItem value="resolved">Résolu</SelectItem>
+                    <SelectItem value="closed">Fermé</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button onClick={handleStatusChange}>Update Status</Button>
+                <Button onClick={handleStatusChange}>Mettre à jour</Button>
               </div>
             </div>
           )}
 
-          {/* Add Reply */}
           <div className="border-t pt-6">
-            <h3 className="font-medium mb-3">Add Reply</h3>
+            <h3 className="font-medium mb-3">Ajouter une réponse</h3>
             <div className="space-y-2">
               <Textarea
-                placeholder="Enter your reply..."
+                placeholder="Saisir votre réponse…"
                 value={replyMessage}
                 onChange={(e) => setReplyMessage(e.target.value)}
                 rows={4}
               />
               <div className="flex justify-end">
-                <Button onClick={handleAddReply}>Post Reply</Button>
+                <Button onClick={handleAddReply}>Publier</Button>
               </div>
             </div>
           </div>

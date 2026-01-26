@@ -31,6 +31,7 @@ import { Card } from "@/shared/components/ui/card";
 import { Search, RefreshCw, AlertCircle, Server, Eye } from "lucide-react";
 import { SubscriptionStatus } from "../types";
 import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 export const MyVPSPage: React.FC = () => {
   const navigate = useNavigate();
@@ -64,14 +65,14 @@ export const MyVPSPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">My VPS Subscriptions</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Mes abonnements VPS</h1>
           <p className="text-slate-600 mt-1">
-            Manage your VPS hosting subscriptions
+            Gérer vos abonnements VPS
           </p>
         </div>
         <Button onClick={() => navigate("/dashboard/vps/plans")}>
           <Server className="h-4 w-4 mr-2" />
-          Browse Plans
+          Voir les formules
         </Button>
       </div>
 
@@ -80,7 +81,7 @@ export const MyVPSPage: React.FC = () => {
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
-            placeholder="Search by subscription number..."
+            placeholder="Rechercher par n° d'abonnement…"
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -120,8 +121,8 @@ export const MyVPSPage: React.FC = () => {
           <AlertDescription className="flex items-center justify-between">
             <span>
               {(error as any)?.response?.status === 403
-                ? "You don't have permission to access VPS subscriptions. Please contact your administrator."
-                : "Failed to load subscriptions. Please try again."}
+                ? "Vous n'avez pas accès aux abonnements VPS. Contactez l'administrateur."
+                : "Impossible de charger les abonnements. Réessayez."}
             </span>
             {(error as any)?.response?.status !== 403 && (
               <Button
@@ -131,7 +132,7 @@ export const MyVPSPage: React.FC = () => {
                 className="ml-4"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Retry
+                Réessayer
               </Button>
             )}
           </AlertDescription>
@@ -162,13 +163,13 @@ export const MyVPSPage: React.FC = () => {
         <Card className="p-12 text-center">
           <Server className="h-12 w-12 text-slate-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-slate-900 mb-2">
-            No VPS subscriptions yet
+            Aucun abonnement VPS
           </h3>
           <p className="text-slate-600 mb-4">
-            Get started by browsing our VPS hosting plans.
+            Parcourez nos formules VPS pour commencer.
           </p>
           <Button onClick={() => navigate("/dashboard/vps/plans")}>
-            Browse Plans
+            Voir les formules
           </Button>
         </Card>
       )}
@@ -181,11 +182,11 @@ export const MyVPSPage: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Subscription Number</TableHead>
-                    <TableHead>Plan</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Next Billing</TableHead>
-                    <TableHead>Created</TableHead>
+                    <TableHead>N° abonnement</TableHead>
+                    <TableHead>Formule</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Prochaine facturation</TableHead>
+                    <TableHead>Créé le</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -207,7 +208,7 @@ export const MyVPSPage: React.FC = () => {
                           {subscription.subscription_number}
                         </TableCell>
                         <TableCell>
-                          {subscription.plan?.name || "N/A"}
+                          {subscription.plan?.name || "—"}
                         </TableCell>
                         <TableCell>
                           <VPSStatusBadge status={subscription.status} />
@@ -248,12 +249,10 @@ export const MyVPSPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="text-sm text-slate-600">
                 {pagination.total === 0 ? (
-                  "No subscriptions found"
+                  "Aucun abonnement"
                 ) : (
                   <>
-                    Showing {(page - 1) * pageSize + 1} to{" "}
-                    {Math.min(page * pageSize, pagination.total)} of{" "}
-                    {pagination.total} subscriptions
+                    {(page - 1) * pageSize + 1} – {Math.min(page * pageSize, pagination.total)} sur {pagination.total} abonnements
                   </>
                 )}
               </div>
@@ -266,10 +265,10 @@ export const MyVPSPage: React.FC = () => {
                   }}
                   className="px-3 py-1 border rounded-md text-sm"
                 >
-                  <option value={10}>10 per page</option>
-                  <option value={20}>20 per page</option>
-                  <option value={50}>50 per page</option>
-                  <option value={100}>100 per page</option>
+                  <option value={10}>10 par page</option>
+                  <option value={20}>20 par page</option>
+                  <option value={50}>50 par page</option>
+                  <option value={100}>100 par page</option>
                 </select>
                 <Button
                   variant="outline"
@@ -277,10 +276,10 @@ export const MyVPSPage: React.FC = () => {
                   onClick={() => setPage(Math.max(1, page - 1))}
                   disabled={page === 1}
                 >
-                  Previous
+                  Précédent
                 </Button>
                 <span className="text-sm text-slate-600">
-                  Page {page} of {pagination.total_pages}
+                  Page {page} / {pagination.total_pages}
                 </span>
                 <Button
                   variant="outline"
@@ -290,7 +289,7 @@ export const MyVPSPage: React.FC = () => {
                   }
                   disabled={page === pagination.total_pages}
                 >
-                  Next
+                  Suivant
                 </Button>
               </div>
             </div>

@@ -268,7 +268,9 @@ async def update_ticket_status(
 ):
     """Update ticket status with state validation."""
     service = TicketService(db)
-    ticket = await service.change_status(ticket_id, status_update.status, current_user.id)
+    ticket = await service.change_status(
+        ticket_id, status_update.status, status_update.reason, current_user.id
+    )
     return TicketResponse.model_validate(ticket)
 
 

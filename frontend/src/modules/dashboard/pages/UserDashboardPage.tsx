@@ -52,7 +52,7 @@ const UserDashboardPage: React.FC = () => {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
-          <p className="text-destructive">Failed to load dashboard data</p>
+          <p className="text-destructive">Impossible de charger les données du tableau de bord</p>
         </div>
       </div>
     );
@@ -62,9 +62,9 @@ const UserDashboardPage: React.FC = () => {
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-6 text-white">
-        <h1 className="text-2xl font-bold mb-2">Welcome back, {user?.full_name || user?.email}!</h1>
+        <h1 className="text-2xl font-bold mb-2">Bon retour, {user?.full_name || user?.email} !</h1>
         <p className="text-blue-100">
-          Here's an overview of your CloudManager services and activities.
+          Vue d&apos;ensemble de vos services et activités CloudManager.
         </p>
       </div>
 
@@ -115,7 +115,14 @@ const UserDashboardPage: React.FC = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.totalSpent}</div>
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat("fr-DZ", {
+                style: "currency",
+                currency: "DZD",
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              }).format(stats.totalSpent)}
+            </div>
             <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
         </Card>
@@ -127,15 +134,15 @@ const UserDashboardPage: React.FC = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Recent Support Tickets</CardTitle>
+                <CardTitle>Tickets support récents</CardTitle>
                 <CardDescription>
-                  Your latest support requests and their status
+                  Vos dernières demandes et leur statut
                 </CardDescription>
               </div>
               <Button asChild size="sm">
                 <Link to="/dashboard/tickets">
                   <Plus className="h-4 w-4 mr-2" />
-                  New Ticket
+                  Nouveau ticket
                 </Link>
               </Button>
             </div>
@@ -144,7 +151,7 @@ const UserDashboardPage: React.FC = () => {
             <div className="space-y-4">
               {recentTickets.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  No recent tickets
+                  Aucun ticket récent
                 </p>
               ) : (
                 recentTickets.map((ticket) => (
@@ -244,9 +251,9 @@ const UserDashboardPage: React.FC = () => {
       {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
+          <CardTitle>Actions rapides</CardTitle>
           <CardDescription>
-            Common tasks you can perform from your dashboard
+            Tâches courantes depuis votre tableau de bord
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -255,9 +262,9 @@ const UserDashboardPage: React.FC = () => {
               <Link to="/dashboard/tickets/new">
                 <Ticket className="h-5 w-5 mr-2" />
                 <div className="text-left">
-                  <div className="font-medium">Create Support Ticket</div>
+                  <div className="font-medium">Créer un ticket support</div>
                   <div className="text-sm text-muted-foreground">
-                    Get help with your services
+                    Obtenir de l&apos;aide pour vos services
                   </div>
                 </div>
               </Link>
@@ -267,9 +274,9 @@ const UserDashboardPage: React.FC = () => {
               <Link to="/dashboard/catalog">
                 <Package className="h-5 w-5 mr-2" />
                 <div className="text-left">
-                  <div className="font-medium">Browse Services</div>
+                  <div className="font-medium">Parcourir les services</div>
                   <div className="text-sm text-muted-foreground">
-                    Explore our product catalog
+                    Explorer notre catalogue produits
                   </div>
                 </div>
               </Link>
@@ -279,9 +286,9 @@ const UserDashboardPage: React.FC = () => {
               <Link to="/dashboard/profile">
                 <CheckCircle className="h-5 w-5 mr-2" />
                 <div className="text-left">
-                  <div className="font-medium">Update Profile</div>
+                  <div className="font-medium">Modifier le profil</div>
                   <div className="text-sm text-muted-foreground">
-                    Manage your account settings
+                    Gérer les paramètres de votre compte
                   </div>
                 </div>
               </Link>

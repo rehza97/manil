@@ -28,14 +28,15 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { Button } from "@/shared/components/ui/button";
+import { formatCurrency } from "@/shared/utils/formatters";
 import { PaymentMethod } from "../types/invoice.types";
 import { invoiceService } from "../services";
 import { useToast } from "@/shared/components/ui/use-toast";
 
 const paymentSchema = z.object({
-  amount: z.number().min(0.01, "Amount must be greater than 0"),
+  amount: z.number().min(0.01, "Le montant doit être supérieur à 0"),
   payment_method: z.nativeEnum(PaymentMethod),
-  payment_date: z.string().min(1, "Payment date is required"),
+  payment_date: z.string().min(1, "La date de paiement est requise"),
   payment_notes: z.string().optional(),
 });
 
@@ -75,7 +76,7 @@ export const PaymentRecordingForm: React.FC<PaymentRecordingFormProps> = ({
   const handleSubmit = async (data: PaymentFormData) => {
     if (data.amount > maxAmount) {
       form.setError("amount", {
-        message: `Amount cannot exceed ${formatCurrency(maxAmount)}`,
+        message: `Le montant ne peut pas dépasser ${formatCurrency(maxAmount)}`,
       });
       return;
     }
@@ -90,20 +91,20 @@ export const PaymentRecordingForm: React.FC<PaymentRecordingFormProps> = ({
       });
 
       toast({
-        title: "Success",
-        description: "Payment recorded successfully",
+        title: "Succès",
+        description: "Paiement enregistré",
       });
       form.reset();
       onOpenChange(false);
       onSuccess?.();
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to record payment",
+        title: "Erreur",
+        description: error.message || "Échec de l'enregistrement du paiement",
         variant: "destructive",
       });
       form.setError("root", {
-        message: error.message || "Failed to record payment",
+        message: error.message || "Échec de l'enregistrement du paiement",
       });
     } finally {
       setIsSubmitting(false);
@@ -148,29 +149,29 @@ export const PaymentRecordingForm: React.FC<PaymentRecordingFormProps> = ({
               name="payment_method"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Payment Method</FormLabel>
+                  <FormLabel>Mode de paiement</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select payment method" />
+                        <SelectValue placeholder="Choisir un mode" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       <SelectItem value={PaymentMethod.BANK_TRANSFER}>
-                        Bank Transfer
+                        Virement
                       </SelectItem>
-                      <SelectItem value={PaymentMethod.CHECK}>Check</SelectItem>
-                      <SelectItem value={PaymentMethod.CASH}>Cash</SelectItem>
+                      <SelectItem value={PaymentMethod.CHECK}>Chèque</SelectItem>
+                      <SelectItem value={PaymentMethod.CASH}>Espèces</SelectItem>
                       <SelectItem value={PaymentMethod.CREDIT_CARD}>
-                        Credit Card
+                        Carte bancaire
                       </SelectItem>
                       <SelectItem value={PaymentMethod.MOBILE_PAYMENT}>
-                        Mobile Payment
+                        Paiement mobile
                       </SelectItem>
-                      <SelectItem value={PaymentMethod.OTHER}>Other</SelectItem>
+                      <SelectItem value={PaymentMethod.OTHER}>Autre</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -183,7 +184,7 @@ export const PaymentRecordingForm: React.FC<PaymentRecordingFormProps> = ({
               name="payment_date"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Payment Date</FormLabel>
+                  <FormLabel>Date du paiement</FormLabel>
                   <FormControl>
                     <Input {...field} type="date" />
                   </FormControl>
@@ -197,9 +198,9 @@ export const PaymentRecordingForm: React.FC<PaymentRecordingFormProps> = ({
               name="payment_notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Payment Notes (Optional)</FormLabel>
+                  <FormLabel>Notes (optionnel)</FormLabel>
                   <FormControl>
-                    <Textarea {...field} placeholder="Additional notes" rows={3} />
+                    <Textarea {...field} placeholder="Notes supplémentaires" rows={3} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -212,10 +213,10 @@ export const PaymentRecordingForm: React.FC<PaymentRecordingFormProps> = ({
                 variant="outline"
                 onClick={() => onOpenChange(false)}
               >
-                Cancel
+                Annuler
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Recording..." : "Record Payment"}
+                {isSubmitting ? "Enregistrement…" : "Enregistrer le paiement"}
               </Button>
             </DialogFooter>
           </form>

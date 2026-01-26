@@ -41,6 +41,7 @@ import { DNSStatusBadge, DNSZoneForm } from "../../components";
 import { useDNSZones, useCreateDNSZone } from "../../hooks";
 import { DNSZoneStatus, DNSZoneType } from "../../types";
 import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 export default function MyDNSZonesPage() {
   const navigate = useNavigate();
@@ -77,28 +78,28 @@ export default function MyDNSZonesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">My DNS Zones</h1>
+          <h1 className="text-3xl font-bold">Mes zones DNS</h1>
           <p className="text-muted-foreground">
-            Manage DNS zones for your VPS subscriptions
+            Gérer les zones DNS de vos abonnements VPS
           </p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Create Zone
+          Créer une zone
         </Button>
       </div>
 
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Filters</CardTitle>
+          <CardTitle>Filtres</CardTitle>
         </CardHeader>
         <CardContent className="flex gap-4">
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by zone name..."
+                placeholder="Rechercher par nom de zone…"
                 className="pl-8"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -110,13 +111,13 @@ export default function MyDNSZonesPage() {
             onValueChange={(value) => setStatusFilter(value as DNSZoneStatus | "all")}
           >
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Filter by status" />
+              <SelectValue placeholder="Filtrer par statut" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value={DNSZoneStatus.ACTIVE}>Active</SelectItem>
-              <SelectItem value={DNSZoneStatus.PENDING}>Pending</SelectItem>
-              <SelectItem value={DNSZoneStatus.SUSPENDED}>Suspended</SelectItem>
+              <SelectItem value="all">Tous les statuts</SelectItem>
+              <SelectItem value={DNSZoneStatus.ACTIVE}>Actif</SelectItem>
+              <SelectItem value={DNSZoneStatus.PENDING}>En attente</SelectItem>
+              <SelectItem value={DNSZoneStatus.SUSPENDED}>Suspendu</SelectItem>
             </SelectContent>
           </Select>
         </CardContent>
@@ -126,7 +127,7 @@ export default function MyDNSZonesPage() {
       {error && (
         <Alert variant="destructive">
           <AlertDescription>
-            Failed to load DNS zones. Please try again later.
+            Impossible de charger les zones DNS. Réessayez plus tard.
           </AlertDescription>
         </Alert>
       )}
@@ -134,9 +135,9 @@ export default function MyDNSZonesPage() {
       {/* Zones Table */}
       <Card>
         <CardHeader>
-          <CardTitle>DNS Zones ({totalCount})</CardTitle>
+          <CardTitle>Zones DNS ({totalCount})</CardTitle>
           <CardDescription>
-            Click on a zone to view and manage its DNS records
+            Cliquez sur une zone pour afficher et gérer ses enregistrements DNS
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -148,16 +149,16 @@ export default function MyDNSZonesPage() {
             </div>
           ) : zones.length === 0 ? (
             <div className="rounded-lg border border-dashed p-12 text-center">
-              <h3 className="mb-2 text-lg font-semibold">No DNS zones found</h3>
+              <h3 className="mb-2 text-lg font-semibold">Aucune zone DNS</h3>
               <p className="mb-4 text-sm text-muted-foreground">
                 {searchQuery || statusFilter !== "all"
-                  ? "Try adjusting your filters"
-                  : "Create your first DNS zone to get started"}
+                  ? "Essayez d'ajuster vos filtres"
+                  : "Créez votre première zone DNS pour commencer"}
               </p>
               {!searchQuery && statusFilter === "all" && (
                 <Button onClick={() => setShowCreateDialog(true)}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Create DNS Zone
+                  Créer une zone DNS
                 </Button>
               )}
             </div>
@@ -166,11 +167,11 @@ export default function MyDNSZonesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Zone Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Records</TableHead>
-                    <TableHead>TTL Default</TableHead>
-                    <TableHead>Created</TableHead>
+                    <TableHead>Zone</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Enregistrements</TableHead>
+                    <TableHead>TTL par défaut</TableHead>
+                    <TableHead>Créée le</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -187,13 +188,13 @@ export default function MyDNSZonesPage() {
                         <DNSStatusBadge status={zone.status} />
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {zone.record_count || 0} records
+                        {zone.record_count || 0} enregistrement(s)
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {zone.ttl_default}s
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {format(new Date(zone.created_at), "MMM d, yyyy")}
+                        {format(new Date(zone.created_at), "dd MMM yyyy", { locale: fr })}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -208,7 +209,7 @@ export default function MyDNSZonesPage() {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Create DNS Zone</DialogTitle>
+            <DialogTitle>Créer une zone DNS</DialogTitle>
           </DialogHeader>
           <DNSZoneForm
             onSubmit={handleCreateZone}

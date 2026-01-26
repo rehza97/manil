@@ -1,7 +1,37 @@
 """Product catalogue request/response schemas."""
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field, ConfigDict
+from enum import Enum
+from pydantic import BaseModel, Field, ConfigDict, field_validator
+
+
+class ServiceType(str, Enum):
+    """Service type enumeration."""
+    DNS = "dns"
+    SSL = "ssl"
+    EMAIL = "email"
+    BACKUP = "backup"
+    MONITORING = "monitoring"
+    DOMAIN = "domain"
+    GENERAL = "general"
+    HOSTING = "hosting"
+    STORAGE = "storage"
+    CDN = "cdn"
+
+
+class BillingCycle(str, Enum):
+    """Billing cycle enumeration."""
+    MONTHLY = "monthly"
+    YEARLY = "yearly"
+    ONE_TIME = "one_time"
+    USAGE_BASED = "usage_based"
+
+
+class ProvisioningType(str, Enum):
+    """Service provisioning type enumeration."""
+    AUTOMATIC = "automatic"
+    MANUAL = "manual"
+    API = "api"
 
 
 class ProductCategoryBase(BaseModel):
@@ -71,12 +101,17 @@ class ProductImageResponse(ProductImageBase):
 
 
 class ProductVariantBase(BaseModel):
-    """Base product variant schema."""
+    """Base product variant schema - represents service tiers/plans."""
 
     name: str = Field(..., min_length=1, max_length=255)
     sku: str = Field(..., min_length=1, max_length=100)
     price_adjustment: Optional[float] = None
-    stock_quantity: int = Field(0, ge=0)
+    tier_name: Optional[str] = Field(None, max_length=50, description="Tier name: basic, professional, enterprise, etc.")
+    tier_level: Optional[int] = Field(None, ge=1, description="Tier level for ordering (1=basic, 2=professional, 3=enterprise)")
+    stock_quantity: Optional[int] = Field(
+        None, ge=0,
+        description="DEPRECATED: Not applicable for service tiers. Kept for backward compatibility."
+    )
 
 
 class ProductVariantCreate(ProductVariantBase):
@@ -100,19 +135,53 @@ class ProductVariantResponse(ProductVariantBase):
 
 
 class ProductBase(BaseModel):
-    """Base product schema."""
+    """Base product schema - represents digital services."""
 
     name: str = Field(..., min_length=1, max_length=255)
     slug: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = Field(None, max_length=5000)
     short_description: Optional[str] = Field(None, max_length=500)
     sku: str = Field(..., min_length=1, max_length=100)
-    barcode: Optional[str] = Field(None, max_length=100)
+    
+    # Service Configuration
+    service_type: ServiceType = Field(
+        ServiceType.GENERAL,
+        description="Type of service: dns, ssl, email, backup, monitoring, domain, general, etc."
+    )
+    billing_cycle: BillingCycle = Field(
+        BillingCycle.ONE_TIME,
+        description="Billing frequency: monthly, yearly, one_time, usage_based"
+    )
+    is_recurring: bool = Field(False, description="Whether service auto-renews")
+    provisioning_type: Optional[ProvisioningType] = Field(
+        None,
+        description="How service is provisioned: automatic, manual, api"
+    )
+    auto_renew: bool = Field(False, description="Auto-renewal enabled by default")
+    trial_period_days: Optional[int] = Field(None, ge=0, description="Trial period in days")
+    service_config: Optional[dict] = Field(None, description="Flexible service configuration (JSON)")
+    
+    # Pricing
     regular_price: float = Field(..., gt=0)
     sale_price: Optional[float] = Field(None, gt=0)
-    cost_price: Optional[float] = Field(None, gt=0)
-    stock_quantity: int = Field(0, ge=0)
-    low_stock_threshold: int = Field(10, ge=0)
+    
+    # Deprecated fields (kept for backward compatibility)
+    barcode: Optional[str] = Field(
+        None, max_length=100,
+        description="DEPRECATED: Not applicable for digital services. Kept for backward compatibility."
+    )
+    cost_price: Optional[float] = Field(
+        None, gt=0,
+        description="DEPRECATED: Not applicable for digital services. Kept for backward compatibility."
+    )
+    stock_quantity: Optional[int] = Field(
+        None, ge=0,
+        description="DEPRECATED: Not applicable for digital services. Use NULL for unlimited. Kept for backward compatibility."
+    )
+    low_stock_threshold: Optional[int] = Field(
+        None, ge=0,
+        description="DEPRECATED: Not applicable for digital services. Kept for backward compatibility."
+    )
 
 
 class ProductCreate(ProductBase):
@@ -126,19 +195,45 @@ class ProductCreate(ProductBase):
 
 
 class ProductUpdate(BaseModel):
-    """Schema for updating a product."""
+    """Schema for updating a product (digital service)."""
 
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     slug: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = Field(None, max_length=5000)
     short_description: Optional[str] = Field(None, max_length=500)
     sku: Optional[str] = Field(None, min_length=1, max_length=100)
-    barcode: Optional[str] = Field(None, max_length=100)
+    
+    # Service Configuration
+    service_type: Optional[ServiceType] = None
+    billing_cycle: Optional[BillingCycle] = None
+    is_recurring: Optional[bool] = None
+    provisioning_type: Optional[ProvisioningType] = None
+    auto_renew: Optional[bool] = None
+    trial_period_days: Optional[int] = Field(None, ge=0)
+    service_config: Optional[dict] = None
+    
+    # Pricing
     regular_price: Optional[float] = Field(None, gt=0)
     sale_price: Optional[float] = Field(None, gt=0)
-    cost_price: Optional[float] = Field(None, gt=0)
-    stock_quantity: Optional[int] = Field(None, ge=0)
-    low_stock_threshold: Optional[int] = Field(None, ge=0)
+    
+    # Deprecated fields (kept for backward compatibility)
+    barcode: Optional[str] = Field(
+        None, max_length=100,
+        description="DEPRECATED: Not applicable for digital services. Kept for backward compatibility."
+    )
+    cost_price: Optional[float] = Field(
+        None, gt=0,
+        description="DEPRECATED: Not applicable for digital services. Kept for backward compatibility."
+    )
+    stock_quantity: Optional[int] = Field(
+        None, ge=0,
+        description="DEPRECATED: Not applicable for digital services. Kept for backward compatibility."
+    )
+    low_stock_threshold: Optional[int] = Field(
+        None, ge=0,
+        description="DEPRECATED: Not applicable for digital services. Kept for backward compatibility."
+    )
+    
     category_id: Optional[str] = None
     is_featured: Optional[bool] = None
     is_active: Optional[bool] = None
@@ -190,7 +285,13 @@ class ProductFilterParams(BaseModel):
     max_price: Optional[float] = None
     search: Optional[str] = None
     is_featured: Optional[bool] = None
-    in_stock: Optional[bool] = None
+    service_type: Optional[ServiceType] = Field(None, description="Filter by service type")
+    billing_cycle: Optional[BillingCycle] = Field(None, description="Filter by billing cycle")
+    is_recurring: Optional[bool] = Field(None, description="Filter recurring services")
+    in_stock: Optional[bool] = Field(
+        None,
+        description="DEPRECATED: Not applicable for digital services. Kept for backward compatibility."
+    )
     sort_by: str = Field("created_at", pattern="^(name|price|created_at|rating|view_count)$")
     sort_order: str = Field("desc", pattern="^(asc|desc)$")
     page: int = Field(1, ge=1)

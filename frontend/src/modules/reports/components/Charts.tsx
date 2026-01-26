@@ -21,7 +21,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  TooltipProps,
 } from 'recharts';
 import type { ChartDataPoint, PieChartData, LineChartData } from '../types/report.types';
 
@@ -106,6 +105,7 @@ interface LineChartProps {
   xAxisKey?: string;
   title?: string;
   height?: number;
+  formatter?: (value: number) => string;
 }
 
 export const LineChart: React.FC<LineChartProps> = ({
@@ -114,6 +114,7 @@ export const LineChart: React.FC<LineChartProps> = ({
   xAxisKey = 'name',
   title,
   height = 300,
+  formatter,
 }) => {
   return (
     <div className="w-full">
@@ -129,6 +130,7 @@ export const LineChart: React.FC<LineChartProps> = ({
               border: '1px solid #E5E7EB',
               borderRadius: '8px',
             }}
+            formatter={formatter ? (value: any) => formatter(Number(value)) : undefined}
           />
           <Legend />
           {lines.map((line, index) => (
@@ -298,6 +300,17 @@ export const DonutChart: React.FC<PieChartProps> = (props) => {
 // ============================================================================
 // Custom Tooltip Component
 // ============================================================================
+
+interface TooltipProps<ValueType = number, NameType = string> {
+  active?: boolean;
+  payload?: Array<{
+    value: ValueType;
+    name: NameType;
+    color?: string;
+    [key: string]: any;
+  }>;
+  label?: string | number;
+}
 
 interface CustomTooltipProps extends TooltipProps<number, string> {
   valueFormatter?: (value: number) => string;

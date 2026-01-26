@@ -1,6 +1,12 @@
 """
 Security utilities for authentication and password handling.
 Includes JWT token management and password hashing.
+
+JWT: Access tokens (30 min), refresh tokens (7 days), type "access"|"refresh".
+Algorithm HS256. Decode via decode_token(); validate "type" and "exp" in payload.
+
+Logout: Currently client-side only (tokens cleared in storage). For production,
+consider a server-side token blacklist (e.g. Redis) and revoke on logout.
 """
 import secrets
 from datetime import datetime, timedelta
@@ -10,6 +16,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from app.config.settings import get_settings
+from app.core.logging import logger
 
 settings = get_settings()
 
@@ -33,7 +40,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def get_password_hash(password: str) -> str:
     """
-    Hash a password using bcrypt.
+    Hash a password using Argon2 (with bcrypt fallback for compatibility).
 
     Args:
         password: Plain text password
@@ -150,5 +157,123 @@ def verify_reset_token(token: str) -> str | None:
     """
     payload = decode_token(token)
     if payload and payload.get("type") == "reset":
+        return payload.get("sub")
+    return None
+
+
+def generate_reset_code() -> str:
+    """
+    Generate a 6-digit password reset code.
+
+    Returns:
+        6-digit code string
+    """
+    return f"{secrets.randbelow(1000000):06d}"
+
+
+async def store_reset_code(email: str, code: str, method: str) -> bool:
+    """
+    Store password reset code in Redis with 1 hour expiration.
+
+    Args:
+        email: User email address
+        code: 6-digit reset code
+        method: Reset method ('email' or 'sms')
+
+    Returns:
+        True if stored successfully
+    """
+    try:
+        from app.config.redis import get_redis
+        import json
+        from datetime import datetime, timezone
+        
+        redis_client = await get_redis()
+        key = f"password_reset_code:{email}"
+        value = json.dumps({
+            "code": code,
+            "method": method,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        # Store for 1 hour (3600 seconds)
+        await redis_client.setex(key, 3600, value)
+        return True
+    except Exception as e:
+        logger.error(f"Failed to store reset code in Redis: {e}")
+        return False
+
+
+async def verify_reset_code(email: str, code: str) -> bool:
+    """
+    Verify password reset code from Redis.
+
+    Args:
+        email: User email address
+        code: 6-digit reset code to verify
+
+    Returns:
+        True if code is valid and not expired
+    """
+    try:
+        from app.config.redis import get_redis
+        import json
+        
+        redis_client = await get_redis()
+        key = f"password_reset_code:{email}"
+        stored_data = await redis_client.get(key)
+        
+        if not stored_data:
+            return False
+        
+        data = json.loads(stored_data)
+        return data.get("code") == code
+    except Exception as e:
+        logger.error(f"Failed to verify reset code from Redis: {e}")
+        return False
+
+
+async def delete_reset_code(email: str) -> None:
+    """
+    Delete password reset code from Redis after use.
+
+    Args:
+        email: User email address
+    """
+    try:
+        from app.config.redis import get_redis
+        redis_client = await get_redis()
+        key = f"password_reset_code:{email}"
+        await redis_client.delete(key)
+    except Exception as e:
+        logger.warning(f"Failed to delete reset code from Redis: {e}")
+
+
+def create_pending_2fa_token(user_id: str) -> str:
+    """
+    Create a short-lived JWT for 2FA-at-login flow.
+    Used when password is correct but 2FA must be verified before issuing real tokens.
+
+    Args:
+        user_id: User ID (sub)
+
+    Returns:
+        Encoded JWT with type "pending_2fa", 5 min expiry
+    """
+    expire = datetime.utcnow() + timedelta(minutes=5)
+    to_encode = {"sub": user_id, "exp": expire, "type": "pending_2fa"}
+    return jwt.encode(
+        to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
+    )
+
+
+def decode_pending_2fa_token(token: str) -> str | None:
+    """
+    Decode pending-2FA token and return user_id if valid.
+
+    Returns:
+        User ID (sub) or None if invalid/expired
+    """
+    payload = decode_token(token)
+    if payload and payload.get("type") == "pending_2fa":
         return payload.get("sub")
     return None

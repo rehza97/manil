@@ -3,22 +3,22 @@ import { Lock, Shield, FileText, Zap } from "lucide-react";
 export const securityFeatures = [
   {
     icon: Lock,
-    title: "2FA Authentication",
-    description: "TOTP & SMS two-factor authentication for all accounts",
+    title: "Authentification 2FA",
+    description: "Authentification à deux facteurs TOTP (application authentificateur) pour tous les comptes.",
   },
   {
     icon: Shield,
-    title: "RBAC System",
-    description: "Granular role-based access control with 40+ permissions",
+    title: "Système RBAC",
+    description: "Contrôle d'accès granulaire par rôles avec plus de 40 permissions.",
   },
   {
     icon: FileText,
-    title: "Complete Audit Trail",
-    description: "Track every action, login attempt, and data modification",
+    title: "Traçabilité complète",
+    description: "Suivi de chaque action, tentative de connexion et modification des données.",
   },
   {
     icon: Zap,
-    title: "Rate Limiting",
-    description: "Automatic protection against brute force and DDoS attacks",
+    title: "Limitation du débit",
+    description: "Protection automatique contre les attaques par force brute et DDoS.",
   },
 ];

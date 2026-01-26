@@ -502,3 +502,37 @@ class TicketReportService:
             )
             for row in data
         ]
+
+    async def get_tickets_for_export(
+        self,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch flat list of tickets as dicts for CSV/Excel/PDF export.
+
+        Returns dicts with keys: id, subject, status, priority, created_at,
+        customer_id, assigned_to_id, first_response_at, resolved_at.
+        """
+        conditions = [Ticket.deleted_at.is_(None)]
+        if start_date:
+            conditions.append(Ticket.created_at >= start_date)
+        if end_date:
+            conditions.append(Ticket.created_at <= end_date)
+        query = select(Ticket).where(and_(*conditions)).order_by(Ticket.created_at.desc())
+        result = await self.db.execute(query)
+        tickets = result.scalars().all()
+        return [
+            {
+                "id": t.id,
+                "subject": t.title,
+                "status": t.status,
+                "priority": t.priority or "",
+                "created_at": t.created_at.isoformat() if t.created_at else "",
+                "customer_id": t.customer_id or "",
+                "assigned_to_id": t.assigned_to or "",
+                "first_response_at": t.first_response_at.isoformat() if t.first_response_at else "",
+                "resolved_at": t.resolved_at.isoformat() if t.resolved_at else "",
+            }
+            for t in tickets
+        ]

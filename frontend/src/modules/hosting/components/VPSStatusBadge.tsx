@@ -38,7 +38,7 @@ export function VPSStatusBadge({ status, className }: VPSStatusBadgeProps) {
           variant: "default",
           icon: CheckCircle2,
           className: "bg-green-100 text-green-800 hover:bg-green-100",
-          label: status === SubscriptionStatus.ACTIVE ? "Active" : "Running",
+          label: status === SubscriptionStatus.ACTIVE ? "Actif" : "En cours",
         };
 
       case SubscriptionStatus.PENDING:
@@ -53,12 +53,12 @@ export function VPSStatusBadge({ status, className }: VPSStatusBadgeProps) {
           className: "bg-blue-100 text-blue-800 hover:bg-blue-100",
           label:
             status === SubscriptionStatus.PENDING
-              ? "Pending"
+              ? "En attente"
               : status === SubscriptionStatus.PROVISIONING
-              ? "Provisioning"
+              ? "En cours"
               : status === ContainerStatus.CREATING
-              ? "Creating"
-              : "Rebooting",
+              ? "Création"
+              : "Redémarrage",
         };
 
       case SubscriptionStatus.SUSPENDED:
@@ -67,7 +67,7 @@ export function VPSStatusBadge({ status, className }: VPSStatusBadgeProps) {
           variant: "secondary",
           icon: status === SubscriptionStatus.SUSPENDED ? PauseCircle : Square,
           className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
-          label: status === SubscriptionStatus.SUSPENDED ? "Suspended" : "Stopped",
+          label: status === SubscriptionStatus.SUSPENDED ? "Suspendu" : "Arrêté",
         };
 
       case SubscriptionStatus.CANCELLED:
@@ -88,7 +88,7 @@ export function VPSStatusBadge({ status, className }: VPSStatusBadgeProps) {
           variant: "destructive",
           icon: AlertTriangle,
           className: "bg-red-100 text-red-800 hover:bg-red-100",
-          label: "Error",
+          label: "Erreur",
         };
 
       default:

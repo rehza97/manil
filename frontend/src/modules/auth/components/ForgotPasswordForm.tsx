@@ -2,13 +2,15 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/shared/components/ui/radio-group";
+import { Loader2, ArrowLeft, Mail, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { authService } from "../services";
 
 export const ForgotPasswordForm = () => {
   const [email, setEmail] = useState("");
+  const [method, setMethod] = useState<"email" | "sms">("email");
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +19,7 @@ export const ForgotPasswordForm = () => {
     e.preventDefault();
 
     if (!email) {
-      setError("Please enter your email address");
+      setError("Veuillez saisir votre adresse e-mail.");
       return;
     }
 
@@ -25,10 +27,10 @@ export const ForgotPasswordForm = () => {
     setError(null);
 
     try {
-      await authService.requestPasswordReset(email);
+      await authService.requestPasswordReset(email, method);
       setIsSubmitted(true);
-    } catch (err) {
-      setError("Failed to send reset email. Please try again.");
+    } catch {
+      setError("Échec de l'envoi. Réessayez.");
     } finally {
       setIsLoading(false);
     }
@@ -37,9 +39,9 @@ export const ForgotPasswordForm = () => {
   if (isSubmitted) {
     return (
       <div className="space-y-6 text-center">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
           <svg
-            className="w-8 h-8 text-green-600"
+            className="h-8 w-8 text-green-600"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -55,34 +57,44 @@ export const ForgotPasswordForm = () => {
 
         <div className="space-y-2">
           <h3 className="text-lg font-semibold text-slate-900">
-            Check your email
+            {method === "sms" ? "Consultez votre téléphone" : "Consultez votre boîte mail"}
           </h3>
           <p className="text-slate-600">
-            We've sent a password reset link to{" "}
-            <span className="font-medium">{email}</span>
+            {method === "sms" ? (
+              <>
+                Nous avons envoyé un code de réinitialisation par SMS au numéro associé à{" "}
+                <span className="font-medium">{email}</span>
+              </>
+            ) : (
+              <>
+                Nous avons envoyé un lien de réinitialisation à{" "}
+                <span className="font-medium">{email}</span>
+              </>
+            )}
           </p>
         </div>
 
         <div className="space-y-4">
           <p className="text-sm text-slate-500">
-            Didn't receive the email? Check your spam folder or{" "}
+            Vous ne l&apos;avez pas reçu ? Vérifiez les spams ou{" "}
             <button
+              type="button"
               onClick={() => {
                 setIsSubmitted(false);
                 setEmail("");
               }}
-              className="text-blue-600 hover:text-blue-700 font-medium"
+              className="font-medium text-brand-primary hover:text-brand-primary/90"
             >
-              try again
+              réessayer
             </button>
           </p>
 
           <Link
             to="/login"
-            className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700"
+            className="inline-flex items-center text-sm font-medium text-brand-primary hover:text-brand-primary/90"
           >
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Back to login
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            Retour à la connexion
           </Link>
         </div>
       </div>
@@ -93,11 +105,10 @@ export const ForgotPasswordForm = () => {
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
         <h3 className="text-lg font-semibold text-slate-900">
-          Forgot your password?
+          Mot de passe oublié ?
         </h3>
         <p className="text-slate-600">
-          Enter your email address and we'll send you a link to reset your
-          password.
+          Entrez votre adresse e-mail et nous vous enverrons un lien pour réinitialiser votre mot de passe.
         </p>
       </div>
 
@@ -109,38 +120,44 @@ export const ForgotPasswordForm = () => {
 
       <div className="space-y-2">
         <Label htmlFor="email" className="text-sm font-medium">
-          Email <span className="text-red-500">*</span>
+          E-mail <span className="text-red-500">*</span>
         </Label>
         <Input
           id="email"
           name="email"
           type="email"
-          placeholder="Enter your email"
+          placeholder="Saisissez votre e-mail"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={isLoading}
           required
+          className="border-slate-200"
         />
       </div>
 
-      <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+      <Button
+        type="submit"
+        className="w-full bg-brand-primary hover:bg-brand-primary/90"
+        size="lg"
+        disabled={isLoading}
+      >
         {isLoading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Sending reset link...
+            {method === "sms" ? "Envoi du code…" : "Envoi du lien…"}
           </>
         ) : (
-          "Send reset link"
+          method === "sms" ? "Envoyer le code" : "Envoyer le lien"
         )}
       </Button>
 
       <div className="text-center">
         <Link
           to="/login"
-          className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700"
+          className="inline-flex items-center text-sm font-medium text-brand-primary hover:text-brand-primary/90"
         >
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          Back to login
+          <ArrowLeft className="mr-1 h-4 w-4" />
+          Retour à la connexion
         </Link>
       </div>
     </form>

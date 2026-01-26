@@ -1,6 +1,5 @@
 /**
  * Order Reports Page
-import { formatCurrency } from "@/shared/utils/formatters";
  *
  * Order analytics and performance reports.
  */
@@ -21,12 +20,15 @@ import {
   ExportButton,
 } from '../components';
 import {
-  ShoppingBagIcon,
-  CurrencyDollarIcon,
-  ChartBarIcon,
-  TrendingUpIcon,
-} from '@heroicons/react/24/outline';
+  ShoppingCart,
+  DollarSign,
+  BarChart3,
+  TrendingUp,
+} from 'lucide-react';
 import type { DateRange } from '../types/report.types';
+import { RevenueCard } from '@/modules/revenue/components';
+import { RevenueType } from '@/modules/revenue/types/revenue.types';
+import { formatRevenue } from '@/shared/utils/revenueFormatters';
 
 export const OrderReportsPage: React.FC = () => {
   const [dateRange, setDateRange] = useState<DateRange>({ period: 'month' });
@@ -67,28 +69,28 @@ export const OrderReportsPage: React.FC = () => {
         <StatCard
           title="Total Orders"
           value={valueMetrics?.total_orders || 0}
-          icon={<ShoppingBagIcon className="h-6 w-6" />}
+          icon={<ShoppingCart className="h-6 w-6" />}
           color="blue"
           loading={valueLoading}
         />
-        <StatCard
+        <RevenueCard
           title="Total Revenue"
-          value={`${(valueMetrics?.total_value || 0).toLocaleString()} DZD`}
-          icon={<CurrencyDollarIcon className="h-6 w-6" />}
-          color="green"
-          loading={valueLoading}
+          value={Number(valueMetrics?.total_value || 0)}
+          type={RevenueType.BOOKED}
+          subtitle="From order values"
+          icon={<DollarSign className="h-6 w-6" />}
         />
         <StatCard
           title="Avg Order Value"
-          value={`${(valueMetrics?.avg_order_value || 0).toLocaleString()} DZD`}
-          icon={<ChartBarIcon className="h-6 w-6" />}
+          value={formatRevenue(valueMetrics?.avg_order_value || 0)}
+          icon={<BarChart3 className="h-6 w-6" />}
           color="purple"
           loading={valueLoading}
         />
         <StatCard
           title="Max Order Value"
-          value={`${(valueMetrics?.max_order_value || 0).toLocaleString()} DZD`}
-          icon={<TrendingUpIcon className="h-6 w-6" />}
+          value={formatRevenue(valueMetrics?.max_order_value || 0)}
+          icon={<TrendingUp className="h-6 w-6" />}
           color="yellow"
           loading={valueLoading}
         />
@@ -156,15 +158,16 @@ export const OrderReportsPage: React.FC = () => {
                 'Avg Order Value': item.avg_order_value,
               }))}
               lines={[
-                { dataKey: 'Revenue', name: 'Revenue (DZD)', color: '#10B981' },
+                { dataKey: 'Revenue', name: 'Revenue', color: '#10B981' },
                 {
                   dataKey: 'Avg Order Value',
-                  name: 'Avg Order Value (DZD)',
+                  name: 'Avg Order Value',
                   color: '#8B5CF6',
                 },
               ]}
               title="Monthly Revenue Trends"
               height={300}
+              formatter={(value: number) => formatRevenue(value)}
             />
           ) : (
             <div className="flex items-center justify-center h-[300px] text-gray-500">
@@ -225,7 +228,7 @@ export const OrderReportsPage: React.FC = () => {
                       {product.quantity_sold}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                      {product.total_revenue.toLocaleString()} DZD
+                      {formatRevenue(Number(product.total_revenue))}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="w-full bg-gray-200 rounded-full h-2">
@@ -274,7 +277,7 @@ export const OrderReportsPage: React.FC = () => {
                 </div>
                 <p className="text-2xl font-bold text-gray-900 mb-1">{item.count}</p>
                 <p className="text-sm text-green-600 font-medium">
-                  {item.total_value.toLocaleString()} DZD
+                  {formatRevenue(Number(item.total_value))}
                 </p>
               </div>
             ))}

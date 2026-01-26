@@ -38,6 +38,12 @@ export interface LoginResponse {
   token_type: string;
   user: UserResponse;
   requires_2fa?: boolean;
+  pending_2fa_token?: string;
+}
+
+export interface CompleteLogin2FARequest {
+  pending_2fa_token: string;
+  code: string;
 }
 
 export interface UserResponse {
@@ -54,20 +60,44 @@ export interface UserResponse {
 
 export interface Enable2FAResponse {
   secret: string;
-  qr_code: string;
+  qr_code_url: string;
   backup_codes: string[];
 }
 
 export interface Verify2FARequest {
-  token: string;
+  code: string;
+}
+
+export interface SetupRequired2FARequest {
+  email: string;
+  password: string;
+}
+
+export interface VerifySetupRequired2FARequest {
+  email: string;
+  password: string;
+  code: string;
+}
+
+export interface VerifySetupRequired2FAResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface Check2FARequirementResponse {
+  is_required: boolean;
+  role: string | null;
 }
 
 export interface PasswordResetRequestRequest {
   email: string;
+  method?: "email" | "sms";
 }
 
 export interface PasswordResetConfirmRequest {
-  token: string;
+  token?: string;
+  code?: string;
+  email?: string;
   new_password: string;
 }
 
@@ -172,6 +202,20 @@ export const authApi = {
   },
 
   /**
+   * Complete login after 2FA (when login returns requires_2fa).
+   * POST /api/v1/auth/2fa/complete-login
+   */
+  completeLogin2FA: async (
+    data: CompleteLogin2FARequest
+  ): Promise<LoginResponse> => {
+    const response: AxiosResponse<LoginResponse> = await apiClient.post(
+      "/auth/2fa/complete-login",
+      data
+    );
+    return response.data;
+  },
+
+  /**
    * Verify 2FA token
    * POST /api/v1/auth/2fa/verify
    */
@@ -186,6 +230,46 @@ export const authApi = {
    */
   disable2FA: async (data: Verify2FARequest): Promise<{ message: string }> => {
     const response = await apiClient.post("/auth/2fa/disable", data);
+    return response.data;
+  },
+
+  /**
+   * Setup 2FA when required (unauthenticated endpoint)
+   * POST /api/v1/auth/2fa/setup-required
+   */
+  setupRequired2FA: async (
+    data: SetupRequired2FARequest
+  ): Promise<Enable2FAResponse> => {
+    const response: AxiosResponse<Enable2FAResponse> = await apiClient.post(
+      "/auth/2fa/setup-required",
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Verify 2FA setup when required (unauthenticated endpoint)
+   * POST /api/v1/auth/2fa/verify-setup-required
+   */
+  verifySetupRequired2FA: async (
+    data: VerifySetupRequired2FARequest
+  ): Promise<VerifySetupRequired2FAResponse> => {
+    const response: AxiosResponse<VerifySetupRequired2FAResponse> =
+      await apiClient.post("/auth/2fa/verify-setup-required", data);
+    return response.data;
+  },
+
+  /**
+   * Check if 2FA is required for a user's role
+   * GET /api/v1/auth/2fa/check-requirement?email=...
+   */
+  check2FARequirement: async (
+    email: string
+  ): Promise<Check2FARequirementResponse> => {
+    const response: AxiosResponse<Check2FARequirementResponse> =
+      await apiClient.get("/auth/2fa/check-requirement", {
+        params: { email },
+      });
     return response.data;
   },
 

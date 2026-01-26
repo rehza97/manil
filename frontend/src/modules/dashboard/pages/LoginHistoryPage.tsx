@@ -71,7 +71,7 @@ const LoginHistoryPage: React.FC = () => {
         success: item.success === true || (item.action === "login_success"),
         ip_address: item.ip_address || "Unknown",
         user_agent: item.user_agent || "Unknown",
-        location: item.location || "Unknown",
+        location: item.location || "Inconnu",
         device_type,
       };
     });
@@ -123,7 +123,7 @@ const LoginHistoryPage: React.FC = () => {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
-          <p className="text-destructive">Failed to load login history</p>
+          <p className="text-destructive">Impossible de charger l&apos;historique de connexion</p>
         </div>
       </div>
     );
@@ -260,7 +260,7 @@ const LoginHistoryPage: React.FC = () => {
                   <TableCell>
                     <div className="flex items-center space-x-2">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{login.location || "Unknown"}</span>
+                      <span className="text-sm">{login.location || "Inconnu"}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -277,24 +277,22 @@ const LoginHistoryPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Security Tips */}
       <Card>
         <CardHeader>
-          <CardTitle>Security Tips</CardTitle>
+          <CardTitle>Conseils de sécurité</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           <p className="text-sm">
-            • If you notice any suspicious login attempts, change your password
-            immediately
+            • En cas de connexion suspecte, changez immédiatement votre mot de passe
           </p>
           <p className="text-sm">
-            • Enable two-factor authentication for added security
+            • Activez l&apos;authentification à deux facteurs pour plus de sécurité
           </p>
           <p className="text-sm">
-            • Regularly review your login history to detect unauthorized access
+            • Consultez régulièrement votre historique pour détecter les accès non autorisés
           </p>
           <p className="text-sm">
-            • Use strong, unique passwords and avoid sharing your credentials
+            • Utilisez des mots de passe forts et uniques, ne partagez jamais vos identifiants
           </p>
         </CardContent>
       </Card>

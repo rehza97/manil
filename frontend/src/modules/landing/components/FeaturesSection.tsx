@@ -1,39 +1,40 @@
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import { Badge } from "@/shared/components/ui/badge";
 import { features } from "../data/features";
 
 export const FeaturesSection = () => {
   return (
-    <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-16">
-          <Badge className="mb-4">Why Choose Us</Badge>
-          <h2 className="text-4xl font-bold text-slate-900 mb-4">
-            Everything You Need to Succeed Online
+    <section id="features" className="bg-white py-24">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="text-sm font-medium uppercase tracking-wider text-[#38ada9]">
+            Plateforme
+          </p>
+          <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+            Tout ce dont votre entreprise a besoin
           </h2>
-          <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-            Powerful hosting features designed to grow with your business
+          <p className="mt-4 text-lg text-slate-600">
+            CRM, support, catalogue, commandes, facturation, rapports, VPS et DNS dans une seule plateforme.
           </p>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feature, index) => (
             <Card
               key={index}
-              className="hover:shadow-lg transition-shadow border-slate-200"
+              className="group border-slate-200/80 bg-white transition hover:border-[#38ada9]/30 hover:shadow-lg"
             >
-              <CardHeader>
-                <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center mb-4">
-                  <feature.icon className="h-6 w-6 text-blue-600" />
+              <CardHeader className="space-y-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#38ada9]/10 text-[#38ada9] transition group-hover:bg-[#38ada9]/15">
+                  <feature.icon className="h-6 w-6" />
                 </div>
-                <CardTitle className="text-xl">{feature.title}</CardTitle>
-                <CardDescription className="text-slate-600">
+                <CardTitle className="text-lg font-semibold text-slate-900">
+                  {feature.title}
+                </CardTitle>
+                <CardDescription className="text-slate-600 leading-relaxed">
                   {feature.description}
                 </CardDescription>
               </CardHeader>

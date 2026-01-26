@@ -104,7 +104,7 @@ export const VPSInstancePage: React.FC = () => {
       <div className="container mx-auto py-6">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Invalid subscription ID</AlertDescription>
+          <AlertDescription>ID d'abonnement invalide</AlertDescription>
         </Alert>
       </div>
     );
@@ -167,11 +167,11 @@ export const VPSInstancePage: React.FC = () => {
           onClick={() => navigate("/dashboard/vps/subscriptions")}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Subscriptions
+          Retour aux abonnements
         </Button>
         <Alert>
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Subscription not found</AlertDescription>
+          <AlertDescription>Abonnement introuvable</AlertDescription>
         </Alert>
       </div>
     );
@@ -222,7 +222,7 @@ export const VPSInstancePage: React.FC = () => {
         onClick={() => navigate("/dashboard/vps/subscriptions")}
       >
         <ArrowLeft className="h-4 w-4 mr-2" />
-        Back to Subscriptions
+        Retour aux abonnements
       </Button>
 
       {/* Control Panel */}
@@ -241,11 +241,11 @@ export const VPSInstancePage: React.FC = () => {
         <div className="lg:col-span-2">
           <Tabs defaultValue="stats" className="w-full">
             <TabsList>
-              <TabsTrigger value="stats">Stats</TabsTrigger>
+              <TabsTrigger value="stats">Statistiques</TabsTrigger>
               <TabsTrigger value="logs">Logs</TabsTrigger>
-              <TabsTrigger value="timeline">Timeline</TabsTrigger>
+              <TabsTrigger value="timeline">Chronologie</TabsTrigger>
               <TabsTrigger value="terminal">Terminal</TabsTrigger>
-              <TabsTrigger value="deploy">Deploy</TabsTrigger>
+              <TabsTrigger value="deploy">Déploiement</TabsTrigger>
             </TabsList>
 
             <TabsContent value="stats" className="mt-4">
@@ -271,15 +271,15 @@ export const VPSInstancePage: React.FC = () => {
             <TabsContent value="timeline" className="mt-4">
               <Card>
                 <div className="p-6">
-                  <h3 className="text-lg font-semibold mb-4">Subscription Timeline</h3>
+                  <h3 className="text-lg font-semibold mb-4">Chronologie de l'abonnement</h3>
                   {timelineLoading ? (
                     <div className="flex items-center justify-center py-8">
-                      <div className="text-slate-600">Loading timeline...</div>
+                      <div className="text-slate-600">Chargement de la chronologie…</div>
                     </div>
                   ) : timeline && timeline.length > 0 ? (
                     <SubscriptionTimeline events={timeline} />
                   ) : (
-                    <p className="text-slate-600">No timeline events available</p>
+                    <p className="text-slate-600">Aucun événement pour le moment</p>
                   )}
                 </div>
               </Card>

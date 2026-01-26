@@ -12,7 +12,7 @@ import { Card } from "@/shared/components/ui/card";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Badge } from "@/shared/components/ui/badge";
 import { Separator } from "@/shared/components/ui/separator";
-import { useRole, usePermissions, useUpdateRole } from "../../hooks/useRoles";
+import { useRole, usePermissions } from "../../hooks/useRoles";
 import { useToast } from "@/shared/components/ui/use-toast";
 import {
   ArrowLeft,
@@ -24,6 +24,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import type { Permission } from "../../services/roleService";
+import { roleService } from "../../services/roleService";
 
 export const RolePermissionsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -32,10 +33,10 @@ export const RolePermissionsPage: React.FC = () => {
 
   const { data: role, isLoading: roleLoading } = useRole(id!);
   const { data: permissions, isLoading: permissionsLoading } = usePermissions();
-  const updateRole = useUpdateRole();
 
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Initialize selected permissions when role loads
   useEffect(() => {
@@ -60,23 +61,41 @@ export const RolePermissionsPage: React.FC = () => {
 
     if (!id) return;
 
+    setIsUpdating(true);
     try {
-      await updateRole.mutateAsync({
-        roleId: id,
-        roleData: { permission_ids: selectedPermissions },
-      });
+      await roleService.updateRolePermissions(id, selectedPermissions);
       toast({
         title: "Success",
         description: "Role permissions updated successfully",
       });
       navigate(`/admin/roles/${id}`);
     } catch (error: any) {
+      // Handle validation errors (422) - extract message from error response
+      let errorMessage = "Failed to update permissions";
+      
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        // Handle FastAPI validation errors
+        if (Array.isArray(errorData.detail)) {
+          errorMessage = errorData.detail
+            .map((err: any) => err.msg || err.message || `${err.loc?.join('.')}: ${err.msg}`)
+            .join(", ");
+        } else if (errorData.detail) {
+          errorMessage = typeof errorData.detail === "string" 
+            ? errorData.detail 
+            : errorData.detail.message || errorData.detail.msg || "Validation error";
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      }
+      
       toast({
         title: "Error",
-        description:
-          error.response?.data?.detail || "Failed to update permissions",
+        description: errorMessage,
         variant: "destructive",
       });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -339,15 +358,15 @@ export const RolePermissionsPage: React.FC = () => {
                 type="button"
                 variant="outline"
                 onClick={() => navigate(`/admin/roles/${id}`)}
-                disabled={updateRole.isPending}
+                disabled={isUpdating}
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={updateRole.isPending || !hasChanges}
+                disabled={isUpdating || !hasChanges}
               >
-                {updateRole.isPending ? (
+                {isUpdating ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Saving...

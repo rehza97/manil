@@ -15,7 +15,8 @@ from pydantic import BaseModel
 
 from app.config.database import get_db
 from app.config.redis import get_redis
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_permission
+from app.core.permissions import Permission
 from app.modules.auth.models import User
 from app.modules.customers.models import Customer
 from app.modules.audit.models import AuditLog, AuditAction
@@ -101,6 +102,7 @@ class SystemLogsResponse(BaseModel):
 @router.get("/stats")
 async def get_system_stats(
     db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: User = Depends(require_permission(Permission.SYSTEM_VIEW)),
 ):
     """
     Get system statistics.
@@ -162,59 +164,14 @@ async def get_system_stats(
         # Orders table doesn't exist yet (migration not run)
         total_orders = 0
 
-    # Get monthly revenue from paid invoices
-    # Calculate revenue for current month
-    current_month_start = datetime.utcnow().replace(
-        day=1, hour=0, minute=0, second=0, microsecond=0
-    )
-    # #region agent log
-    with open('/tmp/debug.log', 'a') as f:
-        f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"system/router.py:166","message":"Before query - using cast to string","data":{"PAID_value":InvoiceStatus.PAID.value,"PARTIALLY_PAID_value":InvoiceStatus.PARTIALLY_PAID.value},"timestamp":int(datetime.utcnow().timestamp()*1000)})+'\n')
-    # #endregion
-    # Cast enum to string and compare with explicit lowercase string values to bypass enum binding
-    monthly_revenue_result = await db.execute(
-        select(func.sum(Invoice.paid_amount))
-        .where(
-            and_(
-                Invoice.deleted_at.is_(None),
-                or_(
-                    cast(Invoice.status, String) == InvoiceStatus.PAID.value,
-                    cast(Invoice.status, String) == InvoiceStatus.PARTIALLY_PAID.value
-                ),
-                Invoice.paid_at >= current_month_start
-            )
-        )
-    )
-    monthly_revenue = float(monthly_revenue_result.scalar() or 0)
-
-    # Calculate revenue for previous month (for growth calculation)
-    previous_month_start = (current_month_start - timedelta(days=1)).replace(
-        day=1, hour=0, minute=0, second=0, microsecond=0
-    )
-    # Cast enum to string and compare with explicit lowercase string values to bypass enum binding
-    previous_month_revenue_result = await db.execute(
-        select(func.sum(Invoice.paid_amount))
-        .where(
-            and_(
-                Invoice.deleted_at.is_(None),
-                or_(
-                    cast(Invoice.status, String) == InvoiceStatus.PAID.value,
-                    cast(Invoice.status, String) == InvoiceStatus.PARTIALLY_PAID.value
-                ),
-                Invoice.paid_at >= previous_month_start,
-                Invoice.paid_at < current_month_start
-            )
-        )
-    )
-    previous_month_revenue = float(previous_month_revenue_result.scalar() or 0)
-
-    # Calculate revenue growth percentage
-    if previous_month_revenue > 0:
-        revenue_growth = ((monthly_revenue - previous_month_revenue) / previous_month_revenue) * 100
-    elif monthly_revenue > 0:
-        revenue_growth = 100.0  # First month with revenue
-    else:
-        revenue_growth = 0.0
+    # Get monthly revenue using revenue service
+    from app.modules.revenue.service import RevenueService
+    revenue_service = RevenueService(db)
+    revenue_overview = await revenue_service.get_overview(period="month")
+    
+    monthly_revenue = float(revenue_overview.metrics.monthly_revenue)
+    previous_month_revenue = float(revenue_overview.metrics.previous_month_revenue)
+    revenue_growth = revenue_overview.metrics.revenue_growth
 
     # Calculate system uptime from earliest audit log
     system_uptime = await _calculate_system_uptime(db)
@@ -306,6 +263,7 @@ async def _calculate_avg_response_time(db: AsyncSession) -> float:
 @router.get("/health/detailed")
 async def get_detailed_health(
     db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: User = Depends(require_permission(Permission.SYSTEM_HEALTH)),
 ):
     """
     Get detailed system health information.
@@ -438,7 +396,8 @@ async def get_detailed_health(
 @router.get("/activity/recent")
 async def get_recent_activity(
     db: Annotated[AsyncSession, Depends(get_db)],
-    limit: int = 10
+    limit: int = 10,
+    current_user: User = Depends(require_permission(Permission.AUDIT_VIEW)),
 ):
     """
     Get recent system activity.
@@ -472,6 +431,7 @@ async def get_recent_activity(
 @router.get("/users/by-role")
 async def get_users_by_role(
     db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: User = Depends(require_permission(Permission.USERS_VIEW)),
 ):
     """
     Get user statistics by role.
@@ -510,7 +470,7 @@ async def get_performance_metrics(
     db: Annotated[AsyncSession, Depends(get_db)],
     start_date: Optional[datetime] = Query(None, description="Start date for metrics"),
     end_date: Optional[datetime] = Query(None, description="End date for metrics"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_PERFORMANCE)),
 ):
     """
     Get system performance metrics.
@@ -518,12 +478,6 @@ async def get_performance_metrics(
     Returns:
         Performance metrics including response times, resource usage, and trends.
     """
-    # Check if user is admin
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can access performance metrics"
-        )
 
     # Default to last 30 days if not specified
     if not end_date:
@@ -781,7 +735,7 @@ async def get_alerts(
     resolved: Optional[bool] = Query(None, description="Filter by resolved status"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=100, description="Items per page"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_ALERTS)),
 ):
     """
     Get system alerts.
@@ -789,12 +743,6 @@ async def get_alerts(
     Returns:
         List of system alerts with pagination.
     """
-    # Check if user is admin
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can access system alerts"
-        )
 
     # For now, return empty alerts list
     # In production, you'd have a dedicated alerts table
@@ -814,7 +762,7 @@ async def get_alerts(
 async def resolve_alert(
     alert_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_ALERTS)),
 ):
     """
     Resolve a system alert.
@@ -825,11 +773,6 @@ async def resolve_alert(
     Returns:
         Updated alert
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can resolve alerts"
-        )
 
     # Find the alert (stored as audit log)
     result = await db.execute(
@@ -867,7 +810,7 @@ async def resolve_alert(
 async def acknowledge_alert(
     alert_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_ALERTS)),
 ):
     """
     Acknowledge a system alert.
@@ -878,11 +821,6 @@ async def acknowledge_alert(
     Returns:
         Updated alert
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can acknowledge alerts"
-        )
 
     # Find the alert
     result = await db.execute(
@@ -929,7 +867,7 @@ async def get_system_logs(
     end_date: Optional[datetime] = Query(None, description="End date"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=100, description="Items per page"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_LOGS)),
 ):
     """
     Get system logs.
@@ -937,11 +875,6 @@ async def get_system_logs(
     Returns:
         List of system logs with pagination.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can access system logs"
-        )
 
     # Use audit logs with system-related actions as system logs
     # Include SYSTEM_ERROR, CONFIG_CHANGE, and other system actions

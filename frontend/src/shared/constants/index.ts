@@ -38,6 +38,7 @@ export const PAGINATION = {
 export const COLORS = {
   PRIMARY: "#38ada9",
   SECONDARY: "#3c6382",
+  BLUE: "#2563eb",
 } as const;
 
 /**

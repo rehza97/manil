@@ -42,57 +42,60 @@ export const RegisterForm = () => {
         <Alert variant="destructive">
           <AlertDescription>
             {registerMutation.error.message ||
-              "Registration failed. Please try again."}
+              "La création du compte a échoué. Réessayez."}
           </AlertDescription>
         </Alert>
       )}
 
       <div className="space-y-2">
         <Label htmlFor="name" className="text-sm font-medium">
-          Full Name <span className="text-red-500">*</span>
+          Nom complet <span className="text-red-500">*</span>
         </Label>
         <Input
           id="name"
           name="name"
           type="text"
-          placeholder="Enter your full name"
+          placeholder="Saisissez votre nom complet"
           value={formData.name}
           onChange={handleInputChange("name")}
           disabled={registerMutation.isPending}
           required
+          className="border-slate-200"
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="email" className="text-sm font-medium">
-          Email <span className="text-red-500">*</span>
+          E-mail <span className="text-red-500">*</span>
         </Label>
         <Input
           id="email"
           name="email"
           type="email"
-          placeholder="Enter your email"
+          placeholder="Saisissez votre e-mail"
           value={formData.email}
           onChange={handleInputChange("email")}
           disabled={registerMutation.isPending}
           required
+          className="border-slate-200"
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="password" className="text-sm font-medium">
-          Password <span className="text-red-500">*</span>
+          Mot de passe <span className="text-red-500">*</span>
         </Label>
         <div className="relative">
           <Input
             id="password"
             name="password"
             type={showPassword ? "text" : "password"}
-            placeholder="Create a password"
+            placeholder="Créez un mot de passe"
             value={formData.password}
             onChange={handleInputChange("password")}
             disabled={registerMutation.isPending}
             required
+            className="border-slate-200"
           />
           <button
             type="button"
@@ -110,18 +113,19 @@ export const RegisterForm = () => {
 
       <div className="space-y-2">
         <Label htmlFor="confirmPassword" className="text-sm font-medium">
-          Confirm Password <span className="text-red-500">*</span>
+          Confirmer le mot de passe <span className="text-red-500">*</span>
         </Label>
         <div className="relative">
           <Input
             id="confirmPassword"
             name="confirmPassword"
             type={showConfirmPassword ? "text" : "password"}
-            placeholder="Confirm your password"
+            placeholder="Confirmez votre mot de passe"
             value={formData.confirmPassword}
             onChange={handleInputChange("confirmPassword")}
             disabled={registerMutation.isPending}
             required
+            className="border-slate-200"
           />
           <button
             type="button"
@@ -149,13 +153,13 @@ export const RegisterForm = () => {
             htmlFor="acceptTerms"
             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
           >
-            I agree to the{" "}
-            <a href="#" className="text-blue-600 hover:text-blue-700 underline">
-              Terms of Service
+            J&apos;accepte les{" "}
+            <a href="#" className="font-medium text-brand-primary underline hover:text-brand-primary/90">
+              Conditions d&apos;utilisation
             </a>{" "}
-            and{" "}
-            <a href="#" className="text-blue-600 hover:text-blue-700 underline">
-              Privacy Policy
+            et la{" "}
+            <a href="#" className="font-medium text-brand-primary underline hover:text-brand-primary/90">
+              Politique de confidentialité
             </a>
           </Label>
         </div>
@@ -163,17 +167,17 @@ export const RegisterForm = () => {
 
       <Button
         type="submit"
-        className="w-full"
+        className="w-full bg-brand-primary hover:bg-brand-primary/90"
         size="lg"
         disabled={registerMutation.isPending || !acceptTerms}
       >
         {registerMutation.isPending ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Creating account...
+            Création du compte…
           </>
         ) : (
-          "Create Account"
+          "Créer un compte"
         )}
       </Button>
     </form>

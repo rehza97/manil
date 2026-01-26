@@ -52,7 +52,7 @@ export const comparisonService = {
             : undefined,
         rating: product.rating,
         review_count: product.review_count,
-        is_available: product.stock_quantity > 0,
+        is_available: product.is_active && product.is_visible, // Services are available if active and visible
         specifications: specifications_by_product[product.id] || {},
       }));
 

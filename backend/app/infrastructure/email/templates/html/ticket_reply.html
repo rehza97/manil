@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>New Reply on Ticket {{ ticket_id }}</h2>
+<p>Your support ticket has received a new reply.</p>
+<p><strong>Ticket ID:</strong> {{ ticket_id }}</p>
+<p><strong>Subject:</strong> {{ subject }}</p>
+<p><strong>Replied by:</strong> {{ reply_author }}</p>
+{% if is_internal %}
+<p><em>This is an internal note and not visible to the customer.</em></p>
+{% endif %}
+<a href="{{ site_url }}/tickets/{{ ticket_id }}" class="button">View Ticket</a>
+{% endblock %}

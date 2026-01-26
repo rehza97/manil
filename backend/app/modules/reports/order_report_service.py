@@ -5,7 +5,7 @@ Provides order analytics and reports.
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from sqlalchemy import select, func, and_, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -314,3 +314,36 @@ class OrderReportService:
         delivered = await self.db.scalar(delivered_query) or 0
 
         return round((delivered / total) * 100, 2)
+
+    async def get_orders_for_export(
+        self,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch flat list of orders as dicts for CSV/Excel/PDF export.
+
+        Returns dicts with keys: id, order_number, customer_id, status,
+        subtotal_amount, tax_amount, total_amount, created_at.
+        """
+        conditions = [Order.deleted_at.is_(None)]
+        if start_date:
+            conditions.append(Order.created_at >= start_date)
+        if end_date:
+            conditions.append(Order.created_at <= end_date)
+        query = select(Order).where(and_(*conditions)).order_by(Order.created_at.desc())
+        result = await self.db.execute(query)
+        orders = result.scalars().all()
+        return [
+            {
+                "id": o.id,
+                "order_number": o.order_number or "",
+                "customer_id": o.customer_id or "",
+                "status": o.status.value if hasattr(o.status, "value") else str(o.status),
+                "subtotal_amount": float(o.subtotal) if o.subtotal is not None else 0.0,
+                "tax_amount": float(o.tax_amount) if o.tax_amount is not None else 0.0,
+                "total_amount": float(o.total_amount) if o.total_amount is not None else 0.0,
+                "created_at": o.created_at.isoformat() if o.created_at else "",
+            }
+            for o in orders
+        ]

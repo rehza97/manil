@@ -5,11 +5,11 @@ import { TwoFactorSetup } from "../components/TwoFactorSetup";
 export const TwoFactorSetupPage: React.FC = () => {
   return (
     <AuthLayout
-      title="Set up Two-Factor Authentication"
-      subtitle="Add an extra layer of security to your account"
-      footerText="Skip for now"
+      title="Activer la double authentification (2FA)"
+      subtitle="Renforcez la sécurité de votre compte"
+      footerText="Passer pour l'instant"
       footerLink="/dashboard"
-      footerLinkText="Continue to dashboard"
+      footerLinkText="Aller au tableau de bord"
     >
       <TwoFactorSetup />
     </AuthLayout>

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_db, require_permission, get_current_user
 from app.core.exceptions import NotFoundException, ConflictException, ValidationException
+from app.core.permissions import Permission
 from app.modules.tickets.services.tag_service import TagService
 from app.modules.tickets.schemas import TagCreate, TagUpdate, TagResponse, TicketTagAssignment
 
@@ -15,7 +16,7 @@ def create_tag(
     tag_data: TagCreate,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
-    _: None = Depends(require_permission("TICKETS_MANAGE")),
+    _: None = Depends(require_permission(Permission.TICKETS_MANAGE)),
 ):
     """Create a new tag.
 
@@ -31,7 +32,7 @@ def create_tag(
 def get_tag(
     tag_id: str,
     db: Session = Depends(get_db),
-    _: None = Depends(require_permission("TICKETS_VIEW")),
+    _: None = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
     """Get a tag by ID.
 
@@ -49,7 +50,7 @@ def list_tags(
     limit: int = Query(100, ge=1, le=500),
     search: str = Query(None, min_length=1),
     db: Session = Depends(get_db),
-    _: None = Depends(require_permission("TICKETS_VIEW")),
+    _: None = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
     """List all tags with pagination and search.
 
@@ -69,7 +70,7 @@ def update_tag(
     tag_id: str,
     tag_data: TagUpdate,
     db: Session = Depends(get_db),
-    _: None = Depends(require_permission("TICKETS_MANAGE")),
+    _: None = Depends(require_permission(Permission.TICKETS_MANAGE)),
 ):
     """Update a tag.
 
@@ -87,7 +88,7 @@ def update_tag(
 def delete_tag(
     tag_id: str,
     db: Session = Depends(get_db),
-    _: None = Depends(require_permission("TICKETS_MANAGE")),
+    _: None = Depends(require_permission(Permission.TICKETS_MANAGE)),
 ):
     """Delete a tag.
 
@@ -102,7 +103,7 @@ def delete_tag(
 @router.post("/{tag_id}/statistics", response_model=dict)
 def get_tag_statistics(
     db: Session = Depends(get_db),
-    _: None = Depends(require_permission("TICKETS_VIEW")),
+    _: None = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
     """Get tag statistics.
 

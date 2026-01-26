@@ -19,6 +19,16 @@ export const useCustomerDashboard = (period: string = "month") => {
   });
 };
 
+/**
+ * Get corporate dashboard data
+ */
+export const useCorporateDashboard = (period: string = "month") => {
+  return useQuery({
+    queryKey: ["dashboard", "corporate", period],
+    queryFn: () => dashboardService.getCorporateDashboard(period),
+  });
+};
+
 
 
 

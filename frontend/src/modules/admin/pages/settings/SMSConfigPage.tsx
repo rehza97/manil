@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { Save, Loader2, RefreshCw, MessageSquare } from "lucide-react";
+import { Save, Loader2, RefreshCw, MessageSquare, Info } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -118,11 +118,21 @@ export const SMSConfigPage: React.FC = () => {
         </p>
       </div>
 
+      <Alert className="mb-6">
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          <strong>Custom Gateway:</strong> When using the "custom" provider, SMS messages are queued 
+          in the database and sent via the Flutter SMS Gateway app running on a mobile device. 
+          The app polls for pending messages and sends them using the device's native SMS capabilities. 
+          No external SMS service credentials are required.
+        </AlertDescription>
+      </Alert>
+
       <Card>
         <CardHeader>
           <CardTitle>SMS Provider Settings</CardTitle>
           <CardDescription>
-            Configure your SMS service provider (Twilio/Infobip)
+            Configure your SMS service provider (Custom Gateway, Twilio, Infobip)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

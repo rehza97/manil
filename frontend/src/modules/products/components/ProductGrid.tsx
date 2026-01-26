@@ -44,9 +44,9 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
             />
           </svg>
         </div>
-        <h3 className="text-lg font-semibold text-foreground mb-2">No products found</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-2">Aucun produit trouvé</h3>
         <p className="text-sm text-muted-foreground text-center max-w-sm">
-          Try adjusting your filters or search criteria to find what you're looking for.
+          Modifiez vos filtres ou critères de recherche pour affiner les résultats.
         </p>
       </div>
     );

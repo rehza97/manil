@@ -15,6 +15,7 @@ from app.core.rate_limiter import (
     two_fa_rate_limit,
     registration_rate_limit,
     token_refresh_rate_limit,
+    two_fa_setup_required_rate_limit,
 )
 from app.modules.auth.session import SessionManager, SessionData
 from app.modules.auth.schemas import (
@@ -26,10 +27,14 @@ from app.modules.auth.schemas import (
     RefreshTokenRequest,
     Enable2FAResponse,
     Verify2FARequest,
+    CompleteLogin2FARequest,
     PasswordResetRequest,
     PasswordResetConfirm,
     PasswordResetResponse,
     ChangePasswordRequest,
+    SetupRequired2FARequest,
+    VerifySetupRequired2FARequest,
+    VerifySetupRequired2FAResponse,
 )
 from app.modules.auth.service import AuthService
 from app.modules.audit.schemas import AuditLogFilter
@@ -88,6 +93,28 @@ async def login(
     """
     service = AuthService(db)
     return await service.login(login_data.email, login_data.password, request)
+
+
+@router.post("/2fa/complete-login", response_model=LoginResponse)
+@two_fa_rate_limit
+async def complete_login_2fa(
+    body: CompleteLogin2FARequest,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """
+    Complete login after 2FA verification.
+
+    Call when login returns requires_2fa=True. Submit pending_2fa_token and TOTP code.
+    Returns full LoginResponse with access_token and refresh_token.
+
+    Security:
+    - Rate limited: 5 attempts per 5 minutes per IP
+    """
+    service = AuthService(db)
+    return await service.complete_login_2fa(
+        body.pending_2fa_token, body.code, request
+    )
 
 
 @router.post("/refresh")
@@ -209,13 +236,131 @@ async def request_password_reset(
         Password reset confirmation message
     """
     service = AuthService(db)
-    await service.request_password_reset(reset_data.email)
+    method = getattr(reset_data, "method", "email")
+    await service.request_password_reset(reset_data.email, method=method)
 
     # Always return success for security (don't reveal if email exists)
+    if method == "sms":
+        message = "If the email exists and has a phone number, a password reset code has been sent via SMS"
+    else:
+        message = "If the email exists, a password reset link has been sent"
+    
     return PasswordResetResponse(
-        message="If the email exists, a password reset link has been sent",
+        message=message,
         email=reset_data.email,
     )
+
+
+@router.post("/2fa/setup-required", response_model=Enable2FAResponse)
+@two_fa_setup_required_rate_limit
+async def setup_required_2fa(
+    setup_data: SetupRequired2FARequest,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """
+    Setup 2FA when required for role (unauthenticated endpoint).
+    
+    Allows users to enable 2FA before first login when their role requires it.
+    Verifies credentials using email/password instead of JWT token.
+
+    Security:
+    - Rate limited: 5 attempts per 15 minutes per IP
+    - Requires valid email/password credentials
+    - Only works if 2FA is required for user's role
+    - Only works if 2FA is not already enabled
+
+    Args:
+        setup_data: Email and password for credential verification
+        request: FastAPI request for rate limiting and audit logging
+        db: Database session
+
+    Returns:
+        2FA setup information with QR code
+
+    Raises:
+        UnauthorizedException: If credentials are invalid
+        ValidationException: If 2FA is already enabled or not required
+    """
+    service = AuthService(db)
+    return await service.setup_required_2fa(
+        setup_data.email, setup_data.password, request
+    )
+
+
+@router.post("/2fa/verify-setup-required", response_model=VerifySetupRequired2FAResponse)
+@two_fa_setup_required_rate_limit
+async def verify_setup_required_2fa(
+    verify_data: VerifySetupRequired2FARequest,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """
+    Verify 2FA code during required setup (unauthenticated endpoint).
+    
+    Verifies credentials and 2FA code to complete the setup process.
+    After successful verification, user can proceed with login.
+
+    Security:
+    - Rate limited: 5 attempts per 15 minutes per IP
+    - Requires valid email/password credentials
+    - Verifies TOTP code
+
+    Args:
+        verify_data: Email, password, and TOTP code
+        request: FastAPI request for rate limiting and audit logging
+        db: Database session
+
+    Returns:
+        Verification result
+
+    Raises:
+        UnauthorizedException: If credentials are invalid
+        ValidationException: If 2FA code is invalid
+    """
+    service = AuthService(db)
+    return await service.verify_setup_required_2fa(
+        verify_data.email, verify_data.password, verify_data.code, request
+    )
+
+
+@router.get("/2fa/check-requirement")
+@two_fa_setup_required_rate_limit
+async def check_2fa_requirement(
+    email: str = Query(..., description="User email address"),
+    request: Request = None,
+    db: Annotated[AsyncSession, Depends(get_db)] = ...,
+):
+    """
+    Check if 2FA is required for a user's role (public endpoint).
+    
+    Allows frontend to check 2FA requirement before login attempt.
+    Does not require authentication and does not reveal if user exists.
+
+    Security:
+    - Rate limited: 5 attempts per 15 minutes per IP
+    - Does not reveal if email exists (returns False if user not found)
+
+    Args:
+        email: User email address
+        request: FastAPI request for rate limiting
+        db: Database session
+
+    Returns:
+        Dictionary with is_required flag and role (if user exists)
+    """
+    from app.modules.settings.utils import is_2fa_required
+    from app.modules.auth.repository import UserRepository
+
+    repository = UserRepository(db)
+    user = await repository.get_by_email(email)
+
+    # Don't reveal if user exists for security
+    if not user:
+        return {"is_required": False, "role": None}
+
+    is_required = await is_2fa_required(db, user.role.value)
+    return {"is_required": is_required, "role": user.role.value}
 
 
 @router.post("/password-reset/confirm", response_model=UserResponse)
@@ -234,7 +379,25 @@ async def confirm_password_reset(
         Updated user information
     """
     service = AuthService(db)
-    user = await service.reset_password(reset_data.token, reset_data.new_password)
+    
+    # Support both token (email) and code (SMS) methods
+    if reset_data.token:
+        user = await service.reset_password(
+            token=reset_data.token,
+            new_password=reset_data.new_password
+        )
+    elif reset_data.code and reset_data.email:
+        user = await service.reset_password(
+            code=reset_data.code,
+            email=reset_data.email,
+            new_password=reset_data.new_password
+        )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either token or (code and email) must be provided"
+        )
+    
     return user
 
 

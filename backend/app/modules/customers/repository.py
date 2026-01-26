@@ -11,6 +11,7 @@ from app.modules.customers.schemas import (
     CustomerUpdate,
     CustomerStatus,
     CustomerType,
+    ApprovalStatus,
 )
 
 logger = logging.getLogger(__name__)
@@ -179,6 +180,8 @@ class CustomerRepository:
         
         if status_str:
             customer.status = CustomerStatus(status_str)
+        
+        # approval_status defaults to NOT_REQUIRED in model, so no need to set it explicitly
         
         # #region agent log
         try:

@@ -28,6 +28,9 @@ from app.modules.hosting.services.docker_service import DockerManagementService
 from app.modules.hosting.services.cgroup_service import CgroupMonitoringService
 from app.infrastructure.email.service import EmailService
 from app.infrastructure.email import templates
+from app.infrastructure.sms.service import SMSService
+from app.modules.notifications.service import user_id_by_email
+from app.modules.settings.service import UserNotificationPreferencesService
 
 
 class ContainerMonitoringService:
@@ -512,29 +515,46 @@ class ContainerMonitoringService:
                 logger.warning(f"No email found for subscription {subscription.subscription_number}")
                 return
 
-            # Format alert severity badge color
-            severity_color = "#dc2626" if alert.get("severity") == "CRITICAL" else "#f59e0b"
-            severity_bg = "#fee2e2" if alert.get("severity") == "CRITICAL" else "#fef3c7"
+            alert_type = alert.get('type', 'Unknown')
+            severity = alert.get('severity', 'warning').lower()
+            threshold = alert.get('threshold', 0)
+            detected_at = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+            
+            template = templates.vps_alert_template(
+                subscription_number=subscription.subscription_number,
+                alert_type=alert_type,
+                severity=severity,
+                threshold=float(threshold),
+                detected_at=detected_at,
+                subscription_link=f"https://cloudmanager.dz/vps/subscriptions/{subscription.id}"
+            )
 
-            subject = f"VPS Alert: {alert.get('type')} - {subscription.subscription_number}"
-            html_body = templates.get_base_template(f"""
-                <h2>VPS Resource Alert</h2>
-                <p>Dear Customer,</p>
-                <p>We detected a resource usage alert on your VPS subscription.</p>
-                <div style="background: {severity_bg}; padding: 15px; margin: 20px 0; border-left: 4px solid {severity_color};">
-                    <p><strong>Subscription:</strong> {subscription.subscription_number}</p>
-                    <p><strong>Alert Type:</strong> {alert.get('type', 'Unknown')}</p>
-                    <p><strong>Severity:</strong> <span style="color: {severity_color}; font-weight: bold;">{alert.get('severity', 'UNKNOWN')}</span></p>
-                    <p><strong>Message:</strong> {alert.get('message', 'No message')}</p>
-                    <p><strong>Current Value:</strong> {alert.get('current_value', 0):.2f}%</p>
-                    <p><strong>Threshold:</strong> {alert.get('threshold', 0):.2f}%</p>
-                    <p><strong>Detected At:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
-                </div>
-                <p>Please review your VPS resource usage and consider upgrading your plan if this continues.</p>
-                <a href="https://cloudmanager.dz/vps/subscriptions/{subscription.id}" class="button">View VPS Details</a>
-            """)
+            await self.email_service.send_email(
+                [customer_email],
+                template["subject"],
+                template["html"],
+                template.get("text")
+            )
 
-            await self.email_service.send_email([customer_email], subject, html_body)
+            # Send SMS notification if customer has phone and preferences allow
+            if subscription.customer and subscription.customer.phone and subscription.customer.phone.strip():
+                try:
+                    uid = await user_id_by_email(self.db, customer_email)
+                    if uid:
+                        prefs_svc = UserNotificationPreferencesService(self.db)
+                        prefs = await prefs_svc.get(uid)
+                        if prefs.get("sms", {}).get("vpsAlerts", False):
+                            sms_service = SMSService()
+                            vps_name = subscription.subscription_number or f"VPS-{subscription.id[:8]}"
+                            alert_message = f"{alert_type}: {alert.get('message', 'Alert detected')}"
+                            await sms_service.send_vps_alert(
+                                to=subscription.customer.phone,
+                                vps_name=vps_name,
+                                alert_type=alert_type,
+                                message=alert_message
+                            )
+                except Exception as e:
+                    logger.warning(f"Failed to send VPS alert SMS: {e}")
 
             # Update last notification time
             self._last_alert_notification[alert_key] = datetime.utcnow()

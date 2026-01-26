@@ -23,14 +23,14 @@ export const TicketCreatePage: React.FC = () => {
           onClick={() => navigate("/dashboard/tickets")}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Tickets
+          Retour aux tickets
         </Button>
       </div>
 
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Create Support Ticket</h1>
+        <h1 className="text-3xl font-bold text-slate-900">Créer un ticket support</h1>
         <p className="text-slate-600 mt-1">
-          Submit a new support ticket for assistance
+          Soumettre une nouvelle demande d&apos;assistance
         </p>
       </div>
 

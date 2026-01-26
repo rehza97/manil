@@ -24,6 +24,9 @@ from app.modules.invoices.models import Invoice, InvoiceItem, InvoiceStatus
 from app.modules.invoices.schemas import InvoiceCreate, InvoiceItemCreate
 from app.infrastructure.email.service import EmailService
 from app.infrastructure.email import templates
+from app.infrastructure.sms.service import SMSService
+from app.modules.notifications.service import user_id_by_email
+from app.modules.settings.service import UserNotificationPreferencesService
 
 
 class SubscriptionBillingService:
@@ -144,21 +147,36 @@ class SubscriptionBillingService:
         try:
             customer_email = subscription.customer.email if subscription.customer else None
             if customer_email:
-                subject = f"VPS Initial Invoice - {invoice.invoice_number}"
-                html_body = templates.get_base_template(f"""
-                    <h2>VPS Initial Invoice</h2>
-                    <p>Dear Customer,</p>
-                    <p>Your VPS subscription has been activated and your initial invoice is ready.</p>
-                    <div style="background: white; padding: 15px; margin: 20px 0; border-left: 4px solid #2563eb;">
-                        <p><strong>Subscription:</strong> {subscription.subscription_number}</p>
-                        <p><strong>Invoice Number:</strong> {invoice.invoice_number}</p>
-                        <p><strong>Total Amount:</strong> {total:,.2f} DZD</p>
-                        <p><strong>Due Date:</strong> {invoice.due_date.strftime('%Y-%m-%d')}</p>
-                    </div>
-                    <p>This invoice includes the setup fee and first month's subscription.</p>
-                    <a href="https://cloudmanager.dz/invoices/{invoice.id}" class="button">View Invoice</a>
-                """)
-                await self.email_service.send_email([customer_email], subject, html_body)
+                from app.infrastructure.email import templates as email_templates
+                template = email_templates.invoice_initial_template(
+                    subscription_number=subscription.subscription_number,
+                    invoice_number=invoice.invoice_number,
+                    total_amount=float(total),
+                    due_date=invoice.due_date.strftime('%Y-%m-%d'),
+                    invoice_link=f"https://cloudmanager.dz/invoices/{invoice.id}"
+                )
+                await self.email_service.send_email(
+                    [customer_email],
+                    template["subject"],
+                    template["html"],
+                    template.get("text")
+                )
+                
+                # Send SMS notification if customer has phone and preferences allow
+                if subscription.customer and subscription.customer.phone and subscription.customer.phone.strip():
+                    try:
+                        uid = await user_id_by_email(self.db, customer_email)
+                        if uid:
+                            prefs_svc = UserNotificationPreferencesService(self.db)
+                            prefs = await prefs_svc.get(uid)
+                            if prefs.get("sms", {}).get("billingUpdates", False):
+                                sms_service = SMSService()
+                                await sms_service.send_billing_notification(
+                                    to=subscription.customer.phone,
+                                    message=f"Initial invoice {invoice.invoice_number} for {subscription.subscription_number}: {total:.2f} DZD. Due: {invoice.due_date.strftime('%d/%m/%Y')}"
+                                )
+                    except Exception as e:
+                        logger.warning(f"Failed to send initial invoice SMS: {e}")
         except Exception as e:
             logger.error(f"Failed to send initial invoice email for subscription {subscription.subscription_number}: {e}")
 
@@ -245,22 +263,35 @@ class SubscriptionBillingService:
         try:
             customer_email = subscription.customer.email if subscription.customer else None
             if customer_email:
-                subject = f"VPS Monthly Invoice - {invoice.invoice_number}"
-                html_body = templates.get_base_template(f"""
-                    <h2>VPS Monthly Invoice</h2>
-                    <p>Dear Customer,</p>
-                    <p>Your monthly VPS subscription invoice is ready.</p>
-                    <div style="background: white; padding: 15px; margin: 20px 0; border-left: 4px solid #2563eb;">
-                        <p><strong>Subscription:</strong> {subscription.subscription_number}</p>
-                        <p><strong>Plan:</strong> {plan.name}</p>
-                        <p><strong>Invoice Number:</strong> {invoice.invoice_number}</p>
-                        <p><strong>Amount:</strong> {total:,.2f} DZD</p>
-                        <p><strong>Due Date:</strong> {invoice.due_date.strftime('%Y-%m-%d')}</p>
-                    </div>
-                    <p>Please ensure payment is made by the due date to avoid service interruption.</p>
-                    <a href="https://cloudmanager.dz/invoices/{invoice.id}" class="button">View & Pay Invoice</a>
-                """)
-                await self.email_service.send_email([customer_email], subject, html_body)
+                template = templates.invoice_recurring_template(
+                    subscription_number=subscription.subscription_number,
+                    invoice_number=invoice.invoice_number,
+                    total_amount=float(total),
+                    due_date=invoice.due_date.strftime('%Y-%m-%d'),
+                    invoice_link=f"https://cloudmanager.dz/invoices/{invoice.id}"
+                )
+                await self.email_service.send_email(
+                    [customer_email],
+                    template["subject"],
+                    template["html"],
+                    template.get("text")
+                )
+                
+                # Send SMS notification if customer has phone and preferences allow
+                if subscription.customer and subscription.customer.phone and subscription.customer.phone.strip():
+                    try:
+                        uid = await user_id_by_email(self.db, customer_email)
+                        if uid:
+                            prefs_svc = UserNotificationPreferencesService(self.db)
+                            prefs = await prefs_svc.get(uid)
+                            if prefs.get("sms", {}).get("billingUpdates", False):
+                                sms_service = SMSService()
+                                await sms_service.send_billing_notification(
+                                    to=subscription.customer.phone,
+                                    message=f"Recurring invoice {invoice.invoice_number} for {subscription.subscription_number}: {total:.2f} DZD. Due: {invoice.due_date.strftime('%d/%m/%Y')}"
+                                )
+                    except Exception as e:
+                        logger.warning(f"Failed to send recurring invoice SMS: {e}")
         except Exception as e:
             logger.error(f"Failed to send recurring invoice email for subscription {subscription.subscription_number}: {e}")
 
@@ -418,21 +449,37 @@ class SubscriptionBillingService:
         try:
             customer_email = subscription.customer.email if subscription.customer else None
             if customer_email:
-                subject = f"Payment Received - Invoice {invoice.invoice_number}"
-                html_body = templates.get_base_template(f"""
-                    <h2>Payment Confirmation</h2>
-                    <p>Dear Customer,</p>
-                    <p>We have successfully received your payment.</p>
-                    <div style="background: white; padding: 15px; margin: 20px 0; border-left: 4px solid #10b981;">
-                        <p><strong>Subscription:</strong> {subscription.subscription_number}</p>
-                        <p><strong>Invoice Number:</strong> {invoice.invoice_number}</p>
-                        <p><strong>Amount Paid:</strong> {invoice.total_amount:,.2f} DZD</p>
-                        <p><strong>Payment Date:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}</p>
-                    </div>
-                    <p>Thank you for your payment. Your VPS subscription remains active.</p>
-                    <a href="https://cloudmanager.dz/invoices/{invoice.id}" class="button">View Invoice</a>
-                """)
-                await self.email_service.send_email([customer_email], subject, html_body)
+                customer_name = subscription.customer.name if subscription.customer else "Customer"
+                template = templates.payment_confirmation_template(
+                    customer_name=customer_name,
+                    invoice_number=invoice.invoice_number,
+                    payment_amount=float(invoice.total_amount),
+                    payment_date=datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+                    invoice_link=f"https://cloudmanager.dz/invoices/{invoice.id}"
+                )
+                await self.email_service.send_email(
+                    [customer_email],
+                    template["subject"],
+                    template["html"],
+                    template.get("text")
+                )
+                
+                # Send SMS notification if customer has phone and preferences allow
+                if subscription.customer and subscription.customer.phone and subscription.customer.phone.strip():
+                    try:
+                        uid = await user_id_by_email(self.db, customer_email)
+                        if uid:
+                            prefs_svc = UserNotificationPreferencesService(self.db)
+                            prefs = await prefs_svc.get(uid)
+                            if prefs.get("sms", {}).get("billingUpdates", False):
+                                sms_service = SMSService()
+                                await sms_service.send_payment_confirmation(
+                                    to=subscription.customer.phone,
+                                    invoice_number=invoice.invoice_number,
+                                    amount=float(invoice.total_amount)
+                                )
+                    except Exception as e:
+                        logger.warning(f"Failed to send payment confirmation SMS: {e}")
         except Exception as e:
             logger.error(f"Failed to send payment confirmation email for subscription {subscription.subscription_number}: {e}")
 
@@ -461,21 +508,46 @@ class SubscriptionBillingService:
                     try:
                         customer_email = subscription.customer.email if subscription.customer else None
                         if customer_email:
-                            subject = f"URGENT: Payment Overdue - VPS Subscription {subscription.subscription_number}"
-                            html_body = templates.get_base_template(f"""
-                                <h2 style="color: #dc2626;">Payment Overdue - Immediate Action Required</h2>
-                                <p>Dear Customer,</p>
-                                <p>Your VPS subscription payment is overdue. Your service will be suspended if payment is not received immediately.</p>
-                                <div style="background: #fef2f2; padding: 15px; margin: 20px 0; border-left: 4px solid #dc2626;">
-                                    <p><strong>Subscription:</strong> {subscription.subscription_number}</p>
-                                    <p><strong>Days Overdue:</strong> {days_overdue}</p>
-                                    <p><strong>Grace Period:</strong> {subscription.grace_period_days} days</p>
-                                    <p><strong>Status:</strong> Service will be suspended if payment is not received</p>
-                                </div>
-                                <p>Please make payment immediately to avoid service interruption. All data will be retained during suspension.</p>
-                                <a href="https://cloudmanager.dz/subscriptions/{subscription.id}" class="button" style="background: #dc2626;">Make Payment Now</a>
-                            """)
-                            await self.email_service.send_email([customer_email], subject, html_body)
+                            # Get the latest invoice for this subscription
+                            invoice_query = select(Invoice).where(
+                                and_(
+                                    Invoice.customer_id == subscription.customer_id,
+                                    Invoice.status == InvoiceStatus.PENDING
+                                )
+                            ).order_by(Invoice.due_date.desc()).limit(1)
+                            invoice_result = await self.db.execute(invoice_query)
+                            latest_invoice = invoice_result.scalar_one_or_none()
+                            
+                            if latest_invoice:
+                                template = templates.invoice_overdue_template(
+                                    subscription_number=subscription.subscription_number,
+                                    invoice_number=latest_invoice.invoice_number,
+                                    total_amount=float(latest_invoice.total_amount),
+                                    days_overdue=days_overdue,
+                                    invoice_link=f"https://cloudmanager.dz/invoices/{latest_invoice.id}"
+                                )
+                                await self.email_service.send_email(
+                                    [customer_email],
+                                    template["subject"],
+                                    template["html"],
+                                    template.get("text")
+                                )
+                                
+                                # Send SMS notification if customer has phone and preferences allow
+                                if subscription.customer and subscription.customer.phone and subscription.customer.phone.strip():
+                                    try:
+                                        uid = await user_id_by_email(self.db, customer_email)
+                                        if uid:
+                                            prefs_svc = UserNotificationPreferencesService(self.db)
+                                            prefs = await prefs_svc.get(uid)
+                                            if prefs.get("sms", {}).get("billingUpdates", False):
+                                                sms_service = SMSService()
+                                                await sms_service.send_billing_notification(
+                                                    to=subscription.customer.phone,
+                                                    message=f"URGENT: Invoice {latest_invoice.invoice_number} for {subscription.subscription_number} is {days_overdue} days overdue. Amount: {latest_invoice.total_amount:.2f} DZD"
+                                                )
+                                    except Exception as e:
+                                        logger.warning(f"Failed to send overdue warning SMS: {e}")
                     except Exception as e:
                         logger.error(f"Failed to send overdue warning email for subscription {subscription.subscription_number}: {e}")
 

@@ -60,7 +60,7 @@ export function DNSZoneForm({ onSubmit, isLoading, onCancel }: DNSZoneFormProps)
           name="zone_name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Zone Name</FormLabel>
+              <FormLabel>Nom de la zone</FormLabel>
               <FormControl>
                 <Input
                   placeholder="example.com"
@@ -69,7 +69,7 @@ export function DNSZoneForm({ onSubmit, isLoading, onCancel }: DNSZoneFormProps)
                 />
               </FormControl>
               <FormDescription>
-                The domain name for this DNS zone (e.g., example.com)
+                Nom de domaine de cette zone DNS (ex. example.com)
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -82,7 +82,7 @@ export function DNSZoneForm({ onSubmit, isLoading, onCancel }: DNSZoneFormProps)
           name="subscription_id"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>VPS Subscription</FormLabel>
+              <FormLabel>Abonnement VPS</FormLabel>
               <Select
                 onValueChange={field.onChange}
                 value={field.value}
@@ -90,13 +90,13 @@ export function DNSZoneForm({ onSubmit, isLoading, onCancel }: DNSZoneFormProps)
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a VPS subscription" />
+                    <SelectValue placeholder="Choisir un abonnement VPS" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   {subscriptions.length === 0 ? (
                     <div className="p-2 text-sm text-muted-foreground">
-                      No active VPS subscriptions found
+                      Aucun abonnement VPS actif
                     </div>
                   ) : (
                     subscriptions
@@ -110,7 +110,7 @@ export function DNSZoneForm({ onSubmit, isLoading, onCancel }: DNSZoneFormProps)
                 </SelectContent>
               </Select>
               <FormDescription>
-                Link this DNS zone to a VPS subscription for hosting
+                Associer cette zone DNS à un abonnement VPS pour l'hébergement
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -142,19 +142,19 @@ export function DNSZoneForm({ onSubmit, isLoading, onCancel }: DNSZoneFormProps)
 
         {/* Form Actions */}
         <div className="flex justify-end gap-3">
-          {onCancel && (
+            {onCancel && (
             <Button
               type="button"
               variant="outline"
               onClick={onCancel}
               disabled={isLoading}
             >
-              Cancel
+              Annuler
             </Button>
           )}
           <Button type="submit" disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create Zone
+            Créer la zone
           </Button>
         </div>
       </form>

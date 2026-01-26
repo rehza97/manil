@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Ticket Assigned to You</h2>
+<p>A support ticket has been assigned to you.</p>
+<p><strong>Ticket ID:</strong> {{ ticket_id }}</p>
+<p><strong>Subject:</strong> {{ subject }}</p>
+<p><strong>Assigned to:</strong> {{ assigned_to }}</p>
+<a href="{{ site_url }}/tickets/{{ ticket_id }}" class="button">View Ticket</a>
+{% endblock %}

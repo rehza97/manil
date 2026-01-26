@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Ticket Created Successfully</h2>
+<p>Your support ticket has been created.</p>
+<p><strong>Ticket ID:</strong> {{ ticket_id }}</p>
+<p><strong>Subject:</strong> {{ subject }}</p>
+<p>Our support team will review your request and respond shortly.</p>
+<a href="{{ site_url }}/tickets/{{ ticket_id }}" class="button">View Ticket</a>
+{% endblock %}

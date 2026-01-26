@@ -4,14 +4,15 @@ Report Routes
 API endpoints for all reporting and analytics functionality.
 """
 
-from datetime import datetime
-from typing import Optional, List
+from datetime import datetime, timedelta
+from typing import Optional, List, Any
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
 from app.core.dependencies import get_current_user, require_permission
+from app.core.permissions import Permission, has_permission
 from app.modules.auth.models import User
 
 from .dashboard_service import DashboardService
@@ -52,7 +53,7 @@ router = APIRouter(prefix="/api/v1/reports", tags=["reports"])
 @router.get("/dashboard/admin", response_model=DashboardResponse)
 async def get_admin_dashboard(
     period: str = Query("month", description="Time period for trends"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -60,13 +61,6 @@ async def get_admin_dashboard(
 
     Requires: REPORTS_VIEW permission
     """
-    # Check permission
-    if not current_user.has_permission("REPORTS_VIEW"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view reports"
-        )
-
     service = DashboardService(db)
     return await service.get_admin_dashboard(period)
 
@@ -74,7 +68,7 @@ async def get_admin_dashboard(
 @router.get("/dashboard/corporate", response_model=DashboardResponse)
 async def get_corporate_dashboard(
     period: str = Query("month", description="Time period for trends"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -82,12 +76,6 @@ async def get_corporate_dashboard(
 
     Requires: REPORTS_VIEW permission
     """
-    if not current_user.has_permission("REPORTS_VIEW"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view reports"
-        )
-
     service = DashboardService(db)
     return await service.get_corporate_dashboard(current_user.id, period)
 
@@ -170,15 +158,10 @@ async def get_customer_dashboard(
 async def get_tickets_by_status(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Get tickets grouped by status"""
-    if not current_user.has_permission("REPORTS_VIEW"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view reports"
-        )
 
     service = TicketReportService(db)
     return await service.get_tickets_by_status(start_date, end_date)
@@ -188,15 +171,10 @@ async def get_tickets_by_status(
 async def get_tickets_by_priority(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Get tickets grouped by priority with avg resolution time"""
-    if not current_user.has_permission("REPORTS_VIEW"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view reports"
-        )
 
     service = TicketReportService(db)
     return await service.get_tickets_by_priority(start_date, end_date)
@@ -206,15 +184,10 @@ async def get_tickets_by_priority(
 async def get_tickets_by_category(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Get tickets grouped by category"""
-    if not current_user.has_permission("REPORTS_VIEW"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view reports"
-        )
 
     service = TicketReportService(db)
     return await service.get_tickets_by_category(start_date, end_date)
@@ -224,15 +197,10 @@ async def get_tickets_by_category(
 async def get_tickets_by_agent(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Get agent performance metrics"""
-    if not current_user.has_permission("REPORTS_VIEW"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view reports"
-        )
 
     service = TicketReportService(db)
     return await service.get_tickets_by_agent(start_date, end_date)
@@ -242,15 +210,10 @@ async def get_tickets_by_agent(
 async def get_tickets_by_team(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Get team performance metrics"""
-    if not current_user.has_permission("REPORTS_VIEW"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view reports"
-        )
 
     service = TicketReportService(db)
     return await service.get_tickets_by_team(start_date, end_date)
@@ -260,15 +223,10 @@ async def get_tickets_by_team(
 async def get_response_time_metrics(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Get response time analytics"""
-    if not current_user.has_permission("REPORTS_VIEW"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view reports"
-        )
 
     service = TicketReportService(db)
     return await service.get_response_time_metrics(start_date, end_date)
@@ -278,15 +236,10 @@ async def get_response_time_metrics(
 async def get_resolution_time_metrics(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Get resolution time analytics"""
-    if not current_user.has_permission("REPORTS_VIEW"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view reports"
-        )
 
     service = TicketReportService(db)
     return await service.get_resolution_time_metrics(start_date, end_date)
@@ -295,15 +248,10 @@ async def get_resolution_time_metrics(
 @router.get("/tickets/open-vs-closed", response_model=List[OpenVsClosedReport])
 async def get_open_vs_closed_report(
     period: str = Query("month", description="Time period"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Get open vs closed tickets report"""
-    if not current_user.has_permission("REPORTS_VIEW"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view reports"
-        )
 
     service = TicketReportService(db)
     return await service.get_open_vs_closed_report(period)
@@ -317,15 +265,10 @@ async def get_open_vs_closed_report(
 async def get_customers_by_status(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Get customers grouped by status"""
-    if not current_user.has_permission("REPORTS_VIEW"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view reports"
-        )
 
     service = CustomerReportService(db)
     return await service.get_customers_by_status(start_date, end_date)
@@ -335,15 +278,10 @@ async def get_customers_by_status(
 async def get_customers_by_type(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Get customers grouped by type"""
-    if not current_user.has_permission("REPORTS_VIEW"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view reports"
-        )
 
     service = CustomerReportService(db)
     return await service.get_customers_by_type(start_date, end_date)
@@ -352,15 +290,10 @@ async def get_customers_by_type(
 @router.get("/customers/growth", response_model=List[CustomerGrowthReport])
 async def get_customer_growth(
     period: str = Query("month", description="Time period"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Get customer growth over time"""
-    if not current_user.has_permission("REPORTS_VIEW"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view reports"
-        )
 
     service = CustomerReportService(db)
     return await service.get_customer_growth(period)
@@ -370,15 +303,10 @@ async def get_customer_growth(
 async def get_kyc_status_report(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Get KYC verification status report"""
-    if not current_user.has_permission("REPORTS_VIEW"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view reports"
-        )
 
     service = CustomerReportService(db)
     return await service.get_kyc_status_report(start_date, end_date)
@@ -392,15 +320,10 @@ async def get_kyc_status_report(
 async def get_orders_by_status(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Get orders grouped by status with total values"""
-    if not current_user.has_permission("REPORTS_VIEW"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view reports"
-        )
 
     service = OrderReportService(db)
     return await service.get_orders_by_status(start_date, end_date)
@@ -410,15 +333,10 @@ async def get_orders_by_status(
 async def get_order_value_metrics(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Get order value metrics"""
-    if not current_user.has_permission("REPORTS_VIEW"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view reports"
-        )
 
     service = OrderReportService(db)
     return await service.get_order_value_metrics(start_date, end_date)
@@ -427,15 +345,10 @@ async def get_order_value_metrics(
 @router.get("/orders/monthly", response_model=List[MonthlyOrderReport])
 async def get_monthly_orders(
     months: int = Query(12, ge=1, le=24, description="Number of months"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Get monthly order statistics"""
-    if not current_user.has_permission("REPORTS_VIEW"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view reports"
-        )
 
     service = OrderReportService(db)
     return await service.get_monthly_orders(months)
@@ -446,15 +359,10 @@ async def get_product_performance(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     limit: int = Query(10, ge=1, le=50, description="Number of top products"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Get top performing products in orders"""
-    if not current_user.has_permission("REPORTS_VIEW"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view reports"
-        )
 
     service = OrderReportService(db)
     return await service.get_product_performance(start_date, end_date, limit)
@@ -465,15 +373,10 @@ async def get_orders_by_customer(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     limit: int = Query(10, ge=1, le=50, description="Number of top customers"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Get top customers by order value"""
-    if not current_user.has_permission("REPORTS_VIEW"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view reports"
-        )
 
     service = OrderReportService(db)
     return await service.get_orders_by_customer(start_date, end_date, limit)
@@ -486,7 +389,7 @@ async def get_orders_by_customer(
 @router.post("/export", response_model=ExportResponse)
 async def export_report(
     export_request: ExportRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_EXPORT)),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -495,45 +398,109 @@ async def export_report(
     Supported formats: csv, excel, pdf
     Supported report types: tickets, customers, orders
     """
-    if not current_user.has_permission("REPORTS_EXPORT"):
+    if export_request.report_type == "vps" and not has_permission(
+        current_user.role.value, Permission.HOSTING_MONITOR
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to export reports"
+            detail="VPS export requires hosting:monitor permission"
         )
 
     export_service = ExportService()
 
-    # This is a simplified version
-    # In a real implementation, you would fetch actual data based on filters
-    # For now, returning a sample export
-
     try:
-        # Parse filters
-        filters = export_request.filters or {}
-        date_from = filters.get("date_from")
-        date_to = filters.get("date_to")
+        # Parse filters: support ReportFilter (date_from/date_to or date_range) and dict
+        filters: Any = export_request.filters
+        date_from_str: Optional[str] = None
+        date_to_str: Optional[str] = None
+        if filters is not None:
+            if isinstance(filters, dict):
+                date_from_str = filters.get("date_from")
+                date_to_str = filters.get("date_to")
+                if not date_from_str and isinstance(filters.get("date_range"), dict):
+                    dr = filters["date_range"]
+                    date_from_str = dr.get("start_date")
+                    date_to_str = dr.get("end_date")
+            else:
+                date_from_str = getattr(filters, "date_from", None) or (
+                    getattr(filters.date_range, "start_date", None) if getattr(filters, "date_range", None) else None
+                )
+                date_to_str = getattr(filters, "date_to", None) or (
+                    getattr(filters.date_range, "end_date", None) if getattr(filters, "date_range", None) else None
+                )
+        date_from = date_from_str
+        date_to = date_to_str
+
+        # Parse date range for ticket/customer/order exports (datetime)
+        start_dt: Optional[datetime] = None
+        end_dt: Optional[datetime] = None
+        if date_from:
+            try:
+                start_dt = datetime.fromisoformat(date_from.replace("Z", "+00:00"))
+            except (ValueError, AttributeError):
+                start_dt = datetime.utcnow() - timedelta(days=30)
+        if date_to:
+            try:
+                end_dt = datetime.fromisoformat(date_to.replace("Z", "+00:00"))
+            except (ValueError, AttributeError):
+                end_dt = datetime.utcnow()
+        if not start_dt and export_request.report_type in ("tickets", "customers", "orders", "vps"):
+            start_dt = datetime.utcnow() - timedelta(days=30)
+        if not end_dt and export_request.report_type in ("tickets", "customers", "orders", "vps"):
+            end_dt = datetime.utcnow()
 
         if export_request.report_type == "tickets":
-            # Fetch tickets data (simplified)
-            data = [{"id": 1, "subject": "Sample", "status": "open"}]
+            ticket_svc = TicketReportService(db)
+            data = await ticket_svc.get_tickets_for_export(start_date=start_dt, end_date=end_dt)
             result = export_service.export_tickets_report(
                 data,
                 export_request.format,
                 "tickets_report"
             )
         elif export_request.report_type == "customers":
-            data = [{"id": 1, "full_name": "Sample", "email": "test@example.com"}]
+            customer_svc = CustomerReportService(db)
+            data = await customer_svc.get_customers_for_export(start_date=start_dt, end_date=end_dt)
             result = export_service.export_customers_report(
                 data,
                 export_request.format,
                 "customers_report"
             )
         elif export_request.report_type == "orders":
-            data = [{"id": 1, "order_number": "ORD-001", "status": "delivered"}]
+            order_svc = OrderReportService(db)
+            data = await order_svc.get_orders_for_export(start_date=start_dt, end_date=end_dt)
             result = export_service.export_orders_report(
                 data,
                 export_request.format,
                 "orders_report"
+            )
+        elif export_request.report_type == "vps":
+            from app.modules.hosting.repository import VPSSubscriptionRepository
+
+            repo = VPSSubscriptionRepository(db)
+            subs, _ = await repo.get_all(skip=0, limit=10000)
+            vps_rows = []
+            for s in subs:
+                if start_dt and s.created_at and s.created_at < start_dt:
+                    continue
+                if end_dt and s.created_at and s.created_at > end_dt:
+                    continue
+                plan_name = s.plan.name if s.plan else ""
+                plan_slug = s.plan.slug if s.plan else ""
+                monthly = float(s.plan.monthly_price) if s.plan and s.plan.monthly_price is not None else 0.0
+                vps_rows.append({
+                    "id": s.id,
+                    "subscription_number": s.subscription_number or "",
+                    "customer_id": s.customer_id or "",
+                    "plan_name": plan_name,
+                    "plan_slug": plan_slug,
+                    "status": s.status.value if hasattr(s.status, "value") else str(s.status),
+                    "monthly_price": monthly,
+                    "created_at": s.created_at.isoformat() if s.created_at else "",
+                })
+            result = export_service.export_vps_report(
+                vps_rows,
+                export_request.format,
+                "vps_report"
             )
         elif export_request.report_type == "users":
             # Get user report data directly
@@ -629,14 +596,9 @@ async def export_report(
 @router.get("/export/download/{file_name}")
 async def download_export(
     file_name: str,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permission(Permission.REPORTS_EXPORT))
 ):
     """Download exported file"""
-    if not current_user.has_permission("REPORTS_EXPORT"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to download exports"
-        )
 
     export_service = ExportService()
     file_path = export_service.export_dir / file_name
@@ -662,7 +624,7 @@ async def download_export(
 async def get_user_report(
     date_from: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.USERS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -671,11 +633,6 @@ async def get_user_report(
     Returns:
         User statistics, registration trends, and role distribution.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can access user reports"
-        )
 
     from sqlalchemy import select, func, and_
     from app.modules.auth.models import User
@@ -765,7 +722,7 @@ async def get_user_report(
 async def get_activity_report(
     date_from: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.AUDIT_ADMIN)),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -774,11 +731,6 @@ async def get_activity_report(
     Returns:
         Activity statistics, trends, and top resources/users.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can access activity reports"
-        )
 
     from sqlalchemy import select, func, and_
     from app.modules.audit.models import AuditLog
@@ -879,7 +831,7 @@ async def get_activity_report(
 async def get_security_report(
     date_from: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.AUDIT_ADMIN)),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -888,11 +840,6 @@ async def get_security_report(
     Returns:
         Security events, failed logins, and threat analysis.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can access security reports"
-        )
 
     from sqlalchemy import select, func, and_
     from app.modules.audit.models import AuditLog, AuditAction
@@ -1043,7 +990,7 @@ async def get_security_report(
 async def get_performance_report(
     date_from: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_PERFORMANCE)),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -1052,11 +999,6 @@ async def get_performance_report(
     Returns:
         Performance metrics, trends, and resource usage.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can access performance reports"
-        )
 
     from datetime import datetime, timedelta
 

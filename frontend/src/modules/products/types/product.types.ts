@@ -31,7 +31,32 @@ export interface ProductImage {
 }
 
 /**
- * Product Variant type
+ * Service Type enumeration
+ */
+export type ServiceType =
+  | "dns"
+  | "ssl"
+  | "email"
+  | "backup"
+  | "monitoring"
+  | "domain"
+  | "general"
+  | "hosting"
+  | "storage"
+  | "cdn";
+
+/**
+ * Billing Cycle enumeration
+ */
+export type BillingCycle = "monthly" | "yearly" | "one_time" | "usage_based";
+
+/**
+ * Provisioning Type enumeration
+ */
+export type ProvisioningType = "automatic" | "manual" | "api";
+
+/**
+ * Product Variant type - represents service tiers/plans
  */
 export interface ProductVariant {
   id: string;
@@ -39,7 +64,9 @@ export interface ProductVariant {
   name: string;
   sku: string;
   price_adjustment?: number;
-  stock_quantity: number;
+  tier_name?: string;
+  tier_level?: number;
+  stock_quantity?: number; // DEPRECATED: Not applicable for service tiers
   display_order: number;
   is_active: boolean;
   created_at: string;
@@ -47,7 +74,7 @@ export interface ProductVariant {
 }
 
 /**
- * Product type (list response)
+ * Product type (list response) - represents digital services
  */
 export interface Product {
   id: string;
@@ -57,12 +84,26 @@ export interface Product {
   short_description?: string;
   category_id: string;
   sku: string;
-  barcode?: string;
+  
+  // Service Configuration
+  service_type: ServiceType;
+  billing_cycle: BillingCycle;
+  is_recurring: boolean;
+  provisioning_type?: ProvisioningType;
+  auto_renew: boolean;
+  trial_period_days?: number;
+  service_config?: Record<string, any>; // JSON object
+  
+  // Pricing
   regular_price: number;
   sale_price?: number;
-  cost_price?: number;
-  stock_quantity: number;
-  low_stock_threshold: number;
+  
+  // Deprecated fields (kept for backward compatibility)
+  barcode?: string; // DEPRECATED
+  cost_price?: number; // DEPRECATED
+  stock_quantity?: number; // DEPRECATED: Use null for unlimited
+  low_stock_threshold?: number; // DEPRECATED
+  
   is_featured: boolean;
   is_active: boolean;
   is_visible: boolean;
@@ -93,12 +134,26 @@ export interface CreateProductDTO {
   sku: string;
   description?: string;
   short_description?: string;
-  barcode?: string;
+  
+  // Service Configuration
+  service_type?: ServiceType;
+  billing_cycle?: BillingCycle;
+  is_recurring?: boolean;
+  provisioning_type?: ProvisioningType;
+  auto_renew?: boolean;
+  trial_period_days?: number;
+  service_config?: Record<string, any>;
+  
+  // Pricing
   regular_price: number;
   sale_price?: number;
-  cost_price?: number;
-  stock_quantity: number;
-  low_stock_threshold?: number;
+  
+  // Deprecated fields (kept for backward compatibility)
+  barcode?: string; // DEPRECATED
+  cost_price?: number; // DEPRECATED
+  stock_quantity?: number; // DEPRECATED
+  low_stock_threshold?: number; // DEPRECATED
+  
   is_featured?: boolean;
   is_active?: boolean;
   is_visible?: boolean;
@@ -115,12 +170,26 @@ export interface UpdateProductDTO {
   sku?: string;
   description?: string;
   short_description?: string;
-  barcode?: string;
+  
+  // Service Configuration
+  service_type?: ServiceType;
+  billing_cycle?: BillingCycle;
+  is_recurring?: boolean;
+  provisioning_type?: ProvisioningType;
+  auto_renew?: boolean;
+  trial_period_days?: number;
+  service_config?: Record<string, any>;
+  
+  // Pricing
   regular_price?: number;
   sale_price?: number;
-  cost_price?: number;
-  stock_quantity?: number;
-  low_stock_threshold?: number;
+  
+  // Deprecated fields (kept for backward compatibility)
+  barcode?: string; // DEPRECATED
+  cost_price?: number; // DEPRECATED
+  stock_quantity?: number; // DEPRECATED
+  low_stock_threshold?: number; // DEPRECATED
+  
   is_featured?: boolean;
   is_active?: boolean;
   is_visible?: boolean;
@@ -169,7 +238,9 @@ export interface CreateProductVariantDTO {
   name: string;
   sku: string;
   price_adjustment?: number;
-  stock_quantity: number;
+  tier_name?: string;
+  tier_level?: number;
+  stock_quantity?: number; // DEPRECATED: Not applicable for service tiers
   display_order?: number;
   is_active?: boolean;
 }
@@ -192,6 +263,8 @@ export interface ProductStatistics {
   total_products: number;
   total_categories: number;
   featured_products: number;
-  out_of_stock: number;
+  service_type_distribution: Record<ServiceType, number>;
+  billing_cycle_distribution: Record<BillingCycle, number>;
+  recurring_services: number;
   avg_rating: number;
 }

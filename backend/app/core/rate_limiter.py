@@ -143,3 +143,8 @@ registration_rate_limit = rate_limit(
 token_refresh_rate_limit = rate_limit(
     requests=10, window=60, key_prefix="auth_token_refresh"
 )
+
+# 2FA setup required: 5 attempts per 15 minutes (900 seconds)
+two_fa_setup_required_rate_limit = rate_limit(
+    requests=5, window=900, key_prefix="auth_2fa_setup_required"
+)

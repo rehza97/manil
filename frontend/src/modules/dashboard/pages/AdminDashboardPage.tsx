@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -33,9 +34,18 @@ import {
   useRecentActivity,
   useUsersByRole,
 } from "@/modules/admin/hooks";
+import { reportsApi } from "@/shared/api/reports";
+import { RevenueCard } from "@/modules/revenue/components";
+import { revenueService } from "@/modules/revenue/services/revenueService";
 
 const AdminDashboardPage: React.FC = () => {
   const { user } = useAuth();
+
+  // Fetch revenue overview for consistent revenue display
+  const { data: revenueOverview } = useQuery({
+    queryKey: ["revenue", "overview", "month"],
+    queryFn: () => revenueService.getOverview("month"),
+  });
 
   // Fetch real data from API
   const { data: overview, isLoading: overviewLoading, error: overviewError } = useSystemOverview();
@@ -44,6 +54,11 @@ const AdminDashboardPage: React.FC = () => {
   const { data: detailedHealth, isLoading: detailedHealthLoading } = useDetailedHealth();
   const { data: recentActivity, isLoading: activityLoading } = useRecentActivity(5);
   const { data: usersByRole, isLoading: usersByRoleLoading } = useUsersByRole();
+  const { data: reportsDashboard } = useQuery({
+    queryKey: ["reports", "dashboard", "admin"],
+    queryFn: () => reportsApi.getAdminDashboard(),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const isLoading = overviewLoading || healthLoading || statsLoading || detailedHealthLoading || activityLoading || usersByRoleLoading;
 
@@ -243,26 +258,15 @@ const AdminDashboardPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Monthly Revenue
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {(stats?.monthly_revenue || 0).toLocaleString()} DZD
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {stats?.revenue_growth !== undefined && stats.revenue_growth !== null
-                ? (stats.revenue_growth > 0 
-                  ? `+${stats.revenue_growth.toFixed(1)}%` 
-                  : `${stats.revenue_growth.toFixed(1)}%`)
-                : "0.0%"} from last month
-            </p>
-          </CardContent>
-        </Card>
+        <RevenueCard
+          title="Monthly Revenue"
+          value={Number(revenueOverview?.metrics.monthly_revenue || stats?.monthly_revenue || 0)}
+          growth={revenueOverview?.metrics.revenue_growth || stats?.revenue_growth}
+          subtitle={revenueOverview?.metrics.revenue_growth !== undefined 
+            ? "Recognized revenue (paid invoices)"
+            : "From system stats"}
+          icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -381,6 +385,66 @@ const AdminDashboardPage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Business KPIs (Reports dashboard) */}
+      {reportsDashboard?.metrics && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Business KPIs</CardTitle>
+                <CardDescription>
+                  Key metrics from reports (customers, tickets, revenue)
+                </CardDescription>
+              </div>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/admin/reports">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  View Reports
+                </Link>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center p-4 border rounded-lg">
+                <div className="text-3xl font-bold text-blue-600">
+                  {reportsDashboard.metrics.total_customers ?? 0}
+                </div>
+                <div className="text-sm font-medium text-slate-900 mt-1">
+                  Total Customers
+                </div>
+              </div>
+              <div className="text-center p-4 border rounded-lg">
+                <div className="text-3xl font-bold text-amber-600">
+                  {reportsDashboard.metrics.open_tickets ?? 0}
+                </div>
+                <div className="text-sm font-medium text-slate-900 mt-1">
+                  Open Tickets
+                </div>
+              </div>
+              <div className="text-center p-4 border rounded-lg">
+                <div className="text-3xl font-bold text-green-600">
+                  {new Intl.NumberFormat("fr-DZ", {
+                    style: "currency",
+                    currency: "DZD",
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }).format(
+                    Number(revenueOverview?.metrics.booked_revenue || reportsDashboard.metrics.total_revenue || 0)
+                  )}
+                </div>
+                <div className="text-sm font-medium text-slate-900 mt-1">
+                  Total Revenue (Booked)
+                </div>
+                <div className="text-xs text-slate-500 mt-1">
+                  From delivered orders
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* User Statistics */}
       <Card>

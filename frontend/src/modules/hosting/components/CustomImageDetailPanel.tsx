@@ -9,6 +9,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Separator } from "@/shared/components/ui/separator";
 import { ImageBuildStatusBadge } from "./ImageBuildStatusBadge";
 import { formatDistanceToNow, format } from "date-fns";
+import { fr } from "date-fns/locale";
 import type { CustomDockerImage } from "../types";
 import {
   Calendar,
@@ -49,12 +50,12 @@ export function CustomImageDetailPanel({ image }: CustomImageDetailPanelProps) {
       {/* Build Information */}
       <Card>
         <CardHeader>
-          <CardTitle>Build Information</CardTitle>
+          <CardTitle>Informations de build</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <div className="text-sm text-muted-foreground">Dockerfile Path</div>
+              <div className="text-sm text-muted-foreground">Chemin du Dockerfile</div>
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-muted-foreground" />
                 <span className="font-mono text-sm">{image.dockerfile_path}</span>
@@ -62,7 +63,7 @@ export function CustomImageDetailPanel({ image }: CustomImageDetailPanelProps) {
             </div>
             {image.docker_image_id && (
               <div className="space-y-1">
-                <div className="text-sm text-muted-foreground">Docker Image ID</div>
+                <div className="text-sm text-muted-foreground">ID de l'image Docker</div>
                 <div className="flex items-center gap-2">
                   <Hash className="h-4 w-4 text-muted-foreground" />
                   <span className="font-mono text-sm truncate">{image.docker_image_id}</span>
@@ -71,7 +72,7 @@ export function CustomImageDetailPanel({ image }: CustomImageDetailPanelProps) {
             )}
             {image.image_size_mb && (
               <div className="space-y-1">
-                <div className="text-sm text-muted-foreground">Image Size</div>
+                <div className="text-sm text-muted-foreground">Taille de l'image</div>
                 <div className="flex items-center gap-2">
                   <HardDrive className="h-4 w-4 text-muted-foreground" />
                   <span>{image.image_size_mb.toFixed(2)} MB</span>
@@ -80,10 +81,10 @@ export function CustomImageDetailPanel({ image }: CustomImageDetailPanelProps) {
             )}
             {image.build_duration_seconds && (
               <div className="space-y-1">
-                <div className="text-sm text-muted-foreground">Build Duration</div>
+                <div className="text-sm text-muted-foreground">Durée du build</div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span>{image.build_duration_seconds} seconds</span>
+                  <span>{image.build_duration_seconds} s</span>
                 </div>
               </div>
             )}
@@ -94,21 +95,21 @@ export function CustomImageDetailPanel({ image }: CustomImageDetailPanelProps) {
           <div className="grid grid-cols-2 gap-4">
             {image.build_started_at && (
               <div className="space-y-1">
-                <div className="text-sm text-muted-foreground">Build Started</div>
+                <div className="text-sm text-muted-foreground">Build démarré</div>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">
-                    {format(new Date(image.build_started_at), "PPpp")}
+                    {format(new Date(image.build_started_at), "PPpp", { locale: fr })}
                   </span>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(new Date(image.build_started_at), { addSuffix: true })}
+                  {formatDistanceToNow(new Date(image.build_started_at), { addSuffix: true, locale: fr })}
                 </div>
               </div>
             )}
             {image.build_completed_at && (
               <div className="space-y-1">
-                <div className="text-sm text-muted-foreground">Build Completed</div>
+                <div className="text-sm text-muted-foreground">Build terminé</div>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">
@@ -116,7 +117,7 @@ export function CustomImageDetailPanel({ image }: CustomImageDetailPanelProps) {
                   </span>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(new Date(image.build_completed_at), { addSuffix: true })}
+                  {formatDistanceToNow(new Date(image.build_completed_at), { addSuffix: true, locale: fr })}
                 </div>
               </div>
             )}
@@ -128,7 +129,7 @@ export function CustomImageDetailPanel({ image }: CustomImageDetailPanelProps) {
               <div className="space-y-1">
                 <div className="text-sm text-muted-foreground flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-destructive" />
-                  Build Error
+                  Erreur de build
                 </div>
                 <div className="p-3 bg-destructive/10 rounded-md">
                   <p className="text-sm text-destructive whitespace-pre-wrap">{image.build_error}</p>
@@ -143,7 +144,7 @@ export function CustomImageDetailPanel({ image }: CustomImageDetailPanelProps) {
       {image.build_args && Object.keys(image.build_args).length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Build Arguments</CardTitle>
+            <CardTitle>Arguments de build</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -199,25 +200,25 @@ export function CustomImageDetailPanel({ image }: CustomImageDetailPanelProps) {
                     <div className="text-lg font-bold text-red-800">
                       {image.security_scan_results.vulnerabilities_by_severity.CRITICAL}
                     </div>
-                    <div className="text-xs text-red-600">Critical</div>
+                    <div className="text-xs text-red-600">Critique</div>
                   </div>
                   <div className="text-center p-2 bg-orange-50 rounded">
                     <div className="text-lg font-bold text-orange-800">
                       {image.security_scan_results.vulnerabilities_by_severity.HIGH}
                     </div>
-                    <div className="text-xs text-orange-600">High</div>
+                    <div className="text-xs text-orange-600">Haute</div>
                   </div>
                   <div className="text-center p-2 bg-yellow-50 rounded">
                     <div className="text-lg font-bold text-yellow-800">
                       {image.security_scan_results.vulnerabilities_by_severity.MEDIUM}
                     </div>
-                    <div className="text-xs text-yellow-600">Medium</div>
+                    <div className="text-xs text-yellow-600">Moyenne</div>
                   </div>
                   <div className="text-center p-2 bg-blue-50 rounded">
                     <div className="text-lg font-bold text-blue-800">
                       {image.security_scan_results.vulnerabilities_by_severity.LOW}
                     </div>
-                    <div className="text-xs text-blue-600">Low</div>
+                    <div className="text-xs text-blue-600">Faible</div>
                   </div>
                 </div>
               </>
@@ -257,12 +258,12 @@ export function CustomImageDetailPanel({ image }: CustomImageDetailPanelProps) {
             </div>
           )}
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Created:</span>
-            <span>{format(new Date(image.created_at), "PPpp")}</span>
+            <span className="text-muted-foreground">Créée :</span>
+            <span>{format(new Date(image.created_at), "PPpp", { locale: fr })}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Updated:</span>
-            <span>{format(new Date(image.updated_at), "PPpp")}</span>
+            <span className="text-muted-foreground">Mise à jour :</span>
+            <span>{format(new Date(image.updated_at), "PPpp", { locale: fr })}</span>
           </div>
         </CardContent>
       </Card>

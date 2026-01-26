@@ -10,6 +10,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
 
 
+def _is_production() -> bool:
+    return os.getenv("ENVIRONMENT", "development").strip().lower() == "production"
+
+
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
@@ -42,8 +46,22 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    @field_validator("JWT_SECRET_KEY")
+    @classmethod
+    def validate_jwt_secret(cls, v: str) -> str:
+        if v == "your-secret-key-change-in-production" and _is_production():
+            raise ValueError(
+                "JWT_SECRET_KEY must be set to a secure value in production. "
+                "Do not use the default. Set JWT_SECRET_KEY in environment."
+            )
+        return v
+
     # Security Configuration
     BCRYPT_ROUNDS: int = 12
+    PASSWORD_HASH_ALGORITHM: str = "argon2"  # argon2 or bcrypt
+    ARGON2_TIME_COST: int = 2
+    ARGON2_MEMORY_COST: int = 65536  # 64 MB
+    ARGON2_PARALLELISM: int = 4
     CORS_ORIGINS: List[str] = [
         "http://localhost:5173", "http://localhost:3000", "http://localhost:80"]
     CORS_ALLOW_CREDENTIALS: bool = True
@@ -55,26 +73,27 @@ class Settings(BaseSettings):
             return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=True,
-        env_parse_none_str="",
-    )
-
-    # Email Configuration
-    EMAIL_PROVIDER: str = "sendgrid"
-    EMAIL_FROM: str = "noreply@cloudmanager.com"
+    # Email Configuration (set via env; no default secrets)
+    EMAIL_PROVIDER: str = "smtp"  # smtp | sendgrid | ses
+    EMAIL_FROM: str = "noreply@localhost"
     EMAIL_FROM_NAME: str = "CloudManager"
     ADMIN_EMAIL: str = "admin@cloudmanager.dz"  # Admin email for critical notifications
     SENDGRID_API_KEY: str | None = None
-    SMTP_HOST: str | None = None
+    AWS_SES_REGION: str = "us-east-1"
+    AWS_ACCESS_KEY_ID: str | None = None
+    AWS_SECRET_ACCESS_KEY: str | None = None
+    SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
-    SMTP_USERNAME: str | None = None
-    SMTP_PASSWORD: str | None = None
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_USE_TLS: bool = True
+    
+    # Webhook Configuration
+    SENDGRID_WEBHOOK_SECRET: str | None = None
+    MAILGUN_WEBHOOK_SECRET: str | None = None
 
-    # SMS Configuration
-    SMS_PROVIDER: str = "twilio"
+    # SMS Configuration (set via env; no default secrets)
+    SMS_PROVIDER: str = "custom"  # Options: "custom", "twilio", "infobip", "mock"
     TWILIO_ACCOUNT_SID: str | None = None
     TWILIO_AUTH_TOKEN: str | None = None
     TWILIO_PHONE_NUMBER: str | None = None
@@ -123,6 +142,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
+        env_parse_none_str="",
         extra="ignore",
     )
 

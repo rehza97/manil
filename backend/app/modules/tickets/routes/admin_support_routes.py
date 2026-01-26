@@ -12,7 +12,8 @@ from sqlalchemy import select, func, and_, or_
 from pydantic import BaseModel, Field
 
 from app.config.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_permission
+from app.core.permissions import Permission
 from app.modules.auth.models import User
 from app.modules.tickets.models import (
     SupportGroup,
@@ -138,7 +139,7 @@ class SupportStatsResponse(BaseModel):
 @router.get("/stats", response_model=SupportStatsResponse)
 async def get_support_stats(
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.TICKETS_MANAGE)),
 ):
     """
     Get support management statistics.
@@ -146,11 +147,6 @@ async def get_support_stats(
     Returns:
         Support statistics including tickets, categories, groups, and rules.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can access support statistics"
-        )
 
     # Count tickets
     total_tickets_result = await db.execute(
@@ -221,7 +217,7 @@ async def get_support_stats(
 async def list_support_groups(
     db: Annotated[AsyncSession, Depends(get_db)],
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.TICKETS_MANAGE)),
 ):
     """
     List all support groups.
@@ -229,11 +225,6 @@ async def list_support_groups(
     Returns:
         List of support groups with member counts.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can access support groups"
-        )
 
     query = select(SupportGroup)
     if is_active is not None:
@@ -265,7 +256,7 @@ async def list_support_groups(
 async def create_support_group(
     group_data: SupportGroupCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.TICKETS_MANAGE)),
 ):
     """
     Create a new support group.
@@ -273,11 +264,6 @@ async def create_support_group(
     Returns:
         Created support group.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can create support groups"
-        )
 
     # Check if name already exists
     existing = await db.execute(
@@ -312,7 +298,7 @@ async def create_support_group(
 async def get_support_group(
     group_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.TICKETS_MANAGE)),
 ):
     """
     Get support group details with members.
@@ -320,11 +306,6 @@ async def get_support_group(
     Returns:
         Support group with member list.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can access support groups"
-        )
 
     group_result = await db.execute(
         select(SupportGroup).where(SupportGroup.id == group_id)
@@ -371,7 +352,7 @@ async def update_support_group(
     group_id: str,
     group_data: SupportGroupUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.TICKETS_MANAGE)),
 ):
     """
     Update support group.
@@ -379,11 +360,6 @@ async def update_support_group(
     Returns:
         Updated support group.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can update support groups"
-        )
 
     group_result = await db.execute(
         select(SupportGroup).where(SupportGroup.id == group_id)
@@ -437,7 +413,7 @@ async def update_support_group(
 async def delete_support_group(
     group_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.TICKETS_MANAGE)),
 ):
     """
     Delete support group (soft delete).
@@ -445,11 +421,6 @@ async def delete_support_group(
     Returns:
         No content.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can delete support groups"
-        )
 
     group_result = await db.execute(
         select(SupportGroup).where(SupportGroup.id == group_id)
@@ -471,7 +442,7 @@ async def add_group_member(
     group_id: str,
     member_data: SupportGroupMemberAdd,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.TICKETS_MANAGE)),
 ):
     """
     Add user to support group.
@@ -479,11 +450,6 @@ async def add_group_member(
     Returns:
         No content.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can manage group members"
-        )
 
     # Verify group exists
     group_result = await db.execute(
@@ -535,7 +501,7 @@ async def remove_group_member(
     group_id: str,
     user_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.TICKETS_MANAGE)),
 ):
     """
     Remove user from support group.
@@ -543,11 +509,6 @@ async def remove_group_member(
     Returns:
         No content.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can manage group members"
-        )
 
     member_result = await db.execute(
         select(SupportGroupMember).where(
@@ -576,7 +537,7 @@ async def remove_group_member(
 async def list_ticket_categories_admin(
     db: Annotated[AsyncSession, Depends(get_db)],
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.TICKETS_MANAGE)),
 ):
     """
     List all ticket categories (admin view).
@@ -584,11 +545,6 @@ async def list_ticket_categories_admin(
     Returns:
         List of ticket categories.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can access ticket categories"
-        )
 
     query = select(TicketCategory)
     if is_active is not None:
@@ -609,7 +565,7 @@ async def list_automation_rules(
     db: Annotated[AsyncSession, Depends(get_db)],
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
     trigger_type: Optional[str] = Query(None, description="Filter by trigger type"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.TICKETS_MANAGE)),
 ):
     """
     List all automation rules.
@@ -617,11 +573,6 @@ async def list_automation_rules(
     Returns:
         List of automation rules.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can access automation rules"
-        )
 
     query = select(AutomationRule)
     if is_active is not None:
@@ -639,7 +590,7 @@ async def list_automation_rules(
 async def create_automation_rule(
     rule_data: AutomationRuleCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.TICKETS_MANAGE)),
 ):
     """
     Create a new automation rule.
@@ -647,11 +598,6 @@ async def create_automation_rule(
     Returns:
         Created automation rule.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can create automation rules"
-        )
 
     # Validate trigger type
     valid_triggers = ["ticket_created", "ticket_updated", "ticket_replied"]
@@ -676,7 +622,7 @@ async def create_automation_rule(
 async def get_automation_rule(
     rule_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.TICKETS_MANAGE)),
 ):
     """
     Get automation rule by ID.
@@ -684,11 +630,6 @@ async def get_automation_rule(
     Returns:
         Automation rule details.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can access automation rules"
-        )
 
     rule_result = await db.execute(
         select(AutomationRule).where(AutomationRule.id == rule_id)
@@ -708,7 +649,7 @@ async def update_automation_rule(
     rule_id: str,
     rule_data: AutomationRuleUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.TICKETS_MANAGE)),
 ):
     """
     Update automation rule.
@@ -716,11 +657,6 @@ async def update_automation_rule(
     Returns:
         Updated automation rule.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can update automation rules"
-        )
 
     rule_result = await db.execute(
         select(AutomationRule).where(AutomationRule.id == rule_id)
@@ -756,7 +692,7 @@ async def update_automation_rule(
 async def delete_automation_rule(
     rule_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.TICKETS_MANAGE)),
 ):
     """
     Delete automation rule.
@@ -764,11 +700,6 @@ async def delete_automation_rule(
     Returns:
         No content.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can delete automation rules"
-        )
 
     rule_result = await db.execute(
         select(AutomationRule).where(AutomationRule.id == rule_id)
@@ -788,7 +719,7 @@ async def delete_automation_rule(
 async def toggle_automation_rule(
     rule_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.TICKETS_MANAGE)),
 ):
     """
     Toggle automation rule active status.
@@ -796,11 +727,6 @@ async def toggle_automation_rule(
     Returns:
         Updated automation rule.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can toggle automation rules"
-        )
 
     rule_result = await db.execute(
         select(AutomationRule).where(AutomationRule.id == rule_id)

@@ -96,7 +96,8 @@ export const useActivateCustomer = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => customerService.activate(id),
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      customerService.activate(id, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
     },
@@ -110,9 +111,88 @@ export const useSuspendCustomer = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => customerService.suspend(id),
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      customerService.suspend(id, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
     },
+  });
+};
+
+/**
+ * Hook to submit customer for approval
+ */
+export const useSubmitForApproval = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, notes }: { id: string; notes?: string }) =>
+      customerService.submitForApproval(id, notes),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+    },
+  });
+};
+
+/**
+ * Hook to approve customer
+ */
+export const useApproveCustomer = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, notes }: { id: string; notes?: string }) =>
+      customerService.approve(id, notes),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+    },
+  });
+};
+
+/**
+ * Hook to reject customer approval
+ */
+export const useRejectCustomer = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      customerService.reject(id, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+    },
+  });
+};
+
+/**
+ * Hook to get status history
+ */
+export const useStatusHistory = (customerId: string) => {
+  return useQuery({
+    queryKey: ["customers", customerId, "status-history"],
+    queryFn: () => customerService.getStatusHistory(customerId),
+    enabled: !!customerId,
+  });
+};
+
+/**
+ * Hook to get profile completeness
+ */
+export const useProfileCompleteness = (customerId: string) => {
+  return useQuery({
+    queryKey: ["customers", customerId, "profile", "completeness"],
+    queryFn: () => customerService.getProfileCompleteness(customerId),
+    enabled: !!customerId,
+  });
+};
+
+/**
+ * Hook to get missing fields
+ */
+export const useMissingFields = (customerId: string) => {
+  return useQuery({
+    queryKey: ["customers", customerId, "profile", "missing-fields"],
+    queryFn: () => customerService.getMissingFields(customerId),
+    enabled: !!customerId,
   });
 };

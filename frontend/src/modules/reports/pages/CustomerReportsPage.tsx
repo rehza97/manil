@@ -17,7 +17,7 @@ import {
   DateRangePicker,
   ExportButton,
 } from '../components';
-import { UserGroupIcon, TrendingUpIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { Users, TrendingUp, CheckCircle2 } from 'lucide-react';
 import type { DateRange } from '../types/report.types';
 
 export const CustomerReportsPage: React.FC = () => {
@@ -62,7 +62,7 @@ export const CustomerReportsPage: React.FC = () => {
         <StatCard
           title="Total Customers"
           value={totalCustomers}
-          icon={<UserGroupIcon className="h-6 w-6" />}
+          icon={<Users className="h-6 w-6" />}
           color="blue"
           loading={statusLoading}
         />
@@ -70,7 +70,7 @@ export const CustomerReportsPage: React.FC = () => {
           title="Active Customers"
           value={activeCustomers}
           subtitle={`${totalCustomers ? ((activeCustomers / totalCustomers) * 100).toFixed(1) : 0}% of total`}
-          icon={<CheckCircleIcon className="h-6 w-6" />}
+          icon={<CheckCircle2 className="h-6 w-6" />}
           color="green"
           loading={statusLoading}
         />
@@ -78,7 +78,7 @@ export const CustomerReportsPage: React.FC = () => {
           title="New Customers"
           value={newCustomers}
           subtitle={`In selected period`}
-          icon={<TrendingUpIcon className="h-6 w-6" />}
+          icon={<TrendingUp className="h-6 w-6" />}
           color="purple"
           loading={growthLoading}
         />

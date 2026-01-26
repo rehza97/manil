@@ -12,6 +12,7 @@ import { Clock, HardDrive, Eye, Trash2, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { CustomDockerImage } from "../types";
 import { formatDistanceToNow } from "date-fns";
+import { fr } from "date-fns/locale";
 
 interface CustomImageCardProps {
   image: CustomDockerImage;
@@ -33,7 +34,7 @@ export function CustomImageCard({
   };
 
   const handleDelete = () => {
-    if (onDelete && window.confirm(`Delete image "${image.image_name}:${image.image_tag}"?`)) {
+    if (onDelete && window.confirm(`Supprimer l'image « ${image.image_name}:${image.image_tag} » ?`)) {
       onDelete(image.id);
     }
   };
@@ -75,12 +76,12 @@ export function CustomImageCard({
             {image.build_duration_seconds && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Clock className="h-4 w-4" />
-                <span>{image.build_duration_seconds}s build time</span>
+                <span>Construction : {image.build_duration_seconds} s</span>
               </div>
             )}
             {image.created_at && (
               <div className="text-xs text-muted-foreground">
-                Created {formatDistanceToNow(new Date(image.created_at), { addSuffix: true })}
+                Créée {formatDistanceToNow(new Date(image.created_at), { addSuffix: true, locale: fr })}
               </div>
             )}
           </div>
@@ -89,7 +90,7 @@ export function CustomImageCard({
           {image.security_scan_results && (
             <div className="pt-2 border-t">
               <div className="flex items-center gap-2 text-sm">
-                <span className="font-medium">Security Scan:</span>
+                <span className="font-medium">Analyse de sécurité :</span>
                 <Badge
                   variant={
                     image.security_scan_results.total_vulnerabilities === 0
@@ -100,7 +101,7 @@ export function CustomImageCard({
                       : "secondary"
                   }
                 >
-                  {image.security_scan_results.total_vulnerabilities} vulnerabilities
+                  {image.security_scan_results.total_vulnerabilities} vulnérabilité(s)
                 </Badge>
               </div>
             </div>
@@ -118,7 +119,7 @@ export function CustomImageCard({
             <div className="flex gap-2 pt-2 border-t">
               <Button variant="outline" size="sm" onClick={handleView} className="flex-1">
                 <Eye className="h-4 w-4 mr-1" />
-                View
+                Voir
               </Button>
               {canRebuild && onRebuild && (
                 <Button

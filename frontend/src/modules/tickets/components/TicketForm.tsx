@@ -29,10 +29,10 @@ import { Paperclip, Save, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 const ticketSchema = z.object({
-  title: z.string().min(5, "Title must be at least 5 characters"),
-  description: z.string().min(10, "Description must be at least 10 characters"),
+  title: z.string().min(5, "Le titre doit contenir au moins 5 caractères"),
+  description: z.string().min(10, "La description doit contenir au moins 10 caractères"),
   priority: z.enum(["low", "medium", "high", "urgent"]),
-  customerId: z.string().uuid("Invalid customer ID"),
+  customerId: z.string().uuid("ID client invalide"),
   category: z.string().optional(),
 });
 
@@ -104,13 +104,13 @@ export const TicketForm: React.FC<TicketFormProps> = ({ customerId, onSuccess })
     try {
       localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(values));
       toast({
-        title: "Draft saved",
-        description: "Your ticket draft has been saved",
+        title: "Brouillon enregistré",
+        description: "Votre brouillon de ticket a été enregistré",
       });
     } catch (e) {
       toast({
-        title: "Error",
-        description: "Failed to save draft",
+        title: "Erreur",
+        description: "Impossible d'enregistrer le brouillon",
         variant: "destructive",
       });
     }
@@ -126,8 +126,8 @@ export const TicketForm: React.FC<TicketFormProps> = ({ customerId, onSuccess })
       description: "",
     });
     toast({
-      title: "Draft cleared",
-      description: "Draft has been cleared",
+      title: "Brouillon effacé",
+      description: "Le brouillon a été effacé",
     });
   };
 
@@ -135,8 +135,8 @@ export const TicketForm: React.FC<TicketFormProps> = ({ customerId, onSuccess })
     const files = Array.from(e.target.files || []);
     if (files.length + attachments.length > 10) {
       toast({
-        title: "Error",
-        description: "Maximum 10 attachments allowed",
+        title: "Erreur",
+        description: "Maximum 10 pièces jointes autorisées",
         variant: "destructive",
       });
       return;
@@ -177,15 +177,15 @@ export const TicketForm: React.FC<TicketFormProps> = ({ customerId, onSuccess })
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>Create Support Ticket</CardTitle>
+          <CardTitle>Créer un ticket support</CardTitle>
           <div className="flex gap-2">
             <Button type="button" variant="outline" size="sm" onClick={handleSaveDraft}>
               <Save className="h-4 w-4 mr-2" />
-              Save Draft
+              Enregistrer le brouillon
             </Button>
             <Button type="button" variant="ghost" size="sm" onClick={handleClearDraft}>
               <X className="h-4 w-4 mr-2" />
-              Clear Draft
+              Effacer le brouillon
             </Button>
           </div>
         </div>
@@ -198,9 +198,9 @@ export const TicketForm: React.FC<TicketFormProps> = ({ customerId, onSuccess })
               name="customerId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Customer ID</FormLabel>
+                  <FormLabel>ID client</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Customer ID" disabled={!!customerId} />
+                    <Input {...field} placeholder="ID client" disabled={!!customerId} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -212,9 +212,9 @@ export const TicketForm: React.FC<TicketFormProps> = ({ customerId, onSuccess })
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Ticket Title</FormLabel>
+                  <FormLabel>Titre du ticket</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Brief description of the issue" />
+                    <Input {...field} placeholder="Résumé du problème" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -230,7 +230,7 @@ export const TicketForm: React.FC<TicketFormProps> = ({ customerId, onSuccess })
                   <FormControl>
                     <Textarea
                       {...field}
-                      placeholder="Detailed description of the issue"
+                      placeholder="Description détaillée du problème"
                       rows={5}
                     />
                   </FormControl>
@@ -244,22 +244,21 @@ export const TicketForm: React.FC<TicketFormProps> = ({ customerId, onSuccess })
               name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category</FormLabel>
+                  <FormLabel>Catégorie</FormLabel>
                   <Select 
                     onValueChange={(value) => field.onChange(value === "none" ? undefined : value)} 
                     value={field.value || "none"}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select category (optional)" />
+                        <SelectValue placeholder="Choisir une catégorie (optionnel)" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="none">Aucune</SelectItem>
                       {isLoadingCategories ? (
-                        <SelectItem value="loading" disabled>Loading categories...</SelectItem>
+                        <SelectItem value="loading" disabled>Chargement des catégories…</SelectItem>
                       ) : categoriesError ? (
-                        // If error (e.g., 403), just show None option
                         null
                       ) : (
                         categories.map((category: any) => (
@@ -347,10 +346,10 @@ export const TicketForm: React.FC<TicketFormProps> = ({ customerId, onSuccess })
 
             <div className="flex gap-2 justify-end">
               <Button type="button" variant="outline" onClick={() => form.reset()}>
-                Clear
+                Effacer
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending ? "Creating..." : "Create Ticket"}
+                {isPending ? "Création…" : "Créer le ticket"}
               </Button>
             </div>
           </form>

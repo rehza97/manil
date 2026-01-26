@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config.database import get_db
 from app.core.dependencies import get_current_user, require_permission
 from app.core.exceptions import NotFoundException
+from app.core.permissions import Permission
 from app.core.logging import logger
 from app.modules.auth.models import User
 from app.modules.tickets.attachments import AttachmentResponse
@@ -25,7 +26,7 @@ async def upload_ticket_attachment(
     file: UploadFile = File(...),
     reply_id: str = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_REPLY")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_REPLY)),
 ):
     """
     Upload file attachment to ticket or reply.
@@ -69,7 +70,7 @@ async def upload_ticket_attachment(
 async def list_ticket_attachments(
     ticket_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_VIEW")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
     """List all attachments for a ticket."""
     service = TicketAttachmentService(db)
@@ -86,7 +87,7 @@ async def get_attachment_details(
     ticket_id: str,
     attachment_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_VIEW")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
     """Get attachment details."""
     service = TicketAttachmentService(db)
@@ -106,7 +107,7 @@ async def download_attachment(
     ticket_id: str,
     attachment_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_VIEW")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
     """Download attachment file."""
     service = TicketAttachmentService(db)
@@ -136,7 +137,7 @@ async def delete_attachment(
     ticket_id: str,
     attachment_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_REPLY")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_REPLY)),
 ):
     """Delete (soft delete) attachment."""
     service = TicketAttachmentService(db)
@@ -156,7 +157,7 @@ async def delete_attachment(
 async def get_attachment_statistics(
     ticket_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_VIEW")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
     """Get attachment statistics for ticket."""
     service = TicketAttachmentService(db)
@@ -172,7 +173,7 @@ async def get_attachment_statistics(
 async def list_reply_attachments(
     reply_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_VIEW")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
     """List all attachments for a reply."""
     service = TicketAttachmentService(db)

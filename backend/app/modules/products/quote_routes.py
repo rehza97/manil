@@ -2,8 +2,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.config.database import get_db
+from app.config.database import get_sync_db
+from app.core.dependencies import require_any_permission
+from app.core.permissions import Permission
 from app.core.exceptions import NotFoundException
+from app.modules.auth.models import User
 from app.modules.products.quote_service import QuoteRequestService, ServiceRequestService
 from app.modules.products.quote_schemas import (
     QuoteRequestCreate,
@@ -18,8 +21,9 @@ from app.modules.products.quote_schemas import (
     ServiceRequestListResponse,
 )
 from app.modules.products.quote_notifications import QuoteNotificationService
+from app.core.logging import logger
 
-router = APIRouter(prefix="/quotes", tags=["quotes"])
+router = APIRouter(prefix="/quote-requests", tags=["quote-requests"])
 
 
 # ============================================================================
@@ -30,15 +34,26 @@ router = APIRouter(prefix="/quotes", tags=["quotes"])
 @router.post("", response_model=QuoteRequestResponse, status_code=status.HTTP_201_CREATED)
 def create_quote_request(
     quote_data: QuoteRequestCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ):
     """Create a new quote request."""
     try:
         quote = QuoteRequestService.create_quote_request(db, quote_data)
 
-        # Send confirmation email to customer
+        # Send confirmation notification (email + SMS) to customer
         if quote.customer_email:
-            QuoteNotificationService.send_quote_creation_email(quote)
+            # Use async notification with preference checks
+            import asyncio
+            from app.config.database import AsyncSessionLocal
+            async def send_notification():
+                async with AsyncSessionLocal() as async_db:
+                    await QuoteNotificationService.send_quote_creation_notification(async_db, quote)
+            try:
+                asyncio.run(send_notification())
+            except Exception as e:
+                logger.warning(f"Failed to send quote creation notification: {e}")
+                # Fallback to email only
+                QuoteNotificationService.send_quote_creation_email(quote)
 
         return QuoteRequestResponse.model_validate(quote)
     except Exception as e:
@@ -53,7 +68,8 @@ def list_quote_requests(
     status: QuoteStatus = Query(None),
     priority: QuotePriority = Query(None),
     search: str = Query(None),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT])),
 ):
     """List quote requests with filtering."""
     skip = (page - 1) * page_size
@@ -80,7 +96,8 @@ def list_quote_requests(
 @router.get("/{quote_id}", response_model=QuoteRequestResponse)
 def get_quote_request(
     quote_id: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT])),
 ):
     """Get a quote request by ID."""
     try:
@@ -94,7 +111,8 @@ def get_quote_request(
 def update_quote_request(
     quote_id: str,
     quote_data: QuoteRequestUpdate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT])),
 ):
     """Update a quote request."""
     try:
@@ -107,7 +125,8 @@ def update_quote_request(
 @router.delete("/{quote_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_quote_request(
     quote_id: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT])),
 ):
     """Delete a quote request."""
     try:
@@ -119,16 +138,26 @@ def delete_quote_request(
 @router.post("/{quote_id}/approve", response_model=QuoteRequestResponse)
 def approve_quote_request(
     quote_id: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT])),
 ):
     """Approve a quote request and set status to QUOTED."""
     try:
         quote_data = QuoteRequestUpdate(status=QuoteStatus.QUOTED)
         quote = QuoteRequestService.update_quote_request(db, quote_id, quote_data)
 
-        # Send approved notification to customer
+        # Send approved notification (email + SMS) to customer
         if quote.customer_email:
-            QuoteNotificationService.send_quote_approved_email(quote)
+            import asyncio
+            from app.config.database import AsyncSessionLocal
+            async def send_notification():
+                async with AsyncSessionLocal() as async_db:
+                    await QuoteNotificationService.send_quote_approved_notification(async_db, quote)
+            try:
+                asyncio.run(send_notification())
+            except Exception as e:
+                logger.warning(f"Failed to send quote approved notification: {e}")
+                QuoteNotificationService.send_quote_approved_email(quote)
 
         return QuoteRequestResponse.model_validate(quote)
     except NotFoundException as e:
@@ -138,7 +167,8 @@ def approve_quote_request(
 @router.post("/{quote_id}/accept", response_model=QuoteRequestResponse)
 def accept_quote_request(
     quote_id: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT])),
 ):
     """Accept a quote request and set status to ACCEPTED."""
     try:
@@ -157,16 +187,26 @@ def accept_quote_request(
 @router.post("/{quote_id}/reject", response_model=QuoteRequestResponse)
 def reject_quote_request(
     quote_id: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT])),
 ):
     """Reject a quote request and set status to REJECTED."""
     try:
         quote_data = QuoteRequestUpdate(status=QuoteStatus.REJECTED)
         quote = QuoteRequestService.update_quote_request(db, quote_id, quote_data)
 
-        # Send rejection notification to customer and corporate
+        # Send rejection notification (email + SMS) to customer and corporate
         if quote.customer_email:
-            QuoteNotificationService.send_quote_rejected_email(quote)
+            import asyncio
+            from app.config.database import AsyncSessionLocal
+            async def send_notification():
+                async with AsyncSessionLocal() as async_db:
+                    await QuoteNotificationService.send_quote_rejected_notification(async_db, quote)
+            try:
+                asyncio.run(send_notification())
+            except Exception as e:
+                logger.warning(f"Failed to send quote rejected notification: {e}")
+                QuoteNotificationService.send_quote_rejected_email(quote)
 
         return QuoteRequestResponse.model_validate(quote)
     except NotFoundException as e:
@@ -181,7 +221,7 @@ def reject_quote_request(
 @router.post("/services", response_model=ServiceRequestResponse, status_code=status.HTTP_201_CREATED)
 def create_service_request(
     service_data: ServiceRequestCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ):
     """Create a new service request."""
     try:
@@ -203,7 +243,7 @@ def list_service_requests(
     customer_id: str = Query(None),
     status: QuoteStatus = Query(None),
     service_type: str = Query(None),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ):
     """List service requests with filtering."""
     skip = (page - 1) * page_size
@@ -229,7 +269,8 @@ def list_service_requests(
 @router.get("/services/{service_id}", response_model=ServiceRequestResponse)
 def get_service_request(
     service_id: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT])),
 ):
     """Get a service request by ID."""
     try:
@@ -243,7 +284,7 @@ def get_service_request(
 def update_service_request(
     service_id: str,
     service_data: ServiceRequestUpdate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ):
     """Update a service request."""
     try:
@@ -256,7 +297,8 @@ def update_service_request(
 @router.delete("/services/{service_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_service_request(
     service_id: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT])),
 ):
     """Delete a service request."""
     try:

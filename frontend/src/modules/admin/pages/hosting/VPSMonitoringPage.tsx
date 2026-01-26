@@ -10,6 +10,7 @@ import {
   useAlerts,
 } from "@/modules/hosting/hooks";
 import { ResourceGauge } from "@/modules/hosting/components";
+import { useExportReport } from "@/modules/admin/hooks/useReports";
 import {
   Table,
   TableBody,
@@ -27,6 +28,13 @@ import {
 } from "@/shared/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import {
@@ -35,11 +43,13 @@ import {
   Cpu,
   MemoryStick,
   AlertTriangle,
-  RefreshCw,
   Activity,
+  Download,
+  FileText,
+  FileSpreadsheet,
 } from "lucide-react";
 import { format } from "date-fns";
-import { formatDZD } from "@/shared/utils/formatters";
+import { formatRevenue } from "@/shared/utils/revenueFormatters";
 
 export const VPSMonitoringPage: React.FC = () => {
   const [severityFilter, setSeverityFilter] = useState<string>("");
@@ -125,7 +135,7 @@ export const VPSMonitoringPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {formatDZD(Number(overview.total_monthly_revenue || 0))}
+                {formatRevenue(Number(overview.total_monthly_revenue || 0))}
               </div>
             </CardContent>
           </Card>

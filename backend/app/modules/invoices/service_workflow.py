@@ -25,6 +25,10 @@ from app.modules.quotes.models import Quote, QuoteStatus
 from app.modules.quotes.repository import QuoteRepository
 from app.modules.customers.models import Customer
 from app.infrastructure.email.service import EmailService
+from app.modules.notifications.service import user_id_by_email
+from app.modules.settings.service import UserNotificationPreferencesService
+from app.infrastructure.sms.service import SMSService
+from app.core.logging import logger
 
 
 class InvoiceWorkflowService:
@@ -109,6 +113,13 @@ class InvoiceWorkflowService:
                 detail="Customer email not found"
             )
 
+        uid = await user_id_by_email(self.db, customer.email)
+        if uid:
+            prefs_svc = UserNotificationPreferencesService(self.db)
+            prefs = await prefs_svc.get(uid)
+            if not prefs.get("email", {}).get("invoiceUpdates", True):
+                return False
+
         # Generate PDF
         pdf_service = InvoicePDFService()
         customer_data = {
@@ -141,6 +152,23 @@ class InvoiceWorkflowService:
                 f"Invoice emailed to {customer.email}",
                 "system"
             )
+            
+            # Send SMS notification if phone exists and preferences allow
+            if customer.phone and customer.phone.strip():
+                try:
+                    if uid:
+                        prefs_svc = UserNotificationPreferencesService(self.db)
+                        prefs = await prefs_svc.get(uid)
+                        if prefs.get("sms", {}).get("invoiceUpdates", False):
+                            sms_service = SMSService()
+                            await sms_service.send_invoice_notification(
+                                to=customer.phone,
+                                invoice_number=invoice.invoice_number,
+                                amount=float(invoice.total_amount),
+                                due_date=due_date
+                            )
+                except Exception as e:
+                    logger.warning(f"Invoice SMS notification failed: {e}")
 
         return success
 
@@ -202,6 +230,27 @@ class InvoiceWorkflowService:
                 from app.core.logging import logger
                 logger.error(f"VPS payment webhook failed for invoice {invoice.id}: {e}")
                 # Don't fail payment recording if webhook fails
+
+        # Send SMS payment confirmation if customer has phone and preferences allow
+        try:
+            customer_query = select(Customer).where(Customer.id == invoice.customer_id)
+            result = await self.db.execute(customer_query)
+            customer = result.scalar_one_or_none()
+            
+            if customer and customer.phone and customer.phone.strip():
+                uid = await user_id_by_email(self.db, customer.email)
+                if uid:
+                    prefs_svc = UserNotificationPreferencesService(self.db)
+                    prefs = await prefs_svc.get(uid)
+                    if prefs.get("sms", {}).get("invoiceUpdates", False):
+                        sms_service = SMSService()
+                        await sms_service.send_payment_confirmation(
+                            to=customer.phone,
+                            invoice_number=invoice.invoice_number,
+                            amount=payment_data.amount
+                        )
+        except Exception as e:
+            logger.warning(f"Payment confirmation SMS notification failed: {e}")
 
         await self.db.commit()
         return invoice

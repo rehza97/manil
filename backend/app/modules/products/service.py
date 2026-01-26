@@ -1,5 +1,6 @@
 """Product catalogue business logic service."""
 import logging
+from datetime import datetime, timezone
 from typing import Optional, Tuple
 from uuid import uuid4
 
@@ -71,7 +72,7 @@ class CategoryService:
         active_only: bool = True,
     ) -> list[ProductCategory]:
         """List all categories with optional filtering."""
-        query = select(ProductCategory)
+        query = select(ProductCategory).where(ProductCategory.deleted_at.is_(None))
 
         if parent_only:
             query = query.where(ProductCategory.parent_category_id.is_(None))
@@ -133,7 +134,6 @@ class CategoryService:
             raise NotFoundException(f"Category {category_id} not found")
 
         category = category[0]
-        from datetime import datetime, timezone
         category.deleted_at = datetime.now(timezone.utc)
 
         db.commit()
@@ -221,7 +221,10 @@ class ProductService:
         max_price: Optional[float] = None,
         search: Optional[str] = None,
         is_featured: Optional[bool] = None,
-        in_stock: Optional[bool] = None,
+        service_type: Optional[str] = None,
+        billing_cycle: Optional[str] = None,
+        is_recurring: Optional[bool] = None,
+        in_stock: Optional[bool] = None,  # DEPRECATED: kept for backward compatibility
         sort_by: str = "created_at",
         sort_order: str = "desc",
         visible_only: bool = True,
@@ -255,13 +258,37 @@ class ProductService:
         if is_featured is not None:
             query = query.where(Product.is_featured == is_featured)
 
-        if in_stock:
-            query = query.where(Product.stock_quantity > 0)
+        # Service filters
+        if service_type:
+            query = query.where(Product.service_type == service_type)
 
-        # Get total count
-        total_result = await db.execute(
-            select(func.count(Product.id)).where(Product.deleted_at.is_(None))
-        )
+        if billing_cycle:
+            query = query.where(Product.billing_cycle == billing_cycle)
+
+        if is_recurring is not None:
+            query = query.where(Product.is_recurring == is_recurring)
+
+        # DEPRECATED: Stock filter (kept for backward compatibility)
+        if in_stock is not None:
+            if in_stock:
+                # For services, "in stock" means service is available (not terminated)
+                query = query.where(
+                    or_(
+                        Product.stock_quantity.is_(None),  # Unlimited
+                        Product.stock_quantity > 0
+                    )
+                )
+            else:
+                query = query.where(
+                    and_(
+                        Product.stock_quantity.isnot(None),
+                        Product.stock_quantity == 0
+                    )
+                )
+
+        # Get total count using same filters as main query
+        count_stmt = select(func.count()).select_from(query.subquery())
+        total_result = await db.execute(count_stmt)
         total_count = total_result.scalar() or 0
 
         # Sorting
@@ -588,10 +615,27 @@ class ProductService:
             )
         ).scalar() or 0
 
-        out_of_stock = db.execute(
+        # Service type distribution
+        service_type_dist = db.execute(
+            select(Product.service_type, func.count(Product.id))
+            .where(Product.deleted_at.is_(None))
+            .group_by(Product.service_type)
+        ).all()
+        service_type_distribution = {row[0]: row[1] for row in service_type_dist}
+
+        # Billing cycle distribution
+        billing_cycle_dist = db.execute(
+            select(Product.billing_cycle, func.count(Product.id))
+            .where(Product.deleted_at.is_(None))
+            .group_by(Product.billing_cycle)
+        ).all()
+        billing_cycle_distribution = {row[0]: row[1] for row in billing_cycle_dist}
+
+        # Recurring services count
+        recurring_services = db.execute(
             select(func.count(Product.id)).where(
                 and_(
-                    Product.stock_quantity == 0,
+                    Product.is_recurring.is_(True),
                     Product.deleted_at.is_(None),
                 )
             )
@@ -605,6 +649,8 @@ class ProductService:
             "total_products": total_products,
             "total_categories": total_categories,
             "featured_products": featured_products,
-            "out_of_stock": out_of_stock,
+            "service_type_distribution": service_type_distribution,
+            "billing_cycle_distribution": billing_cycle_distribution,
+            "recurring_services": recurring_services,
             "avg_rating": round(float(avg_rating), 2),
         }

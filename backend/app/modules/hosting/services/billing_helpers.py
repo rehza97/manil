@@ -25,7 +25,7 @@ class BillingCalculator:
     6. First/last day of month
     """
 
-    # Minimum charge to avoid $0.00 invoices
+    # Minimum charge to avoid 0.00 DZD invoices
     MIN_CHARGE = Decimal("0.01")
 
     # Maximum refund/credit allowed
@@ -140,7 +140,7 @@ class BillingCalculator:
                 "max_credit_allowed": float(max_credit)
             }
 
-        # Edge Case 4: Very small amounts (< $0.01)
+        # Edge Case 4: Very small amounts (< 0.01 DZD)
         if 0 < prorated_amount < BillingCalculator.MIN_CHARGE:
             prorated_amount = BillingCalculator.MIN_CHARGE
 

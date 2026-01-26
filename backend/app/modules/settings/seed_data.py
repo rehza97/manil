@@ -83,6 +83,116 @@ SYSTEM_PERMISSIONS = [
     {"name": "Create Roles", "slug": "roles:create", "category": "Roles", "resource": "roles", "action": "create", "description": "Create new roles"},
     {"name": "Edit Roles", "slug": "roles:edit", "category": "Roles", "resource": "roles", "action": "edit", "description": "Edit role information and permissions"},
     {"name": "Delete Roles", "slug": "roles:delete", "category": "Roles", "resource": "roles", "action": "delete", "description": "Delete roles"},
+
+    # DNS Management permissions
+    {"name": "View DNS", "slug": "dns:view", "category": "DNS", "resource": "dns", "action": "view", "description": "View DNS zones and records"},
+    {"name": "Manage DNS", "slug": "dns:manage", "category": "DNS", "resource": "dns", "action": "manage", "description": "Manage DNS zones and records"},
+    {"name": "Admin DNS", "slug": "dns:admin", "category": "DNS", "resource": "dns", "action": "admin", "description": "Administer all DNS zones (not just own)"},
+    {"name": "DNS Templates", "slug": "dns:templates", "category": "DNS", "resource": "dns", "action": "templates", "description": "Manage DNS zone templates"},
+    {"name": "DNS Sync", "slug": "dns:sync", "category": "DNS", "resource": "dns", "action": "sync", "description": "Sync DNS zones"},
+    {"name": "DNS Export", "slug": "dns:export", "category": "DNS", "resource": "dns", "action": "export", "description": "Export DNS configurations"},
+
+    # Audit & Logging permissions
+    {"name": "View Audit Logs", "slug": "audit:view", "category": "Audit", "resource": "audit", "action": "view", "description": "View audit logs"},
+    {"name": "Export Audit Logs", "slug": "audit:export", "category": "Audit", "resource": "audit", "action": "export", "description": "Export audit logs"},
+    {"name": "Admin Audit Logs", "slug": "audit:admin", "category": "Audit", "resource": "audit", "action": "admin", "description": "View all users' audit logs (not just own)"},
+
+    # Notification permissions
+    {"name": "View Notifications", "slug": "notifications:view", "category": "Notifications", "resource": "notifications", "action": "view", "description": "View own notifications"},
+    {"name": "Manage Notifications", "slug": "notifications:manage", "category": "Notifications", "resource": "notifications", "action": "manage", "description": "Manage notification groups"},
+    {"name": "Send Notifications", "slug": "notifications:send", "category": "Notifications", "resource": "notifications", "action": "send", "description": "Send notifications to users/groups"},
+    {"name": "Admin Notifications", "slug": "notifications:admin", "category": "Notifications", "resource": "notifications", "action": "admin", "description": "Admin notification system"},
+
+    # Email Management permissions
+    {"name": "View Email", "slug": "email:view", "category": "Email", "resource": "email", "action": "view", "description": "View email accounts"},
+    {"name": "Manage Email", "slug": "email:manage", "category": "Email", "resource": "email", "action": "manage", "description": "Manage email accounts"},
+    {"name": "Email Templates", "slug": "email:templates", "category": "Email", "resource": "email", "action": "templates", "description": "Manage email templates"},
+    {"name": "Email Bounces", "slug": "email:bounces", "category": "Email", "resource": "email", "action": "bounces", "description": "View/manage email bounces"},
+    {"name": "Email History", "slug": "email:history", "category": "Email", "resource": "email", "action": "history", "description": "View email send history"},
+    {"name": "Email Sync", "slug": "email:sync", "category": "Email", "resource": "email", "action": "sync", "description": "Sync email accounts"},
+
+    # SMS permissions
+    {"name": "View SMS", "slug": "sms:view", "category": "SMS", "resource": "sms", "action": "view", "description": "View SMS messages"},
+    {"name": "Send SMS", "slug": "sms:send", "category": "SMS", "resource": "sms", "action": "send", "description": "Send SMS messages"},
+    {"name": "Manage SMS", "slug": "sms:manage", "category": "SMS", "resource": "sms", "action": "manage", "description": "Manage SMS configuration"},
+    {"name": "Admin SMS", "slug": "sms:admin", "category": "SMS", "resource": "sms", "action": "admin", "description": "Admin SMS system"},
+
+    # System permissions
+    {"name": "View System", "slug": "system:view", "category": "System", "resource": "system", "action": "view", "description": "View system stats"},
+    {"name": "System Logs", "slug": "system:logs", "category": "System", "resource": "system", "action": "logs", "description": "View system logs"},
+    {"name": "System Alerts", "slug": "system:alerts", "category": "System", "resource": "system", "action": "alerts", "description": "View/manage system alerts"},
+    {"name": "System Maintenance", "slug": "system:maintenance", "category": "System", "resource": "system", "action": "maintenance", "description": "Perform maintenance operations"},
+    {"name": "System Performance", "slug": "system:performance", "category": "System", "resource": "system", "action": "performance", "description": "View performance metrics"},
+    {"name": "System Health", "slug": "system:health", "category": "System", "resource": "system", "action": "health", "description": "View detailed health status"},
+
+    # Customer extended permissions
+    {"name": "Customer Notes", "slug": "customers:notes", "category": "Customers", "resource": "customers", "action": "notes", "description": "Manage customer notes"},
+    {"name": "Customer Documents", "slug": "customers:documents", "category": "Customers", "resource": "customers", "action": "documents", "description": "Manage customer documents"},
+    {"name": "Export Customers", "slug": "customers:export", "category": "Customers", "resource": "customers", "action": "export", "description": "Export customer data"},
+    {"name": "Import Customers", "slug": "customers:import", "category": "Customers", "resource": "customers", "action": "import", "description": "Import customer data"},
+    {"name": "Approve Customers", "slug": "customers:approve", "category": "Customers", "resource": "customers", "action": "approve", "description": "Approve customer registrations"},
+    {"name": "Reject Customers", "slug": "customers:reject", "category": "Customers", "resource": "customers", "action": "reject", "description": "Reject customer registrations"},
+
+    # Product extended permissions
+    {"name": "Product Categories", "slug": "products:categories", "category": "Products", "resource": "products", "action": "categories", "description": "Manage product categories"},
+    {"name": "Product Variants", "slug": "products:variants", "category": "Products", "resource": "products", "action": "variants", "description": "Manage product variants"},
+    {"name": "Product Images", "slug": "products:images", "category": "Products", "resource": "products", "action": "images", "description": "Manage product images"},
+    {"name": "Product Features", "slug": "products:features", "category": "Products", "resource": "products", "action": "features", "description": "Manage product features"},
+
+    # Quote permissions
+    {"name": "View Quotes", "slug": "quotes:view", "category": "Quotes", "resource": "quotes", "action": "view", "description": "View quote list and details"},
+    {"name": "Create Quotes", "slug": "quotes:create", "category": "Quotes", "resource": "quotes", "action": "create", "description": "Create new quotes"},
+    {"name": "Edit Quotes", "slug": "quotes:edit", "category": "Quotes", "resource": "quotes", "action": "edit", "description": "Edit quote information"},
+    {"name": "Delete Quotes", "slug": "quotes:delete", "category": "Quotes", "resource": "quotes", "action": "delete", "description": "Delete quotes"},
+    {"name": "Approve Quotes", "slug": "quotes:approve", "category": "Quotes", "resource": "quotes", "action": "approve", "description": "Approve quotes"},
+    {"name": "Accept Quotes", "slug": "quotes:accept", "category": "Quotes", "resource": "quotes", "action": "accept", "description": "Accept quotes (client)"},
+    {"name": "Reject Quotes", "slug": "quotes:reject", "category": "Quotes", "resource": "quotes", "action": "reject", "description": "Reject quotes"},
+    {"name": "Send Quotes", "slug": "quotes:send", "category": "Quotes", "resource": "quotes", "action": "send", "description": "Send quotes to customers"},
+    {"name": "Convert Quotes", "slug": "quotes:convert", "category": "Quotes", "resource": "quotes", "action": "convert", "description": "Convert quotes to invoices"},
+
+    # Invoice extended permissions
+    {"name": "Pay Invoices", "slug": "invoices:pay", "category": "Invoices", "resource": "invoices", "action": "pay", "description": "Record invoice payments"},
+    {"name": "Cancel Invoices", "slug": "invoices:cancel", "category": "Invoices", "resource": "invoices", "action": "cancel", "description": "Cancel invoices"},
+    {"name": "Refund Invoices", "slug": "invoices:refund", "category": "Invoices", "resource": "invoices", "action": "refund", "description": "Process refunds"},
+    {"name": "Void Invoices", "slug": "invoices:void", "category": "Invoices", "resource": "invoices", "action": "void", "description": "Void invoices"},
+    {"name": "Export Invoices", "slug": "invoices:export", "category": "Invoices", "resource": "invoices", "action": "export", "description": "Export invoices"},
+
+    # Ticket extended permissions
+    {"name": "Reopen Tickets", "slug": "tickets:reopen", "category": "Tickets", "resource": "tickets", "action": "reopen", "description": "Reopen closed tickets"},
+    {"name": "Merge Tickets", "slug": "tickets:merge", "category": "Tickets", "resource": "tickets", "action": "merge", "description": "Merge tickets"},
+    {"name": "Escalate Tickets", "slug": "tickets:escalate", "category": "Tickets", "resource": "tickets", "action": "escalate", "description": "Escalate tickets"},
+    {"name": "Ticket Watchers", "slug": "tickets:watchers", "category": "Tickets", "resource": "tickets", "action": "watchers", "description": "Manage ticket watchers"},
+    {"name": "Ticket SLA", "slug": "tickets:sla", "category": "Tickets", "resource": "tickets", "action": "sla", "description": "View/manage SLA metrics"},
+    {"name": "Ticket Tags", "slug": "tickets:tags", "category": "Tickets", "resource": "tickets", "action": "tags", "description": "Manage ticket tags"},
+    {"name": "Ticket Templates", "slug": "tickets:templates", "category": "Tickets", "resource": "tickets", "action": "templates", "description": "Manage canned replies/templates"},
+    {"name": "Ticket Email", "slug": "tickets:email", "category": "Tickets", "resource": "tickets", "action": "email", "description": "Manage email-to-ticket integration"},
+    {"name": "Manage Tickets", "slug": "tickets:manage", "category": "Tickets", "resource": "tickets", "action": "manage", "description": "Full ticket management access"},
+
+    # Registration permissions
+    {"name": "View Registrations", "slug": "registrations:view", "category": "Registrations", "resource": "registrations", "action": "view", "description": "View registration requests"},
+    {"name": "Approve Registrations", "slug": "registrations:approve", "category": "Registrations", "resource": "registrations", "action": "approve", "description": "Approve registrations"},
+    {"name": "Reject Registrations", "slug": "registrations:reject", "category": "Registrations", "resource": "registrations", "action": "reject", "description": "Reject registrations"},
+    {"name": "Manage Registrations", "slug": "registrations:manage", "category": "Registrations", "resource": "registrations", "action": "manage", "description": "Manage registration workflow"},
+
+    # User extended permissions
+    {"name": "Unlock Users", "slug": "users:unlock", "category": "Users", "resource": "users", "action": "unlock", "description": "Unlock locked accounts"},
+    {"name": "Reset User Password", "slug": "users:reset_password", "category": "Users", "resource": "users", "action": "reset_password", "description": "Reset user passwords (admin-initiated)"},
+    {"name": "User Sessions", "slug": "users:sessions", "category": "Users", "resource": "users", "action": "sessions", "description": "View/manage user sessions"},
+    {"name": "User Activity", "slug": "users:activity", "category": "Users", "resource": "users", "action": "activity", "description": "View user activity logs"},
+    {"name": "Export Users", "slug": "users:export", "category": "Users", "resource": "users", "action": "export", "description": "Export user data"},
+
+    # Hosting extended permissions
+    {"name": "Provision Hosting", "slug": "hosting:provision", "category": "Hosting", "resource": "hosting", "action": "provision", "description": "Provision VPS instances"},
+    {"name": "Deprovision Hosting", "slug": "hosting:deprovision", "category": "Hosting", "resource": "hosting", "action": "deprovision", "description": "Deprovision VPS instances"},
+    {"name": "Hosting Backup", "slug": "hosting:backup", "category": "Hosting", "resource": "hosting", "action": "backup", "description": "Manage backups"},
+    {"name": "Hosting Restore", "slug": "hosting:restore", "category": "Hosting", "resource": "hosting", "action": "restore", "description": "Restore from backups"},
+    {"name": "Hosting Snapshots", "slug": "hosting:snapshots", "category": "Hosting", "resource": "hosting", "action": "snapshots", "description": "Manage snapshots"},
+    {"name": "Hosting Images", "slug": "hosting:images", "category": "Hosting", "resource": "hosting", "action": "images", "description": "Manage custom images"},
+    {"name": "Hosting Domains", "slug": "hosting:domains", "category": "Hosting", "resource": "hosting", "action": "domains", "description": "Manage service domains"},
+
+    # Reports extended permissions
+    {"name": "Custom Reports", "slug": "reports:custom", "category": "Reports", "resource": "reports", "action": "custom", "description": "Create custom reports"},
+    {"name": "Schedule Reports", "slug": "reports:schedule", "category": "Reports", "resource": "reports", "action": "schedule", "description": "Schedule automated reports"},
 ]
 
 
@@ -104,15 +214,42 @@ SYSTEM_ROLES = [
         "hierarchy_level": 1,
         "permissions": [
             "customers:view", "customers:create", "customers:edit", "customers:activate", "customers:suspend",
+            "customers:approve", "customers:reject", "customers:notes", "customers:documents", "customers:export",
             "kyc:view", "kyc:upload", "kyc:edit", "kyc:delete", "kyc:verify", "kyc:download",
             "tickets:view", "tickets:create", "tickets:reply", "tickets:assign", "tickets:close",
+            "tickets:reopen", "tickets:merge", "tickets:escalate", "tickets:watchers", "tickets:sla",
+            "tickets:tags", "tickets:templates", "tickets:email", "tickets:manage",
             "products:view", "products:create", "products:edit",
+            "products:categories", "products:variants", "products:images", "products:features",
             "orders:view", "orders:create", "orders:edit", "orders:approve", "orders:deliver",
             "invoices:view", "invoices:create", "invoices:edit", "invoices:approve", "invoices:send",
+            "invoices:pay", "invoices:cancel", "invoices:export",
+            "quotes:view", "quotes:create", "quotes:edit",
+            "quotes:approve", "quotes:reject", "quotes:send", "quotes:convert",
             # Hosting (staff/admin ops)
             "hosting:view", "hosting:approve", "hosting:admin", "hosting:monitor",
-            "reports:view", "reports:export",
+            "hosting:provision", "hosting:deprovision", "hosting:backup", "hosting:restore",
+            "hosting:snapshots", "hosting:images", "hosting:domains",
+            # DNS Management
+            "dns:view", "dns:admin", "dns:templates", "dns:sync", "dns:export",
+            # Audit & Logging
+            "audit:view", "audit:export",
+            # Notifications
+            "notifications:view", "notifications:manage", "notifications:send",
+            # Email Management
+            "email:view", "email:manage", "email:templates", "email:bounces", "email:history", "email:sync",
+            # SMS
+            "sms:view", "sms:send", "sms:manage",
+            # System
+            "system:view", "system:logs", "system:performance",
+            # Reports
+            "reports:view", "reports:export", "reports:custom", "reports:schedule",
+            # Settings
             "settings:view",
+            # Registration
+            "registrations:view", "registrations:approve", "registrations:reject", "registrations:manage",
+            # User extended
+            "users:unlock", "users:reset_password", "users:sessions", "users:activity",
         ]
     },
     {
@@ -123,12 +260,18 @@ SYSTEM_ROLES = [
         "hierarchy_level": 2,
         "permissions": [
             "kyc:view", "kyc:upload", "kyc:download",
-            "tickets:view", "tickets:create", "tickets:reply",
+            "tickets:view", "tickets:create", "tickets:reply", "tickets:watchers",
             "products:view",
             "orders:view", "orders:create",
-            "invoices:view",
+            "invoices:view", "invoices:export",
+            "quotes:view", "quotes:accept", "quotes:reject",
             # Hosting (own resources only; ownership checks enforced by routes)
             "hosting:view", "hosting:request", "hosting:upgrade", "hosting:manage",
+            "hosting:backup", "hosting:restore", "hosting:snapshots",
+            # DNS Management (own zones only)
+            "dns:view", "dns:manage",
+            # Notifications
+            "notifications:view",
         ]
     },
     {
@@ -140,6 +283,7 @@ SYSTEM_ROLES = [
         "permissions": [
             # Ticket management - core support functions
             "tickets:view", "tickets:create", "tickets:reply", "tickets:close",
+            "tickets:watchers", "tickets:sla",
             # Customer access - view customer info to assist with tickets
             "customers:view",
             # KYC access - view KYC documents to verify customer identity
@@ -148,6 +292,8 @@ SYSTEM_ROLES = [
             "products:view",
             "orders:view",
             "invoices:view",
+            # Notifications - view own
+            "notifications:view",
         ]
     },
     {
@@ -159,8 +305,10 @@ SYSTEM_ROLES = [
         "permissions": [
             # Ticket management - full ticket operations including assignment
             "tickets:view", "tickets:create", "tickets:reply", "tickets:assign", "tickets:close",
+            "tickets:reopen", "tickets:merge", "tickets:escalate", "tickets:watchers", "tickets:sla",
+            "tickets:tags", "tickets:templates",
             # Customer access - view and edit customer info for support
-            "customers:view", "customers:edit",
+            "customers:view", "customers:edit", "customers:notes",
             # KYC access - view and download KYC documents
             "kyc:view", "kyc:download",
             # Product/Order/Invoice access - view to help customers
@@ -169,6 +317,8 @@ SYSTEM_ROLES = [
             "invoices:view",
             # Reports - view support reports and analytics
             "reports:view",
+            # Notifications
+            "notifications:view", "notifications:manage", "notifications:send",
         ]
     },
 ]
@@ -525,9 +675,9 @@ SYSTEM_SETTINGS = [
     # SMS settings
     {
         "key": "sms_provider",
-        "value": "twilio",
+        "value": "custom",
         "category": "sms",
-        "description": "SMS provider (twilio, nexmo, custom)",
+        "description": "SMS provider (custom, twilio, infobip, mock)",
         "is_public": False,
     },
     {

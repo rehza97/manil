@@ -67,6 +67,11 @@ export { reportsApi };
 import { settingsApi } from "./settings";
 export { settingsApi };
 
+// In-app notifications (list, unread count, mark read, SSE stream)
+import { notificationsApi } from "./notifications";
+export { notificationsApi };
+export type * from "./notifications";
+
 /**
  * Unified API object with all clients
  *
@@ -90,6 +95,7 @@ export const api = {
   invoices: invoicesApi,
   reports: reportsApi,
   settings: settingsApi,
+  notifications: notificationsApi,
 };
 
 export default api;

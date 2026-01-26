@@ -197,15 +197,13 @@ export const reportsApi = {
     return response.data;
   },
 
-  // Export
+  // Export: POST returns JSON (ExportResponse with file_name). Use downloadExport for blob.
   exportReport: async (data: {
     report_type: string;
     format: "csv" | "pdf" | "excel";
     filters?: Record<string, any>;
   }) => {
-    const response = await apiClient.post("/reports/export", data, {
-      responseType: "blob",
-    });
+    const response = await apiClient.post("/reports/export", data);
     return response.data;
   },
 

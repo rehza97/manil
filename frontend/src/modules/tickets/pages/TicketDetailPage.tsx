@@ -34,7 +34,7 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ backPath }) 
   if (!id) {
     return (
       <div className="text-center py-8 text-red-600">
-        Invalid ticket ID
+        ID de ticket invalide
       </div>
     );
   }
@@ -66,18 +66,17 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ backPath }) 
         events.push({
           id: `status-${ticket.id}`,
           type: "status_change",
-          description: `Status: ${ticket.status}`,
-          user: ticket.assignedTo || "System",
+          description: `Statut : ${ticket.status}`,
+          user: ticket.assignedTo || "Système",
           timestamp: ticket.updatedAt || ticket.createdAt || new Date().toISOString(),
         });
       }
 
-      // Assignment - only show for non-clients
       if (!isClient && ticket.assignedTo) {
         events.push({
           id: `assignment-${ticket.id}`,
           type: "assignment",
-          description: `Assigned to ${ticket.assignedTo}`,
+          description: `Assigné à ${ticket.assignedTo}`,
           user: ticket.assignedTo,
           timestamp: ticket.updatedAt || ticket.createdAt || new Date().toISOString(),
         });
@@ -114,25 +113,22 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ backPath }) 
           onClick={() => navigate(defaultBackPath)}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Tickets
+          Retour aux tickets
         </Button>
       </div>
 
       {isLoading ? (
         <div className="text-center py-12">
-          <div className="text-slate-600">Loading ticket details...</div>
+          <div className="text-slate-600">Chargement du ticket…</div>
         </div>
       ) : (
         <>
-          {/* Ticket Detail */}
           <TicketDetail ticketId={id} onStatusChange={refetch} />
 
-          {/* Watchers (only for non-clients) */}
           {!isClient && <WatcherManager ticketId={id} />}
 
-          {/* Timeline */}
           <div>
-            <h2 className="text-xl font-semibold mb-4">Timeline</h2>
+            <h2 className="text-xl font-semibold mb-4">Chronologie</h2>
             <TicketTimeline events={timelineEvents} />
           </div>
 

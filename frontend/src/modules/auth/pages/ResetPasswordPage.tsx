@@ -5,11 +5,11 @@ import { ResetPasswordForm } from "../components/ResetPasswordForm";
 export const ResetPasswordPage: React.FC = () => {
   return (
     <AuthLayout
-      title="Create new password"
-      subtitle="Enter your new password below"
-      footerText="Remember your password?"
+      title="Nouveau mot de passe"
+      subtitle="Saisissez votre nouveau mot de passe ci-dessous"
+      footerText="Mot de passe retrouvé ?"
       footerLink="/login"
-      footerLinkText="Sign in"
+      footerLinkText="Se connecter"
     >
       <ResetPasswordForm />
     </AuthLayout>

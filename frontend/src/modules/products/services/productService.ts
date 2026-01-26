@@ -13,6 +13,8 @@ import type {
   UpdateProductCategoryDTO,
   CreateProductImageDTO,
   CreateProductVariantDTO,
+  ServiceType,
+  BillingCycle,
 } from "../types";
 
 /**
@@ -35,7 +37,10 @@ export const productService = {
       max_price?: number;
       search?: string;
       is_featured?: boolean;
-      in_stock?: boolean;
+      service_type?: ServiceType;
+      billing_cycle?: BillingCycle;
+      is_recurring?: boolean;
+      in_stock?: boolean; // DEPRECATED: kept for backward compatibility
       sort_by?: "name" | "price" | "created_at" | "rating" | "view_count";
       sort_order?: "asc" | "desc";
     }

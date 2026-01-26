@@ -14,7 +14,6 @@ export const RoleBasedRedirect: React.FC = () => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      // Redirect based on user role
       switch (user.role) {
         case "admin":
           navigate("/admin", { replace: true });
@@ -29,17 +28,15 @@ export const RoleBasedRedirect: React.FC = () => {
           navigate("/dashboard", { replace: true });
       }
     } else if (isAuthenticated === false) {
-      // User is not authenticated, redirect to login
       navigate("/login", { replace: true });
     }
   }, [isAuthenticated, user, navigate]);
 
-  // Show loading while determining redirect
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50">
       <div className="text-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-        <p className="text-slate-600">Redirecting to your dashboard...</p>
+        <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-brand-primary" />
+        <p className="text-slate-600">Redirection vers votre espace…</p>
       </div>
     </div>
   );

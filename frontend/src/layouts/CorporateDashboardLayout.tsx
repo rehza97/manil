@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
@@ -22,6 +22,7 @@ import {
   Package,
   ShoppingCart,
   FileText,
+  FilePen,
   BarChart3,
   Bell,
   Settings,
@@ -35,13 +36,45 @@ import {
   Globe,
   TrendingUp,
   UserPlus,
+  Receipt,
+  FolderTree,
+  DollarSign,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useAuth, RoleGuard, useLogout } from "@/modules/auth";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/shared/components/ui/collapsible";
+import { NotificationDropdown } from "@/shared/components/NotificationDropdown";
 
 const CorporateDashboardLayout: React.FC = () => {
   const location = useLocation();
   const { user, hasPermission } = useAuth();
   const logoutMutation = useLogout();
+  
+  // State for managing open/closed collapsible sections
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    customers: location.pathname.startsWith("/corporate/customers"),
+    tickets: location.pathname.startsWith("/corporate/tickets"),
+    orders: location.pathname.startsWith("/corporate/orders"),
+    products: location.pathname.startsWith("/corporate/products"),
+    quotes: location.pathname.startsWith("/corporate/quotes"),
+    invoices: location.pathname.startsWith("/corporate/invoices"),
+    reports: location.pathname.startsWith("/corporate/reports"),
+    hosting: location.pathname.startsWith("/corporate/hosting"),
+    dns: location.pathname.startsWith("/corporate/dns"),
+    settings: location.pathname.startsWith("/corporate/settings"),
+  });
+  
+  const toggleSection = (section: string) => {
+    setOpenSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
 
   const navigation = [
     {
@@ -63,6 +96,53 @@ const CorporateDashboardLayout: React.FC = () => {
       icon: Ticket,
       current: location.pathname.startsWith("/corporate/tickets"),
       permission: "ticket:read",
+      sectionKey: "tickets",
+      children: [
+        {
+          name: "All Tickets",
+          href: "/corporate/tickets",
+          icon: Ticket,
+          current: location.pathname === "/corporate/tickets",
+          permission: "ticket:read",
+        },
+        {
+          name: "Categories",
+          href: "/corporate/tickets/categories",
+          icon: FolderTree,
+          current: location.pathname === "/corporate/tickets/categories",
+          permission: "ticket:read",
+        },
+        {
+          name: "Templates",
+          href: "/corporate/tickets/templates",
+          icon: FileText,
+          current: location.pathname.startsWith("/corporate/tickets/templates"),
+          permission: "ticket:read",
+        },
+      ],
+    },
+    {
+      name: "Orders",
+      href: "/corporate/orders",
+      icon: ShoppingCart,
+      current: location.pathname.startsWith("/corporate/orders"),
+      permission: "order:read",
+      children: [
+        {
+          name: "All Orders",
+          href: "/corporate/orders",
+          icon: ShoppingCart,
+          current: location.pathname === "/corporate/orders",
+          permission: "order:read",
+        },
+        {
+          name: "Create Order",
+          href: "/corporate/orders/create",
+          icon: UserPlus,
+          current: location.pathname === "/corporate/orders/create",
+          permission: "order:create",
+        },
+      ],
     },
     {
       name: "Products",
@@ -70,13 +150,77 @@ const CorporateDashboardLayout: React.FC = () => {
       icon: Package,
       current: location.pathname.startsWith("/corporate/products"),
       permission: "product:read",
+      sectionKey: "products",
+      children: [
+        {
+          name: "All Products",
+          href: "/corporate/products",
+          icon: Package,
+          current: location.pathname === "/corporate/products",
+          permission: "product:read",
+        },
+        {
+          name: "Create Product",
+          href: "/corporate/products/new",
+          icon: UserPlus,
+          current: location.pathname === "/corporate/products/new",
+          permission: "product:create",
+        },
+        {
+          name: "Categories",
+          href: "/corporate/products/categories",
+          icon: FolderTree,
+          current: location.pathname === "/corporate/products/categories",
+          permission: "product:read",
+        },
+      ],
+    },
+    {
+      name: "Quotes",
+      href: "/corporate/quotes",
+      icon: FilePen,
+      current: location.pathname.startsWith("/corporate/quotes"),
+      permission: "quotes:read",
+      children: [
+        {
+          name: "All Quotes",
+          href: "/corporate/quotes",
+          icon: FilePen,
+          current: location.pathname === "/corporate/quotes",
+          permission: "quotes:read",
+        },
+        {
+          name: "Create Quote",
+          href: "/corporate/quotes/new",
+          icon: UserPlus,
+          current: location.pathname === "/corporate/quotes/new",
+          permission: "quotes:create",
+        },
+      ],
     },
     {
       name: "Invoices",
       href: "/corporate/invoices",
-      icon: FileText,
+      icon: Receipt,
       current: location.pathname.startsWith("/corporate/invoices"),
       permission: "invoice:read",
+      sectionKey: "invoices",
+      children: [
+        {
+          name: "All Invoices",
+          href: "/corporate/invoices",
+          icon: Receipt,
+          current: location.pathname === "/corporate/invoices",
+          permission: "invoice:read",
+        },
+        {
+          name: "Create Invoice",
+          href: "/corporate/invoices/new",
+          icon: UserPlus,
+          current: location.pathname === "/corporate/invoices/new",
+          permission: "invoice:create",
+        },
+      ],
     },
     {
       name: "Reports",
@@ -84,12 +228,50 @@ const CorporateDashboardLayout: React.FC = () => {
       icon: BarChart3,
       current: location.pathname.startsWith("/corporate/reports"),
       permission: "report:read",
+      children: [
+        {
+          name: "Reports Dashboard",
+          href: "/corporate/reports",
+          icon: BarChart3,
+          current: location.pathname === "/corporate/reports",
+          permission: "report:read",
+        },
+        {
+          name: "Customer Reports",
+          href: "/corporate/reports/customers",
+          icon: Users,
+          current: location.pathname === "/corporate/reports/customers",
+          permission: "report:read",
+        },
+        {
+          name: "Ticket Reports",
+          href: "/corporate/reports/tickets",
+          icon: Ticket,
+          current: location.pathname === "/corporate/reports/tickets",
+          permission: "report:read",
+        },
+        {
+          name: "Order Reports",
+          href: "/corporate/reports/orders",
+          icon: ShoppingCart,
+          current: location.pathname === "/corporate/reports/orders",
+          permission: "report:read",
+        },
+        {
+          name: "Revenue Reports",
+          href: "/corporate/reports/revenue",
+          icon: DollarSign,
+          current: location.pathname === "/corporate/reports/revenue",
+          permission: "report:read",
+        },
+      ],
     },
     {
       name: "VPS Management",
       icon: Server,
       current: location.pathname.startsWith("/corporate/hosting"),
       permission: "hosting:admin",
+      sectionKey: "hosting",
       children: [
         {
           name: "Pending Requests",
@@ -143,6 +325,37 @@ const CorporateDashboardLayout: React.FC = () => {
         },
       ],
     },
+    {
+      name: "Settings",
+      href: "/corporate/settings",
+      icon: Settings,
+      current: location.pathname.startsWith("/corporate/settings"),
+      permission: "settings:read",
+      sectionKey: "settings",
+      children: [
+        {
+          name: "General Settings",
+          href: "/corporate/settings/general",
+          icon: Settings,
+          current: location.pathname === "/corporate/settings/general",
+          permission: "settings:read",
+        },
+        {
+          name: "Notifications",
+          href: "/corporate/settings/notifications",
+          icon: Bell,
+          current: location.pathname === "/corporate/settings/notifications",
+          permission: "settings:read",
+        },
+        {
+          name: "Email Templates",
+          href: "/corporate/settings/templates",
+          icon: FileText,
+          current: location.pathname === "/corporate/settings/templates",
+          permission: "settings:read",
+        },
+      ],
+    },
   ];
 
   const filteredNavigation = navigation.filter(
@@ -169,9 +382,7 @@ const CorporateDashboardLayout: React.FC = () => {
             </div>
 
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm">
-                <Bell className="h-4 w-4" />
-              </Button>
+              <NotificationDropdown />
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -237,30 +448,44 @@ const CorporateDashboardLayout: React.FC = () => {
               <nav className="flex-1 px-2 pb-4 space-y-1">
                 {filteredNavigation.map((item) => {
                   const Icon = item.icon;
-                  // If item has children, render as a group
-                  if (item.children && item.children.length > 0) {
-                    const filteredChildren = item.children.filter(
+                  const hasChildren = item.children && item.children.length > 0;
+                  const sectionKey = item.sectionKey;
+                  const isOpen = sectionKey ? (openSections[sectionKey] ?? false) : false;
+
+                  if (hasChildren && sectionKey) {
+                    const filteredChildren = item.children!.filter(
                       (child) => !child.permission || hasPermission(child.permission)
                     );
                     if (filteredChildren.length === 0) return null;
                     
                     return (
-                      <div key={item.name} className="space-y-1">
-                        <div
+                      <Collapsible
+                        key={item.name}
+                        open={isOpen}
+                        onOpenChange={() => toggleSection(sectionKey!)}
+                      >
+                        <CollapsibleTrigger
                           className={`${
                             item.current
                               ? "bg-green-50 border-green-500 text-green-700"
-                              : "border-transparent text-slate-600"
-                          } group flex items-center px-2 py-2 text-sm font-medium rounded-md border-l-4`}
+                              : "border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                          } group flex items-center justify-between w-full px-2 py-2 text-sm font-medium rounded-md border-l-4 transition-colors`}
                         >
-                          <Icon
-                            className={`${
-                              item.current ? "text-green-500" : "text-slate-400"
-                            } mr-3 h-5 w-5`}
-                          />
-                          {item.name}
-                        </div>
-                        <div className="ml-4 space-y-1">
+                          <div className="flex items-center flex-1">
+                            <Icon
+                              className={`${
+                                item.current ? "text-green-500" : "text-slate-400"
+                              } mr-3 h-5 w-5`}
+                            />
+                            <span>{item.name}</span>
+                          </div>
+                          {isOpen ? (
+                            <ChevronDown className="h-4 w-4 text-slate-400" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-slate-400" />
+                          )}
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="ml-4 mt-1 space-y-1">
                           {filteredChildren.map((child) => {
                             const ChildIcon = child.icon;
                             return (
@@ -269,21 +494,21 @@ const CorporateDashboardLayout: React.FC = () => {
                                 to={child.href || "#"}
                                 className={`${
                                   child.current
-                                    ? "bg-green-50 border-green-500 text-green-700"
-                                    : "border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                                } group flex items-center px-2 py-2 text-sm font-medium rounded-md border-l-4 transition-colors`}
+                                    ? "bg-green-50 text-green-700 font-medium"
+                                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                } group flex items-center px-3 py-2 text-sm rounded-md transition-colors`}
                               >
                                 <ChildIcon
                                   className={`${
                                     child.current ? "text-green-500" : "text-slate-400"
                                   } mr-3 h-4 w-4`}
                                 />
-                                {child.name}
+                                <span>{child.name}</span>
                               </Link>
                             );
                           })}
-                        </div>
-                      </div>
+                        </CollapsibleContent>
+                      </Collapsible>
                     );
                   }
                   

@@ -6,7 +6,7 @@ from sqlalchemy import String, DateTime, Enum as SQLEnum, Text, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.config.database import Base
-from app.modules.customers.schemas import CustomerStatus, CustomerType
+from app.modules.customers.schemas import CustomerStatus, CustomerType, ApprovalStatus
 
 
 
@@ -59,6 +59,13 @@ class Customer(Base):
         nullable=False,
         index=True,
         doc="Customer account status",
+    )
+    approval_status: Mapped[ApprovalStatus] = mapped_column(
+        SQLEnum(ApprovalStatus, name="approval_status_enum", native_enum=True, values_callable=lambda x: [e.value for e in x]),
+        default=ApprovalStatus.NOT_REQUIRED,
+        nullable=False,
+        index=True,
+        doc="Customer approval status",
     )
 
     # Corporate Information (Optional)

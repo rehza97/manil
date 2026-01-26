@@ -5,11 +5,11 @@ import { ForgotPasswordForm } from "../components/ForgotPasswordForm";
 export const ForgotPasswordPage: React.FC = () => {
   return (
     <AuthLayout
-      title="Reset your password"
-      subtitle="Enter your email address and we'll send you a link to reset your password"
-      footerText="Remember your password?"
+      title="Réinitialiser le mot de passe"
+      subtitle="Entrez votre adresse e-mail pour recevoir un lien"
+      footerText="Mot de passe retrouvé ?"
       footerLink="/login"
-      footerLinkText="Sign in"
+      footerLinkText="Se connecter"
     >
       <ForgotPasswordForm />
     </AuthLayout>

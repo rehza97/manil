@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/solid';
+import { ArrowUp, ArrowDown } from 'lucide-react';
 
 interface StatCardProps {
   title: string;
@@ -90,9 +90,9 @@ export const StatCard: React.FC<StatCardProps> = ({
           {trend && (
             <div className="flex items-center mt-2">
               {trend.isPositive ? (
-                <ArrowUpIcon className="h-4 w-4 text-green-500 mr-1" />
+                <ArrowUp className="h-4 w-4 text-green-500 mr-1" />
               ) : (
-                <ArrowDownIcon className="h-4 w-4 text-red-500 mr-1" />
+                <ArrowDown className="h-4 w-4 text-red-500 mr-1" />
               )}
               <span className={`text-sm font-medium ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
                 {Math.abs(trend.value)}%

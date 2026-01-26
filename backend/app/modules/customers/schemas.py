@@ -3,7 +3,7 @@
 from datetime import datetime
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator, model_validator
 
 
 class CustomerStatus(str, Enum):
@@ -20,6 +20,15 @@ class CustomerType(str, Enum):
 
     INDIVIDUAL = "individual"
     CORPORATE = "corporate"
+
+
+class ApprovalStatus(str, Enum):
+    """Customer approval status enumeration."""
+
+    NOT_REQUIRED = "not_required"
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
 
 
 class CustomerBase(BaseModel):
@@ -40,6 +49,58 @@ class CustomerBase(BaseModel):
     state: Optional[str] = Field(None, max_length=100, description="State/Province")
     country: Optional[str] = Field(None, max_length=100, description="Country")
     postal_code: Optional[str] = Field(None, max_length=20, description="Postal code")
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        """Validate email format using advanced validator."""
+        from app.modules.customers.validators import validate_email_format
+        try:
+            validate_email_format(v)
+        except Exception as e:
+            raise ValueError(str(e))
+        return v
+    
+    @field_validator('phone')
+    @classmethod
+    def validate_phone(cls, v: str, info) -> str:
+        """Validate phone number format."""
+        from app.modules.customers.validators import validate_phone_number
+        country = info.data.get('country') if hasattr(info, 'data') else None
+        try:
+            validate_phone_number(v, country)
+        except Exception as e:
+            raise ValueError(str(e))
+        return v
+    
+    @field_validator('tax_id')
+    @classmethod
+    def validate_tax_id(cls, v: Optional[str], info) -> Optional[str]:
+        """Validate tax ID format if provided."""
+        if not v:
+            return v
+        from app.modules.customers.validators import validate_tax_id
+        country = info.data.get('country') if hasattr(info, 'data') else None
+        try:
+            validate_tax_id(v, country)
+        except Exception as e:
+            raise ValueError(str(e))
+        return v
+    
+    @model_validator(mode='after')
+    def validate_corporate_requirements(self):
+        """Validate corporate customer requirements."""
+        if self.customer_type == CustomerType.CORPORATE:
+            from app.modules.customers.validators import validate_company_data
+            try:
+                validate_company_data(
+                    self.company_name or "",
+                    self.tax_id,
+                    self.country
+                )
+            except Exception as e:
+                raise ValueError(str(e))
+        return self
 
 
 class CustomerCreate(CustomerBase):
@@ -70,6 +131,7 @@ class CustomerResponse(CustomerBase):
 
     id: str = Field(..., description="Customer unique identifier")
     status: CustomerStatus = Field(..., description="Customer account status")
+    approval_status: ApprovalStatus = Field(..., description="Customer approval status")
     created_at: datetime = Field(..., description="Timestamp when customer was created")
     updated_at: datetime = Field(..., description="Timestamp when customer was last updated")
     created_by: str = Field(..., description="ID of user who created the customer")

@@ -14,6 +14,7 @@ import json
 
 from app.modules.tickets.models import (
     Ticket,
+    TicketReply,
     TicketStatus,
     TicketPriority,
     EmailMessage,
@@ -21,9 +22,37 @@ from app.modules.tickets.models import (
     EmailAttachment,
 )
 from app.modules.customers.models import Customer
+from app.modules.customers.schemas import CustomerStatus, CustomerType
+from app.modules.auth.models import User
+from app.modules.auth.schemas import UserRole
 from app.modules.tickets.services.email_parser_service import ParsedEmail, EmailParserService
+from app.modules.tickets.response_templates import TicketCategory
 
 logger = logging.getLogger(__name__)
+
+# Map EmailToTicketService slug -> TicketCategory slug
+_CATEGORY_SLUG_MAP = {
+    "technical": "technical-support",
+    "billing": "billing-question",
+    "general": "technical-support",
+}
+
+
+def _get_system_user_id(db: Session) -> Optional[str]:
+    """Return first admin user id for system-created records, or None."""
+    user = db.query(User).filter(User.role == UserRole.ADMIN).first()
+    return str(user.id) if user else None
+
+
+def _resolve_category_id(db: Session, slug: Optional[str]) -> Optional[str]:
+    """Resolve category slug from _detect_category to ticket_categories.id."""
+    if not slug:
+        return None
+    db_slug = _CATEGORY_SLUG_MAP.get(slug) or slug
+    cat = db.query(TicketCategory).filter(
+        TicketCategory.slug == db_slug, TicketCategory.is_active.is_(True)
+    ).first()
+    return str(cat.id) if cat else None
 
 
 class EmailToTicketError(Exception):
@@ -42,12 +71,16 @@ class TicketCreationResult:
         email_message_id: Optional[str] = None,
         error_message: Optional[str] = None,
         is_reply: bool = False,
+        customer_email: Optional[str] = None,
+        subject: Optional[str] = None,
     ):
         self.success = success
         self.ticket_id = ticket_id
         self.email_message_id = email_message_id
         self.error_message = error_message
         self.is_reply = is_reply
+        self.customer_email = customer_email
+        self.subject = subject
 
     def __repr__(self) -> str:
         status = "Reply" if self.is_reply else "New"
@@ -141,8 +174,8 @@ class EmailToTicketService:
             if email_msg and email_msg.ticket_id:
                 return db.query(Ticket).filter(Ticket.id == email_msg.ticket_id).first()
 
-        # Check subject line for ticket ID pattern
-        ticket_id_match = re.search(r"\[#(\d+)\]", parsed_email.subject)
+        # Check subject line for ticket ID (UUID). Match " (Ticket <uuid>)" from reply templates.
+        ticket_id_match = re.search(r"\(Ticket ([a-f0-9-]{36})\)", parsed_email.subject, re.I)
         if ticket_id_match:
             ticket_id = ticket_id_match.group(1)
             return db.query(Ticket).filter(Ticket.id == ticket_id).first()
@@ -185,7 +218,14 @@ class EmailToTicketService:
             # Create ticket
             ticket_id = str(uuid.uuid4())
             priority = cls._detect_priority(parsed_email.subject, parsed_email.body_text)
-            category = cls._detect_category(parsed_email.subject, parsed_email.body_text)
+            category_slug = cls._detect_category(parsed_email.subject, parsed_email.body_text)
+            category_id = _resolve_category_id(db, category_slug)
+            system_user_id = _get_system_user_id(db)
+            if not system_user_id:
+                raise EmailToTicketError(
+                    "No admin user found; cannot create ticket from email. "
+                    "Ensure at least one admin user exists."
+                )
 
             ticket = Ticket(
                 id=ticket_id,
@@ -194,8 +234,8 @@ class EmailToTicketService:
                 status=TicketStatus.OPEN,
                 priority=priority,
                 customer_id=customer.id,
-                category_id=category,
-                created_by="system",
+                category_id=category_id,
+                created_by=system_user_id,
                 created_at=parsed_email.received_at,
             )
 
@@ -219,6 +259,8 @@ class EmailToTicketService:
                 ticket_id=ticket_id,
                 email_message_id=email_msg.id,
                 is_reply=False,
+                customer_email=customer.email,
+                subject=parsed_email.subject or "(No Subject)",
             )
 
         except Exception as e:
@@ -253,6 +295,21 @@ class EmailToTicketService:
                 email_account,
                 ticket.id,
             )
+
+            # Create TicketReply so it appears in timeline and GET /tickets/:id/replies
+            system_user_id = _get_system_user_id(db)
+            if system_user_id:
+                reply_body = (parsed_email.body_text or parsed_email.body_html or "(no content)")[: 64 * 1024]
+                reply = TicketReply(
+                    id=str(uuid.uuid4()),
+                    ticket_id=ticket.id,
+                    user_id=system_user_id,
+                    message=reply_body,
+                    is_internal=False,
+                    is_solution=False,
+                    created_by=system_user_id,
+                )
+                db.add(reply)
 
             # Update ticket status if needed
             if ticket.status == TicketStatus.WAITING_FOR_RESPONSE:
@@ -359,12 +416,20 @@ class EmailToTicketService:
         ).first()
 
         if not customer:
+            system_user_id = _get_system_user_id(db)
+            if not system_user_id:
+                raise EmailToTicketError(
+                    "No admin user found; cannot create customer from email. "
+                    "Ensure at least one admin user exists."
+                )
             customer = Customer(
                 id=str(uuid.uuid4()),
                 name=name_part or email_address,
                 email=email_address,
-                status="active",
-                created_by="system",
+                phone="+0000000000",
+                customer_type=CustomerType.INDIVIDUAL,
+                status=CustomerStatus.ACTIVE,
+                created_by=system_user_id,
             )
             db.add(customer)
             db.flush()

@@ -43,13 +43,13 @@ export function ConnectionInfoPanel({
     try {
       await navigator.clipboard.writeText(text);
       toast({
-        title: "Copied",
-        description: `${label} copied to clipboard`,
+        title: "Copié",
+        description: `${label} copié dans le presse-papiers`,
       });
     } catch (err) {
       toast({
-        title: "Copy Failed",
-        description: "Failed to copy to clipboard",
+        title: "Échec de la copie",
+        description: "Impossible de copier dans le presse-papiers",
         variant: "destructive",
       });
     }
@@ -58,14 +58,14 @@ export function ConnectionInfoPanel({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Connection Information</CardTitle>
-        <CardDescription>SSH access details for your VPS</CardDescription>
+        <CardTitle>Informations de connexion</CardTitle>
+        <CardDescription>Accès SSH à votre VPS</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
         {/* IP Address */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">IP Address</label>
+          <label className="text-sm font-medium">Adresse IP</label>
           <div className="flex gap-2">
             <Input
               value={container.ip_address}
@@ -75,8 +75,8 @@ export function ConnectionInfoPanel({
             <Button
               variant="outline"
               size="icon"
-              onClick={() => copyToClipboard(container.ip_address, "IP address")}
-              aria-label="Copy IP address"
+              onClick={() => copyToClipboard(container.ip_address, "Adresse IP")}
+              aria-label="Copier l'adresse IP"
             >
               <Clipboard className="h-4 w-4" />
             </Button>
@@ -85,7 +85,7 @@ export function ConnectionInfoPanel({
 
         {/* SSH Port */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">SSH Port</label>
+          <label className="text-sm font-medium">Port SSH</label>
           <div className="flex gap-2">
             <Input
               value={container.ssh_port.toString()}
@@ -96,9 +96,9 @@ export function ConnectionInfoPanel({
               variant="outline"
               size="icon"
               onClick={() =>
-                copyToClipboard(container.ssh_port.toString(), "SSH port")
+                copyToClipboard(container.ssh_port.toString(), "Port SSH")
               }
-              aria-label="Copy SSH port"
+              aria-label="Copier le port SSH"
             >
               <Clipboard className="h-4 w-4" />
             </Button>
@@ -107,14 +107,14 @@ export function ConnectionInfoPanel({
 
         {/* SSH Command (IP) */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">SSH Command (IP)</label>
+          <label className="text-sm font-medium">Commande SSH (IP)</label>
           <div className="flex gap-2">
             <Input value={sshCommand} readOnly className="font-mono text-xs" />
             <Button
               variant="outline"
               size="icon"
-              onClick={() => copyToClipboard(sshCommand, "SSH command")}
-              aria-label="Copy SSH command"
+              onClick={() => copyToClipboard(sshCommand, "Commande SSH")}
+              aria-label="Copier la commande SSH"
             >
               <Clipboard className="h-4 w-4" />
             </Button>
@@ -123,14 +123,14 @@ export function ConnectionInfoPanel({
 
         {/* SSH Command (Localhost) */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">SSH Command (Localhost)</label>
+          <label className="text-sm font-medium">Commande SSH (localhost)</label>
           <div className="flex gap-2">
             <Input value={sshLocalhostCommand} readOnly className="font-mono text-xs" />
             <Button
               variant="outline"
               size="icon"
-              onClick={() => copyToClipboard(sshLocalhostCommand, "SSH localhost command")}
-              aria-label="Copy SSH localhost command"
+              onClick={() => copyToClipboard(sshLocalhostCommand, "Commande SSH localhost")}
+              aria-label="Copier la commande SSH localhost"
             >
               <Clipboard className="h-4 w-4" />
             </Button>
@@ -140,18 +140,18 @@ export function ConnectionInfoPanel({
         {/* Root Password */}
         {container.ssh_public_key ? (
           <div className="space-y-2">
-            <label className="text-sm font-medium">SSH Key Authentication</label>
+            <label className="text-sm font-medium">Authentification par clé SSH</label>
             <p className="text-sm text-muted-foreground">
-              This container uses SSH key authentication. Your public key has been configured.
+              Ce conteneur utilise l'authentification par clé SSH. Votre clé publique est configurée.
             </p>
           </div>
         ) : (
           <div className="space-y-2">
-            <label className="text-sm font-medium">Root Password</label>
+            <label className="text-sm font-medium">Mot de passe root</label>
             {credentialsLoading ? (
               <div className="flex items-center justify-center p-3 bg-muted rounded-md">
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                <span className="text-sm text-muted-foreground">Loading password...</span>
+                <span className="text-sm text-muted-foreground">Chargement du mot de passe…</span>
               </div>
             ) : credentials?.root_password ? (
               <div className="flex gap-2">
@@ -165,7 +165,7 @@ export function ConnectionInfoPanel({
                   variant="outline"
                   size="icon"
                   onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -176,8 +176,8 @@ export function ConnectionInfoPanel({
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => copyToClipboard(credentials.root_password, "Root password")}
-                  aria-label="Copy root password"
+                  onClick={() => copyToClipboard(credentials.root_password, "Mot de passe root")}
+                  aria-label="Copier le mot de passe root"
                 >
                   <Clipboard className="h-4 w-4" />
                 </Button>
@@ -185,12 +185,12 @@ export function ConnectionInfoPanel({
             ) : (
               <div className="p-3 bg-muted rounded-md">
                 <p className="text-sm text-muted-foreground">
-                  Unable to load password. Please check your email for the initial password.
+                  Impossible de charger le mot de passe. Consultez votre e-mail pour le mot de passe initial.
                 </p>
               </div>
             )}
             <p className="text-xs text-muted-foreground">
-              Change this password after first login for security.
+              Changez ce mot de passe après la première connexion pour des raisons de sécurité.
             </p>
           </div>
         )}
@@ -198,10 +198,9 @@ export function ConnectionInfoPanel({
         {/* Security Warning */}
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Security Notice</AlertTitle>
+          <AlertTitle>Avis de sécurité</AlertTitle>
           <AlertDescription>
-            Keep your SSH credentials secure. Never share your root password or
-            private key. Change the default password after first login.
+            Gardez vos identifiants SSH confidentiels. Ne partagez jamais votre mot de passe root ni votre clé privée. Changez le mot de passe par défaut après la première connexion.
           </AlertDescription>
         </Alert>
 
@@ -209,7 +208,7 @@ export function ConnectionInfoPanel({
         <Collapsible open={isInstructionsOpen} onOpenChange={setIsInstructionsOpen}>
           <CollapsibleTrigger asChild>
             <Button variant="ghost" className="w-full justify-between">
-              <span>SSH Connection Instructions</span>
+              <span>Instructions de connexion SSH</span>
               <ChevronDown
                 className={`h-4 w-4 transition-transform ${
                   isInstructionsOpen ? "transform rotate-180" : ""
@@ -219,19 +218,18 @@ export function ConnectionInfoPanel({
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-2 pt-2">
             <div className="text-sm space-y-2 bg-muted p-4 rounded-md">
-              <p className="font-medium">To connect via SSH:</p>
+              <p className="font-medium">Pour vous connecter en SSH :</p>
               <ol className="list-decimal list-inside space-y-1 ml-2">
-                <li>Open your terminal or SSH client</li>
+                <li>Ouvrez votre terminal ou client SSH</li>
                 <li>
-                  From the host machine (localhost): <code className="bg-background px-1 rounded">{sshLocalhostCommand}</code>
+                  Depuis la machine hôte (localhost) : <code className="bg-background px-1 rounded">{sshLocalhostCommand}</code>
                 </li>
                 <li>
-                  From external network (IP): <code className="bg-background px-1 rounded">{sshCommand}</code>
+                  Depuis le réseau externe (IP) : <code className="bg-background px-1 rounded">{sshCommand}</code>
                 </li>
-                <li>Enter your root password when prompted</li>
+                <li>Saisissez votre mot de passe root à l'invite</li>
                 <li>
-                  For key-based authentication, ensure your public key is added
-                  to the container
+                  Pour l'authentification par clé, assurez-vous que votre clé publique est ajoutée au conteneur
                 </li>
               </ol>
             </div>

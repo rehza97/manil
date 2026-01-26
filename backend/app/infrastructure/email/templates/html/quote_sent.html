@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>New Quote Available</h2>
+<p>Dear {{ customer_name }},</p>
+<p>We are pleased to provide you with the following quote:</p>
+<div style="background: white; padding: 15px; margin: 20px 0; border-left: 4px solid #2563eb;">
+    <p><strong>Quote Number:</strong> {{ quote_number }}</p>
+    <p><strong>Title:</strong> {{ title }}</p>
+    <p><strong>Total Amount:</strong> {{ "%.2f"|format(total_amount) }} DZD</p>
+    <p><strong>Valid Until:</strong> {{ valid_until }}</p>
+</div>
+<p>Please find the detailed quote attached to this email.</p>
+<p>If you have any questions or would like to proceed, please don't hesitate to contact us.</p>
+<a href="{{ site_url }}/quotes/{{ quote_number }}" class="button">View Quote</a>
+{% endblock %}

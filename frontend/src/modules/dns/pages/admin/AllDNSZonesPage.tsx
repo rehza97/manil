@@ -54,7 +54,7 @@ import {
 import type { CreateSystemZoneFormData } from "../../utils/validation";
 import { DNSZoneStatus, DNSZoneType } from "../../types";
 import { format } from "date-fns";
-import { exportRecordsToCSV } from "../../utils/export";
+import { exportZonesToCSV } from "../../utils/export";
 import { MoreVertical } from "lucide-react";
 
 export default function AllDNSZonesPage() {
@@ -92,9 +92,19 @@ export default function AllDNSZonesPage() {
   };
 
   const handleExportAll = () => {
-    // In a real implementation, this would fetch all records
-    // For now, just show a placeholder
-    alert("Export functionality will download all zone data as CSV");
+    try {
+      // Use existing zones data from the query (already loaded)
+      if (zones.length === 0) {
+        alert("No zones to export. Please ensure zones are loaded.");
+        return;
+      }
+      
+      // Export using existing utility
+      exportZonesToCSV(zones);
+    } catch (error) {
+      console.error("Export failed:", error);
+      alert("Failed to export zones. Please try again.");
+    }
   };
 
   const handleCreateSystemZone = (data: CreateSystemZoneFormData) => {

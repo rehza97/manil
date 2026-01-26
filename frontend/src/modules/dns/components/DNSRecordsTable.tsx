@@ -87,11 +87,11 @@ export function DNSRecordsTable({ records, zoneId, isLoading }: DNSRecordsTableP
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
+              <TableHead>Nom</TableHead>
               <TableHead>Type</TableHead>
-              <TableHead>Value</TableHead>
+              <TableHead>Valeur</TableHead>
               <TableHead>TTL</TableHead>
-              <TableHead>Priority</TableHead>
+              <TableHead>Priorité</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -128,7 +128,7 @@ export function DNSRecordsTable({ records, zoneId, isLoading }: DNSRecordsTableP
     return (
       <div className="rounded-lg border border-dashed p-8 text-center">
         <p className="text-sm text-muted-foreground">
-          No DNS records found. Add your first record to get started.
+          Aucun enregistrement DNS. Ajoutez votre premier enregistrement pour commencer.
         </p>
       </div>
     );
@@ -140,11 +140,11 @@ export function DNSRecordsTable({ records, zoneId, isLoading }: DNSRecordsTableP
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
+              <TableHead>Nom</TableHead>
               <TableHead>Type</TableHead>
-              <TableHead>Value</TableHead>
+              <TableHead>Valeur</TableHead>
               <TableHead>TTL</TableHead>
-              <TableHead>Priority</TableHead>
+              <TableHead>Priorité</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -164,7 +164,7 @@ export function DNSRecordsTable({ records, zoneId, isLoading }: DNSRecordsTableP
                     {record.record_value}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {record.ttl ? `${record.ttl}s` : "Default"}
+                    {record.ttl ? `${record.ttl} s` : "Défaut"}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {record.priority ?? "-"}
@@ -205,7 +205,7 @@ export function DNSRecordsTable({ records, zoneId, isLoading }: DNSRecordsTableP
       <Dialog open={!!editingRecord} onOpenChange={() => setEditingRecord(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit DNS Record</DialogTitle>
+            <DialogTitle>Modifier l'enregistrement DNS</DialogTitle>
           </DialogHeader>
           {editingRecord && (
             <DNSRecordForm
@@ -247,14 +247,14 @@ export function DNSRecordsTable({ records, zoneId, isLoading }: DNSRecordsTableP
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteMutation.isPending}>
-              Cancel
+              Annuler
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleteMutation.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete Record"}
+              {deleteMutation.isPending ? "Suppression…" : "Supprimer"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

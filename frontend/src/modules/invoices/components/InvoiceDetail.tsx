@@ -54,12 +54,12 @@ const statusColors: Record<InvoiceStatus, string> = {
 };
 
 const paymentMethodLabels: Record<PaymentMethod, string> = {
-  [PaymentMethod.BANK_TRANSFER]: "Bank Transfer",
-  [PaymentMethod.CHECK]: "Check",
-  [PaymentMethod.CASH]: "Cash",
-  [PaymentMethod.CREDIT_CARD]: "Credit Card",
-  [PaymentMethod.MOBILE_PAYMENT]: "Mobile Payment",
-  [PaymentMethod.OTHER]: "Other",
+  [PaymentMethod.BANK_TRANSFER]: "Virement",
+  [PaymentMethod.CHECK]: "Chèque",
+  [PaymentMethod.CASH]: "Espèces",
+  [PaymentMethod.CREDIT_CARD]: "Carte bancaire",
+  [PaymentMethod.MOBILE_PAYMENT]: "Paiement mobile",
+  [PaymentMethod.OTHER]: "Autre",
 };
 
 export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
@@ -89,14 +89,14 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
     try {
       await invoiceService.send(invoice.id);
       toast({
-        title: "Success",
-        description: "Invoice sent successfully",
+        title: "Succès",
+        description: "Facture envoyée",
       });
       onUpdate?.();
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to send invoice",
+        title: "Erreur",
+        description: error.message || "Échec de l'envoi",
         variant: "destructive",
       });
     } finally {
@@ -111,13 +111,13 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
         `invoice-${invoice.invoice_number}.pdf`
       );
       toast({
-        title: "Success",
-        description: "Invoice PDF downloaded",
+        title: "Succès",
+        description: "PDF téléchargé",
       });
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to download PDF",
+        title: "Erreur",
+        description: error.message || "Échec du téléchargement PDF",
         variant: "destructive",
       });
     }
@@ -126,7 +126,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
   const handleCancel = async () => {
     if (
       !window.confirm(
-        "Are you sure you want to cancel this invoice? This action cannot be undone."
+        "Confirmer l'annulation de cette facture ? Cette action est irréversible."
       )
     ) {
       return;
@@ -136,14 +136,14 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
     try {
       await invoiceService.cancel(invoice.id);
       toast({
-        title: "Success",
-        description: "Invoice cancelled",
+        title: "Succès",
+        description: "Facture annulée",
       });
       onUpdate?.();
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to cancel invoice",
+        title: "Erreur",
+        description: error.message || "Échec de l'annulation",
         variant: "destructive",
       });
     } finally {
@@ -159,7 +159,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
           <div className="flex items-start justify-between">
             <div className="space-y-2">
               <CardTitle className="text-2xl">
-                Invoice {invoice.invoice_number}
+                Facture {invoice.invoice_number}
               </CardTitle>
               <div className="flex items-center gap-2">
                 <Badge
@@ -167,30 +167,28 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
                     statusColors[invoice.status] || "bg-gray-100 text-gray-800"
                   }
                 >
-                  {invoice.status.replace("_", " ").toUpperCase()}
+                  {invoice.status.replace("_", " ")}
                 </Badge>
                 {isOverdue && (
-                  <Badge className="bg-red-100 text-red-800">OVERDUE</Badge>
+                  <Badge className="bg-red-100 text-red-800">En retard</Badge>
                 )}
               </div>
             </div>
             <div className="text-right text-sm text-slate-600">
-              <div>Issue Date: {format(new Date(invoice.issue_date), "MMM dd, yyyy")}</div>
-              <div>Due Date: {format(new Date(invoice.due_date), "MMM dd, yyyy")}</div>
+              <div>Émission : {format(new Date(invoice.issue_date), "dd MMM yyyy")}</div>
+              <div>Échéance : {format(new Date(invoice.due_date), "dd MMM yyyy")}</div>
             </div>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {/* Customer Information */}
           <div>
-            <h3 className="font-medium mb-2">Customer</h3>
+            <h3 className="font-medium mb-2">Client</h3>
             <div className="text-sm text-slate-600">
-              Customer ID: {invoice.customer_id}
+              ID client : {invoice.customer_id}
             </div>
           </div>
 
-          {/* Description */}
           {invoice.description && (
             <div>
               <h3 className="font-medium mb-2">Description</h3>
@@ -198,16 +196,15 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
             </div>
           )}
 
-          {/* Line Items */}
           <div>
-            <h3 className="font-medium mb-3">Line Items</h3>
+            <h3 className="font-medium mb-3">Lignes</h3>
             <div className="border rounded-lg">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Quantity</TableHead>
-                    <TableHead className="text-right">Unit Price</TableHead>
+                    <TableHead className="text-right">Quantité</TableHead>
+                    <TableHead className="text-right">Prix unitaire</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -229,18 +226,17 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
             </div>
           </div>
 
-          {/* Financial Summary */}
           <div className="border-t pt-4">
             <div className="bg-slate-50 p-4 rounded-lg space-y-2">
               <div className="flex justify-between">
-                <span className="text-slate-600">Subtotal:</span>
+                <span className="text-slate-600">Sous-total :</span>
                 <span className="font-medium">
                   {formatCurrency(invoice.subtotal_amount)}
                 </span>
               </div>
               {invoice.discount_amount > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Discount:</span>
+                  <span className="text-slate-600">Remise :</span>
                   <span className="font-medium text-red-600">
                     -{formatCurrency(invoice.discount_amount)}
                   </span>
@@ -248,24 +244,24 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
               )}
               <div className="flex justify-between">
                 <span className="text-slate-600">
-                  Tax ({invoice.tax_rate}%):
+                  TVA ({invoice.tax_rate} %) :
                 </span>
                 <span className="font-medium">{formatCurrency(invoice.tax_amount)}</span>
               </div>
               <div className="flex justify-between text-lg font-bold border-t pt-2">
-                <span>Total:</span>
+                <span>Total :</span>
                 <span>{formatCurrency(invoice.total_amount)}</span>
               </div>
               {invoice.paid_amount > 0 && (
                 <>
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Paid:</span>
+                    <span className="text-slate-600">Payé :</span>
                     <span className="font-medium text-green-600">
                       {formatCurrency(invoice.paid_amount)}
                     </span>
                   </div>
                   <div className="flex justify-between text-lg font-bold border-t pt-2">
-                    <span>Balance Due:</span>
+                    <span>Reste dû :</span>
                     <span className={balanceDue > 0 ? "text-red-600" : "text-green-600"}>
                       {formatCurrency(balanceDue)}
                     </span>
@@ -275,31 +271,29 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
             </div>
           </div>
 
-          {/* Payment Information */}
           {invoice.paid_amount > 0 && (
             <div className="border-t pt-4">
-              <h3 className="font-medium mb-2">Payment Information</h3>
+              <h3 className="font-medium mb-2">Paiement</h3>
               <div className="text-sm space-y-1">
                 <div>
-                  <span className="text-slate-600">Payment Method: </span>
+                  <span className="text-slate-600">Mode : </span>
                   {invoice.payment_method
                     ? paymentMethodLabels[invoice.payment_method]
                     : "N/A"}
                 </div>
                 {invoice.paid_at && (
                   <div>
-                    <span className="text-slate-600">Paid Date: </span>
-                    {format(new Date(invoice.paid_at), "MMM dd, yyyy")}
+                    <span className="text-slate-600">Date : </span>
+                    {format(new Date(invoice.paid_at), "dd MMM yyyy")}
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* Payment History Timeline */}
           {invoice.paid_amount > 0 && (
             <div className="border-t pt-4">
-              <h3 className="font-medium mb-3">Payment History</h3>
+              <h3 className="font-medium mb-3">Historique des paiements</h3>
               <div className="space-y-3">
                 <div className="flex gap-4">
                   <div className="flex flex-col items-center">
@@ -310,19 +304,19 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
                   </div>
                   <div className="flex-1 pb-4">
                     <div className="flex items-center gap-2 mb-1">
-                      <Badge className="bg-green-100 text-green-800">Payment</Badge>
+                      <Badge className="bg-green-100 text-green-800">Paiement</Badge>
                       <span className="text-sm text-slate-600">
                         {invoice.payment_method
                           ? paymentMethodLabels[invoice.payment_method]
-                          : "Payment"}
+                          : "Paiement"}
                       </span>
                     </div>
                     <p className="text-sm text-slate-900">
-                      Amount: {formatCurrency(invoice.paid_amount)}
+                      Montant : {formatCurrency(invoice.paid_amount)}
                     </p>
                     {invoice.paid_at && (
                       <p className="text-xs text-slate-500 mt-1">
-                        {format(new Date(invoice.paid_at), "MMM dd, yyyy HH:mm")}
+                        {format(new Date(invoice.paid_at), "dd MMM yyyy HH:mm")}
                       </p>
                     )}
                   </div>
@@ -331,9 +325,8 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
             </div>
           )}
 
-          {/* Activity Timeline */}
           <div className="border-t pt-4">
-            <h3 className="font-medium mb-3">Activity Timeline</h3>
+            <h3 className="font-medium mb-3">Activité</h3>
             <div className="space-y-3">
               {invoice.created_at && (
                 <div className="flex gap-4">
@@ -345,11 +338,11 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
                   </div>
                   <div className="flex-1 pb-4">
                     <div className="flex items-center gap-2 mb-1">
-                      <Badge className="bg-blue-100 text-blue-800">Created</Badge>
+                      <Badge className="bg-blue-100 text-blue-800">Créée</Badge>
                     </div>
-                    <p className="text-sm text-slate-900">Invoice created</p>
+                    <p className="text-sm text-slate-900">Facture créée</p>
                     <p className="text-xs text-slate-500 mt-1">
-                      {format(new Date(invoice.created_at), "MMM dd, yyyy HH:mm")}
+                      {format(new Date(invoice.created_at), "dd MMM yyyy HH:mm")}
                     </p>
                   </div>
                 </div>
@@ -364,11 +357,11 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
                   </div>
                   <div className="flex-1 pb-4">
                     <div className="flex items-center gap-2 mb-1">
-                      <Badge className="bg-purple-100 text-purple-800">Sent</Badge>
+                      <Badge className="bg-purple-100 text-purple-800">Envoyée</Badge>
                     </div>
-                    <p className="text-sm text-slate-900">Invoice sent to customer</p>
+                    <p className="text-sm text-slate-900">Facture envoyée au client</p>
                     <p className="text-xs text-slate-500 mt-1">
-                      {format(new Date(invoice.sent_at), "MMM dd, yyyy HH:mm")}
+                      {format(new Date(invoice.sent_at), "dd MMM yyyy HH:mm")}
                     </p>
                   </div>
                 </div>
@@ -376,7 +369,6 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
             </div>
           </div>
 
-          {/* Notes */}
           {invoice.notes && (
             <div className="border-t pt-4">
               <h3 className="font-medium mb-2">Notes</h3>
@@ -386,12 +378,11 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
             </div>
           )}
 
-          {/* Actions */}
           <div className="border-t pt-4 flex gap-2 flex-wrap">
             {invoice.status === InvoiceStatus.DRAFT && (
               <Button variant="outline" onClick={() => window.location.href = `/dashboard/invoices/${invoice.id}/edit`}>
                 <Edit className="h-4 w-4 mr-2" />
-                Edit
+                Modifier
               </Button>
             )}
             {invoice.status !== InvoiceStatus.SENT &&
@@ -403,7 +394,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
                   disabled={isProcessing}
                 >
                   <Send className="h-4 w-4 mr-2" />
-                  Send Invoice
+                  Envoyer la facture
                 </Button>
               )}
             {invoice.status !== InvoiceStatus.PAID &&
@@ -413,12 +404,12 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
                   onClick={() => setShowPaymentForm(true)}
                 >
                   <DollarSign className="h-4 w-4 mr-2" />
-                  Record Payment
+                  Enregistrer un paiement
                 </Button>
               )}
             <Button variant="outline" onClick={handleDownloadPDF}>
               <Download className="h-4 w-4 mr-2" />
-              Download PDF
+              Télécharger PDF
             </Button>
             {invoice.status !== InvoiceStatus.PAID &&
               invoice.status !== InvoiceStatus.CANCELLED && (
@@ -426,24 +417,23 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
                   <AlertDialogTrigger asChild>
                     <Button variant="outline" className="text-red-600">
                       <X className="h-4 w-4 mr-2" />
-                      Cancel Invoice
+                      Annuler la facture
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Cancel Invoice</AlertDialogTitle>
+                      <AlertDialogTitle>Annuler la facture</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Are you sure you want to cancel this invoice? This action
-                        cannot be undone.
+                        Confirmer l&apos;annulation ? Cette action est irréversible.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>No, keep it</AlertDialogCancel>
+                      <AlertDialogCancel>Non, garder</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={handleCancel}
                         className="bg-red-600 hover:bg-red-700"
                       >
-                        Yes, cancel invoice
+                        Oui, annuler
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>

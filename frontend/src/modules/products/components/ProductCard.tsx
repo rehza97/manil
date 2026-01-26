@@ -1,8 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import type { Product } from "../types";
+import type { Product, ServiceType, BillingCycle } from "../types";
 import { PricingDisplay } from "./PricingDisplay";
-import { StockStatus } from "./StockStatus";
+import { useCatalogBase } from "../hooks";
 
 interface ProductCardProps {
   product: Product;
@@ -15,7 +15,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   showCategory = false,
   onClick,
 }) => {
-  const productUrl = `/dashboard/catalog/${product.id}`;
+  const base = useCatalogBase();
+  const productUrl = `${base}/${product.id}`;
 
   return (
     <Link to={productUrl}>
@@ -49,7 +50,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           {/* Category */}
           {showCategory && (
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-              Category
+              Catégorie
             </p>
           )}
 
@@ -82,22 +83,40 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </div>
           )}
 
+          {/* Service Type Badge */}
+          <div className="mt-2">
+            <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
+              {product.service_type?.toUpperCase() || "GENERAL"}
+            </span>
+            {product.is_recurring && (
+              <span className="ml-2 inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+                Récurrent
+              </span>
+            )}
+          </div>
+
+          {/* Billing Cycle */}
+          <div className="mt-2">
+            <p className="text-xs text-gray-600">
+              Billing: <span className="font-medium capitalize">{product.billing_cycle || "one_time"}</span>
+            </p>
+            {product.trial_period_days && (
+              <p className="text-xs text-gray-600">
+                Trial: <span className="font-medium">{product.trial_period_days} days</span>
+              </p>
+            )}
+          </div>
+
           {/* Pricing */}
           <div className="mt-3">
             <PricingDisplay
               regularPrice={product.regular_price}
               salePrice={product.sale_price}
-              costPrice={product.cost_price}
             />
           </div>
 
-          {/* Stock Status */}
-          <div className="mt-2">
-            <StockStatus quantity={product.stock_quantity} />
-          </div>
-
           {/* View Count */}
-          <p className="mt-2 text-xs text-gray-400">Views: {product.view_count}</p>
+          <p className="mt-2 text-xs text-gray-400">Vues : {product.view_count}</p>
         </div>
       </div>
     </Link>

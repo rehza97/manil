@@ -8,7 +8,8 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
-from app.core.dependencies import get_current_active_user, require_role
+from app.core.dependencies import get_current_active_user, require_permission
+from app.core.permissions import Permission
 from app.modules.users.service import UserManagementService
 from app.modules.users.schemas import (
     AdminUserCreate,
@@ -24,8 +25,8 @@ from app.modules.users.schemas import (
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 
-# Admin-only dependency
-require_admin = require_role(["admin"])
+# Admin-only dependency - using USERS_VIEW as admin-only permission for user management
+require_admin = require_permission(Permission.USERS_VIEW)
 
 
 @router.get("", response_model=UserListResponse)

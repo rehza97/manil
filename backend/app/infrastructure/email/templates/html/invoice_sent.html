@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>New Invoice</h2>
+<p>Dear {{ customer_name }},</p>
+<p>You have received a new invoice from CloudManager:</p>
+<div style="background: white; padding: 15px; margin: 20px 0; border-left: 4px solid #2563eb;">
+    <p><strong>Invoice Number:</strong> {{ invoice_number }}</p>
+    <p><strong>Title:</strong> {{ title }}</p>
+    <p><strong>Total Amount:</strong> {{ "%.2f"|format(total_amount) }} DZD</p>
+    <p><strong>Due Date:</strong> {{ due_date }}</p>
+</div>
+<p>Please find the detailed invoice attached to this email.</p>
+<p>We appreciate your business and look forward to serving you.</p>
+<a href="{{ site_url }}/invoices/{{ invoice_number }}" class="button">View & Pay Invoice</a>
+{% endblock %}

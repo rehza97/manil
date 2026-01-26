@@ -30,25 +30,17 @@ import {
 } from "@/shared/components/ui/select";
 import { apiClient } from "@/shared/api/client";
 import { formatDZD } from "@/shared/utils/formatters";
+import type { Product, ServiceType, BillingCycle } from "@/modules/products/types/product.types";
 
-interface Product {
-  id: string;
-  name: string;
-  sku: string;
-  regular_price: number;
-  sale_price: number | null;
-  stock_quantity: number;
-  is_active: boolean;
-  is_featured: boolean;
+interface ProductListItem extends Omit<Product, "category"> {
   category: {
     id: string;
     name: string;
   } | null;
-  created_at: string;
 }
 
 interface ProductListResponse {
-  data: Product[];
+  data: ProductListItem[];
   total: number;
   page: number;
   page_size: number;
@@ -103,7 +95,7 @@ const ProductListPage: React.FC = () => {
             Product Management
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Manage your product catalog, pricing, and inventory
+            Manage your digital services catalog and pricing
           </p>
         </div>
         <Link to="/admin/products/new">
@@ -216,11 +208,17 @@ const ProductListPage: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={product.stock_quantity > 0 ? "default" : "destructive"}
-                      >
-                        {product.stock_quantity} units
-                      </Badge>
+                      <div className="space-y-1">
+                        <Badge variant="outline" className="text-xs">
+                          {product.service_type || "general"}
+                        </Badge>
+                        <div className="text-xs text-gray-500">
+                          {product.billing_cycle || "one_time"}
+                          {product.is_recurring && (
+                            <span className="ml-1 text-blue-600">• Recurring</span>
+                          )}
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant={product.is_active ? "default" : "secondary"}>

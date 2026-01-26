@@ -7,13 +7,14 @@ import {
   CategoryNav,
   type FilterState,
 } from "../components";
-import { useProducts, useCategories } from "../hooks";
+import { useProducts, useCategories, useCatalogBase } from "../hooks";
 import { productService } from "../services";
 import type { Product } from "../types";
 
 export const CataloguePage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const catalogBase = useCatalogBase();
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     category_id: searchParams?.get("category") || undefined,
@@ -55,7 +56,7 @@ export const CataloguePage: React.FC = () => {
   }, []);
 
   const handleSelectProduct = (product: Product) => {
-    navigate(`/dashboard/catalog/${product.id}`);
+    navigate(`${catalogBase}/${product.id}`);
   };
 
   const displayProducts = isSearching ? searchResults : productsData?.data || [];
@@ -67,10 +68,10 @@ export const CataloguePage: React.FC = () => {
       <div className="border-b border-gray-200 bg-white px-4 py-6 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-            Product Catalogue
+            Catalogue produits
           </h1>
           <p className="mt-2 text-base text-gray-600">
-            Browse our collection of products
+            Parcourir notre gamme de produits
           </p>
         </div>
       </div>
@@ -81,7 +82,7 @@ export const CataloguePage: React.FC = () => {
           <SearchBar
             onSearch={handleSearch}
             onSelectProduct={handleSelectProduct}
-            placeholder="Search for products..."
+            placeholder="Rechercher des produits…"
           />
         </div>
       </div>
@@ -107,7 +108,7 @@ export const CataloguePage: React.FC = () => {
             {/* Filters */}
             <div>
               <h3 className="mb-4 text-lg font-semibold text-gray-900">
-                Filters
+                Filtres
               </h3>
               <ProductFilters
                 categories={categories}
@@ -144,7 +145,7 @@ export const CataloguePage: React.FC = () => {
                     d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
                   />
                 </svg>
-                Filters
+                Filtres
               </button>
             </div>
 
@@ -198,7 +199,7 @@ export const CataloguePage: React.FC = () => {
                   disabled={page === 1 || isLoadingProducts}
                   className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Previous
+                  Précédent
                 </button>
 
                 <div className="flex items-center gap-2">
@@ -249,7 +250,7 @@ export const CataloguePage: React.FC = () => {
             {productsError && (
               <div className="rounded-lg border border-red-200 bg-red-50 p-4">
                 <p className="text-sm text-red-700">
-                  Failed to load products. Please try again later.
+                  Impossible de charger les produits. Veuillez réessayer plus tard.
                 </p>
               </div>
             )}

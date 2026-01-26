@@ -10,8 +10,15 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.modules.settings.models import Role, Permission, SystemSetting
-from app.modules.settings.repository import RoleRepository, PermissionRepository, SystemSettingRepository
+from app.core.logging import logger
+
+from app.modules.settings.models import Role, Permission, SystemSetting, UserNotificationPreferences
+from app.modules.settings.repository import (
+    RoleRepository,
+    PermissionRepository,
+    SystemSettingRepository,
+    UserNotificationPreferencesRepository,
+)
 from app.modules.settings.schemas import (
     RoleCreate,
     RoleUpdate,
@@ -194,41 +201,67 @@ class RoleService:
 
     async def update(self, role_id: UUID, role_data: RoleUpdate, updated_by_id: str) -> Role:
         """Update a role."""
+        logger.info(f"RoleService.update called: role_id={role_id}, updated_by_id={updated_by_id}")
+        logger.debug(f"Role update data: {role_data.model_dump(exclude_unset=True)}")
+        
         role = await self.get_by_id(role_id)
+        logger.debug(f"Found role: name={role.name}, slug={role.slug}, is_system={role.is_system}, is_active={role.is_active}")
 
         # Check if system role
-        if role.is_system and not role_data.is_active:
+        if role.is_system and role_data.is_active is not None and not role_data.is_active:
+            error_detail = "Cannot deactivate system role"
+            logger.warning(f"Validation failed: {error_detail} (role_id={role_id}, is_system={role.is_system}, is_active={role_data.is_active})")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot deactivate system role"
+                detail=error_detail
             )
 
         # Update fields
+        fields_updated = []
         if role_data.name is not None:
+            logger.debug(f"Updating role name: '{role.name}' -> '{role_data.name}'")
             role.name = role_data.name
+            fields_updated.append("name")
         if role_data.description is not None:
+            logger.debug(f"Updating role description: '{role.description}' -> '{role_data.description}'")
             role.description = role_data.description
+            fields_updated.append("description")
         if role_data.is_active is not None:
+            logger.debug(f"Updating role is_active: {role.is_active} -> {role_data.is_active}")
             role.is_active = role_data.is_active
+            fields_updated.append("is_active")
         if role_data.settings is not None:
+            logger.debug(f"Updating role settings")
             role.settings = role_data.settings
+            fields_updated.append("settings")
 
         # Update parent and hierarchy level
         if role_data.parent_role_id is not None:
+            logger.debug(f"Updating parent_role_id: {role.parent_role_id} -> {role_data.parent_role_id}")
             # Check for circular reference
             if await self._would_create_cycle(role_id, role_data.parent_role_id):
+                error_detail = "Cannot set parent role: would create circular reference"
+                logger.warning(f"Validation failed: {error_detail} (role_id={role_id}, parent_role_id={role_data.parent_role_id})")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Cannot set parent role: would create circular reference"
+                    detail=error_detail
                 )
 
             parent_role = await self.get_by_id(role_data.parent_role_id)
             role.parent_role_id = role_data.parent_role_id
             role.hierarchy_level = parent_role.hierarchy_level + 1
+            fields_updated.append("parent_role_id")
+            logger.debug(f"Set parent role hierarchy_level to {role.hierarchy_level}")
+
+        if fields_updated:
+            logger.debug(f"Fields to be updated: {', '.join(fields_updated)}")
+        else:
+            logger.debug("No fields to update (all values are None or unchanged)")
 
         role.updated_by_id = updated_by_id
         role = await self.repository.update(role)
         await self.repository.commit()
+        logger.info(f"Successfully updated role {role_id} (name={role.name}): updated fields={fields_updated}")
         return role
 
     async def delete(self, role_id: UUID) -> None:
@@ -258,11 +291,22 @@ class RoleService:
         permission_update: RolePermissionUpdate,
         updated_by_id: str
     ) -> Role:
-        """Update role permissions."""
+        """
+        Update role permissions.
+        
+        Note: System roles can have their permissions updated (unlike deletion/deactivation).
+        """
         role = await self.get_by_id(role_id)
 
         # Get permissions
-        permissions = await self._get_permissions_by_ids(permission_update.permission_ids)
+        try:
+            permissions = await self._get_permissions_by_ids(permission_update.permission_ids)
+        except HTTPException:
+            # Re-raise with more context
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="One or more permission IDs are invalid"
+            )
 
         # Update role permissions
         role = await self.repository.update_permissions(role, permissions)
@@ -442,37 +486,58 @@ async def seed_permissions_and_roles(db: AsyncSession) -> bool:
 
         await db.commit()
 
-        # Step 2: Create roles
+        # Step 2: Create or update roles
         role_map = {}  # slug -> Role object
+        roles_created = 0
+        roles_updated = 0
+        
         for role_data in SYSTEM_ROLES:
             # Check if role already exists
             existing = await role_repo.get_by_slug(role_data["slug"])
-            if existing:
-                role_map[role_data["slug"]] = existing
-                continue
-
-            # Create new role
-            role = Role(
-                name=role_data["name"],
-                slug=role_data["slug"],
-                description=role_data["description"],
-                is_system=role_data["is_system"],
-                hierarchy_level=role_data["hierarchy_level"],
-            )
-
-            # Assign permissions to role
+            
+            # Build expected permissions list from seed data
+            expected_permission_slugs = set(role_data["permissions"])
             role_permissions = [
                 permission_map[perm_slug]
                 for perm_slug in role_data["permissions"]
                 if perm_slug in permission_map
             ]
-            role.permissions = role_permissions
-
-            role = await role_repo.create(role)
-            role_map[role_data["slug"]] = role
+            
+            # Log warning for missing permissions
+            missing_permissions = expected_permission_slugs - set(permission_map.keys())
+            if missing_permissions:
+                print(f"⚠️  Warning: {len(missing_permissions)} permissions not found for role '{role_data['slug']}': {missing_permissions}")
+            
+            if existing:
+                # Update existing role permissions
+                current_permission_slugs = {perm.slug for perm in existing.permissions}
+                
+                # Check if permissions need updating
+                if current_permission_slugs != expected_permission_slugs:
+                    await role_repo.update_permissions(existing, role_permissions)
+                    roles_updated += 1
+                    print(f"✅ Updated role '{role_data['slug']}' with {len(role_permissions)} permissions (was {len(current_permission_slugs)})")
+                else:
+                    print(f"⏭️  Role '{role_data['slug']}' already has correct permissions ({len(role_permissions)})")
+                
+                role_map[role_data["slug"]] = existing
+            else:
+                # Create new role
+                role = Role(
+                    name=role_data["name"],
+                    slug=role_data["slug"],
+                    description=role_data["description"],
+                    is_system=role_data["is_system"],
+                    hierarchy_level=role_data["hierarchy_level"],
+                )
+                role.permissions = role_permissions
+                role = await role_repo.create(role)
+                role_map[role_data["slug"]] = role
+                roles_created += 1
+                print(f"✅ Created role '{role_data['slug']}' with {len(role_permissions)} permissions")
 
         await db.commit()
-        print(f"✅ Seeded {len(permission_map)} permissions and {len(role_map)} roles")
+        print(f"✅ Seeded {len(permission_map)} permissions: {roles_created} roles created, {roles_updated} roles updated")
         return True
 
     except Exception as e:
@@ -531,3 +596,37 @@ async def seed_system_settings(db: AsyncSession) -> bool:
         traceback.print_exc()
         await db.rollback()
         return False
+
+
+DEFAULT_NOTIFICATION_PREFERENCES = {
+    "email": {"orderUpdates": True, "ticketUpdates": True, "invoiceUpdates": True, "marketing": False},
+    "push": {"orderUpdates": True, "ticketUpdates": True, "invoiceUpdates": False},
+    "sms": {"orderUpdates": False, "ticketUpdates": False, "invoiceUpdates": False},
+}
+
+
+class UserNotificationPreferencesService:
+    """Service for user notification preferences."""
+
+    def __init__(self, db: AsyncSession):
+        self.db = db
+        self.repo = UserNotificationPreferencesRepository(db)
+
+    async def get(self, user_id: str) -> dict:
+        """Get preferences for user, or defaults if none stored."""
+        row = await self.repo.get_by_user_id(user_id)
+        if not row:
+            return dict(DEFAULT_NOTIFICATION_PREFERENCES)
+        return dict(row.preferences)
+
+    async def update(self, user_id: str, preferences: dict) -> dict:
+        """Update preferences for user. Merges with defaults."""
+        base = dict(DEFAULT_NOTIFICATION_PREFERENCES)
+        for channel in ("email", "push", "sms"):
+            if channel in preferences and isinstance(preferences[channel], dict):
+                for k, v in preferences[channel].items():
+                    if k in base.get(channel, {}):
+                        base[channel][k] = bool(v)
+        row = await self.repo.upsert(user_id, base)
+        await self.db.commit()
+        return dict(row.preferences)

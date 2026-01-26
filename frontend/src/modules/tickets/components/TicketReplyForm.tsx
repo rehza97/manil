@@ -58,8 +58,8 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({
     const files = Array.from(e.target.files || []);
     if (files.length + attachments.length > 10) {
       toast({
-        title: "Error",
-        description: "Maximum 10 attachments allowed",
+        title: "Erreur",
+        description: "Maximum 10 pièces jointes autorisées",
         variant: "destructive",
       });
       return;
@@ -76,8 +76,8 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({
     
     if (!message.trim()) {
       toast({
-        title: "Error",
-        description: "Please enter a message",
+        title: "Erreur",
+        description: "Veuillez saisir un message",
         variant: "destructive",
       });
       return;
@@ -99,8 +99,8 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({
       // }
       
       toast({
-        title: "Success",
-        description: "Reply added successfully",
+        title: "Succès",
+        description: "Réponse ajoutée",
       });
       
       setMessage("");
@@ -109,8 +109,8 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({
       onReplyAdded?.();
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to add reply",
+        title: "Erreur",
+        description: error.message || "Échec de l'ajout de la réponse",
         variant: "destructive",
       });
     } finally {
@@ -121,7 +121,7 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Add Reply</CardTitle>
+        <CardTitle>Ajouter une réponse</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -130,15 +130,14 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({
             <RichTextEditor
               value={message}
               onChange={setMessage}
-              placeholder="Enter your reply... (Supports basic formatting)"
+              placeholder="Saisir votre réponse… (formatage basique)"
               className="min-h-[150px]"
             />
             <p className="text-xs text-slate-500">
-              Tip: Use Ctrl+B for bold, Ctrl+I for italic, Ctrl+U for underline
+              Ctrl+B gras, Ctrl+I italique, Ctrl+U souligné
             </p>
           </div>
 
-          {/* Internal note checkbox - only for non-clients */}
           {!isClient && (
             <div className="flex items-center space-x-2">
               <Checkbox
@@ -147,13 +146,13 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({
                 onCheckedChange={(checked) => setIsInternal(checked as boolean)}
               />
               <Label htmlFor="internal" className="text-sm font-normal cursor-pointer">
-                Internal note (visible to staff only)
+                Note interne (visible uniquement par le personnel)
               </Label>
             </div>
           )}
 
           <div className="space-y-2">
-            <Label>Attachments</Label>
+            <Label>Pièces jointes</Label>
             <div className="flex items-center gap-2">
               <Input
                 type="file"
@@ -170,10 +169,10 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({
                 onClick={() => document.getElementById("file-upload")?.click()}
               >
                 <Paperclip className="h-4 w-4 mr-2" />
-                Add Files
+                Ajouter des fichiers
               </Button>
               <span className="text-xs text-slate-500">
-                Max 10 files, 20MB each
+                Max 10 fichiers, 20 Mo chacun
               </span>
             </div>
             {attachments.length > 0 && (
@@ -190,7 +189,7 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({
                       size="sm"
                       onClick={() => removeAttachment(index)}
                     >
-                      Remove
+                      Retirer
                     </Button>
                   </div>
                 ))}
@@ -198,10 +197,9 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({
             )}
           </div>
 
-          {/* Existing Attachments */}
           {existingAttachments.length > 0 && (
             <div className="space-y-2">
-              <Label>Existing Attachments</Label>
+              <Label>Pièces jointes existantes</Label>
               <div className="space-y-1">
                 {existingAttachments.map((attachment: any) => (
                   <div
@@ -233,7 +231,7 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({
           <div className="flex justify-end">
             <Button type="submit" disabled={isSubmitting || !message.replace(/<[^>]*>/g, "").trim()}>
               <Send className="h-4 w-4 mr-2" />
-              {isSubmitting ? "Posting..." : "Post Reply"}
+              {isSubmitting ? "Envoi…" : "Publier la réponse"}
             </Button>
           </div>
         </form>

@@ -36,6 +36,7 @@ function transformCustomer(apiCustomer: any): Customer {
       apiCustomer.customer_type ||
       apiCustomer.customerType ||
       CustomerType.individual,
+    approvalStatus: apiCustomer.approval_status || apiCustomer.approvalStatus,
     companyName: apiCustomer.company_name || apiCustomer.companyName,
     taxId: apiCustomer.tax_id || apiCustomer.taxId,
     address: apiCustomer.address,
@@ -206,19 +207,57 @@ export const customerService = {
   /**
    * Activate customer account
    */
-  async activate(id: string): Promise<Customer> {
-    await customersApi.activateCustomer(id);
-    // Refetch customer to get updated status
-    return await customersApi.getCustomer(id);
+  async activate(id: string, reason: string = "Customer activated"): Promise<Customer> {
+    return await customersApi.activateCustomer(id, reason);
   },
 
   /**
    * Suspend customer account
    */
-  async suspend(id: string): Promise<Customer> {
-    await customersApi.suspendCustomer(id);
-    // Refetch customer to get updated status
-    return await customersApi.getCustomer(id);
+  async suspend(id: string, reason: string = "Customer suspended"): Promise<Customer> {
+    return await customersApi.suspendCustomer(id, reason);
+  },
+
+  /**
+   * Submit customer for approval
+   */
+  async submitForApproval(id: string, notes?: string): Promise<Customer> {
+    return await customersApi.submitForApproval(id, notes);
+  },
+
+  /**
+   * Approve customer
+   */
+  async approve(id: string, notes?: string): Promise<Customer> {
+    return await customersApi.approveCustomer(id, notes);
+  },
+
+  /**
+   * Reject customer approval
+   */
+  async reject(id: string, reason: string): Promise<Customer> {
+    return await customersApi.rejectCustomer(id, reason);
+  },
+
+  /**
+   * Get status history
+   */
+  async getStatusHistory(id: string, skip = 0, limit = 100) {
+    return await customersApi.getStatusHistory(id, { skip, limit });
+  },
+
+  /**
+   * Get profile completeness
+   */
+  async getProfileCompleteness(id: string) {
+    return await customersApi.getProfileCompleteness(id);
+  },
+
+  /**
+   * Get missing fields
+   */
+  async getMissingFields(id: string) {
+    return await customersApi.getMissingFields(id);
   },
 
   /**

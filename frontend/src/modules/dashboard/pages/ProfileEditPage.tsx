@@ -52,16 +52,15 @@ const ProfileEditPage: React.FC = () => {
       });
 
       toast({
-        title: "Profile Updated",
-        description: "Your profile has been successfully updated.",
+        title: "Profil mis à jour",
+        description: "Votre profil a été mis à jour avec succès.",
       });
 
-      // Navigate back to profile page
       navigate("/dashboard/profile");
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to update profile. Please try again.",
+        title: "Erreur",
+        description: error.message || "Échec de la mise à jour du profil. Veuillez réessayer.",
         variant: "destructive",
       });
     }
@@ -70,7 +69,7 @@ const ProfileEditPage: React.FC = () => {
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-muted-foreground">Loading...</p>
+        <p className="text-muted-foreground">Chargement…</p>
       </div>
     );
   }
@@ -85,43 +84,41 @@ const ProfileEditPage: React.FC = () => {
           onClick={() => navigate("/dashboard/profile")}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Profile
+          Retour au profil
         </Button>
       </div>
 
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Edit Profile</h1>
+        <h1 className="text-3xl font-bold text-slate-900">Modifier le profil</h1>
         <p className="text-muted-foreground mt-1">
-          Update your personal information and contact details
+          Mettre à jour vos informations personnelles et de contact
         </p>
       </div>
 
-      {/* Edit Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Personal Information */}
         <Card>
           <CardHeader>
-            <CardTitle>Personal Information</CardTitle>
+            <CardTitle>Informations personnelles</CardTitle>
             <CardDescription>
-              Your basic account details and contact information
+              Vos informations de compte et de contact
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name *</Label>
+                <Label htmlFor="name">Nom complet *</Label>
                 <Input
                   id="name"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
                   required
-                  placeholder="Enter your full name"
+                  placeholder="Votre nom complet"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address *</Label>
+                <Label htmlFor="email">Adresse e-mail *</Label>
                 <Input
                   id="email"
                   name="email"
@@ -129,12 +126,12 @@ const ProfileEditPage: React.FC = () => {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  placeholder="your.email@example.com"
+                  placeholder="votre@email.exemple"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
+                <Label htmlFor="phone">Téléphone</Label>
                 <Input
                   id="phone"
                   name="phone"
@@ -148,103 +145,101 @@ const ProfileEditPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Address Information */}
         <Card>
           <CardHeader>
-            <CardTitle>Address Information</CardTitle>
-            <CardDescription>Your location and contact address</CardDescription>
+            <CardTitle>Adresse</CardTitle>
+            <CardDescription>Votre adresse et lieu de contact</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="address">Street Address</Label>
+              <Label htmlFor="address">Adresse</Label>
               <Textarea
                 id="address"
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
-                placeholder="Enter your street address"
+                placeholder="Votre adresse"
                 rows={2}
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
+                <Label htmlFor="city">Ville</Label>
                 <Input
                   id="city"
                   name="city"
                   value={formData.city}
                   onChange={handleChange}
-                  placeholder="City"
+                  placeholder="Ville"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="state">State/Province</Label>
+                <Label htmlFor="state">Région / Province</Label>
                 <Input
                   id="state"
                   name="state"
                   value={formData.state}
                   onChange={handleChange}
-                  placeholder="State or Province"
+                  placeholder="Région ou province"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="postal_code">Postal Code</Label>
+                <Label htmlFor="postal_code">Code postal</Label>
                 <Input
                   id="postal_code"
                   name="postal_code"
                   value={formData.postal_code}
                   onChange={handleChange}
-                  placeholder="Postal Code"
+                  placeholder="Code postal"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="country">Country</Label>
+                <Label htmlFor="country">Pays</Label>
                 <Input
                   id="country"
                   name="country"
                   value={formData.country}
                   onChange={handleChange}
-                  placeholder="Country"
+                  placeholder="Pays"
                 />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Company Information (if corporate account) */}
         {user.role === "corporate" && (
           <Card>
             <CardHeader>
-              <CardTitle>Company Information</CardTitle>
+              <CardTitle>Informations société</CardTitle>
               <CardDescription>
-                Your business details and tax information
+                Détails de votre entreprise et informations fiscales
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="company_name">Company Name</Label>
+                  <Label htmlFor="company_name">Raison sociale</Label>
                   <Input
                     id="company_name"
                     name="company_name"
                     value={formData.company_name}
                     onChange={handleChange}
-                    placeholder="Enter company name"
+                    placeholder="Nom de la société"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="tax_id">Tax ID</Label>
+                  <Label htmlFor="tax_id">N° TVA / SIRET</Label>
                   <Input
                     id="tax_id"
                     name="tax_id"
                     value={formData.tax_id}
                     onChange={handleChange}
-                    placeholder="Tax identification number"
+                    placeholder="Numéro d'identification fiscale"
                   />
                 </div>
               </div>
@@ -252,7 +247,6 @@ const ProfileEditPage: React.FC = () => {
           </Card>
         )}
 
-        {/* Form Actions */}
         <div className="flex items-center justify-end space-x-4">
           <Button
             type="button"
@@ -260,11 +254,11 @@ const ProfileEditPage: React.FC = () => {
             onClick={() => navigate("/dashboard/profile")}
             disabled={updateProfile.isPending}
           >
-            Cancel
+            Annuler
           </Button>
           <Button type="submit" disabled={updateProfile.isPending}>
             <Save className="h-4 w-4 mr-2" />
-            {updateProfile.isPending ? "Saving..." : "Save Changes"}
+            {updateProfile.isPending ? "Enregistrement…" : "Enregistrer"}
           </Button>
         </div>
       </form>

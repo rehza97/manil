@@ -57,21 +57,20 @@ export const VPSPlansPage: React.FC = () => {
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">VPS Hosting Plans</h1>
+        <h1 className="text-3xl font-bold text-slate-900">Formules VPS</h1>
         <p className="text-slate-600 mt-1">
-          Choose a plan that fits your needs. All plans include 24/7 support.
+          Choisissez une formule adaptée. Toutes incluent un support 24/7.
         </p>
       </div>
 
-      {/* Error State */}
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="flex items-center justify-between">
             <span>
               {(error as any)?.response?.status === 403
-                ? "You don't have permission to access VPS plans. Please contact your administrator."
-                : "Failed to load VPS plans. Please try again."}
+                ? "Vous n'avez pas accès aux formules VPS. Contactez l'administrateur."
+                : "Impossible de charger les formules. Réessayez."}
             </span>
             {(error as any)?.response?.status !== 403 && (
               <Button
@@ -81,7 +80,7 @@ export const VPSPlansPage: React.FC = () => {
                 className="ml-4"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Retry
+                Réessayer
               </Button>
             )}
           </AlertDescription>
@@ -139,32 +138,30 @@ export const VPSPlansPage: React.FC = () => {
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>Request VPS Hosting</AlertDialogTitle>
+            <AlertDialogTitle>Demander un VPS</AlertDialogTitle>
             <AlertDialogDescription>
               {selectedPlan && (
                 <>
-                  You are about to request the <strong>{selectedPlan.name}</strong> plan
-                  for {formatDZD(selectedPlan.monthly_price)}/month.
+                  Vous allez demander le plan <strong>{selectedPlan.name}</strong> à {formatDZD(selectedPlan.monthly_price)}/mois.
                   {selectedPlan.setup_fee > 0 && (
-                    <> A setup fee of {formatDZD(selectedPlan.setup_fee)} will apply.</>
+                    <> Frais d&apos;installation : {formatDZD(selectedPlan.setup_fee)}.</>
                   )}
                   <br />
                   <br />
-                  Your request will be submitted for admin approval. You will receive
-                  an email notification once your VPS is approved and provisioned.
+                  La demande sera soumise pour approbation. Vous recevrez un e-mail une fois le VPS approuvé et provisionné.
                 </>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={requestVPS.isPending}>
-              Cancel
+              Annuler
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmRequest}
               disabled={requestVPS.isPending}
             >
-              {requestVPS.isPending ? "Submitting..." : "Confirm Request"}
+              {requestVPS.isPending ? "Envoi…" : "Confirmer"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

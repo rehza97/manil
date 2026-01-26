@@ -8,14 +8,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/shared/components/ui/button";
 import { Separator } from "@/shared/components/ui/separator";
 import { X, Filter } from "lucide-react";
-import type { ProductCategory } from "../types";
+import type { ProductCategory, ServiceType, BillingCycle } from "../types";
 
 export interface FilterState {
   category_id?: string;
   min_price?: number;
   max_price?: number;
   is_featured?: boolean;
-  in_stock?: boolean;
+  service_type?: ServiceType;
+  billing_cycle?: BillingCycle;
+  is_recurring?: boolean;
+  in_stock?: boolean; // DEPRECATED: kept for backward compatibility
   sort_by?: "name" | "price" | "created_at" | "rating" | "view_count";
   sort_order?: "asc" | "desc";
 }
@@ -75,7 +78,7 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
 
         {/* Category Filter */}
         <div className="space-y-3">
-          <Label className="text-sm font-semibold">Category</Label>
+          <Label className="text-sm font-semibold">Catégorie</Label>
           <RadioGroup
             value={filters.category_id || "all"}
             onValueChange={(value) =>
@@ -85,7 +88,7 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="all" id="category-all" />
               <Label htmlFor="category-all" className="font-normal cursor-pointer">
-                All Categories
+                Toutes les catégories
               </Label>
             </div>
             {categories.map((category) => (
@@ -130,7 +133,7 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
             </div>
             <div className="space-y-2">
               <Label htmlFor="max-price" className="text-xs text-muted-foreground">
-                Max Price
+                Prix max
               </Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
@@ -156,6 +159,64 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
 
         <Separator />
 
+        {/* Service Filters */}
+        <div className="space-y-4">
+          <Label className="text-sm font-semibold">Service Type</Label>
+          <Select
+            value={filters.service_type || "all"}
+            onValueChange={(value) =>
+              handleFilterChange({
+                service_type: value === "all" ? undefined : (value as ServiceType),
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Service Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Service Types</SelectItem>
+              <SelectItem value="general">General</SelectItem>
+              <SelectItem value="dns">DNS</SelectItem>
+              <SelectItem value="ssl">SSL Certificate</SelectItem>
+              <SelectItem value="email">Email Hosting</SelectItem>
+              <SelectItem value="backup">Backup Service</SelectItem>
+              <SelectItem value="monitoring">Monitoring</SelectItem>
+              <SelectItem value="domain">Domain Registration</SelectItem>
+              <SelectItem value="hosting">Hosting</SelectItem>
+              <SelectItem value="storage">Storage</SelectItem>
+              <SelectItem value="cdn">CDN</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Separator />
+
+        {/* Billing Cycle Filter */}
+        <div className="space-y-4">
+          <Label className="text-sm font-semibold">Facturation</Label>
+          <Select
+            value={filters.billing_cycle || "all"}
+            onValueChange={(value) =>
+              handleFilterChange({
+                billing_cycle: value === "all" ? undefined : (value as BillingCycle),
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Toutes" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes</SelectItem>
+              <SelectItem value="one_time">Paiement unique</SelectItem>
+              <SelectItem value="monthly">Mensuel</SelectItem>
+              <SelectItem value="yearly">Annuel</SelectItem>
+              <SelectItem value="usage_based">À l&apos;usage</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Separator />
+
         {/* Status Filters */}
         <div className="space-y-3">
           <Label className="text-sm font-semibold">Status</Label>
@@ -176,16 +237,16 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox
-                id="in-stock"
-                checked={filters.in_stock ?? false}
+                id="recurring"
+                checked={filters.is_recurring ?? false}
                 onCheckedChange={(checked) =>
                   handleFilterChange({
-                    in_stock: checked ? true : undefined,
+                    is_recurring: checked ? true : undefined,
                   })
                 }
               />
-              <Label htmlFor="in-stock" className="font-normal cursor-pointer">
-                In Stock Only
+              <Label htmlFor="recurring" className="font-normal cursor-pointer">
+                Recurring Services Only
               </Label>
             </div>
           </div>
@@ -195,7 +256,7 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
 
         {/* Sort By */}
         <div className="space-y-3">
-          <Label className="text-sm font-semibold">Sort By</Label>
+          <Label className="text-sm font-semibold">Trier par</Label>
           <Select
             value={filters.sort_by || "created_at"}
             onValueChange={(value) =>
@@ -205,21 +266,20 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
             }
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select sort option" />
+              <SelectValue placeholder="Choisir le tri" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="created_at">Newest</SelectItem>
-              <SelectItem value="name">Name (A-Z)</SelectItem>
-              <SelectItem value="price">Price (Low to High)</SelectItem>
-              <SelectItem value="rating">Highest Rated</SelectItem>
-              <SelectItem value="view_count">Most Viewed</SelectItem>
+              <SelectItem value="created_at">Plus récents</SelectItem>
+              <SelectItem value="name">Nom (A-Z)</SelectItem>
+              <SelectItem value="price">Prix (croissant)</SelectItem>
+              <SelectItem value="rating">Mieux notés</SelectItem>
+              <SelectItem value="view_count">Plus vus</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {/* Sort Order */}
         <div className="space-y-3">
-          <Label className="text-sm font-semibold">Order</Label>
+          <Label className="text-sm font-semibold">Ordre</Label>
           <RadioGroup
             value={filters.sort_order || "desc"}
             onValueChange={(value) =>
@@ -229,13 +289,13 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="desc" id="order-desc" />
               <Label htmlFor="order-desc" className="font-normal cursor-pointer">
-                Descending
+                Décroissant
               </Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="asc" id="order-asc" />
               <Label htmlFor="order-asc" className="font-normal cursor-pointer">
-                Ascending
+                Croissant
               </Label>
             </div>
           </RadioGroup>
@@ -243,14 +303,13 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
 
         <Separator />
 
-        {/* Reset Button */}
         <Button
           onClick={handleReset}
           disabled={isLoading || !hasActiveFilters}
           variant="outline"
           className="w-full"
         >
-          Reset Filters
+          Réinitialiser les filtres
         </Button>
       </CardContent>
     </Card>

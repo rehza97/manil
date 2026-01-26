@@ -45,11 +45,11 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
 };
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
-  request: "Request",
-  validated: "Validated",
-  in_progress: "In Progress",
-  delivered: "Delivered",
-  cancelled: "Cancelled",
+  request: "Demande",
+  validated: "Validée",
+  in_progress: "En cours",
+  delivered: "Livrée",
+  cancelled: "Annulée",
 };
 
 export function OrderList() {
@@ -91,11 +91,11 @@ export function OrderList() {
     return (
       <Card className="border-red-200 bg-red-50">
         <CardHeader>
-          <CardTitle className="text-red-800">Error Loading Orders</CardTitle>
+          <CardTitle className="text-red-800">Erreur lors du chargement des commandes</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-red-700">
-            {error instanceof Error ? error.message : "An error occurred while loading orders"}
+            {error instanceof Error ? error.message : "Une erreur s'est produite lors du chargement des commandes"}
           </p>
         </CardContent>
       </Card>
@@ -106,25 +106,24 @@ export function OrderList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Orders</h1>
-          <p className="text-gray-600">Manage and track customer orders</p>
+          <h1 className="text-3xl font-bold tracking-tight">Commandes</h1>
+          <p className="text-gray-600">Gérer et suivre les commandes</p>
         </div>
         <Button onClick={handleCreateOrder} className="gap-2">
-          <span>+</span> Create Order
+          <span>+</span> Créer une commande
         </Button>
       </div>
 
-      {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Filters</CardTitle>
+          <CardTitle className="text-base">Filtres</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="mb-2 block text-sm font-medium">Customer ID</label>
+              <label className="mb-2 block text-sm font-medium">ID client</label>
               <Input
-                placeholder="Filter by customer ID..."
+                placeholder="Filtrer par ID client…"
                 value={customerIdFilter}
                 onChange={(e) => {
                   setCustomerIdFilter(e.target.value);
@@ -133,21 +132,21 @@ export function OrderList() {
               />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium">Status</label>
+              <label className="mb-2 block text-sm font-medium">Statut</label>
               <Select value={statusFilter || "all"} onValueChange={(val) => {
                 setStatusFilter(val === "all" ? "" : (val as OrderStatus | ""));
                 setPage(1);
               }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
+                  <SelectValue placeholder="Tous les statuts" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="request">Request</SelectItem>
-                  <SelectItem value="validated">Validated</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="delivered">Delivered</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="all">Tous les statuts</SelectItem>
+                  <SelectItem value="request">Demande</SelectItem>
+                  <SelectItem value="validated">Validée</SelectItem>
+                  <SelectItem value="in_progress">En cours</SelectItem>
+                  <SelectItem value="delivered">Livrée</SelectItem>
+                  <SelectItem value="cancelled">Annulée</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -155,12 +154,11 @@ export function OrderList() {
         </CardContent>
       </Card>
 
-      {/* Orders Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Orders</CardTitle>
+          <CardTitle>Commandes</CardTitle>
           <CardDescription>
-            {data ? `Showing ${data.data.length} of ${data.total} orders` : "Loading orders..."}
+            {data ? `${data.data.length} sur ${data.total} commandes` : "Chargement…"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -168,12 +166,12 @@ export function OrderList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Order Number</TableHead>
-                  <TableHead>Customer ID</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Total Amount</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead>Created</TableHead>
+                  <TableHead>N° commande</TableHead>
+                  <TableHead>ID client</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead className="text-right">Montant total</TableHead>
+                  <TableHead>Articles</TableHead>
+                  <TableHead>Créée le</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -219,7 +217,7 @@ export function OrderList() {
                       <TableCell className="text-right font-semibold">
                         {formatCurrency(order.total_amount)}
                       </TableCell>
-                      <TableCell>{order.items.length} items</TableCell>
+                      <TableCell>{order.items.length} article(s)</TableCell>
                       <TableCell>{formatDate(order.created_at)}</TableCell>
                       <TableCell className="text-right">
                         <Button
@@ -227,7 +225,7 @@ export function OrderList() {
                           size="sm"
                           onClick={() => handleViewOrder(order.id)}
                         >
-                          View
+                          Voir
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -235,7 +233,7 @@ export function OrderList() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={7} className="py-8 text-center text-gray-500">
-                      No orders found
+                      Aucune commande
                     </TableCell>
                   </TableRow>
                 )}

@@ -25,6 +25,7 @@ export interface Customer extends AuditFields {
   phone: string;
   status: CustomerStatus;
   customerType: CustomerType;
+  approvalStatus?: "not_required" | "pending" | "approved" | "rejected";
   companyName?: string | null;
   taxId?: string | null;
   address?: string | null;

@@ -4,12 +4,16 @@ SMS provider implementations.
 Supports multiple SMS providers:
 - Twilio
 - Infobip (planned)
+- Custom (via Flutter app)
 """
 
 from abc import ABC, abstractmethod
 from typing import Optional
 
 from app.config.settings import get_settings
+from app.config.database import AsyncSessionLocal
+from app.infrastructure.sms.repository import SMSRepository
+from app.core.logging import logger
 
 settings = get_settings()
 
@@ -29,7 +33,9 @@ class TwilioProvider(SMSProvider):
     def __init__(self):
         self.account_sid = settings.TWILIO_ACCOUNT_SID
         self.auth_token = settings.TWILIO_AUTH_TOKEN
-        self.from_number = getattr(settings, "TWILIO_FROM_NUMBER", None)
+        self.from_number = getattr(
+            settings, "TWILIO_FROM_NUMBER", None
+        ) or getattr(settings, "TWILIO_PHONE_NUMBER", None)
 
     async def send_sms(self, to: str, message: str) -> bool:
         """
@@ -118,6 +124,33 @@ class InfobipProvider(SMSProvider):
             return False
 
 
+class CustomSMSProvider(SMSProvider):
+    """Custom SMS provider that queues messages for Flutter app to send."""
+
+    async def send_sms(self, to: str, message: str) -> bool:
+        """
+        Queue SMS message for sending via custom gateway (Flutter app).
+
+        Args:
+            to: Recipient phone number
+            message: SMS message content
+
+        Returns:
+            True if message is successfully queued, False otherwise
+        """
+        try:
+            async with AsyncSessionLocal() as db:
+                repo = SMSRepository(db)
+                sms_message = await repo.create_message(phone_number=to, message=message)
+                logger.info(
+                    f"✅ SMS queued for sending: id={sms_message.id}, to={to}"
+                )
+                return True
+        except Exception as e:
+            logger.error(f"❌ Failed to queue SMS: {e}")
+            return False
+
+
 class MockSMSProvider(SMSProvider):
     """Mock SMS provider for testing."""
 
@@ -150,5 +183,7 @@ def get_sms_provider() -> SMSProvider:
         return TwilioProvider()
     elif provider == "infobip":
         return InfobipProvider()
+    elif provider == "custom":
+        return CustomSMSProvider()
     else:
         return MockSMSProvider()

@@ -68,13 +68,13 @@ export function isValidDomain(value: string): boolean {
 export const createZoneSchema = z.object({
   zone_name: z
     .string()
-    .min(1, "Zone name is required")
-    .max(255, "Zone name must be less than 255 characters")
-    .regex(domainRegex, "Invalid domain format (e.g., example.com)"),
+    .min(1, "Le nom de la zone est requis")
+    .max(255, "Le nom doit faire moins de 255 caractères")
+    .regex(domainRegex, "Format de domaine invalide (ex. example.com)"),
   
   subscription_id: z
     .string()
-    .min(1, "VPS subscription is required"),
+    .min(1, "Un abonnement VPS est requis"),
   
   zone_type: z
     .nativeEnum(DNSZoneType)
@@ -82,13 +82,13 @@ export const createZoneSchema = z.object({
   
   ttl_default: z
     .number()
-    .min(60, "TTL must be at least 60 seconds")
-    .max(86400, "TTL must not exceed 86400 seconds (24 hours)")
+    .min(60, "Le TTL doit être d'au moins 60 secondes")
+    .max(86400, "Le TTL ne doit pas dépasser 86400 secondes (24 h)")
     .default(3600),
   
   notes: z
     .string()
-    .max(1000, "Notes must be less than 1000 characters")
+    .max(1000, "Les notes doivent faire moins de 1000 caractères")
     .optional(),
 });
 
@@ -151,40 +151,39 @@ export const createRecordSchema = z
   .object({
     record_name: z
       .string()
-      .min(1, "Record name is required")
-      .max(255, "Record name must be less than 255 characters")
-      .regex(recordNameRegex, "Invalid record name (use @ for root or alphanumeric with hyphens)"),
+      .min(1, "Le nom de l'enregistrement est requis")
+      .max(255, "Le nom doit faire moins de 255 caractères")
+      .regex(recordNameRegex, "Nom invalide (@ pour la racine, ou alphanumérique avec tirets)"),
     
     record_type: z
       .nativeEnum(DNSRecordType, {
-        errorMap: () => ({ message: "Invalid record type" }),
+        errorMap: () => ({ message: "Type d'enregistrement invalide" }),
       }),
     
     record_value: z
       .string()
-      .min(1, "Record value is required")
-      .max(500, "Record value must be less than 500 characters"),
+      .min(1, "La valeur est requise")
+      .max(500, "La valeur doit faire moins de 500 caractères"),
     
     ttl: z
       .number()
-      .min(60, "TTL must be at least 60 seconds")
-      .max(86400, "TTL must not exceed 86400 seconds")
+      .min(60, "Le TTL doit être d'au moins 60 secondes")
+      .max(86400, "Le TTL ne doit pas dépasser 86400 secondes")
       .optional(),
     
     priority: z
       .number()
-      .min(0, "Priority must be at least 0")
-      .max(65535, "Priority must not exceed 65535")
+      .min(0, "La priorité doit être au moins 0")
+      .max(65535, "La priorité ne doit pas dépasser 65535")
       .optional(),
   })
   .superRefine((data, ctx) => {
-    // Type-specific validation
     switch (data.record_type) {
       case DNSRecordType.A:
         if (!isValidIPv4(data.record_value)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: "Invalid IPv4 address (e.g., 192.168.1.1)",
+            message: "Adresse IPv4 invalide (ex. 192.168.1.1)",
             path: ["record_value"],
           });
         }
@@ -194,7 +193,7 @@ export const createRecordSchema = z
         if (!isValidIPv6(data.record_value)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: "Invalid IPv6 address (e.g., 2001:0db8::1)",
+            message: "Adresse IPv6 invalide (ex. 2001:0db8::1)",
             path: ["record_value"],
           });
         }
@@ -205,7 +204,7 @@ export const createRecordSchema = z
         if (!isValidFQDN(data.record_value)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: "Invalid domain name (e.g., example.com)",
+            message: "Nom de domaine invalide (ex. example.com)",
             path: ["record_value"],
           });
         }
@@ -215,25 +214,24 @@ export const createRecordSchema = z
         if (!isValidFQDN(data.record_value)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: "Invalid mail server domain (e.g., mail.example.com)",
+            message: "Domaine du serveur mail invalide (ex. mail.example.com)",
             path: ["record_value"],
           });
         }
         if (data.priority === undefined) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: "Priority is required for MX records (0-65535)",
+            message: "La priorité est requise pour les enregistrements MX (0–65535)",
             path: ["priority"],
           });
         }
         break;
       
       case DNSRecordType.TXT:
-        // TXT records are free-form, just check length
         if (data.record_value.length > 500) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: "TXT record value too long (max 500 characters)",
+            message: "Valeur TXT trop longue (max 500 caractères)",
             path: ["record_value"],
           });
         }

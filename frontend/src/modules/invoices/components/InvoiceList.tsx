@@ -26,6 +26,8 @@ interface InvoiceListProps {
   invoices: Invoice[];
   onSelectInvoice?: (invoiceId: string) => void;
   onAction?: (action: string, invoiceId: string) => void;
+  /** Base path for invoice routes (e.g. /dashboard/invoices or /corporate/invoices). Default: /dashboard/invoices */
+  basePath?: string;
 }
 
 const statusColors: Record<InvoiceStatus, string> = {
@@ -44,7 +46,14 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
   const navigate = useNavigate();
 
   const getStatusLabel = (status: InvoiceStatus) => {
-    return status.charAt(0).toUpperCase() + status.slice(1);
+    const labels: Record<InvoiceStatus, string> = {
+      [InvoiceStatus.DRAFT]: "Brouillon",
+      [InvoiceStatus.SENT]: "Envoyée",
+      [InvoiceStatus.PAID]: "Payée",
+      [InvoiceStatus.OVERDUE]: "En retard",
+      [InvoiceStatus.CANCELLED]: "Annulée",
+    };
+    return labels[status] ?? status;
   };
 
   const isOverdue = (invoice: Invoice) => {
@@ -99,7 +108,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                   >
                     {getStatusLabel(invoice.status)}
                     {isOverdue(invoice) && invoice.status !== InvoiceStatus.OVERDUE && (
-                      <span className="ml-1">(Overdue)</span>
+                      <span className="ml-1">(En retard)</span>
                     )}
                   </Badge>
                 </TableCell>
@@ -126,21 +135,21 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                       <DropdownMenuItem
                         onClick={() => {
                           onSelectInvoice?.(invoice.id);
-                          navigate(`/dashboard/invoices/${invoice.id}`);
+                          navigate(`${basePath}/${invoice.id}`);
                         }}
                       >
                         <Eye className="h-4 w-4 mr-2" />
-                        View
+                        Voir
                       </DropdownMenuItem>
                       {invoice.status === InvoiceStatus.DRAFT && (
                         <DropdownMenuItem
                           onClick={() => {
                             onAction?.("edit", invoice.id);
-                            navigate(`/dashboard/invoices/${invoice.id}/edit`);
+                            navigate(`${basePath}/${invoice.id}/edit`);
                           }}
                         >
                           <Edit className="h-4 w-4 mr-2" />
-                          Edit
+                          Modifier
                         </DropdownMenuItem>
                       )}
                       {invoice.status !== InvoiceStatus.SENT &&
@@ -150,7 +159,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                             onClick={() => onAction?.("send", invoice.id)}
                           >
                             <Send className="h-4 w-4 mr-2" />
-                            Send
+                            Envoyer
                           </DropdownMenuItem>
                         )}
                       {invoice.status !== InvoiceStatus.PAID &&
@@ -159,14 +168,14 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                             onClick={() => onAction?.("payment", invoice.id)}
                           >
                             <DollarSign className="h-4 w-4 mr-2" />
-                            Record Payment
+                            Enregistrer un paiement
                           </DropdownMenuItem>
                         )}
                       <DropdownMenuItem
                         onClick={() => onAction?.("download", invoice.id)}
                       >
                         <Download className="h-4 w-4 mr-2" />
-                        Download PDF
+                        Télécharger PDF
                       </DropdownMenuItem>
                       {invoice.status !== InvoiceStatus.PAID &&
                         invoice.status !== InvoiceStatus.CANCELLED && (
@@ -175,7 +184,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                             className="text-red-600"
                           >
                             <X className="h-4 w-4 mr-2" />
-                            Cancel
+                            Annuler
                           </DropdownMenuItem>
                         )}
                     </DropdownMenuContent>

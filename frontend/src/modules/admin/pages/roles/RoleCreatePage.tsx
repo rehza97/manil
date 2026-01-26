@@ -43,6 +43,16 @@ export const RoleCreatePage: React.FC = () => {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Generate slug from name
+  const generateSlug = (name: string): string => {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9_]+/g, '_')  // Replace non-alphanumeric (except underscore) with underscore
+      .replace(/^_+|_+$/g, '')        // Remove leading/trailing underscores
+      .replace(/_+/g, '_');           // Replace multiple underscores with single
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -72,16 +82,49 @@ export const RoleCreatePage: React.FC = () => {
     }
 
     try {
-      await createRole.mutateAsync(formData);
+      // Generate slug from name
+      const slug = generateSlug(formData.name);
+      if (slug.length < 3) {
+        toast({
+          title: "Error",
+          description: "Role name must generate a valid slug (at least 3 characters)",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await createRole.mutateAsync({
+        ...formData,
+        slug,
+      });
       toast({
         title: "Success",
         description: "Role created successfully",
       });
       navigate("/admin/roles");
     } catch (error: any) {
+      // Handle validation errors (422) - extract message from error response
+      let errorMessage = "Failed to create role";
+      
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        // Handle FastAPI validation errors
+        if (Array.isArray(errorData.detail)) {
+          errorMessage = errorData.detail
+            .map((err: any) => err.msg || err.message || `${err.loc?.join('.')}: ${err.msg}`)
+            .join(", ");
+        } else if (errorData.detail) {
+          errorMessage = typeof errorData.detail === "string" 
+            ? errorData.detail 
+            : errorData.detail.message || errorData.detail.msg || "Validation error";
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      }
+      
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to create role",
+        description: errorMessage,
         variant: "destructive",
       });
     }

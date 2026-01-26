@@ -41,6 +41,7 @@ import {
 import { useAuth, RoleGuard, useLogout } from "@/modules/auth";
 import { customerService } from "@/modules/customers/services";
 import { useCustomerKYCStatus } from "@/modules/customers/hooks";
+import { NotificationDropdown } from "@/shared/components/NotificationDropdown";
 import {
   Collapsible,
   CollapsibleContent,
@@ -48,6 +49,7 @@ import {
 } from "@/shared/components/ui/collapsible";
 
 interface NavItem {
+  id?: string;
   name: string;
   href?: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -79,7 +81,7 @@ const UserDashboardLayout: React.FC = () => {
       return (
         <Badge variant="secondary" className="ml-2">
           <AlertCircle className="h-3 w-3 mr-1" />
-          No Profile
+          Aucun profil
         </Badge>
       );
     }
@@ -92,49 +94,49 @@ const UserDashboardLayout: React.FC = () => {
       return (
         <Badge variant="default" className="ml-2 bg-green-600 hover:bg-green-700">
           <CheckCircle2 className="h-3 w-3 mr-1" />
-          Verified
+          Vérifié
         </Badge>
       );
     } else if (kycStatusValue === "pending") {
       return (
         <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
           <Clock className="h-3 w-3 mr-1" />
-          KYC Pending
+          KYC en attente
         </Badge>
       );
     } else if (kycStatusValue === "rejected") {
       return (
         <Badge variant="destructive" className="ml-2">
           <XCircle className="h-3 w-3 mr-1" />
-          KYC Rejected
+          KYC rejeté
         </Badge>
       );
     } else if (customerStatus === "active") {
       return (
         <Badge variant="default" className="ml-2 bg-green-600 hover:bg-green-700">
           <CheckCircle2 className="h-3 w-3 mr-1" />
-          Active
+          Actif
         </Badge>
       );
     } else if (customerStatus === "pending") {
       return (
         <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
           <Clock className="h-3 w-3 mr-1" />
-          Pending
+          En attente
         </Badge>
       );
     } else if (customerStatus === "suspended") {
       return (
         <Badge variant="destructive" className="ml-2">
           <XCircle className="h-3 w-3 mr-1" />
-          Suspended
+          Suspendu
         </Badge>
       );
     } else if (customerStatus === "inactive") {
       return (
         <Badge variant="secondary" className="ml-2">
           <AlertCircle className="h-3 w-3 mr-1" />
-          Inactive
+          Inactif
         </Badge>
       );
     }
@@ -142,12 +144,12 @@ const UserDashboardLayout: React.FC = () => {
     return (
       <Badge variant="secondary" className="ml-2">
         <AlertCircle className="h-3 w-3 mr-1" />
-        {customerStatus || "Unknown"}
+        {customerStatus || "Inconnu"}
       </Badge>
     );
   };
 
-  // Initialize open items based on current path
+  // Initialize open items based on current path (use stable ids for collapsibles)
   React.useEffect(() => {
     const newOpenItems = new Set<string>();
     if (location.pathname.startsWith("/dashboard/profile") ||
@@ -161,13 +163,16 @@ const UserDashboardLayout: React.FC = () => {
       newOpenItems.add("invoices");
     }
     if (location.pathname.startsWith("/dashboard/vps")) {
-      newOpenItems.add("vps hosting");
+      newOpenItems.add("vps");
     }
     if (location.pathname.startsWith("/dashboard/dns")) {
-      newOpenItems.add("dns management");
+      newOpenItems.add("dns");
     }
     if (location.pathname.startsWith("/dashboard/services")) {
-      newOpenItems.add("my services");
+      newOpenItems.add("services");
+    }
+    if (location.pathname.startsWith("/dashboard/orders")) {
+      newOpenItems.add("orders");
     }
     if (location.pathname.startsWith("/dashboard/settings")) {
       newOpenItems.add("settings");
@@ -177,38 +182,39 @@ const UserDashboardLayout: React.FC = () => {
 
   const navigation: NavItem[] = [
     {
-      name: "Dashboard",
+      name: "Tableau de bord",
       href: "/dashboard",
       icon: LayoutDashboard,
       current: location.pathname === "/dashboard",
     },
     {
-      name: "Profile",
+      id: "profile",
+      name: "Profil",
       icon: User,
-      current: location.pathname.startsWith("/dashboard/profile") || 
+      current: location.pathname.startsWith("/dashboard/profile") ||
               location.pathname.startsWith("/dashboard/security"),
       children: [
         {
-          name: "View Profile",
+          name: "Voir le profil",
           href: "/dashboard/profile",
           icon: User,
           current: location.pathname === "/dashboard/profile",
         },
         {
-          name: "Edit Profile",
+          name: "Modifier le profil",
           href: "/dashboard/profile/edit",
           icon: User,
           current: location.pathname === "/dashboard/profile/edit",
         },
         {
-          name: "Security Settings",
+          name: "Sécurité",
           href: "/dashboard/security",
           icon: Shield,
           current: location.pathname === "/dashboard/security" &&
                   !location.pathname.includes("/login-history"),
         },
         {
-          name: "Login History",
+          name: "Historique de connexion",
           href: "/dashboard/security/login-history",
           icon: Shield,
           current: location.pathname === "/dashboard/security/login-history",
@@ -216,20 +222,21 @@ const UserDashboardLayout: React.FC = () => {
       ],
     },
     {
-      name: "Support Tickets",
+      id: "tickets",
+      name: "Tickets support",
       icon: Ticket,
       current: location.pathname.startsWith("/dashboard/tickets"),
       children: [
         {
-          name: "My Tickets",
+          name: "Mes tickets",
           href: "/dashboard/tickets",
           icon: Ticket,
-          current: location.pathname === "/dashboard/tickets" && 
+          current: location.pathname === "/dashboard/tickets" &&
                   !location.pathname.includes("/new") &&
                   !location.pathname.match(/\/\d+$/),
         },
         {
-          name: "Create Ticket",
+          name: "Créer un ticket",
           href: "/dashboard/tickets/new",
           icon: Ticket,
           current: location.pathname === "/dashboard/tickets/new",
@@ -237,32 +244,56 @@ const UserDashboardLayout: React.FC = () => {
       ],
     },
     {
-      name: "Invoices",
+      id: "orders",
+      name: "Commandes",
+      icon: ShoppingCart,
+      current: location.pathname.startsWith("/dashboard/orders"),
+      children: [
+        {
+          name: "Mes commandes",
+          href: "/dashboard/orders",
+          icon: ShoppingCart,
+          current: location.pathname === "/dashboard/orders" &&
+                  !location.pathname.match(/\/create$/) &&
+                  !location.pathname.match(/\/\d+$/),
+        },
+        {
+          name: "Créer une commande",
+          href: "/dashboard/orders/create",
+          icon: ShoppingCart,
+          current: location.pathname === "/dashboard/orders/create",
+        },
+      ],
+    },
+    {
+      id: "invoices",
+      name: "Factures",
       icon: FileText,
       current: location.pathname.startsWith("/dashboard/invoices"),
       children: [
         {
-          name: "My Invoices",
+          name: "Mes factures",
           href: "/dashboard/invoices",
           icon: FileText,
-          current: location.pathname === "/dashboard/invoices" && 
+          current: location.pathname === "/dashboard/invoices" &&
                   !location.pathname.match(/\/\d+$/),
         },
       ],
     },
     {
-      name: "VPS Hosting",
+      id: "vps",
+      name: "Hébergement VPS",
       icon: Server,
       current: location.pathname.startsWith("/dashboard/vps"),
       children: [
         {
-          name: "Plans",
+          name: "Formules",
           href: "/dashboard/vps/plans",
           icon: Package,
           current: location.pathname === "/dashboard/vps/plans",
         },
         {
-          name: "My VPS",
+          name: "Mes VPS",
           href: "/dashboard/vps/subscriptions",
           icon: Server,
           current: location.pathname.startsWith("/dashboard/vps/subscriptions") &&
@@ -270,7 +301,7 @@ const UserDashboardLayout: React.FC = () => {
                   !location.pathname.startsWith("/dashboard/vps/custom-images"),
         },
         {
-          name: "Custom Images",
+          name: "Images personnalisées",
           href: "/dashboard/vps/custom-images",
           icon: Image,
           current: location.pathname.startsWith("/dashboard/vps/custom-images"),
@@ -278,12 +309,13 @@ const UserDashboardLayout: React.FC = () => {
       ],
     },
     {
-      name: "DNS Management",
+      id: "dns",
+      name: "Gestion DNS",
       icon: Globe,
       current: location.pathname.startsWith("/dashboard/dns"),
       children: [
         {
-          name: "My DNS Zones",
+          name: "Mes zones DNS",
           href: "/dashboard/dns/zones",
           icon: Globe,
           current: location.pathname.startsWith("/dashboard/dns/zones"),
@@ -291,18 +323,19 @@ const UserDashboardLayout: React.FC = () => {
       ],
     },
     {
-      name: "Product Catalog",
+      name: "Catalogue produits",
       href: "/dashboard/catalog",
       icon: Package,
       current: location.pathname.startsWith("/dashboard/catalog"),
     },
     {
-      name: "My Services",
+      id: "services",
+      name: "Mes services",
       icon: Package,
       current: location.pathname.startsWith("/dashboard/services"),
       children: [
         {
-          name: "My Services",
+          name: "Mes services",
           href: "/dashboard/services",
           icon: Package,
           current: location.pathname === "/dashboard/services" && !location.pathname.match(/\/\d+$/),
@@ -310,7 +343,7 @@ const UserDashboardLayout: React.FC = () => {
       ],
     },
     {
-      name: "Settings",
+      name: "Paramètres",
       href: "/dashboard/settings",
       icon: Settings,
       current: location.pathname.startsWith("/dashboard/settings"),
@@ -331,7 +364,8 @@ const UserDashboardLayout: React.FC = () => {
 
   const renderNavItem = (item: NavItem, index: number) => {
     const Icon = item.icon;
-    const isOpen = openItems.has(item.name.toLowerCase().replace(/\s+/g, "-"));
+    const key = item.id ?? item.name.toLowerCase().replace(/\s+/g, "-");
+    const isOpen = openItems.has(key);
     const hasChildren = item.children && item.children.length > 0;
 
     if (hasChildren) {
@@ -339,7 +373,7 @@ const UserDashboardLayout: React.FC = () => {
         <Collapsible
           key={item.name}
           open={isOpen}
-          onOpenChange={() => toggleItem(item.name.toLowerCase().replace(/\s+/g, "-"))}
+          onOpenChange={() => toggleItem(key)}
         >
           <CollapsibleTrigger
             className={`${
@@ -410,7 +444,7 @@ const UserDashboardLayout: React.FC = () => {
   };
 
   return (
-    <RoleGuard allowedRole="client" layoutName="Client Portal">
+    <RoleGuard allowedRole="client" layoutName="Espace client">
       <div className="min-h-screen bg-slate-50">
       {/* Top Navigation */}
       <nav className="bg-white border-b border-slate-200">
@@ -423,16 +457,14 @@ const UserDashboardLayout: React.FC = () => {
                   CloudManager
                 </span>
                 <Badge variant="secondary" className="ml-2">
-                  Client Portal
+                  Espace client
                 </Badge>
                 {getAccountStatusBadge()}
               </div>
             </div>
 
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm">
-                <Bell className="h-4 w-4" />
-              </Button>
+              <NotificationDropdown />
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -463,13 +495,13 @@ const UserDashboardLayout: React.FC = () => {
                   <DropdownMenuItem asChild>
                     <Link to="/dashboard/profile">
                       <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
+                      <span>Profil</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/dashboard/settings">
                       <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
+                      <span>Paramètres</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -478,7 +510,7 @@ const UserDashboardLayout: React.FC = () => {
                     disabled={logoutMutation.isPending}
                   >
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>{logoutMutation.isPending ? "Logging out..." : "Log out"}</span>
+                    <span>{logoutMutation.isPending ? "Déconnexion…" : "Déconnexion"}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

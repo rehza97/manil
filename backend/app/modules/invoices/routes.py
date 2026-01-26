@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
-from app.core.dependencies import get_current_user, require_permission, require_role
+from app.core.dependencies import get_current_user, require_permission, require_any_permission
 from app.core.permissions import Permission
 from app.core.exceptions import ForbiddenException
 from app.modules.auth.models import User
@@ -171,7 +171,7 @@ async def get_invoice(
 async def create_invoice(
     invoice_data: InvoiceCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.INVOICES_CREATE, Permission.INVOICES_EDIT]))
 ):
     """Create a new invoice.
 
@@ -188,7 +188,7 @@ async def update_invoice(
     invoice_id: str,
     invoice_data: InvoiceUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.INVOICES_CREATE, Permission.INVOICES_EDIT]))
 ):
     """Update an existing invoice.
 
@@ -211,7 +211,7 @@ async def update_invoice(
 async def delete_invoice(
     invoice_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["admin"]))
+    current_user: User = Depends(require_permission(Permission.INVOICES_PAY))
 ):
     """Delete an invoice (soft delete).
 
@@ -238,7 +238,7 @@ async def delete_invoice(
 async def issue_invoice(
     invoice_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.INVOICES_CREATE, Permission.INVOICES_EDIT]))
 ):
     """Issue a draft invoice.
 
@@ -253,7 +253,7 @@ async def issue_invoice(
 async def send_invoice(
     invoice_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.INVOICES_CREATE, Permission.INVOICES_EDIT]))
 ):
     """Send invoice to customer.
 
@@ -269,7 +269,7 @@ async def record_payment(
     invoice_id: str,
     payment_data: InvoicePaymentRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["admin"]))
+    current_user: User = Depends(require_permission(Permission.INVOICES_PAY))
 ):
     """Record a payment for an invoice.
 
@@ -286,7 +286,7 @@ async def record_payment(
 async def cancel_invoice(
     invoice_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.INVOICES_CREATE, Permission.INVOICES_EDIT]))
 ):
     """Cancel an invoice.
 
@@ -305,7 +305,7 @@ async def cancel_invoice(
 async def convert_quote_to_invoice(
     conversion_data: InvoiceConvertFromQuoteRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "corporate"]))
+    current_user: User = Depends(require_any_permission([Permission.INVOICES_CREATE, Permission.INVOICES_EDIT]))
 ):
     """Convert an accepted quote to an invoice.
 
@@ -456,7 +456,7 @@ async def get_invoice_statistics(
 @router.post("/update-overdue")
 async def update_overdue_invoices(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["admin"]))
+    current_user: User = Depends(require_permission(Permission.INVOICES_PAY))
 ):
     """Update status of overdue invoices.
 

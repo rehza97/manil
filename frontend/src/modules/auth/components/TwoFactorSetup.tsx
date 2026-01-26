@@ -12,10 +12,10 @@ import {
 import { Loader2, Smartphone, Shield, Download } from "lucide-react";
 import { useState, useEffect } from "react";
 import { authService } from "../services";
-import type { TwoFactorSetup } from "../types";
+import type { TwoFactorSetup as TwoFactorSetupType } from "../types";
 
 export const TwoFactorSetup = () => {
-  const [setup, setSetup] = useState<TwoFactorSetup | null>(null);
+  const [setup, setSetup] = useState<TwoFactorSetupType | null>(null);
   const [verificationCode, setVerificationCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -26,10 +26,10 @@ export const TwoFactorSetup = () => {
     const initialize2FA = async () => {
       setIsLoading(true);
       try {
-        const setupData = await authService.setup2FA();
+        const setupData = await authService.enable2FA();
         setSetup(setupData);
-      } catch (err) {
-        setError("Failed to initialize 2FA setup");
+      } catch {
+        setError("Échec de la configuration de la 2FA. Réessayez.");
       } finally {
         setIsLoading(false);
       }
@@ -42,7 +42,7 @@ export const TwoFactorSetup = () => {
     e.preventDefault();
 
     if (!verificationCode || verificationCode.length !== 6) {
-      setError("Please enter a valid 6-digit code");
+      setError("Veuillez saisir un code à 6 chiffres valide.");
       return;
     }
 
@@ -52,8 +52,8 @@ export const TwoFactorSetup = () => {
     try {
       await authService.verify2FA(verificationCode);
       setIsVerified(true);
-    } catch (err) {
-      setError("Invalid verification code. Please try again.");
+    } catch {
+      setError("Code de vérification invalide. Réessayez.");
     } finally {
       setIsVerifying(false);
     }
@@ -67,7 +67,7 @@ export const TwoFactorSetup = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "cloudmanager-2fa-backup-codes.txt";
+    a.download = "cloudmanager-2fa-codes-secours.txt";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -77,8 +77,8 @@ export const TwoFactorSetup = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        <span className="ml-2 text-slate-600">Setting up 2FA...</span>
+        <Loader2 className="h-8 w-8 animate-spin text-brand-primary" />
+        <span className="ml-2 text-slate-600">Configuration…</span>
       </div>
     );
   }
@@ -86,40 +86,37 @@ export const TwoFactorSetup = () => {
   if (isVerified) {
     return (
       <div className="space-y-6 text-center">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-          <Shield className="w-8 h-8 text-green-600" />
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+          <Shield className="h-8 w-8 text-green-600" />
         </div>
 
         <div className="space-y-2">
           <h3 className="text-lg font-semibold text-slate-900">
-            Two-Factor Authentication Enabled
+            2FA activée
           </h3>
           <p className="text-slate-600">
-            Your account is now protected with 2FA. You'll need to enter a code
-            from your authenticator app when signing in.
+            Votre compte est maintenant protégé par la 2FA. Vous devrez saisir un code de votre application lors de la connexion.
           </p>
         </div>
 
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
           <div className="flex items-start">
-            <Download className="w-5 h-5 text-yellow-600 mt-0.5 mr-3" />
+            <Download className="mr-3 mt-0.5 h-5 w-5 text-yellow-600" />
             <div className="text-left">
               <p className="text-sm font-medium text-yellow-800">
-                Save your backup codes
+                Enregistrez vos codes de secours
               </p>
-              <p className="text-sm text-yellow-700 mt-1">
-                Download and store these backup codes in a safe place. You can
-                use them to access your account if you lose your authenticator
-                device.
+              <p className="mt-1 text-sm text-yellow-700">
+                Téléchargez et conservez ces codes en lieu sûr. Vous pourrez les utiliser pour accéder à votre compte si vous perdez votre appareil.
               </p>
               <Button
                 onClick={downloadBackupCodes}
                 variant="outline"
                 size="sm"
-                className="mt-2"
+                className="mt-2 border-slate-300"
               >
-                <Download className="w-4 h-4 mr-2" />
-                Download Backup Codes
+                <Download className="mr-2 h-4 w-4" />
+                Télécharger les codes de secours
               </Button>
             </div>
           </div>
@@ -132,7 +129,7 @@ export const TwoFactorSetup = () => {
     return (
       <Alert variant="destructive">
         <AlertDescription>
-          Failed to initialize 2FA setup. Please try again.
+          Échec de la configuration de la 2FA. Réessayez.
         </AlertDescription>
       </Alert>
     );
@@ -142,10 +139,10 @@ export const TwoFactorSetup = () => {
     <div className="space-y-6">
       <div className="space-y-2">
         <h3 className="text-lg font-semibold text-slate-900">
-          Set up Two-Factor Authentication
+          Configurer la 2FA
         </h3>
         <p className="text-slate-600">
-          Add an extra layer of security to your account with 2FA.
+          Renforcez la sécurité de votre compte avec l&apos;authentification à deux facteurs.
         </p>
       </div>
 
@@ -156,20 +153,20 @@ export const TwoFactorSetup = () => {
       )}
 
       <div className="space-y-4">
-        <Card>
+        <Card className="border-slate-200/80">
           <CardHeader>
             <CardTitle className="flex items-center">
-              <Smartphone className="w-5 h-5 mr-2" />
-              Step 1: Install Authenticator App
+              <Smartphone className="mr-2 h-5 w-5 text-brand-primary" />
+              Étape 1 : Installer une app d&apos;authentification
             </CardTitle>
             <CardDescription>
-              Download and install an authenticator app on your mobile device.
+              Téléchargez et installez une application d&apos;authentification sur votre téléphone.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <p className="text-sm text-slate-600">Recommended apps:</p>
-              <ul className="text-sm space-y-1">
+              <p className="text-sm text-slate-600">Applications recommandées :</p>
+              <ul className="space-y-1 text-sm">
                 <li>• Google Authenticator</li>
                 <li>• Microsoft Authenticator</li>
                 <li>• Authy</li>
@@ -179,38 +176,37 @@ export const TwoFactorSetup = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-slate-200/80">
           <CardHeader>
-            <CardTitle>Step 2: Scan QR Code</CardTitle>
+            <CardTitle>Étape 2 : Scanner le QR code</CardTitle>
             <CardDescription>
-              Open your authenticator app and scan this QR code.
+              Ouvrez votre app et scannez ce QR code.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex justify-center">
               <img
-                src={`data:image/png;base64,${setup.qrCode}`}
-                alt="2FA QR Code"
-                className="w-48 h-48 border rounded-lg"
+                src={setup.qrCode}
+                alt="QR code 2FA"
+                className="h-48 w-48 rounded-lg border border-slate-200"
               />
             </div>
-            <div className="mt-4 p-3 bg-slate-50 rounded-lg">
-              <p className="text-xs text-slate-600 mb-2">
-                Or enter this code manually:
+            <div className="mt-4 rounded-lg bg-slate-50 p-3">
+              <p className="mb-2 text-xs text-slate-600">
+                Ou saisir ce code manuellement :
               </p>
-              <code className="text-sm font-mono bg-white px-2 py-1 rounded border">
+              <code className="rounded border border-slate-200 bg-white px-2 py-1 font-mono text-sm">
                 {setup.secret}
               </code>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-slate-200/80">
           <CardHeader>
-            <CardTitle>Step 3: Verify Setup</CardTitle>
+            <CardTitle>Étape 3 : Vérifier</CardTitle>
             <CardDescription>
-              Enter the 6-digit code from your authenticator app to complete
-              setup.
+              Saisissez le code à 6 chiffres de votre app pour terminer la configuration.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -220,7 +216,7 @@ export const TwoFactorSetup = () => {
                   htmlFor="verificationCode"
                   className="text-sm font-medium"
                 >
-                  Verification Code <span className="text-red-500">*</span>
+                  Code de vérification <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="verificationCode"
@@ -235,23 +231,23 @@ export const TwoFactorSetup = () => {
                   }
                   disabled={isVerifying}
                   required
-                  className="text-center text-lg tracking-widest"
+                  className="border-slate-200 text-center text-lg tracking-widest"
                 />
               </div>
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full bg-brand-primary hover:bg-brand-primary/90"
                 size="lg"
                 disabled={isVerifying || verificationCode.length !== 6}
               >
                 {isVerifying ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Verifying...
+                    Vérification…
                   </>
                 ) : (
-                  "Verify and Enable 2FA"
+                  "Vérifier et activer la 2FA"
                 )}
               </Button>
             </form>

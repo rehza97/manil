@@ -36,7 +36,7 @@ export function ImageBuildStatusBadge({ status, className }: ImageBuildStatusBad
           variant: "default",
           icon: CheckCircle2,
           className: "bg-green-100 text-green-800 hover:bg-green-100",
-          label: "Completed",
+          label: "Terminé",
         };
 
       case ImageBuildStatus.PENDING:
@@ -44,7 +44,7 @@ export function ImageBuildStatusBadge({ status, className }: ImageBuildStatusBad
           variant: "secondary",
           icon: Clock,
           className: "bg-gray-100 text-gray-800 hover:bg-gray-100",
-          label: "Pending",
+          label: "En attente",
         };
 
       case ImageBuildStatus.VALIDATING:
@@ -52,7 +52,7 @@ export function ImageBuildStatusBadge({ status, className }: ImageBuildStatusBad
           variant: "secondary",
           icon: Loader2,
           className: "bg-blue-100 text-blue-800 hover:bg-blue-100",
-          label: "Validating",
+          label: "Validation",
         };
 
       case ImageBuildStatus.BUILDING:
@@ -60,7 +60,7 @@ export function ImageBuildStatusBadge({ status, className }: ImageBuildStatusBad
           variant: "secondary",
           icon: Loader2,
           className: "bg-blue-100 text-blue-800 hover:bg-blue-100",
-          label: "Building",
+          label: "Construction",
         };
 
       case ImageBuildStatus.SCANNING:
@@ -68,7 +68,7 @@ export function ImageBuildStatusBadge({ status, className }: ImageBuildStatusBad
           variant: "secondary",
           icon: ShieldCheck,
           className: "bg-purple-100 text-purple-800 hover:bg-purple-100",
-          label: "Scanning",
+          label: "Analyse",
         };
 
       case ImageBuildStatus.FAILED:
@@ -76,7 +76,7 @@ export function ImageBuildStatusBadge({ status, className }: ImageBuildStatusBad
           variant: "destructive",
           icon: XCircle,
           className: "bg-red-100 text-red-800 hover:bg-red-100",
-          label: "Failed",
+          label: "Échoué",
         };
 
       case ImageBuildStatus.REJECTED:
@@ -84,7 +84,7 @@ export function ImageBuildStatusBadge({ status, className }: ImageBuildStatusBad
           variant: "destructive",
           icon: AlertTriangle,
           className: "bg-orange-100 text-orange-800 hover:bg-orange-100",
-          label: "Rejected",
+          label: "Rejeté",
         };
 
       default:

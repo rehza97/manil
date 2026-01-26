@@ -94,7 +94,7 @@ export const DockerInfo: React.FC<DockerInfoProps> = ({ subscriptionId }) => {
         setContainers([]);
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || "Failed to check Docker status");
+      setError(err.response?.data?.detail || err.message || "Impossible de vérifier Docker");
       setDockerAvailable(false);
     } finally {
       setIsLoading(false);
@@ -111,21 +111,21 @@ export const DockerInfo: React.FC<DockerInfoProps> = ({ subscriptionId }) => {
       return (
         <Badge variant="default" className="bg-green-500">
           <CheckCircle2 className="h-3 w-3 mr-1" />
-          Running
+          En cours
         </Badge>
       );
     } else if (status.toLowerCase().includes("exited") || status.toLowerCase().includes("stopped")) {
       return (
         <Badge variant="secondary">
           <XCircle className="h-3 w-3 mr-1" />
-          Stopped
+          Arrêté
         </Badge>
       );
     } else if (status.toLowerCase().includes("unhealthy")) {
       return (
         <Badge variant="destructive">
           <AlertCircle className="h-3 w-3 mr-1" />
-          Unhealthy
+          Mauvais état
         </Badge>
       );
     }
@@ -137,7 +137,7 @@ export const DockerInfo: React.FC<DockerInfoProps> = ({ subscriptionId }) => {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Package className="h-5 w-5" />
-          <h3 className="text-lg font-semibold">Docker Status</h3>
+          <h3 className="text-lg font-semibold">État Docker</h3>
         </div>
         <Button
           variant="outline"
@@ -150,7 +150,7 @@ export const DockerInfo: React.FC<DockerInfoProps> = ({ subscriptionId }) => {
           ) : (
             <RefreshCw className="h-4 w-4 mr-2" />
           )}
-          Refresh
+          Actualiser
         </Button>
       </div>
 
@@ -163,7 +163,7 @@ export const DockerInfo: React.FC<DockerInfoProps> = ({ subscriptionId }) => {
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Docker is not installed or not available in this VPS container.
+            Docker n'est pas installé ou indisponible dans ce conteneur VPS.
           </AlertDescription>
         </Alert>
       ) : error ? (
@@ -175,19 +175,19 @@ export const DockerInfo: React.FC<DockerInfoProps> = ({ subscriptionId }) => {
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-green-500" />
-            <span className="text-sm text-slate-600">Docker is available</span>
+            <span className="text-sm text-slate-600">Docker disponible</span>
           </div>
 
           {containers.length === 0 ? (
             <Alert>
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>No Docker containers found.</AlertDescription>
+              <AlertDescription>Aucun conteneur Docker.</AlertDescription>
             </Alert>
           ) : (
             <div className="space-y-4">
               <div>
                 <h4 className="text-sm font-medium mb-2">
-                  Containers ({containers.length})
+                  Conteneurs ({containers.length})
                 </h4>
                 <div className="border rounded-lg overflow-hidden">
                   <Table>
@@ -195,9 +195,9 @@ export const DockerInfo: React.FC<DockerInfoProps> = ({ subscriptionId }) => {
                       <TableRow>
                         <TableHead className="w-[100px]">ID</TableHead>
                         <TableHead>Image</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead>Statut</TableHead>
                         <TableHead>Ports</TableHead>
-                        <TableHead>Names</TableHead>
+                        <TableHead>Noms</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>

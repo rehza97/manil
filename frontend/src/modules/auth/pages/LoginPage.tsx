@@ -5,11 +5,11 @@ import { LoginPageContent } from "../components/LoginPageContent";
 export const LoginPage: React.FC = () => {
   return (
     <AuthLayout
-      title="Welcome back"
-      subtitle="Sign in to your CloudManager account"
-      footerText="Don't have an account?"
+      title="Bienvenue"
+      subtitle="Connectez-vous à votre compte CloudManager"
+      footerText="Pas encore de compte ?"
       footerLink="/register"
-      footerLinkText="Sign up"
+      footerLinkText="Créer un compte"
     >
       <LoginPageContent />
     </AuthLayout>

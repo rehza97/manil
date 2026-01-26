@@ -48,14 +48,14 @@ export const CustomImageDetailPage: React.FC = () => {
 
   const handleRebuild = () => {
     if (!imageId) return;
-    if (window.confirm("Rebuild this image? This will create a new build.")) {
+    if (window.confirm("Reconstruire cette image ? Un nouveau build sera créé.")) {
       rebuildMutation.mutate({ imageId });
     }
   };
 
   const handleDelete = () => {
     if (!imageId) return;
-    if (window.confirm(`Delete image "${image?.image_name}:${image?.image_tag}"? This action cannot be undone.`)) {
+    if (window.confirm(`Supprimer l'image « ${image?.image_name}:${image?.image_tag} » ? Cette action est irréversible.`)) {
       deleteMutation.mutate(imageId, {
         onSuccess: () => {
           navigate("/dashboard/vps/custom-images");
@@ -94,7 +94,7 @@ export const CustomImageDetailPage: React.FC = () => {
           <AlertDescription>
             {error instanceof Error
               ? error.message
-              : "Failed to load image details"}
+              : "Impossible de charger les détails de l'image"}
           </AlertDescription>
         </Alert>
         <Button
@@ -103,7 +103,7 @@ export const CustomImageDetailPage: React.FC = () => {
           onClick={() => navigate("/dashboard/vps/custom-images")}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Images
+          Retour aux images
         </Button>
       </div>
     );
@@ -172,9 +172,9 @@ export const CustomImageDetailPage: React.FC = () => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">Auto-refresh</p>
+              <p className="text-sm font-medium">Actualisation auto</p>
               <p className="text-xs text-muted-foreground">
-                Automatically refresh page while image is building
+                Actualiser la page automatiquement pendant la construction
               </p>
             </div>
             <Button
@@ -182,7 +182,7 @@ export const CustomImageDetailPage: React.FC = () => {
               size="sm"
               onClick={() => setAutoRefresh(!autoRefresh)}
             >
-              {autoRefresh ? "On" : "Off"}
+              {autoRefresh ? "Activé" : "Désactivé"}
             </Button>
           </div>
         </Card>

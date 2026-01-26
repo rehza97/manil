@@ -29,19 +29,19 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
 };
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
-  request: "Request",
-  validated: "Validated",
-  in_progress: "In Progress",
-  delivered: "Delivered",
-  cancelled: "Cancelled",
+  request: "Demande",
+  validated: "Validée",
+  in_progress: "En cours",
+  delivered: "Livrée",
+  cancelled: "Annulée",
 };
 
 const STATUS_DESCRIPTIONS: Record<OrderStatus, string> = {
-  request: "Order has been created and is awaiting validation",
-  validated: "Order has been validated and approved",
-  in_progress: "Order is being prepared for delivery",
-  delivered: "Order has been delivered to customer",
-  cancelled: "Order has been cancelled",
+  request: "Commande créée, en attente de validation",
+  validated: "Commande validée et approuvée",
+  in_progress: "Commande en préparation",
+  delivered: "Commande livrée au client",
+  cancelled: "Commande annulée",
 };
 
 // Valid status transitions based on workflow
@@ -78,7 +78,7 @@ export function OrderStatus() {
     return (
       <Card className="border-red-200 bg-red-50">
         <CardHeader>
-          <CardTitle className="text-red-800">Invalid Order ID</CardTitle>
+          <CardTitle className="text-red-800">ID de commande invalide</CardTitle>
         </CardHeader>
       </Card>
     );
@@ -111,10 +111,10 @@ export function OrderStatus() {
     return (
       <Card className="border-red-200 bg-red-50">
         <CardHeader>
-          <CardTitle className="text-red-800">Error Loading Order</CardTitle>
+          <CardTitle className="text-red-800">Erreur lors du chargement</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-red-700">Order not found or unable to load</p>
+          <p className="text-red-700">Commande introuvable ou impossible à charger</p>
         </CardContent>
       </Card>
     );
@@ -122,35 +122,33 @@ export function OrderStatus() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <Button
           variant="ghost"
           className="mb-4"
           onClick={() => navigate(`${basePath}/${orderId}`)}
         >
-          ← Back to Order
+          ← Retour à la commande
         </Button>
-        <h1 className="text-3xl font-bold tracking-tight">Update Order Status</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Changer le statut</h1>
         {orderLoading ? (
           <Skeleton className="mt-2 h-4 w-48" />
         ) : (
           order && (
             <p className="mt-2 text-gray-600">
-              for {order.order_number}
+              Commande {order.order_number}
             </p>
           )
         )}
       </div>
 
-      {/* Current Status */}
       {orderLoading ? (
         <Skeleton className="h-40" />
       ) : (
         order && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Current Status</CardTitle>
+              <CardTitle className="text-base">Statut actuel</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center gap-3">
@@ -166,29 +164,26 @@ export function OrderStatus() {
         )
       )}
 
-      {/* Available Transitions */}
       {!orderLoading && order && (
         <>
           {availableTransitions.length === 0 ? (
             <Card className="border-yellow-200 bg-yellow-50">
               <CardHeader>
-                <CardTitle className="text-yellow-800">No Transitions Available</CardTitle>
+                <CardTitle className="text-yellow-800">Aucun changement possible</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-yellow-700">
-                  This order status cannot be changed. Orders in{" "}
-                  <Badge variant="outline">{STATUS_LABELS[order.status]}</Badge> status are final.
+                  Le statut <Badge variant="outline">{STATUS_LABELS[order.status]}</Badge> est définitif.
                 </p>
               </CardContent>
             </Card>
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>Change Status</CardTitle>
-                <CardDescription>Select a new status for this order</CardDescription>
+                <CardTitle>Changer le statut</CardTitle>
+                <CardDescription>Choisir un nouveau statut pour cette commande</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Status Options */}
                 <div className="space-y-3">
                   {availableTransitions.map((status) => (
                     <button
@@ -224,19 +219,18 @@ export function OrderStatus() {
                   ))}
                 </div>
 
-                {/* Notes */}
                 {selectedStatus && (
                   <div className="space-y-3">
                     <div>
                       <label className="text-sm font-medium">
-                        Notes (Optional)
+                        Notes (optionnel)
                       </label>
                       <p className="text-xs text-gray-600">
-                        Add any additional notes about this status change
+                        Notes sur ce changement de statut
                       </p>
                     </div>
                     <Textarea
-                      placeholder="Enter notes about this status change..."
+                      placeholder="Notes sur ce changement…"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       className="min-h-24"
@@ -244,14 +238,13 @@ export function OrderStatus() {
                   </div>
                 )}
 
-                {/* Actions */}
                 <div className="flex justify-end gap-3 border-t pt-6">
                   <Button
                     variant="outline"
                     onClick={() => navigate(`${basePath}/${orderId}`)}
                     disabled={updateStatusMutation.isPending}
                   >
-                    Cancel
+                    Annuler
                   </Button>
                   <Button
                     onClick={handleStatusChange}
@@ -260,7 +253,7 @@ export function OrderStatus() {
                     {updateStatusMutation.isPending && (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
-                    Update Status
+                    Mettre à jour
                   </Button>
                 </div>
               </CardContent>
@@ -269,25 +262,24 @@ export function OrderStatus() {
         </>
       )}
 
-      {/* Status Workflow Diagram */}
       {!orderLoading && order && availableTransitions.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Order Workflow</CardTitle>
-            <CardDescription>Valid status transitions for orders</CardDescription>
+            <CardTitle className="text-base">Workflow commande</CardTitle>
+            <CardDescription>Transitions de statut possibles</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <Badge variant="outline">Request</Badge>
+              <Badge variant="outline">Demande</Badge>
               <span className="text-gray-400">→</span>
-              <Badge variant="outline">Validated</Badge>
+              <Badge variant="outline">Validée</Badge>
               <span className="text-gray-400">→</span>
-              <Badge variant="outline">In Progress</Badge>
+              <Badge variant="outline">En cours</Badge>
               <span className="text-gray-400">→</span>
-              <Badge variant="outline">Delivered</Badge>
+              <Badge variant="outline">Livrée</Badge>
               <br />
               <span className="text-xs text-gray-600 italic">
-                (At any stage, orders can be cancelled)
+                (À tout moment : annulation possible)
               </span>
             </div>
           </CardContent>

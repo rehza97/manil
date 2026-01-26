@@ -53,7 +53,7 @@ export const TicketTimeline: React.FC<TicketTimelineProps> = ({ events }) => {
       <Card>
         <CardContent className="py-6">
           <div className="text-center text-slate-500">
-            No timeline events yet
+            Aucun événement pour le moment
           </div>
         </CardContent>
       </Card>
@@ -77,15 +77,21 @@ export const TicketTimeline: React.FC<TicketTimelineProps> = ({ events }) => {
               <div className="flex-1 pb-4">
                 <div className="flex items-center gap-2 mb-1">
                   <Badge className={getEventColor(event.type)}>
-                    {event.type.replace("_", " ")}
+                    {event.type === "status_change"
+                      ? "Changement de statut"
+                      : event.type === "creation"
+                        ? "Création"
+                        : event.type === "assignment"
+                          ? "Assignation"
+                          : "Réponse"}
                   </Badge>
                   {event.user && (
-                    <span className="text-sm text-slate-600">by {event.user}</span>
+                    <span className="text-sm text-slate-600">par {event.user}</span>
                   )}
                 </div>
                 <p className="text-sm text-slate-900">{event.description}</p>
                 <p className="text-xs text-slate-500 mt-1">
-                  {format(new Date(event.timestamp), "MMM dd, yyyy HH:mm")}
+                  {format(new Date(event.timestamp), "dd MMM yyyy HH:mm")}
                 </p>
               </div>
             </div>

@@ -31,7 +31,8 @@ export interface Customer {
   postal_code?: string;
   country?: string;
   customer_type: "individual" | "corporate";
-  status: "active" | "suspended" | "pending";
+  status: "active" | "suspended" | "pending" | "inactive";
+  approval_status: "not_required" | "pending" | "approved" | "rejected";
   kyc_status?: "not_started" | "pending" | "verified" | "rejected";
   created_at: string;
   updated_at: string;
@@ -112,6 +113,36 @@ export interface CustomerDocument {
   created_by_id: string;
   created_at: string;
   updated_at: string;
+}
+
+export type ApprovalStatus = "not_required" | "pending" | "approved" | "rejected";
+
+export interface StatusHistoryEntry {
+  id: string;
+  old_status: string;
+  new_status: string;
+  reason: string | null;
+  changed_by: string;
+  changed_by_email: string | null;
+  changed_at: string;
+  description: string;
+}
+
+export interface ProfileCompleteness {
+  customer_id: string;
+  completeness_percentage: number;
+  base_info_score: number;
+  address_score: number;
+  corporate_score: number;
+  kyc_score: number;
+  missing_fields: string[];
+}
+
+export interface StatusTransition {
+  from: string;
+  to: string;
+  allowed: boolean;
+  reason_required: boolean;
 }
 
 // ============================================================================
@@ -213,9 +244,13 @@ export const customersApi = {
    * POST /api/v1/customers/{customer_id}/activate
    */
   activateCustomer: async (
-    customerId: string
-  ): Promise<{ message: string }> => {
-    const response = await apiClient.post(`/customers/${customerId}/activate`);
+    customerId: string,
+    reason: string
+  ): Promise<Customer> => {
+    const response: AxiosResponse<Customer> = await apiClient.post(
+      `/customers/${customerId}/activate`,
+      { reason }
+    );
     return response.data;
   },
 
@@ -225,11 +260,114 @@ export const customersApi = {
    */
   suspendCustomer: async (
     customerId: string,
-    reason?: string
-  ): Promise<{ message: string }> => {
-    const response = await apiClient.post(`/customers/${customerId}/suspend`, {
-      reason,
-    });
+    reason: string
+  ): Promise<Customer> => {
+    const response: AxiosResponse<Customer> = await apiClient.post(
+      `/customers/${customerId}/suspend`,
+      { reason }
+    );
+    return response.data;
+  },
+
+  /**
+   * Change customer status
+   * POST /api/v1/customers/{customer_id}/change-status
+   */
+  changeStatus: async (
+    customerId: string,
+    newStatus: string,
+    reason: string
+  ): Promise<Customer> => {
+    // Use appropriate endpoint based on status
+    if (newStatus === "active") {
+      return customersApi.activateCustomer(customerId, reason);
+    } else if (newStatus === "suspended") {
+      return customersApi.suspendCustomer(customerId, reason);
+    }
+    throw new Error(`Status change to ${newStatus} not supported via this method`);
+  },
+
+  /**
+   * Submit customer for approval
+   * POST /api/v1/customers/{customer_id}/submit-for-approval
+   */
+  submitForApproval: async (
+    customerId: string,
+    notes?: string
+  ): Promise<Customer> => {
+    const response: AxiosResponse<Customer> = await apiClient.post(
+      `/customers/${customerId}/submit-for-approval`,
+      notes ? { notes } : {}
+    );
+    return response.data;
+  },
+
+  /**
+   * Approve customer
+   * POST /api/v1/customers/{customer_id}/approve
+   */
+  approveCustomer: async (
+    customerId: string,
+    notes?: string
+  ): Promise<Customer> => {
+    const response: AxiosResponse<Customer> = await apiClient.post(
+      `/customers/${customerId}/approve`,
+      notes ? { notes } : {}
+    );
+    return response.data;
+  },
+
+  /**
+   * Reject customer approval
+   * POST /api/v1/customers/{customer_id}/reject
+   */
+  rejectCustomer: async (
+    customerId: string,
+    reason: string
+  ): Promise<Customer> => {
+    const response: AxiosResponse<Customer> = await apiClient.post(
+      `/customers/${customerId}/reject`,
+      { reason }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get status change history for a customer
+   * GET /api/v1/customers/{customer_id}/status-history
+   */
+  getStatusHistory: async (
+    customerId: string,
+    params?: { skip?: number; limit?: number }
+  ): Promise<StatusHistoryEntry[]> => {
+    const response: AxiosResponse<StatusHistoryEntry[]> = await apiClient.get(
+      `/customers/${customerId}/status-history`,
+      { params }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get profile completeness for a customer
+   * GET /api/v1/customers/{customer_id}/profile/completeness
+   */
+  getProfileCompleteness: async (
+    customerId: string
+  ): Promise<ProfileCompleteness> => {
+    const response: AxiosResponse<ProfileCompleteness> = await apiClient.get(
+      `/customers/${customerId}/profile/completeness`
+    );
+    return response.data;
+  },
+
+  /**
+   * Get missing fields for a customer profile
+   * GET /api/v1/customers/{customer_id}/profile/missing-fields
+   */
+  getMissingFields: async (customerId: string): Promise<string[]> => {
+    const response: AxiosResponse<string[]> = await apiClient.get(
+      `/customers/${customerId}/profile/missing-fields`
+    );
     return response.data;
   },
 
@@ -391,6 +529,7 @@ export const customersApi = {
     customerId: string,
     data: {
       note_type: string;
+      title: string;
       content: string;
       is_pinned?: boolean;
     }
@@ -410,6 +549,7 @@ export const customersApi = {
     customerId: string,
     noteId: string,
     data: {
+      title?: string;
       content?: string;
       is_pinned?: boolean;
       note_type?: string;

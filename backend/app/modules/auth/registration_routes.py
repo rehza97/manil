@@ -2,6 +2,7 @@
 User registration API routes.
 Endpoints for user registration, email verification, and account activation.
 """
+import asyncio
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -28,6 +29,7 @@ from app.modules.auth.registration_schemas import (
 )
 from app.modules.auth.registration_service import RegistrationService
 from app.infrastructure.email.service import EmailService
+from app.infrastructure.email import templates
 
 router = APIRouter(prefix="/auth/register", tags=["registration"])
 email_service = EmailService()
@@ -73,16 +75,12 @@ def register(
                 # Fallback if token creation failed
                 verification_link = f"http://localhost:3000/verify-email?registration_id={registration.id}"
 
-            email_service.send_email(
+            asyncio.run(email_service.send_email_verification(
                 to=registration.email,
-                subject="Verify your email address",
-                template="verification_email",
-                context={
-                    "full_name": registration.full_name,
-                    "verification_link": verification_link,
-                    "expires_in_hours": 24,
-                },
-            )
+                full_name=registration.full_name,
+                verification_link=verification_link,
+                expires_in_hours=24
+            ))
         except Exception as e:
             # Log email error but don't fail registration
             logger.warning(f"Failed to send verification email to {registration.email}: {str(e)}")
@@ -99,6 +97,7 @@ def register(
 def get_registration(
     registration_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.REGISTRATIONS_VIEW)),
 ):
     """
     Get registration request details by ID.
@@ -169,16 +168,12 @@ def resend_verification_email(
         try:
             # Send new verification email
             verification_link = f"http://localhost:3000/verify-email?registration_id={registration.id}&token={token}"
-            email_service.send_email(
+            asyncio.run(email_service.send_email_verification(
                 to=registration.email,
-                subject="Verify your email address",
-                template="verification_email",
-                context={
-                    "full_name": registration.full_name,
-                    "verification_link": verification_link,
-                    "expires_in_hours": 24,
-                },
-            )
+                full_name=registration.full_name,
+                verification_link=verification_link,
+                expires_in_hours=24
+            ))
         except Exception as e:
             print(f"Failed to send verification email: {str(e)}")
 
@@ -218,15 +213,10 @@ def activate_account(
 
         try:
             # Send welcome email
-            email_service.send_email(
+            asyncio.run(email_service.send_welcome_email(
                 to=registration.email,
-                subject="Welcome to our platform!",
-                template="welcome_email",
-                context={
-                    "full_name": registration.full_name,
-                    "login_url": "http://localhost:3000/login",
-                },
-            )
+                user_name=registration.full_name or registration.email
+            ))
         except Exception as e:
             print(f"Failed to send welcome email: {str(e)}")
 
@@ -268,6 +258,7 @@ def list_registrations(
     status: RegistrationStatus | None = Query(None),
     email: str | None = Query(None),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.REGISTRATIONS_VIEW)),
 ):
     """
     List registration requests with filtering.

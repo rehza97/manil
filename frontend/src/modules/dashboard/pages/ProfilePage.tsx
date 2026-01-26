@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { customerService } from "@/modules/customers/services";
 import { KYCPanel } from "@/modules/customers/components/KYCPanel";
+import { ProfileCompleteness } from "@/modules/customers/components/ProfileCompleteness";
 import {
   Card,
   CardContent,
@@ -43,7 +44,7 @@ const ProfilePage: React.FC = () => {
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-muted-foreground">Loading profile...</p>
+        <p className="text-muted-foreground">Chargement du profil…</p>
       </div>
     );
   }
@@ -71,9 +72,9 @@ const ProfilePage: React.FC = () => {
         {/* Main Profile Card */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Personal Information</CardTitle>
+            <CardTitle>Informations personnelles</CardTitle>
             <CardDescription>
-              Your basic account details and contact information
+              Vos informations de compte et de contact
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -81,7 +82,7 @@ const ProfilePage: React.FC = () => {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground flex items-center">
                   <User className="h-4 w-4 mr-2" />
-                  Full Name
+                  Nom complet
                 </label>
                 <p className="text-base font-medium">{user.name}</p>
               </div>
@@ -89,7 +90,7 @@ const ProfilePage: React.FC = () => {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground flex items-center">
                   <Mail className="h-4 w-4 mr-2" />
-                  Email Address
+                  Adresse e-mail
                 </label>
                 <p className="text-base font-medium">{user.email}</p>
               </div>
@@ -97,7 +98,7 @@ const ProfilePage: React.FC = () => {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground flex items-center">
                   <Shield className="h-4 w-4 mr-2" />
-                  Account Role
+                  Rôle du compte
                 </label>
                 <Badge variant="secondary" className="font-medium">
                   {user.role}
@@ -131,7 +132,7 @@ const ProfilePage: React.FC = () => {
               <div className="space-y-2 pt-4 border-t">
                 <label className="text-sm font-medium text-muted-foreground flex items-center">
                   <MapPin className="h-4 w-4 mr-2" />
-                  Address
+                  Adresse
                 </label>
                 <div className="text-base">
                   {user.address && <p>{user.address}</p>}
@@ -165,40 +166,64 @@ const ProfilePage: React.FC = () => {
         {/* Security Status Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Security Status</CardTitle>
-            <CardDescription>Your account security overview</CardDescription>
+            <CardTitle>État de sécurité</CardTitle>
+            <CardDescription>Vue d&apos;ensemble de la sécurité de votre compte</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Two-Factor Authentication</label>
+              <label className="text-sm font-medium">Authentification à deux facteurs</label>
               <div className="flex items-center justify-between">
-                <Badge variant={user.is_2fa_enabled ? "default" : "secondary"}>
-                  {user.is_2fa_enabled ? "Enabled" : "Disabled"}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant={user.is_2fa_enabled ? "default" : "secondary"}>
+                    {user.is_2fa_enabled ? "Activée" : "Désactivée"}
+                  </Badge>
+                </div>
                 {!user.is_2fa_enabled && (
                   <Button asChild size="sm" variant="outline">
-                    <Link to="/dashboard/security">Enable</Link>
+                    <Link to="/dashboard/security">Activer</Link>
                   </Button>
                 )}
               </div>
+              {!user.is_2fa_enabled && (
+                <p className="text-xs text-muted-foreground">
+                  {user.role === "admin" || user.role === "corporate"
+                    ? "La 2FA peut être exigée pour votre rôle"
+                    : "Option de sécurité facultative"}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Email Verification</label>
-              <Badge variant="default">Verified</Badge>
+              <label className="text-sm font-medium">Vérification de l&apos;e-mail</label>
+              <Badge variant="default">Vérifié</Badge>
             </div>
 
             <div className="pt-4 border-t">
               <Button asChild variant="outline" className="w-full">
                 <Link to="/dashboard/security">
                   <Shield className="h-4 w-4 mr-2" />
-                  Security Settings
+                  Paramètres de sécurité
                 </Link>
               </Button>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Profile Completeness Section */}
+      {customerId && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Profile Completeness</CardTitle>
+            <CardDescription>
+              Track your profile completion progress
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ProfileCompleteness customerId={customerId} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* KYC Documents Section */}
       <Card>
@@ -232,9 +257,9 @@ const ProfilePage: React.FC = () => {
       {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
+          <CardTitle>Actions rapides</CardTitle>
           <CardDescription>
-            Common tasks related to your profile
+            Tâches courantes liées à votre profil
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -242,9 +267,9 @@ const ProfilePage: React.FC = () => {
             <Button asChild variant="outline" className="h-auto p-4">
               <Link to="/dashboard/profile/edit">
                 <div className="text-left">
-                  <div className="font-medium">Edit Profile</div>
+                  <div className="font-medium">Modifier le profil</div>
                   <div className="text-sm text-muted-foreground">
-                    Update your personal information
+                    Mettre à jour vos informations personnelles
                   </div>
                 </div>
               </Link>
@@ -253,9 +278,9 @@ const ProfilePage: React.FC = () => {
             <Button asChild variant="outline" className="h-auto p-4">
               <Link to="/dashboard/security">
                 <div className="text-left">
-                  <div className="font-medium">Security Settings</div>
+                  <div className="font-medium">Paramètres de sécurité</div>
                   <div className="text-sm text-muted-foreground">
-                    Manage passwords and 2FA
+                    Gérer mots de passe et 2FA
                   </div>
                 </div>
               </Link>
@@ -264,9 +289,9 @@ const ProfilePage: React.FC = () => {
             <Button asChild variant="outline" className="h-auto p-4">
               <Link to="/dashboard/settings">
                 <div className="text-left">
-                  <div className="font-medium">Account Settings</div>
+                  <div className="font-medium">Paramètres du compte</div>
                   <div className="text-sm text-muted-foreground">
-                    Preferences and notifications
+                    Préférences et notifications
                   </div>
                 </div>
               </Link>

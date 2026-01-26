@@ -88,13 +88,13 @@ export function ServiceDomainsPanel({ subscriptionId }: ServiceDomainsPanelProps
     try {
       await navigator.clipboard.writeText(text);
       toast({
-        title: "Copied",
-        description: `${label} copied to clipboard`,
+        title: "Copié",
+        description: `${label} copié dans le presse-papiers`,
       });
     } catch (err) {
       toast({
-        title: "Copy Failed",
-        description: "Failed to copy to clipboard",
+        title: "Échec de la copie",
+        description: "Impossible de copier dans le presse-papiers",
         variant: "destructive",
       });
     }
@@ -103,8 +103,8 @@ export function ServiceDomainsPanel({ subscriptionId }: ServiceDomainsPanelProps
   const handleAddDomain = async () => {
     if (!serviceName || !customDomain) {
       toast({
-        title: "Validation Error",
-        description: "Please fill in all fields",
+        title: "Erreur de validation",
+        description: "Veuillez remplir tous les champs",
         variant: "destructive",
       });
       return;
@@ -227,7 +227,7 @@ export function ServiceDomainsPanel({ subscriptionId }: ServiceDomainsPanelProps
               <div className="flex items-center gap-2 text-destructive">
                 <AlertCircle className="h-4 w-4" />
                 <span className="text-sm">
-                  Failed to load domains. Please try again.
+                  Impossible de charger les domaines. Réessayez.
                 </span>
               </div>
             </div>
@@ -236,9 +236,9 @@ export function ServiceDomainsPanel({ subscriptionId }: ServiceDomainsPanelProps
           {!isLoading && !error && domains.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <Globe className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-sm">No service domains configured</p>
+              <p className="text-sm">Aucun domaine de service configuré</p>
               <p className="text-xs mt-1">
-                Deploy services to automatically generate domains, or add custom domains.
+                Déployez des services pour générer des domaines automatiquement, ou ajoutez des domaines personnalisés.
               </p>
             </div>
           )}
@@ -279,7 +279,7 @@ export function ServiceDomainsPanel({ subscriptionId }: ServiceDomainsPanelProps
                         <Badge
                           variant={domain.domain_type === "AUTO" ? "secondary" : "default"}
                         >
-                          {domain.domain_type === "AUTO" ? "Auto" : "Custom"}
+                          {domain.domain_type === "AUTO" ? "Auto" : "Personnalisé"}
                         </Badge>
                         <Badge
                           variant={domain.is_active ? "default" : "secondary"}
@@ -288,18 +288,18 @@ export function ServiceDomainsPanel({ subscriptionId }: ServiceDomainsPanelProps
                           {domain.is_active ? (
                             <>
                               <CheckCircle2 className="h-3 w-3 mr-1" />
-                              Active
+                              Actif
                             </>
                           ) : (
                             <>
                               <XCircle className="h-3 w-3 mr-1" />
-                              Inactive
+                              Inactif
                             </>
                           )}
                         </Badge>
                         {domain.proxy_configured && (
                           <Badge variant="outline" className="text-xs">
-                            Proxy Configured
+                            Proxy configuré
                           </Badge>
                         )}
                       </div>
@@ -335,19 +335,18 @@ export function ServiceDomainsPanel({ subscriptionId }: ServiceDomainsPanelProps
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Custom Domain</DialogTitle>
+            <DialogTitle>Ajouter un domaine personnalisé</DialogTitle>
             <DialogDescription>
-              Add a custom domain name for one of your services. Make sure to configure DNS
-              to point to your server's public IP.
+              Associez un nom de domaine personnalisé à l'un de vos services. Configurez le DNS pour qu'il pointe vers l'IP publique de votre serveur.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="service-name">Service Name</Label>
+              <Label htmlFor="service-name">Service</Label>
               <Select value={serviceName} onValueChange={setServiceName}>
                 <SelectTrigger id="service-name">
-                  <SelectValue placeholder="Select a service" />
+                  <SelectValue placeholder="Choisir un service" />
                 </SelectTrigger>
                 <SelectContent>
                   {availableServices.map((service) => (
@@ -407,18 +406,17 @@ export function ServiceDomainsPanel({ subscriptionId }: ServiceDomainsPanelProps
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Domain</AlertDialogTitle>
+            <AlertDialogTitle>Supprimer le domaine</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the domain{" "}
+              Supprimer définitivement le domaine{" "}
               <span className="font-mono font-medium">
                 {domainToDelete?.domain_name}
               </span>
-              ? This action cannot be undone. The nginx configuration and DNS records
-              (for auto-generated domains) will be removed.
+              ? Cette action est irréversible. La configuration nginx et les enregistrements DNS (pour les domaines auto-générés) seront supprimés.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-red-600 hover:bg-red-700"
@@ -427,7 +425,7 @@ export function ServiceDomainsPanel({ subscriptionId }: ServiceDomainsPanelProps
               {deleteDomain.isPending && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
-              Delete
+              Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

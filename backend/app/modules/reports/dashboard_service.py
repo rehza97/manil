@@ -4,7 +4,7 @@ Dashboard Service
 Provides aggregated metrics for Admin, Corporate, and Customer dashboards.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from sqlalchemy import select, func, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -273,15 +273,11 @@ class DashboardService:
         )
         completed_orders = await self.db.scalar(completed_orders_query) or 0
 
-        # Calculate total spent
-        revenue_query = select(func.sum(Order.total_amount)).where(
-            and_(
-                Order.deleted_at.is_(None),
-                Order.customer_id == customer_id,
-                Order.status == "delivered"
-            )
-        )
-        total_revenue = await self.db.scalar(revenue_query) or 0.0
+        # Calculate total spent using revenue service
+        from app.modules.revenue.service import RevenueService
+        revenue_service = RevenueService(self.db)
+        revenue_overview = await revenue_service.get_overview(period="month", customer_id=customer_id)
+        total_revenue = float(revenue_overview.metrics.booked_revenue)  # Use booked revenue (delivered orders)
 
         return DashboardMetrics(
             total_customers=0,  # Not applicable for customer view
@@ -414,7 +410,7 @@ class DashboardService:
     async def _get_trends(self, period: str = "month") -> Dict[str, List[TrendData]]:
         """Get trend data for the specified period"""
         # Calculate date range
-        end_date = datetime.now(timezone.utc)
+        end_date = datetime.utcnow()
 
         if period == "today":
             start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -448,7 +444,7 @@ class DashboardService:
     ) -> Dict[str, List[TrendData]]:
         """Get trend data for a specific customer"""
         # Calculate date range
-        end_date = datetime.now(timezone.utc)
+        end_date = datetime.utcnow()
 
         if period == "month":
             start_date = end_date - timedelta(days=30)

@@ -4,15 +4,11 @@ import { formatCurrency } from "@/shared/utils/formatters";
 interface PricingDisplayProps {
   regularPrice: number;
   salePrice?: number;
-  costPrice?: number;
-  showCost?: boolean;
 }
 
 export const PricingDisplay: React.FC<PricingDisplayProps> = ({
   regularPrice,
   salePrice,
-  costPrice,
-  showCost = false,
 }) => {
   const hasSale = salePrice && salePrice < regularPrice;
   const savingsPercentage = hasSale
@@ -31,7 +27,7 @@ export const PricingDisplay: React.FC<PricingDisplayProps> = ({
           </span>
           {savingsPercentage > 0 && (
             <span className="text-xs font-semibold text-red-600">
-              Save {savingsPercentage}%
+              −{savingsPercentage} %
             </span>
           )}
         </div>
@@ -39,10 +35,6 @@ export const PricingDisplay: React.FC<PricingDisplayProps> = ({
         <span className="text-lg font-bold text-gray-900">
           {formatCurrency(regularPrice)}
         </span>
-      )}
-
-      {showCost && costPrice && (
-        <p className="text-xs text-gray-500">Cost: {formatCurrency(costPrice)}</p>
       )}
     </div>
   );

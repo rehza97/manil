@@ -11,7 +11,7 @@ import {
 
 export const LandingPage: React.FC = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <div className="min-h-screen bg-white">
       <LandingNavigation />
       <HeroSection />
       <FeaturesSection />

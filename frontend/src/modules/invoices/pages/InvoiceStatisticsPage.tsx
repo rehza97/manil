@@ -2,6 +2,8 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { invoiceService } from "../services";
+import { revenueService } from "@/modules/revenue/services/revenueService";
+import { formatRevenue } from "@/shared/utils/revenueFormatters";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from "recharts";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
@@ -10,6 +12,12 @@ export const InvoiceStatisticsPage: React.FC = () => {
   const { data: stats, isLoading } = useQuery({
     queryKey: ["invoice-statistics"],
     queryFn: () => invoiceService.getStatistics(),
+  });
+
+  // Fetch revenue trends for monthly revenue chart
+  const { data: revenueTrends, isLoading: trendsLoading } = useQuery({
+    queryKey: ["revenue", "trends", "year", "month"],
+    queryFn: () => revenueService.getTrends("year", "month"),
   });
 
   if (isLoading) {
@@ -151,25 +159,56 @@ export const InvoiceStatisticsPage: React.FC = () => {
             <CardTitle>Monthly Revenue Trend</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart
-                data={stats?.monthly_revenue || [
-                  { month: "Jan", revenue: 0 },
-                  { month: "Feb", revenue: 0 },
-                  { month: "Mar", revenue: 0 },
-                  { month: "Apr", revenue: 0 },
-                  { month: "May", revenue: 0 },
-                  { month: "Jun", revenue: 0 },
-                ]}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip formatter={(value: any) => `$${Number(value).toFixed(2)}`} />
-                <Legend />
-                <Line type="monotone" dataKey="revenue" stroke="#8884d8" />
-              </LineChart>
-            </ResponsiveContainer>
+            {trendsLoading ? (
+              <div className="flex items-center justify-center h-[300px]">
+                <div className="text-slate-600">Loading revenue trends...</div>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart
+                  data={
+                    revenueTrends?.data?.map((point) => ({
+                      month: new Date(point.date).toLocaleDateString("en-US", {
+                        month: "short",
+                        year: "numeric",
+                      }),
+                      recognized: Number(point.recognized_revenue),
+                      booked: Number(point.booked_revenue),
+                      total: Number(point.total_revenue),
+                    })) || []
+                  }
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis tickFormatter={(value) => formatRevenue(value)} />
+                  <Tooltip
+                    formatter={(value: any) => formatRevenue(Number(value))}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="recognized"
+                    stroke="#10B981"
+                    name="Recognized Revenue"
+                    strokeWidth={2}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="booked"
+                    stroke="#3B82F6"
+                    name="Booked Revenue"
+                    strokeWidth={2}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="total"
+                    stroke="#F59E0B"
+                    name="Total Revenue"
+                    strokeWidth={2}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 

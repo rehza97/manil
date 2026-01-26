@@ -44,13 +44,13 @@ export const ServiceDetailPage: React.FC = () => {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
-          <p className="text-destructive">Service not found</p>
+          <p className="text-destructive">Service introuvable</p>
           <Button
             variant="outline"
             className="mt-4"
             onClick={() => navigate("/dashboard/services")}
           >
-            Back to Services
+            Retour aux services
           </Button>
         </div>
       </div>
@@ -67,24 +67,23 @@ export const ServiceDetailPage: React.FC = () => {
           onClick={() => navigate("/dashboard/services")}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Services
+          Retour aux services
         </Button>
       </div>
 
       <div>
         <h1 className="text-3xl font-bold text-slate-900">
-          Service Details
+          Détail du service
         </h1>
         <p className="text-muted-foreground mt-1">
-          Order #{service.order_number}
+          Commande n° {service.order_number}
         </p>
       </div>
 
-      {/* Service Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Status</CardTitle>
+            <CardTitle className="text-sm font-medium">Statut</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -103,7 +102,7 @@ export const ServiceDetailPage: React.FC = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
+            <CardTitle className="text-sm font-medium">Montant total</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -115,26 +114,25 @@ export const ServiceDetailPage: React.FC = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Created</CardTitle>
+            <CardTitle className="text-sm font-medium">Créée le</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-sm">
-              {new Date(service.created_at).toLocaleDateString()}
+              {new Date(service.created_at).toLocaleDateString("fr-FR")}
             </div>
             <div className="text-xs text-muted-foreground">
-              {new Date(service.created_at).toLocaleTimeString()}
+              {new Date(service.created_at).toLocaleTimeString("fr-FR")}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Service Items */}
       <Card>
         <CardHeader>
-          <CardTitle>Service Items</CardTitle>
+          <CardTitle>Contenu de la commande</CardTitle>
           <CardDescription>
-            Products and services included in this order
+            Produits et services inclus dans cette commande
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -146,9 +144,9 @@ export const ServiceDetailPage: React.FC = () => {
                   className="flex items-center justify-between p-4 border rounded-lg"
                 >
                   <div>
-                    <p className="font-medium">{item.product_name || "Product"}</p>
+                    <p className="font-medium">{item.product_name || "Produit"}</p>
                     <p className="text-sm text-muted-foreground">
-                      Quantity: {item.quantity} × ${item.unit_price.toFixed(2)}
+                      Quantité : {item.quantity} × ${item.unit_price.toFixed(2)}
                     </p>
                   </div>
                   <div className="text-right">
@@ -160,12 +158,11 @@ export const ServiceDetailPage: React.FC = () => {
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground">No items found</p>
+            <p className="text-muted-foreground">Aucun article</p>
           )}
         </CardContent>
       </Card>
 
-      {/* Additional Information */}
       {service.customer_notes && (
         <Card>
           <CardHeader>
@@ -177,20 +174,19 @@ export const ServiceDetailPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Delivery Information */}
       {service.delivery_address && (
         <Card>
           <CardHeader>
-            <CardTitle>Delivery Information</CardTitle>
+            <CardTitle>Livraison</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               <p className="text-sm">
-                <strong>Address:</strong> {service.delivery_address}
+                <strong>Adresse :</strong> {service.delivery_address}
               </p>
               {service.delivery_contact && (
                 <p className="text-sm">
-                  <strong>Contact:</strong> {service.delivery_contact}
+                  <strong>Contact :</strong> {service.delivery_contact}
                 </p>
               )}
             </div>

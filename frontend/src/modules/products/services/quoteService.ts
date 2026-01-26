@@ -22,7 +22,7 @@ export const quoteService = {
    * Create a new quote request
    */
   async createQuoteRequest(data: CreateQuoteRequestDTO): Promise<QuoteRequest> {
-    const response = await apiClient.post<QuoteRequest>("/quotes", data);
+    const response = await apiClient.post<QuoteRequest>("/quote-requests", data);
     return response.data;
   },
 
@@ -49,7 +49,7 @@ export const quoteService = {
    * Get a single quote request
    */
   async getQuoteRequest(quoteId: string): Promise<QuoteRequest> {
-    const response = await apiClient.get<QuoteRequest>(`/quotes/${quoteId}`);
+    const response = await apiClient.get<QuoteRequest>(`/quote-requests/${quoteId}`);
     return response.data;
   },
 
@@ -60,7 +60,7 @@ export const quoteService = {
     quoteId: string,
     data: UpdateQuoteRequestDTO
   ): Promise<QuoteRequest> {
-    const response = await apiClient.put<QuoteRequest>(`/quotes/${quoteId}`, data);
+    const response = await apiClient.put<QuoteRequest>(`/quote-requests/${quoteId}`, data);
     return response.data;
   },
 
@@ -68,14 +68,14 @@ export const quoteService = {
    * Delete a quote request
    */
   async deleteQuoteRequest(quoteId: string): Promise<void> {
-    await apiClient.delete(`/quotes/${quoteId}`);
+    await apiClient.delete(`/quote-requests/${quoteId}`);
   },
 
   /**
    * Approve a quote request (set status to QUOTED)
    */
   async approveQuoteRequest(quoteId: string): Promise<QuoteRequest> {
-    const response = await apiClient.post<QuoteRequest>(`/quotes/${quoteId}/approve`);
+    const response = await apiClient.post<QuoteRequest>(`/quote-requests/${quoteId}/approve`);
     return response.data;
   },
 
@@ -83,7 +83,7 @@ export const quoteService = {
    * Accept a quote request (set status to ACCEPTED)
    */
   async acceptQuoteRequest(quoteId: string): Promise<QuoteRequest> {
-    const response = await apiClient.post<QuoteRequest>(`/quotes/${quoteId}/accept`);
+    const response = await apiClient.post<QuoteRequest>(`/quote-requests/${quoteId}/accept`);
     return response.data;
   },
 
@@ -91,7 +91,7 @@ export const quoteService = {
    * Reject a quote request (set status to REJECTED)
    */
   async rejectQuoteRequest(quoteId: string): Promise<QuoteRequest> {
-    const response = await apiClient.post<QuoteRequest>(`/quotes/${quoteId}/reject`);
+    const response = await apiClient.post<QuoteRequest>(`/quote-requests/${quoteId}/reject`);
     return response.data;
   },
 
@@ -103,7 +103,7 @@ export const quoteService = {
    * Create a new service request
    */
   async createServiceRequest(data: CreateServiceRequestDTO): Promise<ServiceRequest> {
-    const response = await apiClient.post<ServiceRequest>("/quotes/services", data);
+    const response = await apiClient.post<ServiceRequest>("/quote-requests/services", data);
     return response.data;
   },
 
@@ -119,7 +119,7 @@ export const quoteService = {
       service_type?: string;
     }
   ): Promise<ServiceRequestListResponse> {
-    const response = await apiClient.get<ServiceRequestListResponse>("/quotes/services", {
+    const response = await apiClient.get<ServiceRequestListResponse>("/quote-requests/services", {
       params: { page, page_size: pageSize, ...filters },
     });
     return response.data;
@@ -129,7 +129,7 @@ export const quoteService = {
    * Get a single service request
    */
   async getServiceRequest(serviceId: string): Promise<ServiceRequest> {
-    const response = await apiClient.get<ServiceRequest>(`/quotes/services/${serviceId}`);
+    const response = await apiClient.get<ServiceRequest>(`/quote-requests/services/${serviceId}`);
     return response.data;
   },
 
@@ -141,7 +141,7 @@ export const quoteService = {
     data: UpdateServiceRequestDTO
   ): Promise<ServiceRequest> {
     const response = await apiClient.put<ServiceRequest>(
-      `/quotes/services/${serviceId}`,
+      `/quote-requests/services/${serviceId}`,
       data
     );
     return response.data;
@@ -151,6 +151,6 @@ export const quoteService = {
    * Delete a service request
    */
   async deleteServiceRequest(serviceId: string): Promise<void> {
-    await apiClient.delete(`/quotes/services/${serviceId}`);
+    await apiClient.delete(`/quote-requests/services/${serviceId}`);
   },
 };

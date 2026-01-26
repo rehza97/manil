@@ -116,13 +116,13 @@ export function SubscriptionTimeline({ events }: SubscriptionTimelineProps) {
   const getActorLabel = (actorType: ActorType): string => {
     switch (actorType) {
       case ActorType.CUSTOMER:
-        return "Customer";
+        return "Client";
       case ActorType.ADMIN:
         return "Admin";
       case ActorType.SYSTEM:
-        return "System";
+        return "Système";
       default:
-        return "Unknown";
+        return "Inconnu";
     }
   };
 
@@ -131,7 +131,7 @@ export function SubscriptionTimeline({ events }: SubscriptionTimelineProps) {
       <Card>
         <CardContent className="py-6">
           <div className="text-center text-muted-foreground">
-            No timeline events yet
+            Aucun événement pour le moment
           </div>
         </CardContent>
       </Card>
@@ -189,8 +189,9 @@ export function SubscriptionTimeline({ events }: SubscriptionTimelineProps) {
                 <p className="text-xs text-muted-foreground mt-1">
                   {formatDistanceToNow(new Date(event.created_at), {
                     addSuffix: true,
+                    locale: fr,
                   })}{" "}
-                  · {format(new Date(event.created_at), "MMM dd, yyyy HH:mm")}
+                  · {format(new Date(event.created_at), "dd MMM yyyy HH:mm", { locale: fr })}
                 </p>
               </div>
             </div>

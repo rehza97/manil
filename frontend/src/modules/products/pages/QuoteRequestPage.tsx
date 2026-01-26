@@ -61,22 +61,21 @@ export const QuoteRequestPage: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Quote Requests</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Demandes de devis</h1>
           <button
             onClick={() => setShowForm(!showForm)}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
           >
-            {showForm ? "Cancel" : "Request Quote"}
+            {showForm ? "Annuler" : "Demander un devis"}
           </button>
         </div>
 
-        {/* Form */}
         {showForm && (
           <div className="bg-white rounded-lg shadow p-6 mb-8">
-            <h2 className="text-xl font-semibold mb-4">Create a New Quote Request</h2>
+            <h2 className="text-xl font-semibold mb-4">Nouvelle demande de devis</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Title</label>
+                <label className="block text-sm font-medium text-gray-700">Titre</label>
                 <input
                   type="text"
                   required
@@ -120,7 +119,7 @@ export const QuoteRequestPage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    Priority
+                    Priorité
                   </label>
                   <select
                     value={formData.priority}
@@ -129,10 +128,10 @@ export const QuoteRequestPage: React.FC = () => {
                     }
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                   >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="urgent">Urgent</option>
+                    <option value="low">Basse</option>
+                    <option value="medium">Moyenne</option>
+                    <option value="high">Haute</option>
+                    <option value="urgent">Urgente</option>
                   </select>
                 </div>
               </div>
@@ -142,7 +141,7 @@ export const QuoteRequestPage: React.FC = () => {
                 disabled={createMutation.isPending}
                 className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
-                {createMutation.isPending ? "Creating..." : "Create Quote Request"}
+                {createMutation.isPending ? "Création…" : "Créer la demande"}
               </button>
             </form>
           </div>
@@ -203,13 +202,13 @@ export const QuoteRequestPage: React.FC = () => {
                                 onClick={() => approveMutation.mutate(quote.id)}
                                 className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
                               >
-                                Approve
+                                Approuver
                               </button>
                               <button
                                 onClick={() => rejectMutation.mutate(quote.id)}
                                 className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700"
                               >
-                                Reject
+                                Rejeter
                               </button>
                             </>
                           )}
@@ -218,14 +217,14 @@ export const QuoteRequestPage: React.FC = () => {
                               onClick={() => acceptMutation.mutate(quote.id)}
                               className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
                             >
-                              Accept
+                              Accepter
                             </button>
                           )}
                           <button
                             onClick={() => deleteMutation.mutate(quote.id)}
                             className="px-2 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700"
                           >
-                            Delete
+                            Supprimer
                           </button>
                         </div>
                       </td>
@@ -245,17 +244,17 @@ export const QuoteRequestPage: React.FC = () => {
               disabled={page === 1}
               className="px-4 py-2 border rounded-lg disabled:opacity-50"
             >
-              Previous
+              Précédent
             </button>
             <span className="px-4 py-2">
-              Page {page} of {quoteData.total_pages}
+              Page {page} / {quoteData.total_pages}
             </span>
             <button
               onClick={() => setPage(Math.min(quoteData.total_pages, page + 1))}
               disabled={page === quoteData.total_pages}
               className="px-4 py-2 border rounded-lg disabled:opacity-50"
             >
-              Next
+              Suivant
             </button>
           </div>
         )}

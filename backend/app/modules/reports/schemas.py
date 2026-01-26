@@ -300,6 +300,8 @@ class DateRangeFilter(BaseModel):
 class ReportFilter(BaseModel):
     """Generic report filter"""
     date_range: Optional[DateRangeFilter] = None
+    date_from: Optional[str] = None  # YYYY-MM-DD, for export alignment with frontend
+    date_to: Optional[str] = None
     status: Optional[str] = None
     category: Optional[str] = None
     agent_id: Optional[int] = None

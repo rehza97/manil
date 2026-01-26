@@ -71,8 +71,8 @@ export const baseClient: AxiosInstance = axios.create({
  */
 apiClient.interceptors.request.use(
   (config) => {
-    // Get token from storage (check sessionStorage first, then localStorage)
-    // sessionStorage is checked first because it's used when rememberMe is false
+    // Token storage: sessionStorage (rememberMe=false) or localStorage (rememberMe=true).
+    // Security: HTTP-only cookies are preferred for production; current impl uses storage.
     const token = sessionStorage.getItem("access_token") || localStorage.getItem("access_token");
 
     if (token) {

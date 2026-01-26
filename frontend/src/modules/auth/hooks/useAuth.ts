@@ -24,7 +24,8 @@ export const useCurrentUser = () => {
 };
 
 /**
- * Login mutation hook
+ * Login mutation hook.
+ * When requires_2fa, does not setAuth/navigate; form must show 2FA step and call useCompleteLogin2FA.
  */
 export const useLogin = () => {
   const navigate = useNavigate();
@@ -34,13 +35,43 @@ export const useLogin = () => {
     mutationFn: (credentials: LoginCredentials) =>
       authService.login(credentials),
     onSuccess: (data, variables) => {
+      if (data.requires_2fa) {
+        return; // Form shows 2FA step; complete via useCompleteLogin2FA
+      }
       setAuth(
-        data.user, 
-        data.access_token, 
-        data.refresh_token, 
+        data.user,
+        data.access_token,
+        data.refresh_token,
         variables.rememberMe ?? true
       );
-      // Let RoleBasedRedirect handle the routing based on user role
+      navigate("/redirect");
+    },
+  });
+};
+
+/**
+ * Complete login after 2FA verification (when login returned requires_2fa).
+ */
+export const useCompleteLogin2FA = () => {
+  const navigate = useNavigate();
+  const { setAuth } = useAuthStore();
+
+  return useMutation({
+    mutationFn: ({
+      pending2FAToken,
+      code,
+    }: {
+      pending2FAToken: string;
+      code: string;
+      rememberMe: boolean;
+    }) => authService.completeLogin2FA(pending2FAToken, code),
+    onSuccess: (data, variables) => {
+      setAuth(
+        data.user,
+        data.access_token,
+        data.refresh_token,
+        variables.rememberMe ?? true
+      );
       navigate("/redirect");
     },
   });

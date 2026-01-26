@@ -57,8 +57,8 @@ export const InvoiceListPage: React.FC = () => {
         case "send":
           await invoiceService.send(invoiceId);
           toast({
-            title: "Success",
-            description: "Invoice sent successfully",
+            title: "Succès",
+            description: "Facture envoyée",
           });
           refetch();
           break;
@@ -68,16 +68,16 @@ export const InvoiceListPage: React.FC = () => {
             `invoice-${invoiceId}.pdf`
           );
           toast({
-            title: "Success",
-            description: "Invoice PDF downloaded",
+            title: "Succès",
+            description: "PDF téléchargé",
           });
           break;
         case "cancel":
-          if (window.confirm("Are you sure you want to cancel this invoice?")) {
+          if (window.confirm("Confirmer l'annulation de cette facture ?")) {
             await invoiceService.cancel(invoiceId);
             toast({
-              title: "Success",
-              description: "Invoice cancelled",
+              title: "Succès",
+              description: "Facture annulée",
             });
             refetch();
           }
@@ -90,8 +90,8 @@ export const InvoiceListPage: React.FC = () => {
       }
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Action failed",
+        title: "Erreur",
+        description: error.message || "Échec de l'action",
         variant: "destructive",
       });
     }
@@ -113,12 +113,12 @@ export const InvoiceListPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Invoices</h1>
-          <p className="text-slate-600 mt-1">View and manage your invoices</p>
+          <h1 className="text-3xl font-bold text-slate-900">Factures</h1>
+          <p className="text-slate-600 mt-1">Consulter et gérer vos factures</p>
         </div>
         <Button onClick={() => navigate("/dashboard/invoices/create")}>
           <Plus className="h-4 w-4 mr-2" />
-          Create Invoice
+          Créer une facture
         </Button>
       </div>
 
@@ -127,7 +127,7 @@ export const InvoiceListPage: React.FC = () => {
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
-            placeholder="Search by invoice number or customer ID..."
+            placeholder="Rechercher par n° facture ou ID client…"
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -152,14 +152,14 @@ export const InvoiceListPage: React.FC = () => {
           </SheetTrigger>
           <SheetContent side="right" className="w-80">
             <SheetHeader>
-              <SheetTitle>Filter Invoices</SheetTitle>
+              <SheetTitle>Filtrer les factures</SheetTitle>
               <SheetDescription>
-                Use filters to find specific invoices
+                Utilisez les filtres pour retrouver des factures
               </SheetDescription>
             </SheetHeader>
             <div className="mt-6 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
+                <Label htmlFor="status">Statut</Label>
                 <Select
                   value={statusFilter || "all"}
                   onValueChange={(value) => {
@@ -168,18 +168,18 @@ export const InvoiceListPage: React.FC = () => {
                   }}
                 >
                   <SelectTrigger id="status">
-                    <SelectValue placeholder="All statuses" />
+                    <SelectValue placeholder="Tous les statuts" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    <SelectItem value={InvoiceStatus.DRAFT}>Draft</SelectItem>
-                    <SelectItem value={InvoiceStatus.SENT}>Sent</SelectItem>
-                    <SelectItem value={InvoiceStatus.PAID}>Paid</SelectItem>
+                    <SelectItem value="all">Tous les statuts</SelectItem>
+                    <SelectItem value={InvoiceStatus.DRAFT}>Brouillon</SelectItem>
+                    <SelectItem value={InvoiceStatus.SENT}>Envoyée</SelectItem>
+                    <SelectItem value={InvoiceStatus.PAID}>Payée</SelectItem>
                     <SelectItem value={InvoiceStatus.OVERDUE}>
-                      Overdue
+                      En retard
                     </SelectItem>
                     <SelectItem value={InvoiceStatus.CANCELLED}>
-                      Cancelled
+                      Annulée
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -197,15 +197,15 @@ export const InvoiceListPage: React.FC = () => {
                   className="rounded"
                 />
                 <Label htmlFor="overdue" className="cursor-pointer">
-                  Show overdue only
+                  En retard uniquement
                 </Label>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="customer">Customer ID</Label>
+                <Label htmlFor="customer">ID client</Label>
                 <Input
                   id="customer"
-                  placeholder="Filter by customer ID"
+                  placeholder="Filtrer par ID client"
                   value={customerFilter}
                   onChange={(e) => {
                     setCustomerFilter(e.target.value);
@@ -215,7 +215,7 @@ export const InvoiceListPage: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="dateFrom">Date From</Label>
+                <Label htmlFor="dateFrom">Du</Label>
                 <Input
                   id="dateFrom"
                   type="date"
@@ -228,7 +228,7 @@ export const InvoiceListPage: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="dateTo">Date To</Label>
+                <Label htmlFor="dateTo">Au</Label>
                 <Input
                   id="dateTo"
                   type="date"
@@ -255,7 +255,7 @@ export const InvoiceListPage: React.FC = () => {
                   }}
                 >
                   <X className="h-4 w-4 mr-2" />
-                  Clear Filters
+                  Effacer les filtres
                 </Button>
               )}
             </div>
@@ -294,12 +294,12 @@ export const InvoiceListPage: React.FC = () => {
       {/* Invoice List */}
       {isLoading ? (
         <div className="text-center py-12">
-          <div className="text-slate-600">Loading invoices...</div>
+          <div className="text-slate-600">Chargement des factures…</div>
         </div>
       ) : error ? (
         <div className="text-center py-12">
           <div className="text-red-600">
-            Error loading invoices. Please try again.
+            Erreur lors du chargement. Veuillez réessayer.
           </div>
         </div>
       ) : (
@@ -314,9 +314,7 @@ export const InvoiceListPage: React.FC = () => {
       {data?.pagination && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-slate-600">
-            Showing {(page - 1) * pageSize + 1} to{" "}
-            {Math.min(page * pageSize, data.pagination.total)} of{" "}
-            {data.pagination.total} invoices
+            {(page - 1) * pageSize + 1} – {Math.min(page * pageSize, data.pagination.total)} sur {data.pagination.total} factures
           </div>
           <div className="flex items-center gap-2">
             <select
@@ -327,10 +325,10 @@ export const InvoiceListPage: React.FC = () => {
               }}
               className="px-3 py-1 border rounded-md text-sm"
             >
-              <option value={10}>10 per page</option>
-              <option value={20}>20 per page</option>
-              <option value={50}>50 per page</option>
-              <option value={100}>100 per page</option>
+              <option value={10}>10 par page</option>
+              <option value={20}>20 par page</option>
+              <option value={50}>50 par page</option>
+              <option value={100}>100 par page</option>
             </select>
             <Button
               variant="outline"
@@ -338,10 +336,10 @@ export const InvoiceListPage: React.FC = () => {
               onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page === 1}
             >
-              Previous
+              Précédent
             </Button>
             <span className="text-sm text-slate-600">
-              Page {page} of {data.pagination.total_pages}
+              Page {page} / {data.pagination.total_pages}
             </span>
             <Button
               variant="outline"
@@ -351,7 +349,7 @@ export const InvoiceListPage: React.FC = () => {
               }
               disabled={page === data.pagination.total_pages}
             >
-              Next
+              Suivant
             </Button>
           </div>
         </div>

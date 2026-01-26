@@ -2,6 +2,7 @@
  * React Query hooks for product management
  */
 
+import { useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productService } from '../services';
 import type {
@@ -16,6 +17,8 @@ import type {
   UpdateProductCategoryDTO,
   CreateProductImageDTO,
   CreateProductVariantDTO,
+  ServiceType,
+  BillingCycle,
 } from '../types';
 
 // ============================================================================
@@ -33,7 +36,10 @@ export const useProducts = (
     max_price?: number;
     search?: string;
     is_featured?: boolean;
-    in_stock?: boolean;
+    service_type?: ServiceType;
+    billing_cycle?: BillingCycle;
+    is_recurring?: boolean;
+    in_stock?: boolean; // DEPRECATED: kept for backward compatibility
     sort_by?: "name" | "price" | "created_at" | "rating" | "view_count";
     sort_order?: "asc" | "desc";
   }
@@ -377,4 +383,16 @@ export const useDeleteProductVariant = () => {
       queryClient.invalidateQueries({ queryKey: ['product', productId] });
     },
   });
+};
+
+/**
+ * Base path for catalog links (public /catalog vs dashboard /dashboard/catalog).
+ * Use when rendering catalog navigation, product links, etc.
+ */
+export const useCatalogBase = (): string => {
+  const { pathname } = useLocation();
+  if (pathname.startsWith('/catalog') || pathname.startsWith('/products/')) {
+    return '/catalog';
+  }
+  return '/dashboard/catalog';
 };

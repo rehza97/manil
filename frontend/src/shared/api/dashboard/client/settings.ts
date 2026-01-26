@@ -5,15 +5,16 @@
  */
 
 import { apiClient } from "../../client";
+import type { NotificationPrefs } from "@/modules/settings/types";
 
 export const clientSettingsApi = {
-  getNotificationSettings: async (): Promise<any> => {
-    const response = await apiClient.get("/client/settings/notifications");
+  getNotificationSettings: async (): Promise<NotificationPrefs> => {
+    const response = await apiClient.get<NotificationPrefs>("/client/settings/notifications");
     return response.data;
   },
 
-  updateNotificationSettings: async (settings: any): Promise<any> => {
-    const response = await apiClient.put(
+  updateNotificationSettings: async (settings: NotificationPrefs): Promise<NotificationPrefs> => {
+    const response = await apiClient.put<NotificationPrefs>(
       "/client/settings/notifications",
       settings
     );

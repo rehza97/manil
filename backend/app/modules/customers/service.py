@@ -15,6 +15,9 @@ from app.modules.customers.schemas import (
     CustomerType,
 )
 from app.modules.customers.models import Customer
+from app.modules.customers.validation import validate_status_transition, check_kyc_requirements
+from app.modules.audit.service import AuditService
+from app.modules.audit.models import AuditAction
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +28,7 @@ class CustomerService:
     def __init__(self, db: AsyncSession):
         """Initialize service with database session."""
         self.repository = CustomerRepository(db)
+        self.db = db
 
     async def get_all(
         self,
@@ -135,29 +139,78 @@ class CustomerService:
             logger.error(f"Failed to delete customer {customer_id}: {e}", exc_info=True)
             raise
 
-    async def activate(self, customer_id: str, updated_by: str) -> Customer:
-        """Activate customer account."""
+    async def change_status(
+        self,
+        customer_id: str,
+        new_status: CustomerStatus,
+        reason: str,
+        updated_by: str,
+    ) -> Customer:
+        """
+        Change customer status with validation and audit logging.
+        
+        Args:
+            customer_id: Customer ID
+            new_status: New status to transition to
+            reason: Reason for status change (required)
+            updated_by: User ID making the change
+            
+        Returns:
+            Updated customer instance
+        """
+        customer = await self.get_by_id(customer_id)
+        old_status = customer.status
+        
+        # Validate transition
+        validate_status_transition(old_status, new_status, reason)
+        
+        # Check KYC requirements if needed
+        if new_status == CustomerStatus.ACTIVE:
+            await check_kyc_requirements(self.db, customer_id, new_status)
+        
+        # Update status
+        update_data = CustomerUpdate(status=new_status)
+        result = await self.repository.update(customer, update_data, updated_by)
+        
+        # Log to audit system (async)
         try:
-            customer = await self.get_by_id(customer_id)
-            update_data = CustomerUpdate(status=CustomerStatus.ACTIVE)
-            result = await self.repository.update(customer, update_data, updated_by)
-            logger.info(f"Customer {customer_id} activated by user {updated_by}")
-            return result
+            from app.modules.audit.repository import AuditRepository
+            from app.modules.audit.schemas import AuditLogCreate
+            from sqlalchemy import select
+            from app.modules.auth.models import User
+            
+            # Get user info if available
+            user_result = await self.db.execute(select(User).where(User.id == updated_by))
+            user = user_result.scalar_one_or_none()
+            
+            # AuditRepository accepts both Session and AsyncSession
+            # The async methods work with AsyncSession
+            audit_repo = AuditRepository(self.db)
+            audit_data = AuditLogCreate(
+                action=AuditAction.UPDATE,
+                resource_type="customer",
+                resource_id=customer_id,
+                description=f"Customer status changed from {old_status.value} to {new_status.value}. Reason: {reason}",
+                user_id=updated_by,
+                user_email=user.email if user else None,
+                user_role=str(user.role) if user else None,
+                old_values={"status": old_status.value},
+                new_values={"status": new_status.value},
+            )
+            await audit_repo.create(audit_data)
         except Exception as e:
-            logger.error(f"Failed to activate customer {customer_id}: {e}", exc_info=True)
-            raise
+            logger.warning(f"Failed to log status change to audit: {e}")
+        
+        logger.info(f"Customer {customer_id} status changed from {old_status.value} to {new_status.value} by {updated_by}")
+        return result
 
-    async def suspend(self, customer_id: str, updated_by: str) -> Customer:
-        """Suspend customer account."""
-        try:
-            customer = await self.get_by_id(customer_id)
-            update_data = CustomerUpdate(status=CustomerStatus.SUSPENDED)
-            result = await self.repository.update(customer, update_data, updated_by)
-            logger.info(f"Customer {customer_id} suspended by user {updated_by}")
-            return result
-        except Exception as e:
-            logger.error(f"Failed to suspend customer {customer_id}: {e}", exc_info=True)
-            raise
+    async def activate(self, customer_id: str, updated_by: str, reason: str = "Customer activated") -> Customer:
+        """Activate customer account with validation."""
+        return await self.change_status(customer_id, CustomerStatus.ACTIVE, reason, updated_by)
+
+    async def suspend(self, customer_id: str, updated_by: str, reason: str = "Customer suspended") -> Customer:
+        """Suspend customer account with validation."""
+        return await self.change_status(customer_id, CustomerStatus.SUSPENDED, reason, updated_by)
 
     async def get_statistics(self) -> CustomerStatistics:
         """Get customer statistics (optimized single query)."""

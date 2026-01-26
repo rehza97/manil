@@ -8,7 +8,8 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_permission
+from app.core.permissions import Permission
 from app.modules.auth.models import User
 
 # Import the report functions from the main routes
@@ -27,7 +28,7 @@ router = APIRouter(prefix="/admin/reports", tags=["admin-reports"])
 async def admin_get_user_report(
     date_from: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Admin endpoint for user reports - maps to /reports/users"""
@@ -38,7 +39,7 @@ async def admin_get_user_report(
 async def admin_get_activity_report(
     date_from: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Admin endpoint for activity reports - maps to /reports/activity"""
@@ -60,7 +61,7 @@ async def admin_get_security_report(
 async def admin_get_performance_report(
     date_from: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_PERFORMANCE)),
     db: AsyncSession = Depends(get_db)
 ):
     """Admin endpoint for performance reports - maps to /reports/performance"""

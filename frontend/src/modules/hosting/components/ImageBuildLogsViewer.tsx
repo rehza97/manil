@@ -56,8 +56,8 @@ export function ImageBuildLogsViewer({
 
     navigator.clipboard.writeText(logText);
     toast({
-      title: "Logs Copied",
-      description: "Build logs have been copied to clipboard.",
+      title: "Logs copiés",
+      description: "Les logs de build ont été copiés dans le presse-papiers.",
     });
   };
 
@@ -106,10 +106,10 @@ export function ImageBuildLogsViewer({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Build Logs</CardTitle>
+            <CardTitle>Logs de build</CardTitle>
             <CardDescription>
-              {filteredLogs.length} log {filteredLogs.length === 1 ? "entry" : "entries"}
-              {isLoading && " (Live)"}
+              {filteredLogs.length} entrée{filteredLogs.length !== 1 ? "s" : ""}
+              {isLoading && " (en direct)"}
             </CardDescription>
           </div>
           <div className="flex gap-2">
@@ -120,7 +120,7 @@ export function ImageBuildLogsViewer({
                   className="cursor-pointer"
                   onClick={() => setSelectedStep(undefined)}
                 >
-                  All
+                  Toutes
                 </Badge>
                 {steps.map((step) => (
                   <Badge
@@ -149,9 +149,9 @@ export function ImageBuildLogsViewer({
         {filteredLogs.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             {isLoading ? (
-              <p>Waiting for build logs...</p>
+              <p>En attente des logs de build…</p>
             ) : (
-              <p>No build logs available yet.</p>
+              <p>Aucun log de build pour le moment.</p>
             )}
           </div>
         ) : (
@@ -190,7 +190,7 @@ export function ImageBuildLogsViewer({
               })}
               {isLoading && (
                 <div className="text-center py-2 text-muted-foreground animate-pulse">
-                  <p className="text-sm">Building...</p>
+                  <p className="text-sm">Construction…</p>
                 </div>
               )}
             </div>

@@ -129,10 +129,9 @@ class QuoteRequestService:
                 )
             )
 
-        # Get total count
-        total_count = db.execute(
-            select(func.count(QuoteRequest.id)).where(QuoteRequest.deleted_at.is_(None))
-        ).scalar()
+        # Get total count using same filters as main query
+        count_stmt = select(func.count()).select_from(query.subquery())
+        total_count = db.execute(count_stmt).scalar() or 0
 
         # Get paginated results
         quotes = db.execute(

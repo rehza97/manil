@@ -2,12 +2,14 @@
 Order management API routes.
 Endpoints for order CRUD and status management.
 """
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+import logging
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.config.database import get_sync_db, get_db
-from app.core.dependencies import get_current_active_user, require_permission, require_role
+from app.core.dependencies import get_current_active_user, require_permission, require_any_permission
 from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException
 from app.core.permissions import Permission
 from app.modules.auth.models import User
@@ -21,6 +23,78 @@ from app.modules.orders.schemas import (
     OrderTimelineListResponse,
 )
 from app.modules.orders.service import OrderService
+from app.modules.customers.models import Customer
+from app.infrastructure.email.service import EmailService
+from app.config.database import AsyncSessionLocal
+from app.modules.notifications.service import create_notification, user_id_by_email
+from app.modules.settings.service import UserNotificationPreferencesService
+from app.infrastructure.sms.service import SMSService
+
+logger = logging.getLogger(__name__)
+
+
+async def _send_order_status_email(to: str, order_id: str, status: str) -> None:
+    """Send order status update email (async, for use in background tasks)."""
+    try:
+        async with AsyncSessionLocal() as db:
+            uid = await user_id_by_email(db, to)
+            if uid:
+                prefs_svc = UserNotificationPreferencesService(db)
+                prefs = await prefs_svc.get(uid)
+                if not prefs.get("email", {}).get("orderUpdates", True):
+                    return
+        email_service = EmailService()
+        await email_service.send_order_status_update(to=to, order_id=order_id, status=status)
+    except Exception as e:
+        logger.warning("Order status notification email failed: %s", e)
+
+
+async def _create_order_status_notification(
+    customer_email: str, order_id: str, status: str
+) -> None:
+    """Create in-app notification for order status update (async, for background tasks)."""
+    try:
+        async with AsyncSessionLocal() as db:
+            uid = await user_id_by_email(db, customer_email)
+            if not uid:
+                return
+            # Check push notification preferences (in-app notifications are considered push)
+            prefs_svc = UserNotificationPreferencesService(db)
+            prefs = await prefs_svc.get(uid)
+            if not prefs.get("push", {}).get("orderUpdates", True):
+                return
+            await create_notification(
+                db,
+                uid,
+                "order_status",
+                f"Order {order_id} – {status}",
+                body=f"Your order status has been updated to {status}.",
+                link=f"/orders/{order_id}",
+            )
+    except Exception as e:
+        logger.warning("Order status in-app notification failed: %s", e)
+
+
+async def _send_order_status_sms(
+    customer_email: str, customer_phone: str, order_id: str, status: str
+) -> None:
+    """Send order status SMS if user has sms.orderUpdates and customer has phone."""
+    if not customer_phone or not customer_phone.strip():
+        return
+    try:
+        async with AsyncSessionLocal() as db:
+            uid = await user_id_by_email(db, customer_email)
+            if not uid:
+                return
+            prefs_svc = UserNotificationPreferencesService(db)
+            prefs = await prefs_svc.get(uid)
+            if not prefs.get("sms", {}).get("orderUpdates", False):
+                return
+        sms = SMSService()
+        await sms.send_order_notification(customer_phone, order_id, status)
+    except Exception as e:
+        logger.warning("Order status SMS notification failed: %s", e)
+
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -210,8 +284,9 @@ def update_order(
 def update_order_status(
     order_id: str,
     status_data: OrderStatusUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_sync_db),
-    current_user: User = Depends(require_role(["admin", "corporate"])),
+    current_user: User = Depends(require_any_permission([Permission.ORDERS_APPROVE, Permission.ORDERS_DELIVER])),
 ):
     """
     Update order status with validation. Requires admin or corporate role.
@@ -240,6 +315,31 @@ def update_order_status(
             status_data.notes,
             str(current_user.id),
         )
+        customer = db.execute(
+            select(Customer).where(Customer.id == order.customer_id)
+        ).scalar_one_or_none()
+        if customer and customer.email:
+            st = status_data.status.value
+            background_tasks.add_task(
+                _send_order_status_email,
+                customer.email,
+                order_id,
+                st,
+            )
+            background_tasks.add_task(
+                _create_order_status_notification,
+                customer.email,
+                order_id,
+                st,
+            )
+            if getattr(customer, "phone", None):
+                background_tasks.add_task(
+                    _send_order_status_sms,
+                    customer.email,
+                    customer.phone,
+                    order_id,
+                    st,
+                )
         return OrderResponse.model_validate(order)
 
     except NotFoundException as e:

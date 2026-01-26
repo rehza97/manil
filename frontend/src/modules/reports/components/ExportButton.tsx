@@ -5,7 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { Download } from 'lucide-react';
 import { useExportReport, useDownloadExport } from '../hooks/useReports';
 import type { ExportRequest } from '../types/report.types';
 
@@ -56,7 +56,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
             : 'bg-blue-600 text-white hover:bg-blue-700'
         }`}
       >
-        <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
+        <Download className="h-5 w-5 mr-2" />
         {isLoading ? 'Exporting...' : 'Export'}
       </button>
 

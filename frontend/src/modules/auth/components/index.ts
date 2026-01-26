@@ -12,6 +12,7 @@ export { RegisterPageContent } from "./RegisterPageContent";
 export { ForgotPasswordForm } from "./ForgotPasswordForm";
 export { ResetPasswordForm } from "./ResetPasswordForm";
 export { TwoFactorSetup } from "./TwoFactorSetup";
+export { TwoFactorSetupRequired } from "./TwoFactorSetupRequired";
 export { TwoFactorVerify } from "./TwoFactorVerify";
 export { ProtectedRoute, withAuth, useAuth } from "./ProtectedRoute";
 export { RoleBasedRedirect } from "./RoleBasedRedirect";

@@ -87,17 +87,17 @@ export function DNSRecordForm({
   const getValueDescription = (type: DNSRecordType): string => {
     switch (type) {
       case DNSRecordType.A:
-        return "IPv4 address (e.g., 192.0.2.1)";
+        return "Adresse IPv4 (ex. 192.0.2.1)";
       case DNSRecordType.AAAA:
-        return "IPv6 address (e.g., 2001:db8::1)";
+        return "Adresse IPv6 (ex. 2001:db8::1)";
       case DNSRecordType.CNAME:
-        return "Target domain name (e.g., example.com)";
+        return "Nom de domaine cible (ex. example.com)";
       case DNSRecordType.MX:
-        return "Mail server domain (e.g., mail.example.com)";
+        return "Domaine du serveur mail (ex. mail.example.com)";
       case DNSRecordType.TXT:
-        return "Text record value (quotes will be added automatically)";
+        return "Valeur du champ texte (guillemets ajoutés automatiquement)";
       case DNSRecordType.NS:
-        return "Nameserver domain (e.g., ns1.example.com)";
+        return "Domaine du serveur de noms (ex. ns1.example.com)";
       default:
         return "";
     }
@@ -112,7 +112,7 @@ export function DNSRecordForm({
           name="record_type"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Record Type</FormLabel>
+              <FormLabel>Type d'enregistrement</FormLabel>
               <Select
                 onValueChange={field.onChange}
                 value={field.value}
@@ -120,20 +120,20 @@ export function DNSRecordForm({
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select record type" />
+                    <SelectValue placeholder="Choisir le type" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value={DNSRecordType.A}>A - IPv4 Address</SelectItem>
-                  <SelectItem value={DNSRecordType.AAAA}>AAAA - IPv6 Address</SelectItem>
-                  <SelectItem value={DNSRecordType.CNAME}>CNAME - Canonical Name</SelectItem>
-                  <SelectItem value={DNSRecordType.MX}>MX - Mail Exchange</SelectItem>
-                  <SelectItem value={DNSRecordType.TXT}>TXT - Text Record</SelectItem>
-                  <SelectItem value={DNSRecordType.NS}>NS - Nameserver</SelectItem>
+                  <SelectItem value={DNSRecordType.A}>A – Adresse IPv4</SelectItem>
+                  <SelectItem value={DNSRecordType.AAAA}>AAAA – Adresse IPv6</SelectItem>
+                  <SelectItem value={DNSRecordType.CNAME}>CNAME – Nom canonique</SelectItem>
+                  <SelectItem value={DNSRecordType.MX}>MX – Mail Exchange</SelectItem>
+                  <SelectItem value={DNSRecordType.TXT}>TXT – Enregistrement texte</SelectItem>
+                  <SelectItem value={DNSRecordType.NS}>NS – Serveur de noms</SelectItem>
                 </SelectContent>
               </Select>
               <FormDescription>
-                {mode === "edit" ? "Record type cannot be changed" : "Select the DNS record type"}
+                {mode === "edit" ? "Le type ne peut pas être modifié" : "Choisir le type d'enregistrement DNS"}
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -146,16 +146,16 @@ export function DNSRecordForm({
           name="record_name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Record Name</FormLabel>
+              <FormLabel>Nom de l'enregistrement</FormLabel>
               <FormControl>
                 <Input
-                  placeholder="@ or subdomain"
+                  placeholder="@ ou sous-domaine"
                   {...field}
                   disabled={isLoading}
                 />
               </FormControl>
               <FormDescription>
-                Use @ for the root domain, or enter a subdomain (e.g., www, mail)
+                Utilisez @ pour la racine, ou un sous-domaine (ex. www, mail)
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -200,7 +200,7 @@ export function DNSRecordForm({
             name="priority"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Priority</FormLabel>
+                <FormLabel>Priorité</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -213,7 +213,7 @@ export function DNSRecordForm({
                   />
                 </FormControl>
                 <FormDescription>
-                  Lower values have higher priority (0-65535)
+                  Les valeurs plus basses ont priorité (0–65535)
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -249,19 +249,19 @@ export function DNSRecordForm({
 
         {/* Form Actions */}
         <div className="flex justify-end gap-3">
-          {onCancel && (
+            {onCancel && (
             <Button
               type="button"
               variant="outline"
               onClick={onCancel}
               disabled={isLoading}
             >
-              Cancel
+              Annuler
             </Button>
           )}
           <Button type="submit" disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {mode === "create" ? "Create Record" : "Update Record"}
+            {mode === "create" ? "Créer" : "Mettre à jour"}
           </Button>
         </div>
       </form>

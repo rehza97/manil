@@ -669,24 +669,19 @@ class VPSProvisioningService:
         container_name: str
     ) -> None:
         """Send welcome email with VPS credentials."""
-        subject = f"Your VPS is Ready - {subscription_number}"
-        html_body = f"""
-        <h2>Your VPS is Ready!</h2>
-        <p>Your VPS hosting subscription {subscription_number} has been successfully provisioned.</p>
-        <h3>Connection Details:</h3>
-        <ul>
-            <li><strong>IP Address:</strong> {ip_address}</li>
-            <li><strong>SSH Port:</strong> {ssh_port}</li>
-            <li><strong>Container:</strong> {container_name}</li>
-        </ul>
-        <p>You can connect via SSH using:</p>
-        <pre>ssh root@{ip_address} -p {ssh_port}</pre>
-        <p>Note: Your root password has been sent separately for security.</p>
-        """
+        from app.infrastructure.email import templates
+        
+        template = templates.vps_welcome_template(
+            subscription_number=subscription_number,
+            ip_address=ip_address,
+            ssh_port=ssh_port,
+            container_name=container_name
+        )
         await self.email_service.send_email(
             to=[customer_email],
-            subject=subject,
-            html_body=html_body
+            subject=template["subject"],
+            html_body=template["html"],
+            text_body=template.get("text")
         )
 
     async def _notify_provisioning_failure(self, subscription: VPSSubscription, error: str) -> None:

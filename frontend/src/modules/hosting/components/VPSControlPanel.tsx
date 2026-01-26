@@ -51,27 +51,27 @@ export function VPSControlPanel({
   > = {
     [ContainerStatus.RUNNING]: {
       color: "bg-green-500",
-      text: "Running",
+      text: "En cours",
     },
     [ContainerStatus.STOPPED]: {
       color: "bg-gray-500",
-      text: "Stopped",
+      text: "Arrêté",
     },
     [ContainerStatus.REBOOTING]: {
       color: "bg-yellow-500",
-      text: "Rebooting",
+      text: "Redémarrage",
     },
     [ContainerStatus.CREATING]: {
       color: "bg-blue-500",
-      text: "Creating",
+      text: "Création",
     },
     [ContainerStatus.ERROR]: {
       color: "bg-red-500",
-      text: "Error",
+      text: "Erreur",
     },
     [ContainerStatus.TERMINATED]: {
       color: "bg-gray-500",
-      text: "Terminated",
+      text: "Résilié",
     },
   };
 
@@ -87,11 +87,11 @@ export function VPSControlPanel({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          Container Control
+          Contrôle du conteneur
           <Badge variant="outline" className="ml-auto">
             <div
               className={`w-2 h-2 rounded-full ${config.color} mr-2`}
-              aria-label="Status indicator"
+              aria-label="Indicateur de statut"
             />
             {config.text}
           </Badge>
@@ -188,7 +188,7 @@ export function VPSControlPanel({
         {subscription.container && (
           <div className="mt-4 pt-4 border-t">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Status:</span>
+              <span className="text-muted-foreground">Statut :</span>
               <VPSStatusBadge status={containerStatus} />
             </div>
           </div>

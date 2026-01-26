@@ -4,16 +4,16 @@ import { formatCurrency } from "@/shared/utils/formatters";
 import {
   ProductCarousel,
   PricingDisplay,
-  StockStatus,
   CategoryNav,
   ProductGrid,
 } from "../components";
-import { useProduct, useCategories, useFeaturedProducts } from "../hooks";
+import { useProduct, useCategories, useFeaturedProducts, useCatalogBase } from "../hooks";
 import type { ProductVariant } from "../types";
 
 export const ProductPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const catalogBase = useCatalogBase();
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
 
   // Fetch product details
@@ -21,7 +21,7 @@ export const ProductPage: React.FC = () => {
     data: product,
     isLoading: isLoadingProduct,
     error: productError,
-  } = useProduct(id || "", true);
+  } = useProduct(id || "", false);
 
   // Fetch categories for sidebar
   const {
@@ -74,10 +74,10 @@ export const ProductPage: React.FC = () => {
       <div className="min-h-screen bg-gray-50">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
-            <h1 className="text-2xl font-bold text-red-900">Product not found</h1>
-            <p className="mt-2 text-red-700">The product you're looking for doesn't exist.</p>
-            <Link to="/dashboard/catalog" className="mt-4 inline-block text-blue-600 hover:text-blue-700">
-              ← Back to catalogue
+            <h1 className="text-2xl font-bold text-red-900">Produit introuvable</h1>
+            <p className="mt-2 text-red-700">Ce produit n&apos;existe pas.</p>
+            <Link to={catalogBase} className="mt-4 inline-block text-blue-600 hover:text-blue-700">
+              ← Retour au catalogue
             </Link>
           </div>
         </div>
@@ -95,7 +95,7 @@ export const ProductPage: React.FC = () => {
       <div className="border-b border-gray-200 bg-white px-4 py-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <nav className="flex gap-2 text-sm">
-            <Link to="/dashboard/catalog" className="text-blue-600 hover:text-blue-700">
+            <Link to={catalogBase} className="text-blue-600 hover:text-blue-700">
               Products
             </Link>
             <span className="text-gray-500">/</span>
@@ -123,8 +123,7 @@ export const ProductPage: React.FC = () => {
               {/* Title */}
               <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
 
-              {/* SKU */}
-              <p className="mt-2 text-sm text-gray-600">SKU: {product.sku}</p>
+              <p className="mt-2 text-sm text-gray-600">Réf. : {product.sku}</p>
 
               {/* Rating */}
               {product.rating > 0 && (
@@ -157,9 +156,24 @@ export const ProductPage: React.FC = () => {
                 />
               </div>
 
-              {/* Stock Status */}
-              <div className="mt-4">
-                <StockStatus quantity={product.stock_quantity} />
+              {/* Service Information */}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800">
+                  {product.service_type?.toUpperCase() || "GENERAL"}
+                </span>
+                <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-800 capitalize">
+                  {product.billing_cycle || "one_time"}
+                </span>
+                {product.is_recurring && (
+                  <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
+                    Récurrent
+                  </span>
+                )}
+                {product.trial_period_days && (
+                  <span className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-800">
+                    Essai {product.trial_period_days} jour(s)
+                  </span>
+                )}
               </div>
 
               {/* Description */}
@@ -195,12 +209,15 @@ export const ProductPage: React.FC = () => {
                         }`}
                       >
                         <p className="font-medium text-gray-900">{variant.name}</p>
-                        <p className="text-sm text-gray-600">
-                          Stock: {variant.stock_quantity}
-                        </p>
+                        {variant.tier_name && (
+                          <p className="text-xs text-gray-600 capitalize">
+                            {variant.tier_name} Tier
+                          </p>
+                        )}
                         {variant.price_adjustment && (
                           <p className="text-sm font-semibold text-gray-900 mt-1">
-                            +formatCurrency substitution needed
+                            {variant.price_adjustment > 0 ? "+" : ""}
+                            {formatCurrency(variant.price_adjustment)}
                           </p>
                         )}
                       </button>
@@ -209,12 +226,12 @@ export const ProductPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Add to Cart Button */}
+              {/* Add to Cart / Request Service Button */}
               <button
-                disabled={product.stock_quantity === 0}
+                disabled={!product.is_active}
                 className="mt-8 w-full rounded-lg bg-blue-600 px-6 py-3 text-center font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Add to Cart
+                {product.billing_cycle === "one_time" ? "Ajouter au panier" : "Demander le service"}
               </button>
             </div>
 
@@ -222,30 +239,36 @@ export const ProductPage: React.FC = () => {
             <div className="rounded-lg border border-gray-200 bg-white p-6">
               <h3 className="text-lg font-semibold text-gray-900">Product Details</h3>
               <dl className="mt-4 space-y-4">
-                {product.barcode && (
-                  <>
-                    <dt className="text-sm font-medium text-gray-500">Barcode</dt>
-                    <dd className="text-sm text-gray-900">{product.barcode}</dd>
-                  </>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Service Type</dt>
+                  <dd className="text-sm text-gray-900 capitalize">{product.service_type || "general"}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Billing Cycle</dt>
+                  <dd className="text-sm text-gray-900 capitalize">{product.billing_cycle || "one_time"}</dd>
+                </div>
+                {product.provisioning_type && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Provisioning</dt>
+                    <dd className="text-sm text-gray-900 capitalize">{product.provisioning_type}</dd>
+                  </div>
+                )}
+                {product.trial_period_days && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Trial Period</dt>
+                    <dd className="text-sm text-gray-900">{product.trial_period_days} days</dd>
+                  </div>
                 )}
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Regular Price</dt>
-                  <dd className="text-sm text-gray-900">
-                    formatCurrency substitution needed
-                  </dd>
+                  <dd className="text-sm text-gray-900">{formatCurrency(product.regular_price)}</dd>
                 </div>
-                {product.cost_price && (
-                  <>
-                    <dt className="text-sm font-medium text-gray-500">Cost Price</dt>
-                    <dd className="text-sm text-gray-900">
-                      formatCurrency substitution needed
-                    </dd>
-                  </>
+                {product.sale_price && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Sale Price</dt>
+                    <dd className="text-sm text-gray-900">{formatCurrency(product.sale_price)}</dd>
+                  </div>
                 )}
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Stock</dt>
-                  <dd className="text-sm text-gray-900">{product.stock_quantity} units</dd>
-                </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Views</dt>
                   <dd className="text-sm text-gray-900">{product.view_count}</dd>
@@ -258,7 +281,7 @@ export const ProductPage: React.FC = () => {
           <div className="space-y-6">
             {/* Category Navigation */}
             <div className="rounded-lg border border-gray-200 bg-white p-6">
-              <h3 className="mb-4 text-lg font-semibold text-gray-900">Categories</h3>
+              <h3 className="mb-4 text-lg font-semibold text-gray-900">Catégories</h3>
               <CategoryNav
                 categories={categories}
                 isLoading={isLoadingCategories}
@@ -282,14 +305,16 @@ export const ProductPage: React.FC = () => {
                   {featuredProducts.slice(0, 5).map((feat) => (
                     <Link
                       key={feat.id}
-                      to={`/dashboard/catalog/${feat.id}`}
+                      to={`${catalogBase}/${feat.id}`}
                       className="block rounded-lg border border-gray-200 p-3 hover:bg-gray-50 transition"
                     >
                       <p className="text-sm font-medium text-gray-900 truncate">
                         {feat.name}
                       </p>
                       <p className="text-xs text-gray-600 mt-1">
-                        formatCurrency substitution needed
+                        {formatCurrency(
+                          feat.sale_price ?? feat.regular_price ?? 0
+                        )}
                       </p>
                     </Link>
                   ))}
@@ -299,14 +324,28 @@ export const ProductPage: React.FC = () => {
 
             {/* Share Product */}
             <div className="rounded-lg border border-gray-200 bg-white p-6">
-              <h3 className="mb-4 text-lg font-semibold text-gray-900">Share</h3>
+              <h3 className="mb-4 text-lg font-semibold text-gray-900">Partager</h3>
               <div className="flex gap-2">
-                <button className="flex-1 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                <a
+                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+                    typeof window !== "undefined" ? window.location.href : ""
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 rounded-lg bg-blue-600 px-3 py-2 text-center text-sm font-medium text-white hover:bg-blue-700"
+                >
                   Facebook
-                </button>
-                <button className="flex-1 rounded-lg bg-blue-400 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500">
+                </a>
+                <a
+                  href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(
+                    typeof window !== "undefined" ? window.location.href : ""
+                  )}&text=${encodeURIComponent(product.name)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 rounded-lg bg-blue-400 px-3 py-2 text-center text-sm font-medium text-white hover:bg-blue-500"
+                >
                   Twitter
-                </button>
+                </a>
               </div>
             </div>
           </div>

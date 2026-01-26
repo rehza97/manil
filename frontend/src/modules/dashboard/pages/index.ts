@@ -9,3 +9,4 @@ export { ServicesListPage } from "./ServicesListPage";
 export { ServiceDetailPage } from "./ServiceDetailPage";
 export { SettingsPage } from "./SettingsPage";
 export { NotificationSettingsPage } from "./NotificationSettingsPage";
+export { NotificationsPage } from "./NotificationsPage";

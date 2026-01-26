@@ -51,6 +51,8 @@ import {
 import { formatDZD } from "@/shared/utils/formatters";
 import { formatDateSafe } from "@/shared/utils/formatters";
 import type { SubscriptionStatus } from "@/modules/hosting/types";
+import { useExportReport, useDownloadExport } from "@/modules/reports/hooks/useReports";
+import { useToast } from "@/shared/components/ui/use-toast";
 
 export const AllVPSSubscriptionsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -115,6 +117,39 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
       )
     : subscriptions;
 
+  // Export hooks
+  const { toast } = useToast();
+  const exportMutation = useExportReport();
+  const downloadMutation = useDownloadExport();
+
+  // Export handler
+  const handleExportVPS = async () => {
+    try {
+      // Request export creation
+      const exportResponse = await exportMutation.mutateAsync({
+        report_type: "vps",
+        format: "csv",
+        filters: {}, // Can add date filters later if needed
+      });
+      
+      // Download the file
+      await downloadMutation.mutateAsync(exportResponse.file_name);
+      
+      // Show success notification
+      toast({
+        title: "Export successful",
+        description: "VPS subscriptions exported successfully",
+      });
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast({
+        title: "Export failed",
+        description: error instanceof Error ? error.message : "Failed to export VPS subscriptions",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
@@ -128,9 +163,14 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={handleExportVPS}
+            disabled={exportMutation.isPending || downloadMutation.isPending}
+          >
             <Download className="w-4 h-4" />
-            Export CSV
+            {exportMutation.isPending || downloadMutation.isPending ? "Exporting..." : "Export CSV"}
           </Button>
           <Button className="flex items-center gap-2">
             <Plus className="w-4 h-4" />

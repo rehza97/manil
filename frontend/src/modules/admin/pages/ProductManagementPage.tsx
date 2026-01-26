@@ -9,7 +9,13 @@ import {
   useCreateProduct,
   useDeleteProduct,
 } from "@/modules/products/hooks/useProducts";
-import { CreateProductDTO, UpdateProductDTO } from "@/modules/products/types/product.types";
+import {
+  CreateProductDTO,
+  UpdateProductDTO,
+  ServiceType,
+  BillingCycle,
+  ProvisioningType,
+} from "@/modules/products/types/product.types";
 
 export const ProductManagementPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
@@ -25,31 +31,48 @@ export const ProductManagementPage: React.FC = () => {
   const deleteMutation = useDeleteProduct();
 
   // Form state for new product
-  const [formData, setFormData] = useState<CreateProductDTO>({
+  const [formData, setFormData] = useState<CreateProductDTO & { service_config?: string }>({
     name: "",
     description: "",
     short_description: "",
     category_id: "",
     sku: "",
-    barcode: "",
     regular_price: 0,
     sale_price: undefined,
-    cost_price: undefined,
-    stock_quantity: 0,
-    low_stock_threshold: 10,
+    service_type: "general",
+    billing_cycle: "one_time",
+    is_recurring: false,
+    provisioning_type: undefined,
+    auto_renew: false,
+    trial_period_days: undefined,
+    service_config: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Parse service_config JSON if provided
+      const submitData: CreateProductDTO = {
+        ...formData,
+        service_config: formData.service_config
+          ? (() => {
+              try {
+                return JSON.parse(formData.service_config);
+              } catch {
+                return undefined;
+              }
+            })()
+          : undefined,
+      };
+      
       if (editingProductId) {
         await updateMutation.mutateAsync({
           id: editingProductId,
-          data: formData,
+          data: submitData,
         });
         setEditingProductId(null);
       } else {
-        await createMutation.mutateAsync(formData);
+        await createMutation.mutateAsync(submitData);
       }
       setFormData({
         name: "",
@@ -57,12 +80,15 @@ export const ProductManagementPage: React.FC = () => {
         short_description: "",
         category_id: "",
         sku: "",
-        barcode: "",
         regular_price: 0,
         sale_price: undefined,
-        cost_price: undefined,
-        stock_quantity: 0,
-        low_stock_threshold: 10,
+        service_type: "general",
+        billing_cycle: "one_time",
+        is_recurring: false,
+        provisioning_type: undefined,
+        auto_renew: false,
+        trial_period_days: undefined,
+        service_config: "",
       });
       setShowForm(false);
     } catch (error) {
@@ -205,20 +231,6 @@ export const ProductManagementPage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    Barcode
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.barcode || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, barcode: e.target.value })
-                    }
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
                     Regular Price
                   </label>
                   <input
@@ -256,42 +268,157 @@ export const ProductManagementPage: React.FC = () => {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Cost Price
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.cost_price || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        cost_price: e.target.value
-                          ? parseFloat(e.target.value)
-                          : undefined,
-                      })
-                    }
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                  />
+              </div>
+
+              {/* Service Configuration */}
+              <div className="mt-4">
+                <h3 className="text-lg font-semibold mb-4">Service Configuration</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Service Type
+                    </label>
+                    <select
+                      value={formData.service_type || "general"}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          service_type: e.target.value as ServiceType,
+                        })
+                      }
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                    >
+                      <option value="general">General</option>
+                      <option value="dns">DNS</option>
+                      <option value="ssl">SSL Certificate</option>
+                      <option value="email">Email Hosting</option>
+                      <option value="backup">Backup Service</option>
+                      <option value="monitoring">Monitoring</option>
+                      <option value="domain">Domain Registration</option>
+                      <option value="hosting">Hosting</option>
+                      <option value="storage">Storage</option>
+                      <option value="cdn">CDN</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Billing Cycle
+                    </label>
+                    <select
+                      value={formData.billing_cycle || "one_time"}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          billing_cycle: e.target.value as BillingCycle,
+                        })
+                      }
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                    >
+                      <option value="one_time">One Time</option>
+                      <option value="monthly">Monthly</option>
+                      <option value="yearly">Yearly</option>
+                      <option value="usage_based">Usage Based</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Provisioning Type
+                    </label>
+                    <select
+                      value={formData.provisioning_type || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          provisioning_type: e.target.value
+                            ? (e.target.value as ProvisioningType)
+                            : undefined,
+                        })
+                      }
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                    >
+                      <option value="">None</option>
+                      <option value="automatic">Automatic</option>
+                      <option value="manual">Manual</option>
+                      <option value="api">API</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Trial Period (days)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.trial_period_days || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          trial_period_days: e.target.value
+                            ? parseInt(e.target.value)
+                            : undefined,
+                        })
+                      }
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                      placeholder="e.g., 14"
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Service Configuration (JSON)
+                    </label>
+                    <textarea
+                      value={formData.service_config || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, service_config: e.target.value })
+                      }
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm"
+                      rows={4}
+                      placeholder='{"key": "value"}'
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Optional JSON configuration for service-specific settings
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Stock Quantity
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    value={formData.stock_quantity}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        stock_quantity: parseInt(e.target.value),
-                      })
-                    }
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                  />
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Recurring Service
+                    </label>
+                    <input
+                      type="checkbox"
+                      checked={formData.is_recurring || false}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          is_recurring: e.target.checked,
+                        })
+                      }
+                      className="h-4 w-4 text-blue-600 rounded"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Auto Renew
+                    </label>
+                    <input
+                      type="checkbox"
+                      checked={formData.auto_renew || false}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          auto_renew: e.target.checked,
+                        })
+                      }
+                      className="h-4 w-4 text-blue-600 rounded"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -363,7 +490,7 @@ export const ProductManagementPage: React.FC = () => {
                       Sale Price
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">
-                      Stock
+                      Service
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">
                       Status
@@ -388,8 +515,18 @@ export const ProductManagementPage: React.FC = () => {
                       <td className="px-6 py-4 text-sm text-gray-900">
                         {product.sale_price ? `$${product.sale_price}` : "-"}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {product.stock_quantity}
+                      <td className="px-6 py-4 text-sm">
+                        <div className="space-y-1">
+                          <span className="inline-block px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded">
+                            {product.service_type || "general"}
+                          </span>
+                          <div className="text-xs text-gray-500">
+                            {product.billing_cycle || "one_time"}
+                            {product.is_recurring && (
+                              <span className="ml-1 text-blue-600">• Recurring</span>
+                            )}
+                          </div>
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-sm">
                         <div className="flex gap-2">
@@ -436,12 +573,17 @@ export const ProductManagementPage: React.FC = () => {
                                 short_description: product.short_description,
                                 category_id: product.category_id,
                                 sku: product.sku,
-                                barcode: product.barcode,
                                 regular_price: product.regular_price,
                                 sale_price: product.sale_price,
-                                cost_price: product.cost_price,
-                                stock_quantity: product.stock_quantity,
-                                low_stock_threshold: product.low_stock_threshold,
+                                service_type: product.service_type || "general",
+                                billing_cycle: product.billing_cycle || "one_time",
+                                is_recurring: product.is_recurring || false,
+                                provisioning_type: product.provisioning_type,
+                                auto_renew: product.auto_renew || false,
+                                trial_period_days: product.trial_period_days,
+                                service_config: product.service_config
+                                  ? JSON.stringify(product.service_config, null, 2)
+                                  : "",
                               });
                               setShowForm(true);
                             }}

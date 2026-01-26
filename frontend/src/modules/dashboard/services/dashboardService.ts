@@ -7,7 +7,10 @@
  */
 
 import { dashboardApi } from "@/shared/api";
-import type { DashboardResponse } from "@/shared/api/dashboard";
+import type {
+  DashboardResponse,
+  CorporateDashboardResponse,
+} from "@/shared/api/dashboard";
 
 export const dashboardService = {
   /**
@@ -15,6 +18,15 @@ export const dashboardService = {
    */
   getCustomerDashboard: async (period: string = "month"): Promise<DashboardResponse> => {
     return await dashboardApi.getCustomerDashboard(period);
+  },
+
+  /**
+   * Get corporate dashboard data
+   */
+  getCorporateDashboard: async (
+    period: string = "month"
+  ): Promise<CorporateDashboardResponse> => {
+    return await dashboardApi.getCorporateDashboard(period);
   },
 };
 

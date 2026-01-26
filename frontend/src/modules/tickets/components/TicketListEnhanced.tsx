@@ -66,16 +66,16 @@ const priorityColors: Record<string, string> = {
 
 const getColumns = (isClient: boolean) =>
   [
-    { id: "title", label: "Title", visible: true },
-    { id: "status", label: "Status", visible: true },
-    { id: "priority", label: "Priority", visible: true },
+    { id: "title", label: "Titre", visible: true },
+    { id: "status", label: "Statut", visible: true },
+    { id: "priority", label: "Priorité", visible: true },
     ...(isClient
       ? []
       : [
-          { id: "customer", label: "Customer", visible: true },
-          { id: "assignedTo", label: "Assigned To", visible: true },
+          { id: "customer", label: "Client", visible: true },
+          { id: "assignedTo", label: "Assigné à", visible: true },
         ]),
-    { id: "createdAt", label: "Created", visible: true },
+    { id: "createdAt", label: "Créé le", visible: true },
   ] as const;
 
 export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
@@ -242,7 +242,7 @@ export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
   );
 
   if (isLoading) {
-    return <div className="text-center py-8">Loading tickets...</div>;
+    return <div className="text-center py-8">Chargement des tickets…</div>;
   }
 
   return (
@@ -251,7 +251,7 @@ export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
       {!isClient && selectedTickets.size > 0 && (
         <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="text-sm font-medium text-blue-900">
-            {selectedTickets.size} ticket(s) selected
+            {selectedTickets.size} ticket(s) sélectionné(s)
           </div>
           <div className="flex gap-2">
             <Select
@@ -261,15 +261,15 @@ export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
               }
             >
               <SelectTrigger className="w-40">
-                <SelectValue placeholder="Change status..." />
+                <SelectValue placeholder="Changer le statut…" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={TicketStatus.OPEN}>Open</SelectItem>
+                <SelectItem value={TicketStatus.OPEN}>Ouvert</SelectItem>
                 <SelectItem value={TicketStatus.IN_PROGRESS}>
-                  In Progress
+                  En cours
                 </SelectItem>
-                <SelectItem value={TicketStatus.RESOLVED}>Resolved</SelectItem>
-                <SelectItem value={TicketStatus.CLOSED}>Closed</SelectItem>
+                <SelectItem value={TicketStatus.RESOLVED}>Résolu</SelectItem>
+                <SelectItem value={TicketStatus.CLOSED}>Fermé</SelectItem>
               </SelectContent>
             </Select>
             <Button
@@ -281,14 +281,14 @@ export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
                 }
               }}
             >
-              Assign
+              Assigner
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setSelectedTickets(new Set())}
             >
-              Clear Selection
+              Effacer la sélection
             </Button>
           </div>
         </div>
@@ -435,14 +435,14 @@ export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
                       <DropdownMenuItem
                         onClick={() => onSelectTicket?.(ticket.id)}
                       >
-                        View Details
+                        Voir le détail
                       </DropdownMenuItem>
                       {!isClient && (
                         <>
-                          <DropdownMenuItem>Edit</DropdownMenuItem>
-                          <DropdownMenuItem>Assign</DropdownMenuItem>
+                          <DropdownMenuItem>Modifier</DropdownMenuItem>
+                          <DropdownMenuItem>Assigner</DropdownMenuItem>
                           <DropdownMenuItem className="text-red-600">
-                            Delete
+                            Supprimer
                           </DropdownMenuItem>
                         </>
                       )}
@@ -458,9 +458,7 @@ export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
       {pagination && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600">
-            Showing {(page - 1) * 20 + 1} to{" "}
-            {Math.min(page * 20, pagination.total)} of {pagination.total}{" "}
-            tickets
+            {(page - 1) * 20 + 1} – {Math.min(page * 20, pagination.total)} sur {pagination.total} tickets
           </div>
           <div className="flex gap-2">
             <Button

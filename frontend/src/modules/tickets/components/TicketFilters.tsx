@@ -47,92 +47,91 @@ export const TicketFilters: React.FC<TicketFiltersProps> = ({
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Filters</CardTitle>
+          <CardTitle className="text-lg">Filtres</CardTitle>
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={onClear}>
               <X className="h-4 w-4 mr-1" />
-              Clear
+              Effacer
             </Button>
           )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="search">Search</Label>
+          <Label htmlFor="search">Recherche</Label>
           <Input
             id="search"
-            placeholder="Search tickets..."
+            placeholder="Rechercher des tickets…"
             value={filters.search || ""}
             onChange={(e) => updateFilter("search", e.target.value)}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="status">Status</Label>
+          <Label htmlFor="status">Statut</Label>
           <Select
             value={filters.status || "all"}
             onValueChange={(value) => updateFilter("status", value === "all" ? undefined : value)}
           >
             <SelectTrigger id="status">
-              <SelectValue placeholder="All statuses" />
+              <SelectValue placeholder="Tous les statuts" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value={TicketStatus.OPEN}>Open</SelectItem>
-              <SelectItem value={TicketStatus.IN_PROGRESS}>In Progress</SelectItem>
-              <SelectItem value={TicketStatus.RESOLVED}>Resolved</SelectItem>
-              <SelectItem value={TicketStatus.CLOSED}>Closed</SelectItem>
+              <SelectItem value="all">Tous les statuts</SelectItem>
+              <SelectItem value={TicketStatus.OPEN}>Ouvert</SelectItem>
+              <SelectItem value={TicketStatus.IN_PROGRESS}>En cours</SelectItem>
+              <SelectItem value={TicketStatus.RESOLVED}>Résolu</SelectItem>
+              <SelectItem value={TicketStatus.CLOSED}>Fermé</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="priority">Priority</Label>
+          <Label htmlFor="priority">Priorité</Label>
           <Select
             value={filters.priority || "all"}
             onValueChange={(value) => updateFilter("priority", value === "all" ? undefined : value)}
           >
             <SelectTrigger id="priority">
-              <SelectValue placeholder="All priorities" />
+              <SelectValue placeholder="Toutes les priorités" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All priorities</SelectItem>
-              <SelectItem value={TicketPriority.LOW}>Low</SelectItem>
-              <SelectItem value={TicketPriority.MEDIUM}>Medium</SelectItem>
-              <SelectItem value={TicketPriority.HIGH}>High</SelectItem>
-              <SelectItem value={TicketPriority.URGENT}>Urgent</SelectItem>
+              <SelectItem value="all">Toutes les priorités</SelectItem>
+              <SelectItem value={TicketPriority.LOW}>Basse</SelectItem>
+              <SelectItem value={TicketPriority.MEDIUM}>Moyenne</SelectItem>
+              <SelectItem value={TicketPriority.HIGH}>Haute</SelectItem>
+              <SelectItem value={TicketPriority.URGENT}>Urgente</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="category">Category</Label>
+          <Label htmlFor="category">Catégorie</Label>
           <Select
             value={filters.category || "all"}
             onValueChange={(value) => updateFilter("category", value === "all" ? undefined : value)}
           >
             <SelectTrigger id="category">
-              <SelectValue placeholder="All categories" />
+              <SelectValue placeholder="Toutes les catégories" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All categories</SelectItem>
-              {/* Categories will be loaded from API */}
+              <SelectItem value="all">Toutes les catégories</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="assignedTo">Assigned To</Label>
+          <Label htmlFor="assignedTo">Assigné à</Label>
           <Input
             id="assignedTo"
-            placeholder="Agent name or ID"
+            placeholder="Nom ou ID de l'agent"
             value={filters.assignedTo || ""}
             onChange={(e) => updateFilter("assignedTo", e.target.value)}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="dateFrom">Date From</Label>
+          <Label htmlFor="dateFrom">Du</Label>
           <Input
             id="dateFrom"
             type="date"
@@ -142,7 +141,7 @@ export const TicketFilters: React.FC<TicketFiltersProps> = ({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="dateTo">Date To</Label>
+          <Label htmlFor="dateTo">Au</Label>
           <Input
             id="dateTo"
             type="date"

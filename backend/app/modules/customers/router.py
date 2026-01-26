@@ -20,6 +20,9 @@ from app.modules.customers.schemas import (
     CustomerType,
 )
 from app.modules.customers.service import CustomerService
+from app.modules.customers.workflow import CustomerWorkflowService
+from app.modules.customers.status_history import CustomerStatusHistoryService
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
@@ -134,23 +137,113 @@ async def delete_customer(
     await service.delete(customer_id, deleted_by=current_user.id)
 
 
+class StatusChangeRequest(BaseModel):
+    """Request schema for status change."""
+    reason: str = Field(..., min_length=3, description="Reason for status change")
+
+
 @router.post("/{customer_id}/activate", response_model=CustomerResponse)
 async def activate_customer(
     customer_id: str,
+    request: StatusChangeRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_permission(Permission.CUSTOMERS_ACTIVATE)),
 ):
-    """Activate a customer account."""
+    """Activate a customer account with validation."""
     service = CustomerService(db)
-    return await service.activate(customer_id, updated_by=current_user.id)
+    return await service.activate(customer_id, updated_by=current_user.id, reason=request.reason)
 
 
 @router.post("/{customer_id}/suspend", response_model=CustomerResponse)
 async def suspend_customer(
     customer_id: str,
+    request: StatusChangeRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_permission(Permission.CUSTOMERS_SUSPEND)),
 ):
-    """Suspend a customer account."""
+    """Suspend a customer account with validation."""
     service = CustomerService(db)
-    return await service.suspend(customer_id, updated_by=current_user.id)
+    return await service.suspend(customer_id, updated_by=current_user.id, reason=request.reason)
+
+
+@router.post("/{customer_id}/submit-for-approval", response_model=CustomerResponse)
+async def submit_for_approval(
+    customer_id: str,
+    notes: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.CUSTOMERS_EDIT)),
+):
+    """Submit customer for approval."""
+    workflow_service = CustomerWorkflowService(db)
+    return await workflow_service.submit_for_approval(customer_id, current_user.id, notes)
+
+
+class ApprovalRequest(BaseModel):
+    """Request schema for approval."""
+    notes: Optional[str] = Field(None, description="Optional approval notes")
+
+
+class RejectionRequest(BaseModel):
+    """Request schema for rejection."""
+    reason: str = Field(..., min_length=3, description="Reason for rejection")
+
+
+@router.post("/{customer_id}/approve", response_model=CustomerResponse)
+async def approve_customer(
+    customer_id: str,
+    request: ApprovalRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.CUSTOMERS_APPROVE)),
+):
+    """Approve customer."""
+    workflow_service = CustomerWorkflowService(db)
+    return await workflow_service.approve_customer(customer_id, current_user.id, request.notes)
+
+
+@router.post("/{customer_id}/reject", response_model=CustomerResponse)
+async def reject_customer(
+    customer_id: str,
+    request: RejectionRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.CUSTOMERS_REJECT)),
+):
+    """Reject customer approval."""
+    workflow_service = CustomerWorkflowService(db)
+    return await workflow_service.reject_customer(customer_id, current_user.id, request.reason)
+
+
+@router.get("/{customer_id}/status-history")
+async def get_status_history(
+    customer_id: str,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.CUSTOMERS_VIEW)),
+):
+    """Get status change history for a customer."""
+    history_service = CustomerStatusHistoryService(db)
+    return await history_service.get_status_history(customer_id, skip=skip, limit=limit)
+
+
+@router.get("/{customer_id}/profile/completeness")
+async def get_profile_completeness(
+    customer_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.CUSTOMERS_VIEW)),
+):
+    """Get profile completeness information for a customer."""
+    from app.modules.customers.profile_service import CustomerProfileService
+    profile_service = CustomerProfileService(db)
+    return await profile_service.get_profile_completeness(customer_id)
+
+
+@router.get("/{customer_id}/profile/missing-fields")
+async def get_missing_fields(
+    customer_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.CUSTOMERS_VIEW)),
+):
+    """Get list of missing required fields for customer profile."""
+    from app.modules.customers.profile_service import CustomerProfileService
+    profile_service = CustomerProfileService(db)
+    return await profile_service.get_missing_fields(customer_id)

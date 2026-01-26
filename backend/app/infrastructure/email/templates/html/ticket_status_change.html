@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Ticket Status Changed</h2>
+<p>Your support ticket status has been updated.</p>
+<p><strong>Ticket ID:</strong> {{ ticket_id }}</p>
+<p><strong>Subject:</strong> {{ subject }}</p>
+<p><strong>Previous Status:</strong> {{ old_status|replace('_', ' ')|title }}</p>
+<p><strong>New Status:</strong> {{ new_status|replace('_', ' ')|title }}</p>
+<a href="{{ site_url }}/tickets/{{ ticket_id }}" class="button">View Ticket</a>
+{% endblock %}

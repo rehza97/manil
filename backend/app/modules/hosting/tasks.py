@@ -966,20 +966,20 @@ def provision_vps_async(self, subscription_id: str) -> Dict[str, Any]:
 
             # Send email notification (use asyncio.run for this specific async operation)
             try:
+                from app.infrastructure.email import templates
                 admin_email = settings.ADMIN_EMAIL
                 email_service = EmailService()
+                template = templates.vps_provisioning_failure_template(
+                    subscription_id=subscription_id,
+                    task_id=task_id,
+                    error_message=str(exc),
+                    timestamp=datetime.utcnow().isoformat()
+                )
                 asyncio.run(email_service.send_email(
                     to=[admin_email],
-                    subject=f"VPS Provisioning Failed: Subscription {subscription_id}",
-                    html_body=f"""
-                        <h2>VPS Provisioning Failed</h2>
-                        <p>The VPS provisioning task failed after {self.max_retries} retries.</p>
-                        <p><strong>Subscription ID:</strong> {subscription_id}</p>
-                        <p><strong>Task ID:</strong> {task_id}</p>
-                        <p><strong>Error:</strong> {str(exc)}</p>
-                        <p><strong>Timestamp:</strong> {datetime.utcnow().isoformat()}</p>
-                        <p>Please check the logs and investigate the issue.</p>
-                    """
+                    subject=template["subject"],
+                    html_body=template["html"],
+                    text_body=template.get("text")
                 ))
             except Exception as email_error:
                 logger.error(f"[Task {task_id}] Failed to send admin notification email: {email_error}")

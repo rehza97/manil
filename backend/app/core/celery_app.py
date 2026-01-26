@@ -23,7 +23,7 @@ celery_app = Celery(
     "cloudmanager",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
-    include=["app.modules.hosting.tasks"],
+    include=["app.modules.hosting.tasks", "app.modules.tickets.tasks.auto_close_tasks"],
 )
 
 # Celery configuration

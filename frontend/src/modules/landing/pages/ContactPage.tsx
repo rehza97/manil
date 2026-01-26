@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Button } from "@/shared/components/ui/button";
-import { Badge } from "@/shared/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
 import { Textarea } from "@/shared/components/ui/textarea";
@@ -12,27 +11,27 @@ import { LandingFooter } from "../components/LandingFooter";
 const contactInfo = [
   {
     icon: Mail,
-    title: "Email",
-    details: "support@cloudhost.dz",
-    description: "We'll respond within 24 hours",
+    title: "E-mail",
+    details: "support@cloudmanager.dz",
+    description: "Réponse sous 24 heures",
   },
   {
     icon: Phone,
-    title: "Phone",
+    title: "Téléphone",
     details: "+213 (0) 21 XX XX XX",
-    description: "24/7 support hotline (Algeria)",
+    description: "Support (Algérie)",
   },
   {
     icon: MapPin,
-    title: "Address",
-    details: "Algiers, Algeria",
-    description: "Serving all of Algeria",
+    title: "Adresse",
+    details: "Alger, Algérie",
+    description: "Au service de toute l'Algérie",
   },
   {
     icon: Clock,
-    title: "Business Hours",
-    details: "24/7 Support Available",
-    description: "Local time (GMT+1)",
+    title: "Horaires",
+    details: "Support disponible",
+    description: "Heure locale (GMT+1)",
   },
 ];
 
@@ -43,119 +42,97 @@ export const ContactPage = () => {
     subject: "",
     message: "",
   });
-
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real application, this would send the form data to your backend
     console.log("Form submitted:", formData);
     setSubmitted(true);
-
-    // Reset form after 3 seconds
     setTimeout(() => {
       setSubmitted(false);
-      setFormData({
-        name: "",
-        email: "",
-        subject: "",
-        message: "",
-      });
+      setFormData({ name: "", email: "", subject: "", message: "" });
     }, 3000);
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <div className="min-h-screen bg-white">
       <LandingNavigation />
 
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-16">
-            <Badge className="mb-4 bg-blue-100 text-blue-700 hover:bg-blue-200">
-              Get in Touch
-            </Badge>
-            <h1 className="text-5xl md:text-6xl font-bold text-slate-900 mb-6">
-              Contact{" "}
-              <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-                Our Team
-              </span>
+      <section className="bg-[linear-gradient(135deg,#f0fdfa_0%,#e0f2fe_50%,#f1f5f9_100%)] pb-24 pt-36">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-sm font-medium uppercase tracking-wider text-[#38ada9]">
+              Contact
+            </p>
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+              Contactez notre équipe
             </h1>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              Have a question? We're here to help. Reach out to our team and we'll get back to you as soon as possible.
+            <p className="mt-4 text-lg text-slate-600">
+              Une question sur CloudManager ? Écrivez-nous, nous vous répondrons rapidement.
             </p>
           </div>
+        </div>
+      </section>
 
-          <div className="grid lg:grid-cols-2 gap-12 mb-20">
-            {/* Contact Form */}
-            <Card>
+      <section className="border-t border-slate-200 py-24">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="grid gap-12 lg:grid-cols-2">
+            <Card className="border-slate-200/80">
               <CardHeader>
-                <CardTitle className="text-2xl">Send us a Message</CardTitle>
+                <CardTitle className="text-xl">Envoyez-nous un message</CardTitle>
                 <CardDescription>
-                  Fill out the form below and we'll get back to you within 24 hours
+                  Remplissez le formulaire et nous vous répondrons sous 24 heures.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {submitted ? (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-                    <div className="text-green-600 text-lg font-semibold mb-2">
-                      Message Sent Successfully!
-                    </div>
-                    <p className="text-slate-600">
-                      We'll get back to you as soon as possible.
-                    </p>
+                  <div className="rounded-xl border border-green-200 bg-green-50 p-6 text-center">
+                    <p className="font-semibold text-green-700">Message envoyé avec succès.</p>
+                    <p className="mt-1 text-sm text-slate-600">Nous vous répondrons au plus vite.</p>
                   </div>
                 ) : (
-                  <form onSubmit={handleSubmit} className="space-y-6">
+                  <form id="contact-form" onSubmit={handleSubmit} className="space-y-5">
                     <div>
-                      <Label htmlFor="name">Name *</Label>
+                      <Label htmlFor="name">Nom *</Label>
                       <Input
                         id="name"
                         name="name"
                         value={formData.name}
                         onChange={handleChange}
-                        placeholder="Your full name"
+                        placeholder="Votre nom complet"
                         required
-                        className="mt-1"
+                        className="mt-1.5 border-slate-200"
                       />
                     </div>
-
                     <div>
-                      <Label htmlFor="email">Email *</Label>
+                      <Label htmlFor="email">E-mail *</Label>
                       <Input
                         id="email"
                         name="email"
                         type="email"
                         value={formData.email}
                         onChange={handleChange}
-                        placeholder="your.email@example.com"
+                        placeholder="votre@email.com"
                         required
-                        className="mt-1"
+                        className="mt-1.5 border-slate-200"
                       />
                     </div>
-
                     <div>
-                      <Label htmlFor="subject">Subject *</Label>
+                      <Label htmlFor="subject">Sujet *</Label>
                       <Input
                         id="subject"
                         name="subject"
                         value={formData.subject}
                         onChange={handleChange}
-                        placeholder="How can we help?"
+                        placeholder="Comment pouvons-nous vous aider ?"
                         required
-                        className="mt-1"
+                        className="mt-1.5 border-slate-200"
                       />
                     </div>
-
                     <div>
                       <Label htmlFor="message">Message *</Label>
                       <Textarea
@@ -163,69 +140,52 @@ export const ContactPage = () => {
                         name="message"
                         value={formData.message}
                         onChange={handleChange}
-                        placeholder="Tell us more about your inquiry..."
+                        placeholder="Décrivez votre demande..."
                         required
-                        className="mt-1 min-h-[150px]"
+                        className="mt-1.5 min-h-[140px] border-slate-200"
                       />
                     </div>
-
-                    <Button type="submit" className="w-full" size="lg">
-                      Send Message
+                    <Button
+                      type="submit"
+                      className="w-full bg-[#38ada9] text-white hover:bg-[#38ada9]/90"
+                      size="lg"
+                    >
+                      Envoyer le message
                     </Button>
                   </form>
                 )}
               </CardContent>
             </Card>
 
-            {/* Contact Information */}
-            <div>
-              <div className="space-y-6">
-                {contactInfo.map((info, index) => (
-                  <Card key={index} className="hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                      <div className="flex items-start gap-4">
-                        <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                          <info.icon className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-xl mb-1">{info.title}</CardTitle>
-                          <p className="text-lg font-semibold text-blue-600 mb-1">
-                            {info.details}
-                          </p>
-                          <CardDescription>{info.description}</CardDescription>
-                        </div>
+            <div className="space-y-6">
+              {contactInfo.map((info, index) => (
+                <Card key={index} className="border-slate-200/80 transition hover:border-[#38ada9]/30">
+                  <CardHeader>
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#38ada9]/10 text-[#38ada9]">
+                        <info.icon className="h-6 w-6" />
                       </div>
-                    </CardHeader>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Live Chat CTA */}
-              <Card className="mt-6 bg-gradient-to-r from-blue-600 to-cyan-600 text-white border-0">
+                      <div>
+                        <CardTitle className="text-lg">{info.title}</CardTitle>
+                        <p className="mt-0.5 font-medium text-[#38ada9]">{info.details}</p>
+                        <CardDescription className="mt-1">{info.description}</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
+              ))}
+              <Card className="border-[#38ada9]/30 bg-[#38ada9]/5">
                 <CardContent className="pt-6">
-                  <h3 className="text-xl font-bold mb-2">Need Immediate Help?</h3>
-                  <p className="mb-4 opacity-90">
-                    Chat with our support team right now
+                  <h3 className="font-semibold text-slate-900">Besoin d&apos;aide immédiate ?</h3>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Notre équipe support est disponible pour vous accompagner sur CloudManager.
                   </p>
-                  <Button variant="secondary" size="lg" className="w-full">
-                    Start Live Chat
+                  <Button asChild className="mt-4 w-full bg-[#38ada9] text-white hover:bg-[#38ada9]/90" size="lg">
+                    <a href="#contact-form">Remplir le formulaire</a>
                   </Button>
                 </CardContent>
               </Card>
             </div>
-          </div>
-
-          {/* FAQ Prompt */}
-          <div className="text-center bg-slate-50 rounded-2xl p-12">
-            <h3 className="text-2xl font-bold text-slate-900 mb-4">
-              Looking for Answers?
-            </h3>
-            <p className="text-slate-600 mb-6">
-              Check out our comprehensive FAQ section for quick answers to common questions
-            </p>
-            <Button variant="outline" size="lg">
-              View FAQ
-            </Button>
           </div>
         </div>
       </section>

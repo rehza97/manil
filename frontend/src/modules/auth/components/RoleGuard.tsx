@@ -14,7 +14,7 @@ import { Loader2 } from "lucide-react";
 
 interface RoleGuardProps {
   children: ReactNode;
-  allowedRole: "admin" | "corporate" | "client";
+  allowedRole: "admin" | "corporate" | "client" | "support_agent" | "support_supervisor";
   layoutName?: string;
 }
 
@@ -52,6 +52,8 @@ export const RoleGuard = ({
         admin: "/admin",
         corporate: "/corporate",
         client: "/dashboard",
+        support_agent: "/dashboard",
+        support_supervisor: "/dashboard",
       };
 
       const userDashboard = roleDashboards[user.role];
@@ -95,7 +97,7 @@ export const RoleGuard = ({
  */
 export const withRoleGuard = <P extends object>(
   Component: React.ComponentType<P>,
-  allowedRole: "admin" | "corporate" | "client",
+  allowedRole: "admin" | "corporate" | "client" | "support_agent" | "support_supervisor",
   layoutName?: string
 ) => {
   return (props: P) => (

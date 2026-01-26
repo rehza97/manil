@@ -77,19 +77,19 @@ export function ImageUploadForm({
     try {
       const parsed = JSON.parse(value);
       if (typeof parsed !== "object" || Array.isArray(parsed)) {
-        setBuildArgsError("Build args must be a JSON object");
+        setBuildArgsError("Les arguments de build doivent être un objet JSON");
         return false;
       }
       for (const [key, val] of Object.entries(parsed)) {
         if (typeof val !== "string") {
-          setBuildArgsError("All build arg values must be strings");
+          setBuildArgsError("Toutes les valeurs des arguments doivent être des chaînes");
           return false;
         }
       }
       setBuildArgsError(null);
       return true;
     } catch {
-      setBuildArgsError("Invalid JSON format");
+      setBuildArgsError("Format JSON invalide");
       return false;
     }
   };
@@ -144,23 +144,23 @@ export function ImageUploadForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Upload Custom Docker Image</CardTitle>
+        <CardTitle>Téléverser une image Docker</CardTitle>
         <CardDescription>
-          Upload a Docker project archive (tar.gz, tar, or zip) to build a custom image.
+          Téléversez une archive de projet Docker (tar.gz, tar ou zip) pour créer une image personnalisée.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* File Upload */}
           <div className="space-y-2">
-            <Label htmlFor="file">Project Archive *</Label>
+            <Label htmlFor="file">Archive du projet *</Label>
             <div className="flex items-center gap-4">
               <Input
                 id="file"
                 type="file"
                 accept=".tar.gz,.tar,.zip"
                 {...register("file", {
-                  required: "Please select a file to upload",
+                  required: "Veuillez sélectionner un fichier à téléverser",
                   onChange: handleFileChange,
                 })}
                 className="cursor-pointer"
@@ -195,14 +195,14 @@ export function ImageUploadForm({
 
           {/* Image Name */}
           <div className="space-y-2">
-            <Label htmlFor="image_name">Image Name</Label>
+            <Label htmlFor="image_name">Nom de l'image</Label>
             <Input
               id="image_name"
               placeholder="my-custom-app"
               {...register("image_name", {
                 pattern: {
                   value: /^[a-z0-9]([a-z0-9._-]*[a-z0-9])?$/,
-                  message: "Invalid image name format (lowercase alphanumeric, dots, dashes, underscores)",
+                  message: "Format invalide (minuscules, chiffres, points, tirets, underscores)",
                 },
               })}
             />
@@ -210,20 +210,20 @@ export function ImageUploadForm({
               <p className="text-sm text-destructive">{errors.image_name.message}</p>
             )}
             <p className="text-xs text-muted-foreground">
-              Optional. If not provided, will be derived from filename.
+              Optionnel. Sera dérivé du nom du fichier si absent.
             </p>
           </div>
 
           {/* Image Tag */}
           <div className="space-y-2">
-            <Label htmlFor="image_tag">Image Tag</Label>
+            <Label htmlFor="image_tag">Tag de l'image</Label>
             <Input
               id="image_tag"
               placeholder="latest"
               {...register("image_tag", {
                 pattern: {
                   value: /^[a-z0-9]([a-z0-9._-]*[a-z0-9])?$/,
-                  message: "Invalid tag format",
+                  message: "Format de tag invalide",
                 },
               })}
             />
@@ -234,20 +234,20 @@ export function ImageUploadForm({
 
           {/* Dockerfile Path */}
           <div className="space-y-2">
-            <Label htmlFor="dockerfile_path">Dockerfile Path</Label>
+            <Label htmlFor="dockerfile_path">Chemin du Dockerfile</Label>
             <Input
               id="dockerfile_path"
               placeholder="Dockerfile"
               {...register("dockerfile_path")}
             />
             <p className="text-xs text-muted-foreground">
-              Path to Dockerfile within the archive (default: Dockerfile)
+              Chemin du Dockerfile dans l'archive (par défaut : Dockerfile)
             </p>
           </div>
 
           {/* Build Args */}
           <div className="space-y-2">
-            <Label htmlFor="build_args">Build Arguments (JSON)</Label>
+            <Label htmlFor="build_args">Arguments de build (JSON)</Label>
             <Textarea
               id="build_args"
               placeholder='{"NODE_ENV": "production", "API_URL": "https://api.example.com"}'
@@ -264,7 +264,7 @@ export function ImageUploadForm({
               <p className="text-sm text-destructive">{errors.build_args.message}</p>
             )}
             <p className="text-xs text-muted-foreground">
-              Optional JSON object with build-time variables (e.g., {"{"}"NODE_ENV": "production"{"}"})
+              Objet JSON optionnel (ex. {"{"}"NODE_ENV": "production"{"}"})
             </p>
           </div>
 
@@ -274,7 +274,7 @@ export function ImageUploadForm({
               <AlertDescription>
                 {uploadMutation.error instanceof Error
                   ? uploadMutation.error.message
-                  : "Failed to upload image"}
+                  : "Échec du téléversement de l'image"}
               </AlertDescription>
             </Alert>
           )}
@@ -283,7 +283,7 @@ export function ImageUploadForm({
           <div className="flex gap-2 justify-end">
             {onCancel && (
               <Button type="button" variant="outline" onClick={onCancel}>
-                Cancel
+                Annuler
               </Button>
             )}
             <Button
@@ -293,12 +293,12 @@ export function ImageUploadForm({
               {uploadMutation.isPending ? (
                 <>
                   <Upload className="h-4 w-4 mr-2 animate-spin" />
-                  Uploading...
+                  Téléversement…
                 </>
               ) : (
                 <>
                   <Upload className="h-4 w-4 mr-2" />
-                  Upload Image
+                  Téléverser l'image
                 </>
               )}
             </Button>

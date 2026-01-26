@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import type { ProductCategory } from "../types";
+import { useCatalogBase } from "../hooks";
 
 interface CategoryNavProps {
   categories: ProductCategory[];
@@ -15,6 +16,7 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({
   isLoading = false,
   variant = "sidebar",
 }) => {
+  const base = useCatalogBase();
   const parentCategories = categories.filter((c) => !c.parent_category_id);
   const getChildCategories = (parentId: string) =>
     categories.filter((c) => c.parent_category_id === parentId);
@@ -22,7 +24,7 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({
   if (variant === "inline") {
     return (
       <div className="flex flex-wrap gap-2">
-        <Link to="/dashboard/catalog">
+        <Link to={base}>
           <button
             className={`rounded-full px-4 py-2 text-sm font-medium transition ${
               !activeCategory
@@ -30,13 +32,13 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({
                 : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
             }`}
           >
-            All Products
+            Tous les produits
           </button>
         </Link>
         {parentCategories.map((category) => (
           <Link
             key={category.id}
-            to={`/dashboard/catalog?category=${category.id}`}
+            to={`${base}?category=${category.id}`}
           >
             <button
               className={`rounded-full px-4 py-2 text-sm font-medium transition ${
@@ -59,7 +61,7 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({
   // Sidebar variant (default)
   return (
     <nav className="space-y-2">
-      <Link to="/dashboard/catalog">
+      <Link to={base}>
         <button
           className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition ${
             !activeCategory
@@ -67,7 +69,7 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({
               : "text-gray-700 hover:bg-gray-50"
           }`}
         >
-          All Products
+          Tous les produits
         </button>
       </Link>
 
@@ -85,7 +87,7 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({
 
             return (
               <div key={category.id}>
-                <Link to={`/dashboard/catalog?category=${category.id}`}>
+                <Link to={`${base}?category=${category.id}`}>
                   <button
                     className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition flex items-center justify-between ${
                       isActive
@@ -106,7 +108,7 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({
                     {children.map((child) => (
                       <Link
                         key={child.id}
-                        to={`/dashboard/catalog?category=${child.id}`}
+                        to={`${base}?category=${child.id}`}
                       >
                         <button
                           className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition ${

@@ -33,12 +33,21 @@ from app.modules.tickets.router_phase2 import router as tickets_phase2_router
 from app.modules.tickets.attachments_router import router as ticket_attachments_router
 from app.modules.tickets.routes.admin_support_routes import router as admin_support_router
 from app.modules.products.routes import router as products_router
+from app.modules.products.quote_routes import router as product_quote_routes
 from app.modules.orders.routes import router as orders_router
 from app.modules.quotes.routes import router as quotes_router
 from app.modules.invoices.routes import router as invoices_router
 from app.modules.reports.routes import router as reports_router
 from app.modules.reports.admin_routes import router as admin_reports_router
+from app.modules.revenue.router import router as revenue_router
 from app.modules.settings.routes import router as settings_router
+from app.modules.settings.routes.template_routes import router as template_routes
+from app.modules.settings.routes.admin_email_routes import router as admin_email_routes
+from app.modules.settings.notification_preferences_routes import router as notification_preferences_router
+from app.modules.notifications.router import router as notifications_router
+from app.modules.notifications.routes.send_history_routes import router as send_history_router
+from app.modules.notifications.routes.bounce_routes import router as bounce_router
+from app.modules.notifications.routes.group_routes import router as notification_group_router
 from app.modules.system.router import router as system_router
 from app.modules.system.routes.maintenance_routes import router as maintenance_router
 from app.modules.system.admin_logs_routes import router as admin_logs_router
@@ -50,6 +59,7 @@ from app.modules.hosting.dns_client_router import router as dns_client_router
 from app.modules.hosting.dns_admin_router import router as dns_admin_router
 from app.modules.hosting.routes.service_domains_client import router as service_domains_client_router
 from app.modules.hosting.routes.service_domains_admin import router as service_domains_admin_router
+from app.modules.sms.router import router as sms_router
 
 settings = get_settings()
 
@@ -253,13 +263,36 @@ app.include_router(tickets_router, prefix="/api/v1")
 app.include_router(ticket_attachments_router, prefix="/api/v1")
 app.include_router(admin_support_router, prefix="/api/v1")
 app.include_router(products_router, prefix="/api/v1")
+app.include_router(product_quote_routes, prefix="/api/v1")
 app.include_router(orders_router, prefix="/api/v1")
-app.include_router(quotes_router)  # Quotes router already has /api/v1/quotes prefix
+app.include_router(quotes_router)  # VPS quotes router already has /api/v1/quotes prefix
 app.include_router(invoices_router)  # Invoices router already has /api/v1/invoices prefix
 app.include_router(reports_router)  # Reports router already has /api/v1/reports prefix
 app.include_router(admin_reports_router, prefix="/api/v1")  # Admin reports router
+app.include_router(revenue_router)  # Revenue router already has /api/v1/revenue prefix
 app.include_router(admin_logs_router, prefix="/api/v1")  # Admin logs router
 app.include_router(settings_router)  # Settings router already has /api/v1/settings prefix
+app.include_router(template_routes, prefix="/api/v1")  # Template routes
+app.include_router(
+    notification_preferences_router,
+    prefix="/api/v1/client/settings",
+)
+app.include_router(
+    notification_preferences_router,
+    prefix="/api/v1/corporate/settings",
+)
+app.include_router(
+    notification_preferences_router,
+    prefix="/api/v1/admin/settings",
+)
+app.include_router(
+    admin_email_routes,
+    prefix="/api/v1/admin/settings",
+)
+app.include_router(notifications_router, prefix="/api/v1")
+app.include_router(send_history_router, prefix="/api/v1")
+app.include_router(bounce_router, prefix="/api/v1")
+app.include_router(notification_group_router, prefix="/api/v1")
 app.include_router(system_router, prefix="/api/v1")
 app.include_router(maintenance_router, prefix="/api/v1")
 app.include_router(hosting_client_router)  # Hosting client router already has /api/v1/hosting prefix
@@ -270,3 +303,4 @@ app.include_router(dns_client_router, prefix="/api/v1")  # DNS client router has
 app.include_router(dns_admin_router, prefix="/api/v1")  # DNS admin router has /hosting/admin/dns prefix
 app.include_router(service_domains_client_router, prefix="/api/v1")  # Service domains client router has /hosting/service-domains prefix
 app.include_router(service_domains_admin_router, prefix="/api/v1")  # Service domains admin router has /hosting/admin/service-domains prefix
+app.include_router(sms_router, prefix="/api/v1")  # SMS gateway router for Flutter app

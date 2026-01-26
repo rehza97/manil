@@ -180,9 +180,15 @@ class InvoiceRepository:
                 stats['total_outstanding'] += float(total or 0)
             elif status == InvoiceStatus.PAID:
                 stats['paid_count'] = count
-                stats['total_revenue'] += float(total or 0)
+                # Note: total_revenue will be calculated using RevenueService below
             elif status == InvoiceStatus.OVERDUE:
                 stats['overdue_count'] = count
                 stats['total_outstanding'] += float(total or 0)
+
+        # Calculate total revenue using RevenueService for consistency
+        from app.modules.revenue.service import RevenueService
+        revenue_service = RevenueService(self.db)
+        revenue_overview = await revenue_service.get_overview(period="year", customer_id=customer_id)
+        stats['total_revenue'] = float(revenue_overview.metrics.total_revenue)
 
         return stats

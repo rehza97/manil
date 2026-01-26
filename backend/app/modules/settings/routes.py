@@ -7,11 +7,12 @@ from typing import Optional
 from math import ceil
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
 from app.core.dependencies import get_current_user, require_permission
+from app.core.logging import logger
 from app.modules.auth.models import User
 from app.core.permissions import Permission as PermissionEnum
 from app.modules.settings.service import RoleService, PermissionService, SystemSettingService
@@ -198,8 +199,26 @@ async def update_role(
     current_user: User = Depends(require_permission(PermissionEnum.ROLES_EDIT))
 ):
     """Update a role."""
-    service = RoleService(db)
-    return await service.update(role_id, role_data, updated_by_id=current_user.id)
+    logger.info(f"Role update request: role_id={role_id}, user_id={current_user.id}, user_email={current_user.email}")
+    logger.debug(f"Role update data: {role_data.model_dump(exclude_unset=True)}")
+    
+    try:
+        service = RoleService(db)
+        result = await service.update(role_id, role_data, updated_by_id=current_user.id)
+        logger.info(f"Successfully updated role {role_id} by user {current_user.id}")
+        return result
+    except HTTPException as e:
+        logger.warning(
+            f"Role update failed for role_id={role_id}, user_id={current_user.id}: "
+            f"status={e.status_code}, detail={e.detail}"
+        )
+        raise
+    except Exception as e:
+        logger.error(
+            f"Unexpected error updating role {role_id} by user {current_user.id}: {e}",
+            exc_info=True
+        )
+        raise
 
 
 @router.delete("/roles/{role_id}", status_code=status.HTTP_204_NO_CONTENT)

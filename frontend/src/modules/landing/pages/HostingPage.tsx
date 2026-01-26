@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/shared/components/ui/button";
-import { Badge } from "@/shared/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Check, Server, Zap, Shield, HardDrive } from "lucide-react";
 import { LandingNavigation } from "../components/LandingNavigation";
@@ -9,155 +8,129 @@ import { LandingFooter } from "../components/LandingFooter";
 const features = [
   {
     icon: Server,
-    title: "cPanel Control Panel",
-    description: "Industry-standard control panel for easy website management",
+    title: "cPanel",
+    description: "Panneau de contrôle standard pour gérer vos sites facilement.",
   },
   {
     icon: Zap,
-    title: "Unlimited Bandwidth",
-    description: "No traffic limits on all hosting plans",
+    title: "Bande passante illimitée",
+    description: "Aucune limite de trafic sur toutes les formules.",
   },
   {
     icon: Shield,
-    title: "Free SSL Certificate",
-    description: "Secure your website with automatic SSL installation",
+    title: "SSL gratuit",
+    description: "Certificats Let's Encrypt, installation et renouvellement automatiques.",
   },
   {
     icon: HardDrive,
-    title: "SSD Storage",
-    description: "Lightning-fast SSD drives for optimal performance",
+    title: "Stockage SSD",
+    description: "Disques SSD pour des performances optimales.",
   },
 ];
 
 const includedFeatures = [
-  "1-Click WordPress Install",
-  "Free Website Migration",
-  "Unlimited Email Accounts",
-  "MySQL Databases",
-  "PHP 8.x Support",
-  "Daily Automated Backups",
-  "Cloudflare CDN Integration",
-  "DDoS Protection",
-  "99.9% Uptime Guarantee",
-  "24/7 Expert Support",
+  "WordPress en 1 clic",
+  "Migration de site gratuite",
+  "Comptes e-mail illimités",
+  "Bases MySQL",
+  "PHP 8.x",
+  "Sauvegardes quotidiennes",
+  "CDN Cloudflare",
+  "Protection DDoS",
+  "99,9 % disponibilité",
+  "Support 24h/24 et 7j/7",
 ];
 
 export const HostingPage = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <div className="min-h-screen bg-white">
       <LandingNavigation />
 
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-16">
-            <Badge className="mb-4 bg-blue-100 text-blue-700 hover:bg-blue-200">
-              Shared Web Hosting
-            </Badge>
-            <h1 className="text-5xl md:text-6xl font-bold text-slate-900 mb-6">
-              Fast & Reliable{" "}
-              <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-                Web Hosting
-              </span>
+      <section className="bg-[linear-gradient(135deg,#f0fdfa_0%,#e0f2fe_50%,#f1f5f9_100%)] pb-24 pt-36">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-sm font-medium uppercase tracking-wider text-[#38ada9]">
+              Hébergement
+            </p>
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+              Hébergement web mutualisé
             </h1>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              Perfect for personal websites, blogs, and small businesses. Get started in minutes with our easy-to-use hosting platform.
+            <p className="mt-4 text-lg text-slate-600">
+              Inclus dans CloudManager : idéal pour sites personnels, blogs et petites entreprises. En ligne en quelques minutes.
             </p>
           </div>
+        </div>
+      </section>
 
-          {/* Features Grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-20">
+      <section className="border-t border-slate-200 py-24">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {features.map((feature, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center mb-4">
-                    <feature.icon className="h-6 w-6 text-blue-600" />
+              <Card
+                key={index}
+                className="border-slate-200/80 transition hover:border-[#38ada9]/30 hover:shadow-lg"
+              >
+                <CardHeader className="space-y-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#38ada9]/10 text-[#38ada9]">
+                    <feature.icon className="h-6 w-6" />
                   </div>
-                  <CardTitle className="text-lg">{feature.title}</CardTitle>
-                  <CardDescription className="text-sm">{feature.description}</CardDescription>
+                  <CardTitle className="text-lg font-semibold text-slate-900">
+                    {feature.title}
+                  </CardTitle>
+                  <CardDescription className="text-slate-600">
+                    {feature.description}
+                  </CardDescription>
                 </CardHeader>
               </Card>
             ))}
           </div>
+        </div>
+      </section>
 
-          {/* What's Included */}
-          <div className="mb-20">
-            <h2 className="text-3xl font-bold text-slate-900 mb-8 text-center">
-              What's Included in Every Plan
-            </h2>
-            <Card className="max-w-4xl mx-auto">
-              <CardContent className="pt-6">
-                <div className="grid md:grid-cols-2 gap-4">
-                  {includedFeatures.map((feature, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
-                      <span className="text-slate-700">{feature}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Perfect For Section */}
-          <div className="bg-slate-50 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-16 mb-20">
-            <div className="max-w-7xl mx-auto">
-              <h2 className="text-3xl font-bold text-slate-900 mb-8 text-center">
-                Perfect For
-              </h2>
-              <div className="grid md:grid-cols-3 gap-8">
-                <Card className="bg-white">
-                  <CardHeader>
-                    <CardTitle className="text-xl">Personal Websites</CardTitle>
-                    <CardDescription>
-                      Create your portfolio, blog, or personal website with ease. Perfect for showcasing your work or sharing your thoughts.
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-                <Card className="bg-white border-blue-500 border-2">
-                  <CardHeader>
-                    <Badge className="mb-2 w-fit">Most Popular</Badge>
-                    <CardTitle className="text-xl">Small Business</CardTitle>
-                    <CardDescription>
-                      Get your business online with a professional website. Includes everything you need to establish your online presence.
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-                <Card className="bg-white">
-                  <CardHeader>
-                    <CardTitle className="text-xl">WordPress Sites</CardTitle>
-                    <CardDescription>
-                      Optimized for WordPress with 1-click installation, automatic updates, and enhanced security.
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
+      <section className="border-t border-slate-200 bg-slate-50 py-24">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <h2 className="text-center text-xl font-semibold text-slate-900">
+            Inclus dans toutes les formules
+          </h2>
+          <Card className="mx-auto mt-12 max-w-4xl border-slate-200/80">
+            <CardContent className="pt-8 pb-8">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {includedFeatures.map((f, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-slate-700">
+                    <Check className="h-4 w-4 shrink-0 text-[#38ada9]" />
+                    {f}
+                  </div>
+                ))}
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
 
-          {/* CTA Section */}
-          <div className="text-center bg-gradient-to-r from-blue-600 to-cyan-600 rounded-2xl p-12 text-white">
-            <h3 className="text-3xl font-bold mb-4">
-              Ready to Get Started?
-            </h3>
-            <p className="text-xl mb-8 opacity-90">
-              Choose your hosting plan and launch your website today
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/pricing">
-                <Button size="lg" variant="secondary" className="text-lg px-8 py-6">
-                  View Pricing
-                </Button>
-              </Link>
-              <Link to="/register">
-                <Button size="lg" variant="outline" className="text-lg px-8 py-6 bg-white text-blue-600 hover:bg-slate-50">
-                  Start Free Trial
-                </Button>
-              </Link>
-            </div>
-            <p className="mt-6 text-sm opacity-75">
-              30-day money-back guarantee • No setup fees • Free SSL
-            </p>
+      <section className="border-t border-slate-200 py-24">
+        <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
+          <h2 className="text-2xl font-bold text-slate-900">Prêt à commencer ?</h2>
+          <p className="mt-4 text-slate-600">
+            Choisissez votre formule et lancez votre site. Garantie 30 jours, sans frais cachés.
+          </p>
+          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Link to="/pricing">
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-12 border-slate-300 px-8 font-medium"
+              >
+                Voir les tarifs
+              </Button>
+            </Link>
+            <Link to="/register">
+              <Button
+                size="lg"
+                className="h-12 bg-[#38ada9] px-8 font-medium text-white hover:bg-[#38ada9]/90"
+              >
+                Créer un compte
+              </Button>
+            </Link>
           </div>
         </div>
       </section>

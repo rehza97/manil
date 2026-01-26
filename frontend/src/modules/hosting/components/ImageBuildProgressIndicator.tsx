@@ -17,16 +17,16 @@ interface ImageBuildProgressIndicatorProps {
 }
 
 const buildStages = [
-  { key: "PENDING", label: "Pending", icon: Clock },
-  { key: "VALIDATING", label: "Validating", icon: FileCheck },
-  { key: "BUILDING", label: "Building", icon: Loader2 },
-  { key: "SCANNING", label: "Scanning", icon: ShieldCheck },
-  { key: "COMPLETED", label: "Completed", icon: CheckCircle2 },
+  { key: "PENDING", label: "En attente", icon: Clock },
+  { key: "VALIDATING", label: "Validation", icon: FileCheck },
+  { key: "BUILDING", label: "Construction", icon: Loader2 },
+  { key: "SCANNING", label: "Analyse", icon: ShieldCheck },
+  { key: "COMPLETED", label: "Terminé", icon: CheckCircle2 },
 ];
 
 const failedStages = [
-  { key: "FAILED", label: "Failed", icon: XCircle },
-  { key: "REJECTED", label: "Rejected", icon: XCircle },
+  { key: "FAILED", label: "Échoué", icon: XCircle },
+  { key: "REJECTED", label: "Rejeté", icon: XCircle },
 ];
 
 export function ImageBuildProgressIndicator({
@@ -74,7 +74,7 @@ export function ImageBuildProgressIndicator({
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle>Build Progress</CardTitle>
+        <CardTitle>Progression du build</CardTitle>
         <CardDescription>
           {currentStep && <span className="font-mono text-xs">{currentStep}</span>}
         </CardDescription>
@@ -83,7 +83,7 @@ export function ImageBuildProgressIndicator({
         {/* Progress Bar */}
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Overall Progress</span>
+            <span className="text-muted-foreground">Progression globale</span>
             <span className="font-medium">{Math.round(progress)}%</span>
           </div>
           <Progress value={progress} className="h-2" />
@@ -150,7 +150,7 @@ export function ImageBuildProgressIndicator({
               </div>
               <div className="flex-1">
                 <span className="text-sm font-medium text-red-700">
-                  {status === "FAILED" ? "Build Failed" : "Image Rejected"}
+                  {status === "FAILED" ? "Build échoué" : "Image rejetée"}
                 </span>
               </div>
             </div>

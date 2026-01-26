@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 # ============================================================================
@@ -68,6 +68,8 @@ class RoleCreate(RoleBase):
 
 class RoleUpdate(BaseModel):
     """Update role schema."""
+    model_config = ConfigDict(extra='forbid')
+    
     name: Optional[str] = Field(None, min_length=3, max_length=100)
     description: Optional[str] = None
     parent_role_id: Optional[UUID] = None

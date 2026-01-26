@@ -8,6 +8,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -169,6 +170,11 @@ const CategoryManagementPage: React.FC = () => {
               <DialogTitle>
                 {editingCategory ? "Edit Category" : "Create Category"}
               </DialogTitle>
+              <DialogDescription>
+                {editingCategory
+                  ? "Update the category information below."
+                  : "Enter the details for the new product category."}
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>

@@ -9,7 +9,13 @@ from uuid import UUID
 from sqlalchemy import select, func, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.settings.models import Role, Permission, SystemSetting, role_permissions
+from app.modules.settings.models import (
+    Role,
+    Permission,
+    SystemSetting,
+    UserNotificationPreferences,
+    role_permissions,
+)
 
 
 class PermissionRepository:
@@ -236,3 +242,37 @@ class SystemSettingRepository:
     async def commit(self) -> None:
         """Commit transaction."""
         await self.db.commit()
+
+
+class UserNotificationPreferencesRepository:
+    """Repository for user notification preferences."""
+
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def get_by_user_id(self, user_id: str) -> Optional[UserNotificationPreferences]:
+        """Get preferences for user."""
+        query = select(UserNotificationPreferences).where(
+            UserNotificationPreferences.user_id == user_id
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
+    async def upsert(self, user_id: str, preferences: dict) -> UserNotificationPreferences:
+        """Create or update preferences for user."""
+        import uuid
+        row = await self.get_by_user_id(user_id)
+        if row:
+            row.preferences = preferences
+            await self.db.flush()
+            await self.db.refresh(row)
+            return row
+        row = UserNotificationPreferences(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            preferences=preferences,
+        )
+        self.db.add(row)
+        await self.db.flush()
+        await self.db.refresh(row)
+        return row

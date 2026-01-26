@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_db, require_permission
 from app.core.exceptions import NotFoundException, ConflictException
+from app.core.permissions import Permission
 from app.modules.tickets.services.tag_service import TagService
 from app.modules.tickets.schemas import TagResponse, TicketTagAssignment
 
@@ -15,7 +16,7 @@ def assign_tag(
     ticket_id: str,
     tag_data: TicketTagAssignment,
     db: Session = Depends(get_db),
-    _: None = Depends(require_permission("TICKETS_REPLY")),
+    _: None = Depends(require_permission(Permission.TICKETS_REPLY)),
 ):
     """Assign tags to a ticket.
 
@@ -35,7 +36,7 @@ def remove_tag(
     ticket_id: str,
     tag_id: str,
     db: Session = Depends(get_db),
-    _: None = Depends(require_permission("TICKETS_REPLY")),
+    _: None = Depends(require_permission(Permission.TICKETS_REPLY)),
 ):
     """Remove a tag from a ticket.
 
@@ -51,7 +52,7 @@ def remove_tag(
 def get_ticket_tags(
     ticket_id: str,
     db: Session = Depends(get_db),
-    _: None = Depends(require_permission("TICKETS_VIEW")),
+    _: None = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
     """Get all tags for a ticket.
 

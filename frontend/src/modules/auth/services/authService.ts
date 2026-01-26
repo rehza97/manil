@@ -74,44 +74,101 @@ export const authService = {
   },
 
   /**
+   * Complete login after 2FA (when login returns requires_2fa).
+   */
+  async completeLogin2FA(
+    pending2FAToken: string,
+    code: string
+  ): Promise<AuthResponse> {
+    const response = await authApi.completeLogin2FA({
+      pending_2fa_token: pending2FAToken,
+      code,
+    });
+    return response as AuthResponse;
+  },
+
+  /**
    * Enable 2FA for current user
    */
   async enable2FA(): Promise<TwoFactorSetup> {
     const response = await authApi.enable2FA();
     return {
       secret: response.secret,
-      qrCode: response.qr_code,
+      qrCode: response.qr_code_url,
       backupCodes: response.backup_codes,
     };
   },
 
   /**
-   * Verify 2FA token
+   * Verify 2FA token (TOTP code)
    */
-  async verify2FA(token: string): Promise<void> {
-    await authApi.verify2FA({ token });
+  async verify2FA(code: string): Promise<void> {
+    await authApi.verify2FA({ code });
   },
 
   /**
    * Disable 2FA
    */
-  async disable2FA(token: string): Promise<void> {
-    await authApi.disable2FA({ token });
+  async disable2FA(code: string): Promise<void> {
+    await authApi.disable2FA({ code });
+  },
+
+  /**
+   * Setup 2FA when required (unauthenticated)
+   */
+  async setupRequired2FA(
+    email: string,
+    password: string
+  ): Promise<TwoFactorSetup> {
+    const response = await authApi.setupRequired2FA({ email, password });
+    return {
+      secret: response.secret,
+      qrCode: response.qr_code_url,
+      backupCodes: response.backup_codes,
+    };
+  },
+
+  /**
+   * Verify 2FA setup when required (unauthenticated)
+   */
+  async verifySetupRequired2FA(
+    email: string,
+    password: string,
+    code: string
+  ): Promise<void> {
+    await authApi.verifySetupRequired2FA({ email, password, code });
+  },
+
+  /**
+   * Check if 2FA is required for a user's role
+   */
+  async check2FARequirement(email: string): Promise<{
+    is_required: boolean;
+    role: string | null;
+  }> {
+    return await authApi.check2FARequirement(email);
   },
 
   /**
    * Request password reset
    */
-  async requestPasswordReset(email: string): Promise<void> {
-    await authApi.requestPasswordReset({ email });
+  async requestPasswordReset(email: string, method: "email" | "sms" = "email"): Promise<void> {
+    await authApi.requestPasswordReset({ email, method });
   },
 
   /**
    * Confirm password reset
    */
-  async confirmPasswordReset(token: string, newPassword: string): Promise<void> {
+  async confirmPasswordReset(
+    newPassword: string,
+    token?: string,
+    code?: string,
+    email?: string
+  ): Promise<void> {
     await authApi.confirmPasswordReset({
-      token,
+      token: token || undefined,
+      code: code || undefined,
+      email: email || undefined,
       new_password: newPassword,
     });
   },

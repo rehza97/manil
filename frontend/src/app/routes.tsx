@@ -44,6 +44,7 @@ import {
   ServiceDetailPage,
   SettingsPage,
   NotificationSettingsPage,
+  NotificationsPage,
 } from "@/modules/dashboard";
 import {
   UserManagementPage,
@@ -74,6 +75,7 @@ import {
   SecurityReportsPage,
   PerformanceReportsPage,
 } from "@/modules/admin/pages/reports";
+import { RevenueDashboardPage as AdminRevenueDashboardPage } from "@/modules/revenue/pages/RevenueDashboardPage";
 import {
   SystemLogsPage,
   UserActivityLogsPage,
@@ -98,9 +100,16 @@ import {
   MigrationsPage,
 } from "@/modules/admin/pages/maintenance";
 import {
-  ProductListPage,
-  ProductFormPage,
-  CategoryManagementPage,
+  EmailTemplatesPage,
+  EmailSendHistoryPage,
+  EmailBouncesPage,
+  TicketSettingsPage,
+  NotificationGroupsPage,
+} from "@/modules/admin/pages/settings";
+import {
+  ProductListPage as AdminProductListPage,
+  ProductFormPage as AdminProductFormPage,
+  CategoryManagementPage as AdminCategoryManagementPage,
 } from "@/modules/admin/pages/products";
 import {
   UserCreatePage,
@@ -118,13 +127,14 @@ import {
   PermissionListPage,
 } from "@/modules/admin/pages/roles";
 import {
-  TicketListPage,
-  TicketDetailPage,
+  TicketListPage as AdminTicketListPage,
+  TicketDetailPage as AdminTicketDetailPage,
   TicketCreatePage,
-  TemplateListPage,
+  TemplateListPage as AdminTemplateListPage,
   TemplateCreatePage,
   TemplateEditPage,
   TemplateDetailPage,
+  EmailAccountsPage,
 } from "@/modules/tickets/pages";
 import {
   OrdersListPage,
@@ -175,6 +185,48 @@ import {
   CustomerDNSZonesPage,
   DNSOverviewPage,
 } from "@/modules/dns/pages/corporate";
+import {
+  CorporateReportsLandingPage,
+  CustomerReportsPage,
+  TicketReportsPage,
+  OrderReportsPage,
+} from "@/modules/reports/pages";
+import { RevenueDashboardPage } from "@/modules/revenue/pages/RevenueDashboardPage";
+import {
+  CustomerListPage as CorporateCustomerListPage,
+  CustomerCreatePage as CorporateCustomerCreatePage,
+  CustomerDetailsPage as CorporateCustomerDetailsPage,
+  CustomerEditPage as CorporateCustomerEditPage,
+  CustomerKYCPage as CorporateCustomerKYCPage,
+  CustomerNotesPage as CorporateCustomerNotesPage,
+  CustomerDocumentsPage as CorporateCustomerDocumentsPage,
+  TicketListPage as CorporateTicketListPage,
+  TicketDetailPage as CorporateTicketDetailPage,
+  TicketAssignPage as CorporateTicketAssignPage,
+  TicketTransferPage as CorporateTicketTransferPage,
+  TicketCategoriesPage as CorporateTicketCategoriesPage,
+  TemplateListPage as CorporateTemplateListPage,
+  ProductListPage as CorporateProductListPage,
+  ProductFormPage as CorporateProductFormPage,
+  CategoryManagementPage as CorporateCategoryManagementPage,
+  QuoteListPage as CorporateQuoteListPage,
+  QuoteCreatePage as CorporateQuoteCreatePage,
+  QuoteDetailPage as CorporateQuoteDetailPage,
+  QuoteApprovePage as CorporateQuoteApprovePage,
+  QuoteConvertPage as CorporateQuoteConvertPage,
+  InvoiceListPage as CorporateInvoiceListPage,
+  InvoiceCreatePage as CorporateInvoiceCreatePage,
+  InvoiceDetailPage as CorporateInvoiceDetailPage,
+  InvoiceEditPage as CorporateInvoiceEditPage,
+  InvoiceSendPage as CorporateInvoiceSendPage,
+  InvoicePaymentPage as CorporateInvoicePaymentPage,
+  CorporateAutomationRestrictedPage,
+} from "@/modules/corporate/pages";
+import {
+  UnauthorizedPage,
+  AccountDisabledPage,
+  NotFoundPage,
+} from "@/modules/error/pages";
 
 // Placeholder components for modules not yet implemented
 const ModulePlaceholder = ({ module }: { module: string }) => {
@@ -258,6 +310,19 @@ export const routes = [
     path: "/products/:id",
     element: <ProductPage />,
   },
+  // Public Catalog Routes (unauthenticated browsing)
+  {
+    path: "/catalog",
+    element: <CataloguePage />,
+  },
+  {
+    path: "/catalog/quote-request",
+    element: <QuoteRequestPage />,
+  },
+  {
+    path: "/catalog/:id",
+    element: <ProductPage />,
+  },
 
   // Client Dashboard Routes (/dashboard)
   {
@@ -301,7 +366,7 @@ export const routes = [
       // Support Tickets
       {
         path: "tickets",
-        element: <TicketListPage />,
+        element: <AdminTicketListPage />,
       },
       {
         path: "tickets/new",
@@ -309,7 +374,7 @@ export const routes = [
       },
       {
         path: "tickets/:id",
-        element: <TicketDetailPage />,
+        element: <AdminTicketDetailPage />,
       },
       // Product Catalog
       {
@@ -405,6 +470,10 @@ export const routes = [
         path: "settings/notifications",
         element: <NotificationSettingsPage />,
       },
+      {
+        path: "notifications",
+        element: <NotificationsPage />,
+      },
     ],
   },
 
@@ -412,7 +481,7 @@ export const routes = [
   {
     path: "/corporate",
     element: (
-      <ProtectedRoute requiredRole="corporate">
+      <ProtectedRoute requiredRole={["corporate", "admin"]}>
         <CorporateDashboardLayout />
       </ProtectedRoute>
     ),
@@ -441,77 +510,85 @@ export const routes = [
       // Customer Management
       {
         path: "customers",
-        element: <ModulePlaceholder module="Customer Management" />,
+        element: <CorporateCustomerListPage />,
       },
       {
         path: "customers/new",
-        element: <ModulePlaceholder module="Add Customer" />,
+        element: <CorporateCustomerCreatePage />,
       },
       {
         path: "customers/:id",
-        element: <ModulePlaceholder module="Customer Details" />,
+        element: <CorporateCustomerDetailsPage />,
       },
       {
         path: "customers/:id/edit",
-        element: <ModulePlaceholder module="Edit Customer" />,
+        element: <CorporateCustomerEditPage />,
       },
       {
         path: "customers/:id/kyc",
-        element: <ModulePlaceholder module="KYC Validation" />,
+        element: <CorporateCustomerKYCPage />,
       },
       {
         path: "customers/:id/notes",
-        element: <ModulePlaceholder module="Customer Notes" />,
+        element: <CorporateCustomerNotesPage />,
       },
       {
         path: "customers/:id/documents",
-        element: <ModulePlaceholder module="Customer Documents" />,
+        element: <CorporateCustomerDocumentsPage />,
       },
       // Support Tickets Management
       {
         path: "tickets",
-        element: <ModulePlaceholder module="Support Tickets" />,
+        element: <CorporateTicketListPage />,
       },
       {
         path: "tickets/:id",
-        element: <ModulePlaceholder module="Ticket Management" />,
+        element: <CorporateTicketDetailPage backPath="/corporate/tickets" />,
       },
       {
         path: "tickets/:id/assign",
-        element: <ModulePlaceholder module="Assign Ticket" />,
+        element: <CorporateTicketAssignPage />,
       },
       {
         path: "tickets/:id/transfer",
-        element: <ModulePlaceholder module="Transfer Ticket" />,
+        element: <CorporateTicketTransferPage />,
       },
       {
         path: "tickets/categories",
-        element: <ModulePlaceholder module="Ticket Categories" />,
+        element: <CorporateTicketCategoriesPage />,
       },
       {
         path: "tickets/templates",
-        element: <ModulePlaceholder module="Response Templates" />,
+        element: <CorporateTemplateListPage />,
+      },
+      {
+        path: "tickets/templates/create",
+        element: <TemplateCreatePage />,
+      },
+      {
+        path: "tickets/templates/:id",
+        element: <TemplateDetailPage />,
+      },
+      {
+        path: "tickets/templates/:id/edit",
+        element: <TemplateEditPage />,
       },
       // Product & Service Management
       {
         path: "products",
-        element: <ModulePlaceholder module="Product Management" />,
+        element: <CorporateProductListPage />,
       },
       {
         path: "products/new",
-        element: <ModulePlaceholder module="Add Product" />,
+        element: <CorporateProductFormPage />,
       },
       {
-        path: "products/:id",
-        element: <ModulePlaceholder module="Product Details" />,
-      },
-      {
-        path: "products/:id/edit",
-        element: <ModulePlaceholder module="Edit Product" />,
+        path: "products/:productId/edit",
+        element: <CorporateProductFormPage />,
       },
       {
         path: "products/categories",
-        element: <ModulePlaceholder module="Product Categories" />,
+        element: <CorporateCategoryManagementPage />,
       },
       // Order Management
       {
@@ -537,65 +614,69 @@ export const routes = [
       // Quote Management
       {
         path: "quotes",
-        element: <ModulePlaceholder module="Quote Management" />,
+        element: <CorporateQuoteListPage />,
       },
       {
         path: "quotes/new",
-        element: <ModulePlaceholder module="Create Quote" />,
+        element: <CorporateQuoteCreatePage />,
       },
       {
         path: "quotes/:id",
-        element: <ModulePlaceholder module="Quote Details" />,
+        element: <CorporateQuoteDetailPage />,
       },
       {
         path: "quotes/:id/approve",
-        element: <ModulePlaceholder module="Approve Quote" />,
+        element: <CorporateQuoteApprovePage />,
       },
       {
         path: "quotes/:id/convert",
-        element: <ModulePlaceholder module="Convert to Order" />,
+        element: <CorporateQuoteConvertPage />,
       },
       // Invoice Management
       {
         path: "invoices",
-        element: <ModulePlaceholder module="Invoice Management" />,
+        element: <CorporateInvoiceListPage />,
       },
       {
         path: "invoices/new",
-        element: <ModulePlaceholder module="Create Invoice" />,
+        element: <CorporateInvoiceCreatePage />,
       },
       {
         path: "invoices/:id",
-        element: <ModulePlaceholder module="Invoice Details" />,
+        element: <CorporateInvoiceDetailPage />,
+      },
+      {
+        path: "invoices/:id/edit",
+        element: <CorporateInvoiceEditPage />,
       },
       {
         path: "invoices/:id/send",
-        element: <ModulePlaceholder module="Send Invoice" />,
+        element: <CorporateInvoiceSendPage />,
       },
       {
         path: "invoices/:id/payment",
-        element: <ModulePlaceholder module="Record Payment" />,
+        element: <CorporateInvoicePaymentPage />,
       },
       // Business Reports
       {
         path: "reports",
-        element: <ModulePlaceholder module="Business Reports" />,
+        element: <CorporateReportsLandingPage />,
       },
       {
         path: "reports/customers",
-        element: <ModulePlaceholder module="Customer Reports" />,
+        element: <CustomerReportsPage />,
       },
       {
         path: "reports/tickets",
-        element: <ModulePlaceholder module="Ticket Reports" />,
+        element: <TicketReportsPage />,
       },
       {
         path: "reports/orders",
-        element: <ModulePlaceholder module="Order Reports" />,
+        element: <OrderReportsPage />,
       },
       {
         path: "reports/revenue",
-        element: <ModulePlaceholder module="Revenue Reports" />,
+        element: <RevenueDashboardPage />,
       },
       // VPS Management
       {
@@ -658,15 +739,19 @@ export const routes = [
       },
       {
         path: "settings/notifications",
-        element: <ModulePlaceholder module="Notification Settings" />,
+        element: <NotificationSettingsPage />,
+      },
+      {
+        path: "notifications",
+        element: <NotificationsPage />,
       },
       {
         path: "settings/automation",
-        element: <ModulePlaceholder module="Automation Rules" />,
+        element: <CorporateAutomationRestrictedPage />,
       },
       {
         path: "settings/templates",
-        element: <ModulePlaceholder module="Email Templates" />,
+        element: <EmailTemplatesPage />,
       },
     ],
   },
@@ -775,19 +860,19 @@ export const routes = [
       // Product Management
       {
         path: "products",
-        element: <ProductListPage />,
+        element: <AdminProductListPage />,
       },
       {
         path: "products/new",
-        element: <ProductFormPage />,
+        element: <AdminProductFormPage />,
       },
       {
         path: "products/:productId/edit",
-        element: <ProductFormPage />,
+        element: <AdminProductFormPage />,
       },
       {
         path: "products/categories",
-        element: <CategoryManagementPage />,
+        element: <AdminCategoryManagementPage />,
       },
       // System Settings
       {
@@ -805,6 +890,30 @@ export const routes = [
       {
         path: "settings/email",
         element: <EmailConfigPage />,
+      },
+      {
+        path: "settings/email/templates",
+        element: <EmailTemplatesPage />,
+      },
+      {
+        path: "settings/email/history",
+        element: <EmailSendHistoryPage />,
+      },
+      {
+        path: "settings/email/bounces",
+        element: <EmailBouncesPage />,
+      },
+      {
+        path: "settings/tickets",
+        element: <TicketSettingsPage />,
+      },
+      {
+        path: "settings/notifications/groups",
+        element: <NotificationGroupsPage />,
+      },
+      {
+        path: "notifications",
+        element: <NotificationsPage />,
       },
       {
         path: "settings/sms",
@@ -881,6 +990,10 @@ export const routes = [
         path: "reports/performance",
         element: <PerformanceReportsPage />,
       },
+      {
+        path: "reports/revenue",
+        element: <AdminRevenueDashboardPage />,
+      },
       // Support Groups & Categories
       // Support Management
       {
@@ -906,7 +1019,7 @@ export const routes = [
       },
       {
         path: "tickets/:id",
-        element: <TicketDetailPage backPath="/admin/tickets" />,
+        element: <AdminTicketDetailPage backPath="/admin/tickets" />,
       },
       // Order Management
       {
@@ -932,7 +1045,7 @@ export const routes = [
       // Ticket Templates
       {
         path: "tickets/templates",
-        element: <TemplateListPage />,
+        element: <AdminTemplateListPage />,
       },
       {
         path: "tickets/templates/create",
@@ -945,6 +1058,10 @@ export const routes = [
       {
         path: "tickets/templates/:id/edit",
         element: <TemplateEditPage />,
+      },
+      {
+        path: "tickets/email-accounts",
+        element: <EmailAccountsPage />,
       },
       // System Maintenance
       {
@@ -1009,54 +1126,51 @@ export const routes = [
         path: "dns/templates",
         element: <DNSTemplatesPage />,
       },
+      // Invoice Management (Admin)
+      {
+        path: "invoices",
+        element: <InvoiceListPage />,
+      },
+      {
+        path: "invoices/create",
+        element: <InvoiceCreatePage />,
+      },
+      {
+        path: "invoices/:id",
+        element: <InvoiceDetailPage />,
+      },
+      {
+        path: "invoices/:id/edit",
+        element: <InvoiceEditPage />,
+      },
+      // Quote Management (Admin)
+      {
+        path: "quotes",
+        element: <CorporateQuoteListPage />,
+      },
+      {
+        path: "quotes/new",
+        element: <CorporateQuoteCreatePage />,
+      },
+      {
+        path: "quotes/:id",
+        element: <CorporateQuoteDetailPage />,
+      },
     ],
   },
 
   // Error Routes
   {
     path: "/unauthorized",
-    element: (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-2">
-            Access Denied
-          </h1>
-          <p className="text-slate-600">
-            You don't have permission to access this resource.
-          </p>
-        </div>
-      </div>
-    ),
+    element: <UnauthorizedPage />,
   },
   {
     path: "/account-disabled",
-    element: (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-yellow-600 mb-2">
-            Account Disabled
-          </h1>
-          <p className="text-slate-600">
-            Your account has been disabled. Please contact support.
-          </p>
-        </div>
-      </div>
-    ),
+    element: <AccountDisabledPage />,
   },
   {
     path: "*",
-    element: (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">
-            Page Not Found
-          </h1>
-          <p className="text-slate-600">
-            The page you're looking for doesn't exist.
-          </p>
-        </div>
-      </div>
-    ),
+    element: <NotFoundPage />,
   },
 ];
 
@@ -1123,6 +1237,7 @@ export const routePermissions = {
   "/admin/tickets/templates/create": ["admin"],
   "/admin/tickets/templates/:id": ["admin"],
   "/admin/tickets/templates/:id/edit": ["admin"],
+  "/admin/tickets/email-accounts": ["admin"],
   "/admin/maintenance": ["admin"],
 } as const;
 
@@ -1172,6 +1287,7 @@ export const moduleRoutes = {
     "/admin/tickets/templates/create",
     "/admin/tickets/templates/:id",
     "/admin/tickets/templates/:id/edit",
+    "/admin/tickets/email-accounts",
   ],
 
   // Module 3: Product Catalogue

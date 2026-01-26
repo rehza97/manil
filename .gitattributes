@@ -36,7 +36,7 @@ Dockerfile text eol=lf
 docker-compose.yml text eol=lf
 
 # Config files should use LF
-.env* text eol=lf
+
 *.conf text eol=lf
 *.config text eol=lf
 *.ini text eol=lf

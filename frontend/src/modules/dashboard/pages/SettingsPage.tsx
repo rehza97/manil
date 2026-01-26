@@ -41,136 +41,128 @@ export const SettingsPage: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Account Settings</h1>
+        <h1 className="text-3xl font-bold text-slate-900">Paramètres du compte</h1>
         <p className="text-muted-foreground mt-1">
-          Manage your account preferences and settings
+          Gérer les préférences et paramètres de votre compte
         </p>
       </div>
 
-      {/* Settings Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Profile Settings */}
         <Card>
           <CardHeader>
             <div className="flex items-center space-x-2">
               <User className="h-5 w-5 text-blue-600" />
-              <CardTitle>Profile Settings</CardTitle>
+              <CardTitle>Profil</CardTitle>
             </div>
             <CardDescription>
-              Update your personal information and contact details
+              Mettre à jour vos informations personnelles et de contact
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild variant="outline" className="w-full">
-              <Link to="/dashboard/profile/edit">Edit Profile</Link>
+              <Link to="/dashboard/profile/edit">Modifier le profil</Link>
             </Button>
           </CardContent>
         </Card>
 
-        {/* Security Settings */}
         <Card>
           <CardHeader>
             <div className="flex items-center space-x-2">
               <Shield className="h-5 w-5 text-green-600" />
-              <CardTitle>Security Settings</CardTitle>
+              <CardTitle>Sécurité</CardTitle>
             </div>
             <CardDescription>
-              Manage your password and two-factor authentication
+              Gérer mot de passe et authentification à deux facteurs
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild variant="outline" className="w-full">
-              <Link to="/dashboard/security">Security Settings</Link>
+              <Link to="/dashboard/security">Paramètres de sécurité</Link>
             </Button>
           </CardContent>
         </Card>
 
-        {/* Notification Settings */}
         <Card>
           <CardHeader>
             <div className="flex items-center space-x-2">
               <Bell className="h-5 w-5 text-yellow-600" />
-              <CardTitle>Notification Preferences</CardTitle>
+              <CardTitle>Notifications</CardTitle>
             </div>
             <CardDescription>
-              Configure how and when you receive notifications
+              Configurer la réception des notifications
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild variant="outline" className="w-full">
               <Link to="/dashboard/settings/notifications">
-                Manage Notifications
+                Gérer les notifications
               </Link>
             </Button>
           </CardContent>
         </Card>
 
-        {/* Email Settings */}
         <Card>
           <CardHeader>
             <div className="flex items-center space-x-2">
               <Mail className="h-5 w-5 text-purple-600" />
-              <CardTitle>Email Preferences</CardTitle>
+              <CardTitle>E-mail</CardTitle>
             </div>
             <CardDescription>
-              Manage your email communication preferences
+              Préférences de communication par e-mail
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild variant="outline" className="w-full">
               <Link to="/dashboard/settings/notifications">
-                Email Settings
+                Paramètres e-mail
               </Link>
             </Button>
           </CardContent>
         </Card>
 
-        {/* Language & Region */}
         <Card>
           <CardHeader>
             <div className="flex items-center space-x-2">
               <Globe className="h-5 w-5 text-indigo-600" />
-              <CardTitle>Language & Region</CardTitle>
+              <CardTitle>Langue et région</CardTitle>
             </div>
             <CardDescription>
-              Set your preferred language and regional settings
+              Langue et paramètres régionaux
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="outline" className="w-full" disabled>
-              Coming Soon
+              Bientôt disponible
             </Button>
           </CardContent>
         </Card>
 
-        {/* Privacy Settings */}
         <Card>
           <CardHeader>
             <div className="flex items-center space-x-2">
               <Settings className="h-5 w-5 text-gray-600" />
-              <CardTitle>Privacy Settings</CardTitle>
+              <CardTitle>Confidentialité</CardTitle>
             </div>
             <CardDescription>
-              Control your privacy and data sharing preferences
+              Contrôler la confidentialité et le partage des données
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="outline" className="w-full" disabled>
-              Coming Soon
+              Bientôt disponible
             </Button>
           </CardContent>
         </Card>
       </div>
 
-      {/* KYC Documents Section */}
       <Card>
         <CardHeader>
           <div className="flex items-center space-x-2">
             <FileCheck className="h-5 w-5 text-blue-600" />
-            <CardTitle>KYC Documents</CardTitle>
+            <CardTitle>Documents KYC</CardTitle>
           </div>
           <CardDescription>
-            Upload and manage your Know Your Customer (KYC) verification documents
+            Télécharger et gérer vos pièces pour la vérification KYC
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -182,7 +174,7 @@ export const SettingsPage: React.FC = () => {
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Customer profile not found. Please contact support to set up your customer account.
+                Profil client introuvable. Contactez le support pour configurer votre compte client.
               </AlertDescription>
             </Alert>
           ) : (

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Ticket Closed</h2>
+<p>Your support ticket has been closed.</p>
+<p><strong>Ticket ID:</strong> {{ ticket_id }}</p>
+<p><strong>Subject:</strong> {{ subject }}</p>
+<p>If you need further assistance, please feel free to open a new ticket.</p>
+<a href="{{ site_url }}/tickets" class="button">View All Tickets</a>
+{% endblock %}

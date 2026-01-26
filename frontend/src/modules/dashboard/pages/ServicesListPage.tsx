@@ -63,7 +63,7 @@ export const ServicesListPage: React.FC = () => {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
-          <p className="text-destructive">Failed to load services</p>
+          <p className="text-destructive">Impossible de charger les services</p>
         </div>
       </div>
     );
@@ -86,7 +86,7 @@ export const ServicesListPage: React.FC = () => {
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
-            placeholder="Search services by order number..."
+            placeholder="Rechercher par numéro de commande…"
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -118,7 +118,7 @@ export const ServicesListPage: React.FC = () => {
         <Card>
           <CardContent className="py-12 text-center">
             <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">No active services found</p>
+            <p className="text-muted-foreground">Aucun service actif</p>
           </CardContent>
         </Card>
       ) : (
@@ -151,7 +151,7 @@ export const ServicesListPage: React.FC = () => {
                       onClick={() => handleSelectService(service.id)}
                     >
                       <Eye className="h-4 w-4 mr-2" />
-                      View
+                      Voir
                     </Button>
                   </div>
                 </div>
@@ -187,9 +187,7 @@ export const ServicesListPage: React.FC = () => {
       {data?.pagination && data.pagination.total_pages > 1 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-slate-600">
-            Showing {(page - 1) * pageSize + 1} to{" "}
-            {Math.min(page * pageSize, data.pagination.total)} of{" "}
-            {data.pagination.total} services
+            {(page - 1) * pageSize + 1} – {Math.min(page * pageSize, data.pagination.total)} sur {data.pagination.total} services
           </div>
           <div className="flex items-center gap-2">
             <select
@@ -200,9 +198,9 @@ export const ServicesListPage: React.FC = () => {
               }}
               className="px-3 py-1 border rounded-md text-sm"
             >
-              <option value={10}>10 per page</option>
-              <option value={20}>20 per page</option>
-              <option value={50}>50 per page</option>
+              <option value={10}>10 par page</option>
+              <option value={20}>20 par page</option>
+              <option value={50}>50 par page</option>
             </select>
             <Button
               variant="outline"
@@ -210,10 +208,10 @@ export const ServicesListPage: React.FC = () => {
               onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page === 1}
             >
-              Previous
+              Précédent
             </Button>
             <span className="text-sm text-slate-600">
-              Page {page} of {data.pagination.total_pages}
+              Page {page} / {data.pagination.total_pages}
             </span>
             <Button
               variant="outline"
@@ -223,7 +221,7 @@ export const ServicesListPage: React.FC = () => {
               }
               disabled={page === data.pagination.total_pages}
             >
-              Next
+              Suivant
             </Button>
           </div>
         </div>

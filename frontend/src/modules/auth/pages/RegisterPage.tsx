@@ -5,11 +5,11 @@ import { RegisterPageContent } from "../components/RegisterPageContent";
 export const RegisterPage: React.FC = () => {
   return (
     <AuthLayout
-      title="Create your account"
-      subtitle="Start your free trial and join 500+ Algerian businesses"
-      footerText="Already have an account?"
+      title="Créez votre compte"
+      subtitle="Essai gratuit • Rejoignez les entreprises algériennes"
+      footerText="Déjà un compte ?"
       footerLink="/login"
-      footerLinkText="Sign in"
+      footerLinkText="Se connecter"
     >
       <RegisterPageContent />
     </AuthLayout>

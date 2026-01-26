@@ -19,7 +19,7 @@ import {
   DateRangePicker,
   ExportButton,
 } from '../components';
-import { TicketIcon, ClockIcon, CheckCircleIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { Ticket, Clock, CheckCircle2, Users } from 'lucide-react';
 import type { DateRange } from '../types/report.types';
 
 export const TicketReportsPage: React.FC = () => {
@@ -82,7 +82,7 @@ export const TicketReportsPage: React.FC = () => {
               : 'N/A'
           }
           subtitle="First response"
-          icon={<ClockIcon className="h-6 w-6" />}
+          icon={<Clock className="h-6 w-6" />}
           color="purple"
           loading={responseLoading}
         />
@@ -94,7 +94,7 @@ export const TicketReportsPage: React.FC = () => {
               : 'N/A'
           }
           subtitle="Time to resolve"
-          icon={<CheckCircleIcon className="h-6 w-6" />}
+          icon={<CheckCircle2 className="h-6 w-6" />}
           color="green"
           loading={resolutionLoading}
         />
@@ -106,7 +106,7 @@ export const TicketReportsPage: React.FC = () => {
               : 'N/A'
           }
           subtitle="Response time SLA"
-          icon={<CheckCircleIcon className="h-6 w-6" />}
+          icon={<CheckCircle2 className="h-6 w-6" />}
           color="green"
           loading={responseLoading}
         />
@@ -163,7 +163,7 @@ export const TicketReportsPage: React.FC = () => {
         {/* Agent Performance */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 lg:col-span-2">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
-            <UserGroupIcon className="h-5 w-5 mr-2 text-gray-500" />
+            <Users className="h-5 w-5 mr-2 text-gray-500" />
             Agent Performance
           </h3>
           {agentLoading ? (

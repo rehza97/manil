@@ -31,8 +31,8 @@ export const TwoFactorVerify = ({
     if (!code || (useBackupCode ? code.length < 8 : code.length !== 6)) {
       setError(
         useBackupCode
-          ? "Please enter a valid backup code"
-          : "Please enter a valid 6-digit code"
+          ? "Veuillez saisir un code de secours valide"
+          : "Veuillez saisir un code à 6 chiffres valide"
       );
       return;
     }
@@ -43,11 +43,11 @@ export const TwoFactorVerify = ({
     try {
       await authService.verify2FA(code);
       onSuccess();
-    } catch (err) {
+    } catch {
       setError(
         useBackupCode
-          ? "Invalid backup code"
-          : "Invalid verification code. Please try again."
+          ? "Code de secours invalide"
+          : "Code de vérification invalide. Réessayez."
       );
     } finally {
       setIsLoading(false);
@@ -65,17 +65,17 @@ export const TwoFactorVerify = ({
 
   return (
     <div className="space-y-6">
-      <div className="text-center space-y-2">
-        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
-          <Shield className="w-6 h-6 text-blue-600" />
+      <div className="space-y-2 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary/10">
+          <Shield className="h-6 w-6 text-brand-primary" />
         </div>
         <h3 className="text-lg font-semibold text-slate-900">
-          Two-Factor Authentication
+          Authentification à deux facteurs
         </h3>
         <p className="text-slate-600">
           {email
-            ? `Enter the verification code for ${email}`
-            : "Enter your verification code to continue"}
+            ? `Saisissez le code de vérification pour ${email}`
+            : "Saisissez votre code pour continuer"}
         </p>
       </div>
 
@@ -89,7 +89,7 @@ export const TwoFactorVerify = ({
         {!useBackupCode ? (
           <div className="space-y-2">
             <Label htmlFor="verificationCode" className="text-sm font-medium">
-              Verification Code <span className="text-red-500">*</span>
+              Code de vérification <span className="text-red-500">*</span>
             </Label>
             <Input
               id="verificationCode"
@@ -100,37 +100,37 @@ export const TwoFactorVerify = ({
               onChange={(e) => handleInputChange(e.target.value)}
               disabled={isLoading}
               required
-              className="text-center text-lg tracking-widest"
+              className="border-slate-200 text-center text-lg tracking-widest"
             />
             <p className="text-xs text-slate-500">
-              Enter the 6-digit code from your authenticator app
+              Saisissez le code à 6 chiffres de votre application
             </p>
           </div>
         ) : (
           <div className="space-y-2">
             <Label htmlFor="backupCode" className="text-sm font-medium">
-              Backup Code <span className="text-red-500">*</span>
+              Code de secours <span className="text-red-500">*</span>
             </Label>
             <Input
               id="backupCode"
               name="backupCode"
               type="text"
-              placeholder="Enter backup code"
+              placeholder="Saisissez un code de secours"
               value={backupCode}
               onChange={(e) => handleInputChange(e.target.value)}
               disabled={isLoading}
               required
-              className="text-center"
+              className="border-slate-200 text-center"
             />
             <p className="text-xs text-slate-500">
-              Enter one of your backup codes
+              Saisissez l&apos;un de vos codes de secours
             </p>
           </div>
         )}
 
         <Button
           type="submit"
-          className="w-full"
+          className="w-full bg-brand-primary hover:bg-brand-primary/90"
           size="lg"
           disabled={
             isLoading ||
@@ -142,14 +142,14 @@ export const TwoFactorVerify = ({
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Verifying...
+              Vérification…
             </>
           ) : (
-            "Verify"
+            "Vérifier"
           )}
         </Button>
 
-        <div className="text-center">
+        <div className="flex justify-center">
           <button
             type="button"
             onClick={() => {
@@ -158,12 +158,12 @@ export const TwoFactorVerify = ({
               setBackupCode("");
               setError(null);
             }}
-            className="text-sm text-blue-600 hover:text-blue-700 flex items-center justify-center mx-auto"
+            className="mx-auto flex items-center justify-center text-sm font-medium text-brand-primary hover:text-brand-primary/90"
           >
-            <Key className="w-4 h-4 mr-1" />
+            <Key className="mr-1 h-4 w-4" />
             {useBackupCode
-              ? "Use authenticator app instead"
-              : "Use backup code instead"}
+              ? "Utiliser l'app d'authentification"
+              : "Utiliser un code de secours"}
           </button>
         </div>
 
@@ -174,23 +174,22 @@ export const TwoFactorVerify = ({
               onClick={onCancel}
               className="text-sm text-slate-600 hover:text-slate-700"
             >
-              Cancel
+              Annuler
             </button>
           </div>
         )}
       </form>
 
       {!useBackupCode && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="rounded-lg border border-brand-primary/30 bg-brand-primary/5 p-4">
           <div className="flex items-start">
-            <Shield className="w-5 h-5 text-blue-600 mt-0.5 mr-3" />
+            <Shield className="mr-3 mt-0.5 h-5 w-5 text-brand-primary" />
             <div className="text-sm">
-              <p className="font-medium text-blue-800">
-                Having trouble with your authenticator app?
+              <p className="font-medium text-slate-900">
+                Problème avec l&apos;app d&apos;authentification ?
               </p>
-              <p className="text-blue-700 mt-1">
-                Make sure your device's time is synchronized correctly. If
-                you're still having issues, you can use a backup code instead.
+              <p className="mt-1 text-slate-600">
+                Vérifiez que l&apos;heure de votre appareil est correcte. En cas de souci, vous pouvez utiliser un code de secours.
               </p>
             </div>
           </div>

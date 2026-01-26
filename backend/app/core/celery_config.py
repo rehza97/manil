@@ -31,10 +31,16 @@ CELERYBEAT_SCHEDULE = {
         "schedule": crontab(hour=2, minute=0),
     },
     
-    # Cleanup old metrics weekly on Sunday at 3 AM UTC
+    # Auto-close resolved tickets daily at 3 AM UTC
+    "auto-close-resolved-tickets": {
+        "task": "tickets.auto_close_resolved_tickets",
+        "schedule": crontab(hour=3, minute=0),
+    },
+    
+    # Cleanup old metrics weekly on Sunday at 4 AM UTC
     "cleanup-vps-metrics": {
         "task": "hosting.cleanup_old_metrics",
-        "schedule": crontab(day_of_week=0, hour=3, minute=0),
+        "schedule": crontab(day_of_week=0, hour=4, minute=0),
     },
 }
 

@@ -56,8 +56,8 @@ class ExportService:
         Returns:
             Dictionary with file information
         """
-        if not data:
-            raise ValueError("No data to export")
+        if headers is None and not data:
+            raise ValueError("No data to export and no headers provided")
 
         # Generate filename
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -104,8 +104,8 @@ class ExportService:
         if not EXCEL_AVAILABLE:
             raise ImportError("openpyxl is required for Excel export. Install with: pip install openpyxl")
 
-        if not data:
-            raise ValueError("No data to export")
+        if headers is None and not data:
+            raise ValueError("No data to export and no headers provided")
 
         # Generate filename
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -187,8 +187,8 @@ class ExportService:
         Returns:
             Dictionary with file information
         """
-        if not data:
-            raise ValueError("No data to export")
+        if headers is None and not data:
+            raise ValueError("No data to export and no headers provided")
 
         # Generate filename
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -375,5 +375,35 @@ class ExportService:
             return self.export_to_excel(orders, report_name, "Orders", headers)
         elif format == "pdf":
             return self.export_to_pdf(orders, report_name, "Orders Report", headers)
+        else:
+            raise ValueError(f"Unsupported format: {format}")
+
+    def export_vps_report(
+        self,
+        vps_rows: List[Dict[str, Any]],
+        format: str = "csv",
+        report_name: str = "vps_report"
+    ) -> Dict[str, Any]:
+        """
+        Export VPS (hosting) subscriptions report in specified format.
+
+        Args:
+            vps_rows: List of VPS subscription dicts (id, subscription_number, etc.)
+            format: Export format (csv, excel, pdf)
+            report_name: Name for the export file
+
+        Returns:
+            Dictionary with file information
+        """
+        headers = [
+            "id", "subscription_number", "customer_id", "plan_name", "plan_slug",
+            "status", "monthly_price", "created_at"
+        ]
+        if format == "csv":
+            return self.export_to_csv(vps_rows, report_name, headers)
+        elif format == "excel":
+            return self.export_to_excel(vps_rows, report_name, "VPS Subscriptions", headers)
+        elif format == "pdf":
+            return self.export_to_pdf(vps_rows, report_name, "VPS Report", headers)
         else:
             raise ValueError(f"Unsupported format: {format}")

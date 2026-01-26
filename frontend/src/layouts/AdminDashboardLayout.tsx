@@ -25,8 +25,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/shared/components/ui/collapsible";
-import { useSystemAlerts } from "@/modules/admin/hooks";
-import { AlertCircle, CheckCircle, XCircle } from "lucide-react";
+import { NotificationDropdown } from "@/shared/components/NotificationDropdown";
+import { AlertCircle, CheckCircle, XCircle, Mail } from "lucide-react";
 import {
   LayoutDashboard,
   Users,
@@ -56,7 +56,6 @@ import {
   Building2,
   FileCheck,
   Lock,
-  Mail,
   MessageSquare,
   HardDrive,
   Archive,
@@ -72,6 +71,8 @@ import {
   Image,
   Globe,
   BarChart2,
+  FileEdit as FilePen,
+  Receipt,
 } from "lucide-react";
 import { useAuth, RoleGuard, useLogout } from "@/modules/auth";
 
@@ -92,22 +93,14 @@ const AdminDashboardLayout: React.FC = () => {
     reports: location.pathname.startsWith("/admin/reports"),
     support: location.pathname.startsWith("/admin/support"),
     tickets: location.pathname.startsWith("/admin/tickets"),
+    orders: location.pathname.startsWith("/admin/orders"),
+    invoices: location.pathname.startsWith("/admin/invoices"),
+    quotes: location.pathname.startsWith("/admin/quotes"),
     hosting: location.pathname.startsWith("/admin/hosting"),
     dns: location.pathname.startsWith("/admin/dns"),
     maintenance: location.pathname.startsWith("/admin/maintenance"),
   });
   
-  // Fetch alerts for notifications
-  const { data: alertsData } = useSystemAlerts({
-    status: "active",
-    page: 1,
-    page_size: 10,
-  });
-  
-  const activeAlerts = alertsData?.alerts?.filter(
-    (alert: any) => alert.status === "active"
-  ) || [];
-  const unreadCount = activeAlerts.length;
 
   const toggleSection = (section: string) => {
     setOpenSections((prev) => ({
@@ -321,6 +314,76 @@ const AdminDashboardLayout: React.FC = () => {
           href: "/admin/tickets/templates",
           icon: FileText,
           current: location.pathname.startsWith("/admin/tickets/templates"),
+        },
+        {
+          name: "Email accounts",
+          href: "/admin/tickets/email-accounts",
+          icon: Mail,
+          current: location.pathname.startsWith("/admin/tickets/email-accounts"),
+        },
+      ],
+    },
+    {
+      name: "Orders",
+      href: "/admin/orders",
+      icon: ShoppingCart,
+      current: location.pathname.startsWith("/admin/orders"),
+      sectionKey: "orders",
+      children: [
+        {
+          name: "All Orders",
+          href: "/admin/orders",
+          icon: ShoppingCart,
+          current: location.pathname === "/admin/orders",
+        },
+        {
+          name: "Create Order",
+          href: "/admin/orders/create",
+          icon: UserPlus,
+          current: location.pathname === "/admin/orders/create",
+        },
+      ],
+    },
+    {
+      name: "Quotes",
+      href: "/admin/quotes",
+      icon: FilePen,
+      current: location.pathname.startsWith("/admin/quotes"),
+      sectionKey: "quotes",
+      children: [
+        {
+          name: "All Quotes",
+          href: "/admin/quotes",
+          icon: FilePen,
+          current: location.pathname === "/admin/quotes",
+        },
+        {
+          name: "Create Quote",
+          href: "/admin/quotes/new",
+          icon: UserPlus,
+          current: location.pathname === "/admin/quotes/new",
+          permission: "quotes:create",
+        },
+      ],
+    },
+    {
+      name: "Invoices",
+      href: "/admin/invoices",
+      icon: Receipt,
+      current: location.pathname.startsWith("/admin/invoices"),
+      sectionKey: "invoices",
+      children: [
+        {
+          name: "All Invoices",
+          href: "/admin/invoices",
+          icon: Receipt,
+          current: location.pathname === "/admin/invoices",
+        },
+        {
+          name: "Create Invoice",
+          href: "/admin/invoices/create",
+          icon: UserPlus,
+          current: location.pathname === "/admin/invoices/create",
         },
       ],
     },
@@ -615,85 +678,16 @@ const AdminDashboardLayout: React.FC = () => {
                 <PopoverTrigger asChild>
                   <Button variant="ghost" size="sm" className="relative">
                     <Bell className="h-4 w-4" />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                      </span>
-                    )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-0 bg-white border-gray-200 shadow-lg" align="end">
-                  <div className="p-4 border-b bg-white">
-                    <h4 className="font-semibold text-sm text-gray-900">Notifications</h4>
-                    <p className="text-xs text-gray-500">
-                      {unreadCount > 0
-                        ? `${unreadCount} active alert${unreadCount > 1 ? "s" : ""}`
-                        : "No active alerts"}
-                    </p>
-                  </div>
-                  <div className="max-h-96 overflow-y-auto bg-white">
-                    {activeAlerts.length > 0 ? (
-                      activeAlerts.map((alert: any) => (
-                        <div
-                          key={alert.id}
-                          className="p-4 border-b bg-white hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 mt-0.5">
-                              {alert.severity === "critical" ? (
-                                <XCircle className="h-4 w-4 text-red-600" />
-                              ) : alert.severity === "warning" ? (
-                                <AlertCircle className="h-4 w-4 text-yellow-600" />
-                              ) : (
-                                <CheckCircle className="h-4 w-4 text-blue-600" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900">
-                                {alert.title}
-                              </p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {alert.description}
-                              </p>
-                              {alert.component && (
-                                <p className="text-xs text-gray-400 mt-1">
-                                  Component: {alert.component}
-                                </p>
-                              )}
-                              <p className="text-xs text-gray-400 mt-1">
-                                {new Date(alert.timestamp).toLocaleString()}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="p-8 text-center text-sm text-gray-500 bg-white">
-                        No active alerts
-                      </div>
-                    )}
-                  </div>
-                  {activeAlerts.length > 0 && (
-                    <div className="p-2 border-t bg-white">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full"
-                        asChild
-                      >
-                        <Link to="/admin/overview/alerts">View all alerts</Link>
-                      </Button>
-                    </div>
-                  )}
+                <PopoverContent className="w-80 p-0" align="end">
+                  <NotificationDropdown />
                 </PopoverContent>
               </Popover>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="relative h-8 w-8 rounded-full"
-                  >
+                  <Button variant="ghost" size="sm" className="relative">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src="" alt={user?.name} />
                       <AvatarFallback>

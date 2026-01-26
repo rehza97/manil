@@ -15,28 +15,20 @@ import {
 } from "@/shared/components/ui/select";
 import { Switch } from "@/shared/components/ui/switch";
 import { apiClient } from "@/shared/api/client";
+import type {
+  ServiceType,
+  BillingCycle,
+  ProvisioningType,
+  CreateProductDTO,
+} from "@/modules/products/types/product.types";
 
 interface ProductCategory {
   id: string;
   name: string;
 }
 
-interface ProductFormData {
-  name: string;
-  slug: string;
-  description: string;
-  short_description: string;
-  category_id: string;
-  sku: string;
-  barcode: string;
-  regular_price: number;
-  sale_price: number | null;
-  cost_price: number | null;
-  stock_quantity: number;
-  low_stock_threshold: number;
-  is_featured: boolean;
-  is_active: boolean;
-  is_visible: boolean;
+interface ProductFormData extends Omit<CreateProductDTO, "service_config"> {
+  service_config?: string; // JSON string for textarea input
 }
 
 const ProductFormPage: React.FC = () => {
@@ -51,12 +43,15 @@ const ProductFormPage: React.FC = () => {
     short_description: "",
     category_id: "",
     sku: "",
-    barcode: "",
     regular_price: 0,
     sale_price: null,
-    cost_price: null,
-    stock_quantity: 0,
-    low_stock_threshold: 10,
+    service_type: "general",
+    billing_cycle: "one_time",
+    is_recurring: false,
+    provisioning_type: undefined,
+    auto_renew: false,
+    trial_period_days: undefined,
+    service_config: "",
     is_featured: false,
     is_active: true,
     is_visible: true,
@@ -90,12 +85,17 @@ const ProductFormPage: React.FC = () => {
         short_description: product.short_description || "",
         category_id: product.category_id || "",
         sku: product.sku || "",
-        barcode: product.barcode || "",
         regular_price: product.regular_price || 0,
-        sale_price: product.sale_price,
-        cost_price: product.cost_price,
-        stock_quantity: product.stock_quantity || 0,
-        low_stock_threshold: product.low_stock_threshold || 10,
+        sale_price: product.sale_price || null,
+        service_type: product.service_type || "general",
+        billing_cycle: product.billing_cycle || "one_time",
+        is_recurring: product.is_recurring || false,
+        provisioning_type: product.provisioning_type,
+        auto_renew: product.auto_renew || false,
+        trial_period_days: product.trial_period_days,
+        service_config: product.service_config
+          ? JSON.stringify(product.service_config, null, 2)
+          : "",
         is_featured: product.is_featured || false,
         is_active: product.is_active !== undefined ? product.is_active : true,
         is_visible: product.is_visible !== undefined ? product.is_visible : true,
@@ -122,7 +122,22 @@ const ProductFormPage: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    mutation.mutate(formData);
+    
+    // Parse service_config JSON if provided
+    const submitData: CreateProductDTO = {
+      ...formData,
+      service_config: formData.service_config
+        ? (() => {
+            try {
+              return JSON.parse(formData.service_config);
+            } catch {
+              return undefined;
+            }
+          })()
+        : undefined,
+    };
+    
+    mutation.mutate(submitData as any);
   };
 
   const handleChange = (
@@ -235,13 +250,129 @@ const ProductFormPage: React.FC = () => {
                   required
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Service Configuration */}
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Service Configuration</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="service_type">Service Type *</Label>
+                <Select
+                  value={formData.service_type}
+                  onValueChange={(value) => handleChange("service_type", value as ServiceType)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select service type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="general">General</SelectItem>
+                    <SelectItem value="dns">DNS</SelectItem>
+                    <SelectItem value="ssl">SSL Certificate</SelectItem>
+                    <SelectItem value="email">Email Hosting</SelectItem>
+                    <SelectItem value="backup">Backup Service</SelectItem>
+                    <SelectItem value="monitoring">Monitoring</SelectItem>
+                    <SelectItem value="domain">Domain Registration</SelectItem>
+                    <SelectItem value="hosting">Hosting</SelectItem>
+                    <SelectItem value="storage">Storage</SelectItem>
+                    <SelectItem value="cdn">CDN</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
               <div>
-                <Label htmlFor="barcode">Barcode</Label>
+                <Label htmlFor="billing_cycle">Billing Cycle *</Label>
+                <Select
+                  value={formData.billing_cycle}
+                  onValueChange={(value) => handleChange("billing_cycle", value as BillingCycle)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select billing cycle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="one_time">One Time</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="yearly">Yearly</SelectItem>
+                    <SelectItem value="usage_based">Usage Based</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="provisioning_type">Provisioning Type</Label>
+                <Select
+                  value={formData.provisioning_type || undefined}
+                  onValueChange={(value) =>
+                    handleChange("provisioning_type", value ? (value as ProvisioningType) : undefined)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select provisioning type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="automatic">Automatic</SelectItem>
+                    <SelectItem value="manual">Manual</SelectItem>
+                    <SelectItem value="api">API</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="trial_period_days">Trial Period (days)</Label>
                 <Input
-                  id="barcode"
-                  value={formData.barcode}
-                  onChange={(e) => handleChange("barcode", e.target.value)}
+                  id="trial_period_days"
+                  type="number"
+                  min="0"
+                  value={formData.trial_period_days || ""}
+                  onChange={(e) =>
+                    handleChange(
+                      "trial_period_days",
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
+                  placeholder="e.g., 14"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <Label htmlFor="service_config">Service Configuration (JSON)</Label>
+                <Textarea
+                  id="service_config"
+                  value={formData.service_config || ""}
+                  onChange={(e) => handleChange("service_config", e.target.value)}
+                  rows={6}
+                  placeholder='{"key": "value"}'
+                  className="font-mono text-sm"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Optional JSON configuration for service-specific settings
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="is_recurring">Recurring Service</Label>
+                  <p className="text-xs text-gray-500">Service auto-renews</p>
+                </div>
+                <Switch
+                  id="is_recurring"
+                  checked={formData.is_recurring}
+                  onCheckedChange={(checked) => handleChange("is_recurring", checked)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="auto_renew">Auto Renew</Label>
+                  <p className="text-xs text-gray-500">Enable auto-renewal by default</p>
+                </div>
+                <Switch
+                  id="auto_renew"
+                  checked={formData.auto_renew}
+                  onCheckedChange={(checked) => handleChange("auto_renew", checked)}
                 />
               </div>
             </div>
@@ -250,7 +381,7 @@ const ProductFormPage: React.FC = () => {
           {/* Pricing */}
           <div>
             <h2 className="text-lg font-semibold mb-4">Pricing</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="regular_price">Regular Price *</Label>
                 <Input
@@ -273,45 +404,6 @@ const ProductFormPage: React.FC = () => {
                   onChange={(e) =>
                     handleChange("sale_price", e.target.value ? parseFloat(e.target.value) : null)
                   }
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="cost_price">Cost Price</Label>
-                <Input
-                  id="cost_price"
-                  type="number"
-                  step="0.01"
-                  value={formData.cost_price || ""}
-                  onChange={(e) =>
-                    handleChange("cost_price", e.target.value ? parseFloat(e.target.value) : null)
-                  }
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Inventory */}
-          <div>
-            <h2 className="text-lg font-semibold mb-4">Inventory</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="stock_quantity">Stock Quantity</Label>
-                <Input
-                  id="stock_quantity"
-                  type="number"
-                  value={formData.stock_quantity}
-                  onChange={(e) => handleChange("stock_quantity", parseInt(e.target.value))}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="low_stock_threshold">Low Stock Threshold</Label>
-                <Input
-                  id="low_stock_threshold"
-                  type="number"
-                  value={formData.low_stock_threshold}
-                  onChange={(e) => handleChange("low_stock_threshold", parseInt(e.target.value))}
                 />
               </div>
             </div>

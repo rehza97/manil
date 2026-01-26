@@ -59,7 +59,7 @@ export const RoleEditPage: React.FC = () => {
     return null;
   }
 
-  const [formData, setFormData] = useState<UpdateRoleData>({
+  const [formData, setFormData] = useState<UpdateRoleData & { permission_ids: string[] }>({
     name: "",
     description: "",
     permission_ids: [],

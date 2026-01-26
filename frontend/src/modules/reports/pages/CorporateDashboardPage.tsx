@@ -1,25 +1,35 @@
 /**
  * Corporate Dashboard Page
-import { formatCurrency } from "@/shared/utils/formatters";
  *
  * Business operations overview for corporate users.
  */
 
 import React, { useState } from 'react';
 import {
-  UserGroupIcon,
-  TicketIcon,
-  ShoppingBagIcon,
-  CurrencyDollarIcon,
-  ClockIcon,
-  CheckCircleIcon,
-} from '@heroicons/react/24/outline';
+  Users,
+  Ticket,
+  ShoppingCart,
+  DollarSign,
+  Clock,
+  CheckCircle2,
+  ShoppingBag as ShoppingBagIcon,
+} from 'lucide-react';
 import { useCorporateDashboard } from '../hooks/useReports';
 import { StatCard, LineChart, AreaChart, PieChart } from '../components';
+import { RevenueCard } from '@/modules/revenue/components';
+import { RevenueType } from '@/modules/revenue/types/revenue.types';
+import { useQuery } from '@tanstack/react-query';
+import { revenueService } from '@/modules/revenue/services/revenueService';
 
 export const CorporateDashboardPage: React.FC = () => {
   const [period, setPeriod] = useState('month');
   const { data: dashboard, isLoading, error } = useCorporateDashboard(period);
+
+  // Fetch revenue overview for consistent revenue display
+  const { data: revenueOverview } = useQuery({
+    queryKey: ["revenue", "overview", period],
+    queryFn: () => revenueService.getOverview(period),
+  });
 
   if (error) {
     return (
@@ -64,7 +74,7 @@ export const CorporateDashboardPage: React.FC = () => {
           title="Active Customers"
           value={metrics?.active_customers || 0}
           subtitle={`${metrics?.total_customers || 0} total`}
-          icon={<UserGroupIcon className="h-6 w-6" />}
+          icon={<Users className="h-6 w-6" />}
           color="blue"
           loading={isLoading}
         />
@@ -72,7 +82,7 @@ export const CorporateDashboardPage: React.FC = () => {
           title="Open Tickets"
           value={metrics?.open_tickets || 0}
           subtitle={`${metrics?.total_tickets || 0} total`}
-          icon={<TicketIcon className="h-6 w-6" />}
+          icon={<Ticket className="h-6 w-6" />}
           color="yellow"
           loading={isLoading}
         />
@@ -80,17 +90,16 @@ export const CorporateDashboardPage: React.FC = () => {
           title="Pending Orders"
           value={metrics?.pending_orders || 0}
           subtitle="Awaiting processing"
-          icon={<ClockIcon className="h-6 w-6" />}
+          icon={<Clock className="h-6 w-6" />}
           color="purple"
           loading={isLoading}
         />
-        <StatCard
+        <RevenueCard
           title="Revenue (Month)"
-          value={`${(metrics?.total_revenue || 0).toLocaleString()} DZD`}
-          subtitle="From completed orders"
-          icon={<CurrencyDollarIcon className="h-6 w-6" />}
-          color="green"
-          loading={isLoading}
+          value={Number(revenueOverview?.metrics.booked_revenue || metrics?.total_revenue || 0)}
+          type={RevenueType.BOOKED}
+          subtitle="From delivered orders"
+          icon={<DollarSign className="h-6 w-6" />}
         />
       </div>
 
@@ -99,7 +108,7 @@ export const CorporateDashboardPage: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">Ticket Performance</h3>
-            <TicketIcon className="h-8 w-8 text-purple-500" />
+            <Ticket className="h-8 w-8 text-purple-500" />
           </div>
           <div className="space-y-4">
             <div>
@@ -183,7 +192,7 @@ export const CorporateDashboardPage: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">Customer Engagement</h3>
-            <UserGroupIcon className="h-8 w-8 text-blue-500" />
+            <Users className="h-8 w-8 text-blue-500" />
           </div>
           <div className="space-y-4">
             <div>

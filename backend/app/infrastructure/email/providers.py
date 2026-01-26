@@ -4,8 +4,10 @@ Email provider implementations.
 Supports multiple email providers:
 - SMTP (generic)
 - SendGrid
+- AWS SES
 """
 
+import asyncio
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -53,9 +55,9 @@ class SMTPProvider(EmailProvider):
     def __init__(self):
         self.smtp_host = getattr(settings, "SMTP_HOST", "localhost")
         self.smtp_port = getattr(settings, "SMTP_PORT", 587)
-        self.smtp_user = getattr(settings, "SMTP_USER", "")
+        self.smtp_user = getattr(settings, "SMTP_USERNAME", "")
         self.smtp_password = getattr(settings, "SMTP_PASSWORD", "")
-        self.smtp_tls = getattr(settings, "SMTP_TLS", True)
+        self.smtp_tls = getattr(settings, "SMTP_USE_TLS", True)
         self.from_email = settings.EMAIL_FROM
 
     async def send_email(
@@ -190,13 +192,70 @@ class SendGridProvider(EmailProvider):
 
                             mail.add_attachment(attachment)
 
-            # Send email
+            # Send email (run sync SDK in thread pool to avoid blocking)
+            loop = asyncio.get_running_loop()
             sg = SendGridAPIClient(self.api_key)
-            response = sg.send(mail)
-
+            response = await loop.run_in_executor(None, lambda: sg.send(mail))
             return response.status_code in [200, 202]
         except Exception as e:
             print(f"❌ SendGrid send error: {e}")
+            return False
+
+
+class SESProvider(EmailProvider):
+    """AWS SES email provider implementation."""
+
+    def __init__(self):
+        self.region = getattr(settings, "AWS_SES_REGION", "us-east-1")
+        self.from_email = settings.EMAIL_FROM
+        self.access_key = getattr(settings, "AWS_ACCESS_KEY_ID", None)
+        self.secret_key = getattr(settings, "AWS_SECRET_ACCESS_KEY", None)
+
+    async def send_email(
+        self,
+        to: List[str],
+        subject: str,
+        html_body: str,
+        text_body: Optional[str] = None,
+        attachments: Optional[List[Dict[str, str]]] = None,
+    ) -> bool:
+        """
+        Send email via AWS SES.
+
+        Uses boto3 SES client. Credentials via AWS_ACCESS_KEY_ID,
+        AWS_SECRET_ACCESS_KEY, or default boto3 resolution (env/instance).
+        """
+        try:
+            import boto3
+
+            client_kw: dict = {"region_name": self.region}
+            if self.access_key and self.secret_key:
+                client_kw["aws_access_key_id"] = self.access_key
+                client_kw["aws_secret_access_key"] = self.secret_key
+            ses = boto3.client("ses", **client_kw)
+
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = self.from_email
+            msg["To"] = ", ".join(to)
+            if text_body:
+                msg.attach(MIMEText(text_body, "plain"))
+            msg.attach(MIMEText(html_body, "html"))
+
+            raw = msg.as_string()
+
+            def _send() -> dict:
+                return ses.send_raw_email(
+                    Source=self.from_email,
+                    Destinations=to,
+                    RawMessage={"Data": raw.encode("utf-8")},
+                )
+
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, _send)
+            return True
+        except Exception as e:
+            print(f"❌ SES send error: {e}")
             return False
 
 
@@ -207,9 +266,10 @@ def get_email_provider() -> EmailProvider:
     Returns:
         EmailProvider instance based on settings
     """
-    provider = settings.EMAIL_PROVIDER.lower()
+    provider = settings.EMAIL_PROVIDER.lower().strip()
 
     if provider == "sendgrid":
         return SendGridProvider()
-    else:
-        return SMTPProvider()
+    if provider == "ses":
+        return SESProvider()
+    return SMTPProvider()

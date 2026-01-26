@@ -56,8 +56,8 @@ export const QuoteConversionModal: React.FC<QuoteConversionModalProps> = ({
   const handleConvert = async () => {
     if (!selectedQuoteId) {
       toast({
-        title: "Error",
-        description: "Please select a quote",
+        title: "Erreur",
+        description: "Veuillez sélectionner un devis",
         variant: "destructive",
       });
       return;
@@ -67,22 +67,22 @@ export const QuoteConversionModal: React.FC<QuoteConversionModalProps> = ({
     try {
       const invoice = await invoiceService.convertFromQuote(selectedQuoteId);
       toast({
-        title: "Success",
-        description: "Quote converted to invoice successfully",
+        title: "Succès",
+        description: "Devis converti en facture",
       });
       onOpenChange(false);
       onSuccess?.(invoice.id);
     } catch (error: any) {
       if (error.message?.includes("already converted")) {
         toast({
-          title: "Error",
-          description: "This quote has already been converted to an invoice",
+          title: "Erreur",
+          description: "Ce devis a déjà été converti en facture",
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Error",
-          description: error.message || "Failed to convert quote",
+          title: "Erreur",
+          description: error.message || "Échec de la conversion",
           variant: "destructive",
         });
       }
@@ -95,32 +95,32 @@ export const QuoteConversionModal: React.FC<QuoteConversionModalProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Convert Quote to Invoice</DialogTitle>
+          <DialogTitle>Convertir un devis en facture</DialogTitle>
           <DialogDescription>
-            Select an accepted quote to convert to an invoice
+            Choisir un devis accepté à convertir en facture
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="quote">Quote</Label>
+            <Label htmlFor="quote">Devis</Label>
             <Select value={selectedQuoteId} onValueChange={setSelectedQuoteId}>
               <SelectTrigger id="quote">
-                <SelectValue placeholder="Select a quote" />
+                <SelectValue placeholder="Choisir un devis" />
               </SelectTrigger>
               <SelectContent>
                 {isLoadingQuotes ? (
                   <SelectItem value="__loading__" disabled>
-                    Loading quotes...
+                    Chargement des devis…
                   </SelectItem>
                 ) : acceptedQuotes.length === 0 ? (
                   <SelectItem value="__no_quotes__" disabled>
-                    No accepted quotes available
+                    Aucun devis accepté
                   </SelectItem>
                 ) : (
                   acceptedQuotes.map((quote: any) => (
                     <SelectItem key={quote.id} value={quote.id}>
-                      {quote.quote_number} - {quote.title || "Untitled"} (
+                      {quote.quote_number} - {quote.title || "Sans titre"} (
                       {quote.total?.toFixed(2)})
                     </SelectItem>
                   ))
@@ -130,7 +130,7 @@ export const QuoteConversionModal: React.FC<QuoteConversionModalProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="issue_date">Issue Date</Label>
+            <Label htmlFor="issue_date">Date d&apos;émission</Label>
             <Input
               id="issue_date"
               type="date"
@@ -140,7 +140,7 @@ export const QuoteConversionModal: React.FC<QuoteConversionModalProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="due_date">Due Date</Label>
+            <Label htmlFor="due_date">Échéance</Label>
             <Input
               id="due_date"
               type="date"
@@ -156,13 +156,13 @@ export const QuoteConversionModal: React.FC<QuoteConversionModalProps> = ({
             variant="outline"
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            Annuler
           </Button>
           <Button
             onClick={handleConvert}
             disabled={isConverting || !selectedQuoteId || acceptedQuotes.length === 0}
           >
-            {isConverting ? "Converting..." : "Convert to Invoice"}
+            {isConverting ? "Conversion…" : "Convertir en facture"}
           </Button>
         </DialogFooter>
       </DialogContent>

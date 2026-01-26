@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy import String, DateTime, Text, Integer, Boolean, ForeignKey, Float, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.dialects.postgresql import JSONB
 
 from app.config.database import Base
 
@@ -39,6 +40,9 @@ class ProductCategory(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
 
     # Relationships
     products = relationship(
@@ -56,7 +60,7 @@ class ProductCategory(Base):
 
 
 class Product(Base):
-    """Product in the catalogue."""
+    """Product in the catalogue - represents digital services."""
 
     __tablename__ = "products"
 
@@ -75,16 +79,58 @@ class Product(Base):
 
     # Identifiers
     sku: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
-    barcode: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
+    barcode: Mapped[Optional[str]] = mapped_column(
+        String(100), nullable=True, index=True,
+        comment="DEPRECATED: Not applicable for digital services. Kept for backward compatibility."
+    )
 
     # Pricing
     regular_price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     sale_price: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
-    cost_price: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
+    cost_price: Mapped[Optional[float]] = mapped_column(
+        Numeric(10, 2), nullable=True,
+        comment="DEPRECATED: Not applicable for digital services. Kept for backward compatibility."
+    )
 
-    # Inventory
-    stock_quantity: Mapped[int] = mapped_column(Integer, default=0)
-    low_stock_threshold: Mapped[int] = mapped_column(Integer, default=10)
+    # Service Configuration
+    service_type: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="general", index=True,
+        comment="Type of service: dns, ssl, email, backup, monitoring, domain, general, etc."
+    )
+    billing_cycle: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="one_time", index=True,
+        comment="Billing frequency: monthly, yearly, one_time, usage_based"
+    )
+    is_recurring: Mapped[bool] = mapped_column(
+        Boolean, default=False, index=True,
+        comment="Whether service auto-renews"
+    )
+    provisioning_type: Mapped[Optional[str]] = mapped_column(
+        String(20), nullable=True, index=True,
+        comment="How service is provisioned: automatic, manual, api"
+    )
+    auto_renew: Mapped[bool] = mapped_column(
+        Boolean, default=False,
+        comment="Auto-renewal enabled by default"
+    )
+    trial_period_days: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True,
+        comment="Trial period in days"
+    )
+    service_config: Mapped[Optional[dict]] = mapped_column(
+        JSONB, nullable=True,
+        comment="Flexible service configuration (JSON)"
+    )
+
+    # Inventory (DEPRECATED - kept for backward compatibility)
+    stock_quantity: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True, default=None,
+        comment="DEPRECATED: Not applicable for digital services. Use NULL for unlimited. Kept for backward compatibility."
+    )
+    low_stock_threshold: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True, default=None,
+        comment="DEPRECATED: Not applicable for digital services. Kept for backward compatibility."
+    )
 
     # Features
     is_featured: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
@@ -164,7 +210,7 @@ class ProductImage(Base):
 
 
 class ProductVariant(Base):
-    """Product variants (size, color, etc.)."""
+    """Product variants - represents service tiers/plans (e.g., Basic, Professional, Enterprise)."""
 
     __tablename__ = "product_variants"
 
@@ -173,15 +219,26 @@ class ProductVariant(Base):
         String(36), ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
-    # Variant info
-    name: Mapped[str] = mapped_column(String(255), nullable=False)  # e.g., "Size: Large"
+    # Variant/Tier info
+    name: Mapped[str] = mapped_column(String(255), nullable=False)  # e.g., "Professional Plan"
     sku: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
+    tier_name: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True, index=True,
+        comment="Tier name: basic, professional, enterprise, etc."
+    )
+    tier_level: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True,
+        comment="Tier level for ordering (1=basic, 2=professional, 3=enterprise, etc.)"
+    )
 
     # Pricing
     price_adjustment: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
 
-    # Inventory
-    stock_quantity: Mapped[int] = mapped_column(Integer, default=0)
+    # Inventory (DEPRECATED - kept for backward compatibility)
+    stock_quantity: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True, default=None,
+        comment="DEPRECATED: Not applicable for service tiers. Kept for backward compatibility."
+    )
 
     # Display
     display_order: Mapped[int] = mapped_column(Integer, default=0)

@@ -17,7 +17,7 @@ export const StockStatus: React.FC<StockStatusProps> = ({
     return (
       <div className="inline-flex items-center gap-2 rounded-full bg-red-100 px-3 py-1">
         <span className="h-2 w-2 rounded-full bg-red-600"></span>
-        <span className="text-xs font-semibold text-red-700">Out of Stock</span>
+        <span className="text-xs font-semibold text-red-700">Rupture de stock</span>
       </div>
     );
   }
@@ -36,7 +36,7 @@ export const StockStatus: React.FC<StockStatusProps> = ({
   return (
     <div className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1">
       <span className="h-2 w-2 rounded-full bg-green-600"></span>
-      <span className="text-xs font-semibold text-green-700">In Stock</span>
+      <span className="text-xs font-semibold text-green-700">En stock</span>
     </div>
   );
 };

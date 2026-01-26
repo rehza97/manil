@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config.database import get_db
 from app.core.dependencies import get_current_user, require_permission
 from app.core.exceptions import NotFoundException
+from app.core.permissions import Permission
 from app.core.logging import logger
 from app.modules.auth.models import User
 from app.modules.tickets.canned_replies import (
@@ -28,7 +29,7 @@ router = APIRouter(prefix="/tickets", tags=["canned-replies"])
     summary="Get available template variables",
 )
 async def get_available_variables(
-    current_user: User = Depends(require_permission("TICKETS_VIEW")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
     """Get list of available template variables for substitution."""
     service = CannedReplyService(None)  # No DB needed for this
@@ -58,7 +59,7 @@ async def get_available_variables(
 )
 async def validate_template(
     request: TemplateRenderRequest,
-    current_user: User = Depends(require_permission("TICKETS_MANAGE")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_MANAGE)),
 ):
     """Validate template syntax and variables."""
     service = CannedReplyService(None)
@@ -78,7 +79,7 @@ async def validate_template(
 )
 async def preview_template(
     request: TemplateRenderRequest,
-    current_user: User = Depends(require_permission("TICKETS_VIEW")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
     """Preview template with variables substituted."""
     service = CannedReplyService(None)
@@ -119,7 +120,7 @@ async def insert_canned_reply(
     ticket_id: str,
     request: CannedReplyQuickInsert,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_REPLY")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_REPLY)),
 ):
     """
     Get rendered canned reply ready for posting to ticket.
@@ -165,7 +166,7 @@ async def insert_canned_reply(
 async def get_popular_templates(
     limit: int = Query(10, ge=1, le=50),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_VIEW")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
     """Get most-used canned reply templates."""
     service = CannedReplyService(db)
@@ -182,7 +183,7 @@ async def get_templates_by_category(
     category: str,
     limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_VIEW")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
     """Get canned reply templates for a category."""
     service = CannedReplyService(db)
@@ -202,7 +203,7 @@ async def suggest_replies_for_ticket(
     ticket_id: str,
     limit: int = Query(5, ge=1, le=20),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_VIEW")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
     """
     Get suggested canned replies based on ticket category/priority.

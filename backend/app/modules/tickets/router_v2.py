@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config.database import get_db
 from app.core.dependencies import get_current_user, require_permission
 from app.core.exceptions import ForbiddenException, NotFoundException
+from app.core.permissions import Permission
 from app.core.logging import logger
 from app.modules.auth.models import User
 from app.modules.tickets.service import TicketService
@@ -34,7 +35,7 @@ router = APIRouter(prefix="/tickets", tags=["tickets"])
 async def create_ticket(
     ticket_data: TicketCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_CREATE")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_CREATE)),
 ) -> TicketResponse:
     """Create a new support ticket with permission validation."""
     # ✅ FIXED: Added permission validation
@@ -63,7 +64,7 @@ async def list_my_tickets(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_VIEW")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ) -> TicketListResponse:
     """List current user's tickets (for customers)."""
     if current_user.role != "client":
@@ -98,7 +99,7 @@ async def list_tickets(
     status: str | None = Query(None),
     priority: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_VIEW")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ) -> TicketListResponse:
     """List all tickets with pagination and filters."""
     service = TicketService(db)
@@ -138,7 +139,7 @@ async def list_tickets(
 async def get_ticket(
     ticket_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_VIEW")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ) -> TicketDetailResponse:
     """Get ticket by ID with all replies."""
     service = TicketService(db)
@@ -168,7 +169,7 @@ async def update_ticket(
     ticket_id: str,
     ticket_data: TicketUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_CREATE")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_CREATE)),
 ) -> TicketResponse:
     """Update ticket details (limited fields)."""
     service = TicketService(db)
@@ -195,7 +196,7 @@ async def update_ticket(
 async def delete_ticket(
     ticket_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_DELETE")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_DELETE)),
 ) -> None:
     """Delete (soft delete) ticket."""
     service = TicketService(db)
@@ -212,7 +213,7 @@ async def update_ticket_status(
     ticket_id: str,
     status_update: TicketStatusUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_CLOSE")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_CLOSE)),
 ) -> TicketResponse:
     """Update ticket status with state validation."""
     service = TicketService(db)
@@ -232,7 +233,7 @@ async def assign_ticket(
     ticket_id: str,
     assignment: TicketAssignment,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_ASSIGN")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_ASSIGN)),
 ) -> TicketResponse:
     """Assign ticket to user with validation."""
     service = TicketService(db)
@@ -252,7 +253,7 @@ async def transfer_ticket(
     ticket_id: str,
     transfer: TicketTransfer,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_ASSIGN")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_ASSIGN)),
 ) -> TicketResponse:
     """Transfer ticket to another user."""
     service = TicketService(db)
@@ -270,7 +271,7 @@ async def transfer_ticket(
 async def close_ticket(
     ticket_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_CLOSE")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_CLOSE)),
 ) -> TicketResponse:
     """Close ticket."""
     service = TicketService(db)
@@ -288,7 +289,7 @@ async def add_ticket_reply(
     ticket_id: str,
     reply_data: TicketReplyCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_REPLY")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_REPLY)),
 ) -> TicketReplyResponse:
     """Add reply to ticket."""
     service = TicketService(db)
@@ -304,7 +305,7 @@ async def add_ticket_reply(
 async def get_ticket_replies(
     ticket_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_VIEW")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ) -> list[TicketReplyResponse]:
     """Get all replies for ticket."""
     service = TicketService(db)
@@ -321,7 +322,7 @@ async def get_ticket_replies(
 async def delete_ticket_reply(
     reply_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("TICKETS_REPLY")),
+    current_user: User = Depends(require_permission(Permission.TICKETS_REPLY)),
 ) -> None:
     """Delete (soft delete) ticket reply."""
     service = TicketService(db)

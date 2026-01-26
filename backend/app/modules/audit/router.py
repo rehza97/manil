@@ -8,7 +8,8 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_permission
+from app.core.permissions import Permission
 from app.modules.auth.models import User
 from app.modules.audit.service import AuditService
 from app.modules.audit.schemas import (
@@ -49,7 +50,8 @@ async def get_audit_logs(
     )
 
     # Non-admin users can only see their own logs
-    if current_user.role != "admin":
+    from app.core.permissions import has_permission
+    if not has_permission(current_user.role.value, Permission.AUDIT_ADMIN):
         filters.user_id = current_user.id
 
     return await service.get_logs(page=page, page_size=page_size, filters=filters)
@@ -68,7 +70,8 @@ async def get_user_audit_logs(
     Users can only view their own logs unless they are admin.
     """
     # Check permissions
-    if current_user.role != "admin" and current_user.id != user_id:
+    from app.core.permissions import has_permission
+    if not has_permission(current_user.role.value, Permission.AUDIT_ADMIN) and current_user.id != user_id:
         from app.core.exceptions import ForbiddenException
 
         raise ForbiddenException("You can only view your own audit logs")

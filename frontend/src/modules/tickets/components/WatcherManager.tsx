@@ -60,7 +60,7 @@ export const WatcherManager: React.FC<WatcherManagerProps> = ({
 
   const handleAddWatcher = async () => {
     if (!selectedUserId) {
-      toast.error('Please select a user');
+      toast.error('Veuillez choisir un utilisateur');
       return;
     }
 
@@ -69,11 +69,11 @@ export const WatcherManager: React.FC<WatcherManagerProps> = ({
       await addWatcher.mutateAsync({
         user_id: selectedUserId,
       });
-      toast.success('Watcher added successfully');
+      toast.success('Observateur ajouté');
       setSelectedUserId('');
       onWatchersChange?.();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to add watcher');
+      toast.error(error instanceof Error ? error.message : "Échec de l'ajout de l'observateur");
     } finally {
       setIsSubmitting(false);
     }
@@ -83,11 +83,11 @@ export const WatcherManager: React.FC<WatcherManagerProps> = ({
     setIsSubmitting(true);
     try {
       await removeWatcher.mutateAsync(userId);
-      toast.success('Watcher removed successfully');
+      toast.success('Observateur retiré');
       onWatchersChange?.();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Failed to remove watcher'
+        error instanceof Error ? error.message : "Échec du retrait de l'observateur"
       );
     } finally {
       setIsSubmitting(false);
@@ -99,21 +99,20 @@ export const WatcherManager: React.FC<WatcherManagerProps> = ({
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <Users className="h-4 w-4 mr-2" />
-          Watchers ({watchers?.length || 0})
+          Observateurs ({watchers?.length || 0})
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Ticket Watchers</DialogTitle>
+          <DialogTitle>Observateurs du ticket</DialogTitle>
           <DialogDescription>
-            Manage who is watching this ticket for updates
+            Gérer qui suit ce ticket pour les mises à jour
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Current Watchers */}
           <div>
-            <p className="text-sm font-semibold mb-2">Current Watchers</p>
+            <p className="text-sm font-semibold mb-2">Observateurs actuels</p>
             {watchersLoading ? (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
@@ -130,17 +129,17 @@ export const WatcherManager: React.FC<WatcherManagerProps> = ({
                       <div className="flex gap-1 mt-1">
                         {watcher.notify_on_reply && (
                           <Badge variant="outline" className="text-xs">
-                            Replies
+                            Réponses
                           </Badge>
                         )}
                         {watcher.notify_on_status_change && (
                           <Badge variant="outline" className="text-xs">
-                            Status
+                            Statut
                           </Badge>
                         )}
                         {watcher.notify_on_assignment && (
                           <Badge variant="outline" className="text-xs">
-                            Assigned
+                            Assignation
                           </Badge>
                         )}
                       </div>
@@ -157,18 +156,17 @@ export const WatcherManager: React.FC<WatcherManagerProps> = ({
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">No watchers yet</p>
+              <p className="text-sm text-gray-500">Aucun observateur</p>
             )}
           </div>
 
-          {/* Add Watcher */}
           {availableUsers.length > 0 && (
             <div className="space-y-2 border-t pt-4">
-              <p className="text-sm font-semibold">Add Watcher</p>
+              <p className="text-sm font-semibold">Ajouter un observateur</p>
               <div className="flex gap-2">
                 <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a user..." />
+                    <SelectValue placeholder="Choisir un utilisateur…" />
                   </SelectTrigger>
                   <SelectContent>
                     {availableUsers.map((user: any) => (
@@ -206,7 +204,7 @@ export const WatcherManager: React.FC<WatcherManagerProps> = ({
             onClick={() => setIsOpen(false)}
             disabled={isSubmitting}
           >
-            Done
+            Terminé
           </Button>
         </div>
       </DialogContent>

@@ -17,7 +17,8 @@ from pydantic import BaseModel, Field
 from app.config.database import get_db
 from app.config.redis import get_redis
 from app.config.settings import get_settings
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_permission
+from app.core.permissions import Permission
 from app.modules.auth.models import User
 from app.modules.audit.models import AuditLog
 from app.modules.customers.models import Customer
@@ -113,7 +114,7 @@ class MaintenanceStatsResponse(BaseModel):
 @router.get("/stats", response_model=MaintenanceStatsResponse)
 async def get_maintenance_stats(
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_MAINTENANCE)),
 ):
     """
     Get maintenance statistics.
@@ -121,11 +122,6 @@ async def get_maintenance_stats(
     Returns:
         Aggregated maintenance statistics.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can access maintenance statistics"
-        )
 
     # Get backup count and latest backup
     backup_dir = Path("storage/backups")
@@ -177,7 +173,7 @@ async def get_maintenance_stats(
 
 @router.get("/backup/history", response_model=List[BackupInfo])
 async def list_backups(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_MAINTENANCE)),
 ):
     """
     List all backup files.
@@ -185,11 +181,6 @@ async def list_backups(
     Returns:
         List of backup files with metadata.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can access backup history"
-        )
 
     backup_dir = Path("storage/backups")
     if not backup_dir.exists():
@@ -214,7 +205,7 @@ async def list_backups(
 @router.post("/backup/create", response_model=BackupInfo)
 async def create_backup(
     request: BackupCreateRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_MAINTENANCE)),
 ):
     """
     Create a new database backup.
@@ -222,11 +213,6 @@ async def create_backup(
     Returns:
         Backup file information.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can create backups"
-        )
 
     # Parse database URL
     db_url = settings.DATABASE_URL
@@ -316,7 +302,7 @@ async def create_backup(
 @router.post("/backup/restore", status_code=status.HTTP_204_NO_CONTENT)
 async def restore_backup(
     request: BackupRestoreRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_MAINTENANCE)),
 ):
     """
     Restore database from backup.
@@ -326,11 +312,6 @@ async def restore_backup(
     Returns:
         No content.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can restore backups"
-        )
 
     if not request.confirm:
         raise HTTPException(
@@ -475,7 +456,7 @@ async def restore_backup(
 @router.get("/backup/{backup_id}/download")
 async def download_backup(
     backup_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_MAINTENANCE)),
 ):
     """
     Download backup file.
@@ -483,11 +464,6 @@ async def download_backup(
     Returns:
         Backup file as download.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can download backups"
-        )
 
     backup_dir = Path("storage/backups")
     backup_file = backup_dir / f"{backup_id}.sql"
@@ -508,7 +484,7 @@ async def download_backup(
 @router.delete("/backup/{backup_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_backup(
     backup_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_MAINTENANCE)),
 ):
     """
     Delete backup file.
@@ -516,11 +492,6 @@ async def delete_backup(
     Returns:
         No content.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can delete backups"
-        )
 
     backup_dir = Path("storage/backups")
     backup_file = backup_dir / f"{backup_id}.sql"
@@ -589,7 +560,7 @@ async def _get_cache_stats() -> CacheStatsResponse:
 
 @router.get("/cache/stats", response_model=CacheStatsResponse)
 async def get_cache_stats(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_MAINTENANCE)),
 ):
     """
     Get cache statistics.
@@ -597,18 +568,13 @@ async def get_cache_stats(
     Returns:
         Cache statistics including keys, memory usage, and hit rate.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can access cache statistics"
-        )
 
     return await _get_cache_stats()
 
 
 @router.delete("/cache", status_code=status.HTTP_204_NO_CONTENT)
 async def clear_all_cache(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_MAINTENANCE)),
 ):
     """
     Clear all cache.
@@ -618,11 +584,6 @@ async def clear_all_cache(
     Returns:
         No content.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can clear cache"
-        )
 
     try:
         redis = await get_redis()
@@ -638,7 +599,7 @@ async def clear_all_cache(
 @router.delete("/cache/{pattern}", status_code=status.HTTP_204_NO_CONTENT)
 async def clear_cache_by_pattern(
     pattern: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_MAINTENANCE)),
 ):
     """
     Clear cache by pattern.
@@ -646,11 +607,6 @@ async def clear_cache_by_pattern(
     Returns:
         No content.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can clear cache"
-        )
 
     try:
         redis = await get_redis()
@@ -668,7 +624,7 @@ async def clear_cache_by_pattern(
 
 @router.post("/cache/warm", status_code=status.HTTP_204_NO_CONTENT)
 async def warm_cache(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_MAINTENANCE)),
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ):
     """
@@ -677,11 +633,6 @@ async def warm_cache(
     Returns:
         No content.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can warm cache"
-        )
 
     try:
         redis = await get_redis()
@@ -759,7 +710,7 @@ async def _get_cleanup_stats(db: AsyncSession) -> CleanupStatsResponse:
 @router.get("/cleanup/stats", response_model=CleanupStatsResponse)
 async def get_cleanup_stats(
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_MAINTENANCE)),
 ):
     """
     Get cleanup statistics.
@@ -767,11 +718,6 @@ async def get_cleanup_stats(
     Returns:
         Statistics on data that can be cleaned up.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can access cleanup statistics"
-        )
 
     return await _get_cleanup_stats(db)
 
@@ -780,7 +726,7 @@ async def get_cleanup_stats(
 async def preview_cleanup(
     request: CleanupRunRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_MAINTENANCE)),
 ):
     """
     Preview cleanup operation (dry-run).
@@ -788,11 +734,6 @@ async def preview_cleanup(
     Returns:
         Preview of what would be cleaned up.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can preview cleanup"
-        )
 
     stats = await _get_cleanup_stats(db)
     
@@ -814,7 +755,7 @@ async def preview_cleanup(
 async def run_cleanup(
     request: CleanupRunRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_MAINTENANCE)),
 ):
     """
     Run cleanup operations.
@@ -824,11 +765,6 @@ async def run_cleanup(
     Returns:
         No content.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can run cleanup"
-        )
 
     try:
         if request.cleanup_audit_logs:
@@ -868,7 +804,7 @@ async def run_cleanup(
 @router.get("/migrations", response_model=List[MigrationInfo])
 async def list_migrations(
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_MAINTENANCE)),
 ):
     """
     List all database migrations.
@@ -876,11 +812,6 @@ async def list_migrations(
     Returns:
         List of migration information.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can access migration history"
-        )
 
     migrations = []
     migrations_dir = Path("app/migrations/versions")
@@ -931,7 +862,7 @@ async def list_migrations(
 @router.get("/migrations/current", response_model=dict)
 async def get_current_migration(
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_MAINTENANCE)),
 ):
     """
     Get current migration version.
@@ -939,11 +870,6 @@ async def get_current_migration(
     Returns:
         Current migration version.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can access migration information"
-        )
 
     try:
         result = await db.execute(text("SELECT version_num FROM alembic_version"))
@@ -958,7 +884,7 @@ async def get_current_migration(
 @router.post("/migrations/upgrade", response_model=dict)
 async def upgrade_migrations(
     revision: Optional[str] = Query(None, description="Target revision (default: head)"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_MAINTENANCE)),
 ):
     """
     Run database migrations (upgrade).
@@ -968,11 +894,6 @@ async def upgrade_migrations(
     Returns:
         Migration result.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can run migrations"
-        )
 
     try:
         import subprocess
@@ -1011,7 +932,7 @@ async def upgrade_migrations(
 @router.post("/migrations/downgrade", response_model=dict)
 async def downgrade_migrations(
     revision: str = Query(..., description="Target revision to downgrade to"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permission.SYSTEM_MAINTENANCE)),
 ):
     """
     Rollback database migrations (downgrade).
@@ -1021,11 +942,6 @@ async def downgrade_migrations(
     Returns:
         Migration result.
     """
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can rollback migrations"
-        )
 
     try:
         import subprocess

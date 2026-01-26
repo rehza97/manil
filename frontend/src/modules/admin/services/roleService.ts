@@ -48,7 +48,6 @@ export interface CreateRoleData {
 export interface UpdateRoleData {
   name?: string;
   description?: string;
-  permission_ids?: string[];
   is_active?: boolean;
 }
 

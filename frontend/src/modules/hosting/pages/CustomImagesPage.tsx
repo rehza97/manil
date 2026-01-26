@@ -54,14 +54,14 @@ export const CustomImagesPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Custom Docker Images</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Images Docker personnalisées</h1>
           <p className="text-slate-600 mt-1">
-            Upload and manage your custom Docker images
+            Téléversez et gérez vos images Docker personnalisées
           </p>
         </div>
         <Button onClick={() => navigate("/dashboard/vps/custom-images/upload")}>
           <Upload className="h-4 w-4 mr-2" />
-          Upload Image
+          Téléverser une image
         </Button>
       </div>
 
@@ -75,22 +75,22 @@ export const CustomImagesPage: React.FC = () => {
           }}
         >
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Filter by status" />
+            <SelectValue placeholder="Filtrer par statut" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value={ImageBuildStatus.PENDING}>Pending</SelectItem>
-            <SelectItem value={ImageBuildStatus.VALIDATING}>Validating</SelectItem>
-            <SelectItem value={ImageBuildStatus.BUILDING}>Building</SelectItem>
-            <SelectItem value={ImageBuildStatus.SCANNING}>Scanning</SelectItem>
-            <SelectItem value={ImageBuildStatus.COMPLETED}>Completed</SelectItem>
-            <SelectItem value={ImageBuildStatus.FAILED}>Failed</SelectItem>
-            <SelectItem value={ImageBuildStatus.REJECTED}>Rejected</SelectItem>
+            <SelectItem value="all">Tous les statuts</SelectItem>
+            <SelectItem value={ImageBuildStatus.PENDING}>En attente</SelectItem>
+            <SelectItem value={ImageBuildStatus.VALIDATING}>Validation</SelectItem>
+            <SelectItem value={ImageBuildStatus.BUILDING}>Construction</SelectItem>
+            <SelectItem value={ImageBuildStatus.SCANNING}>Analyse</SelectItem>
+            <SelectItem value={ImageBuildStatus.COMPLETED}>Terminé</SelectItem>
+            <SelectItem value={ImageBuildStatus.FAILED}>Échoué</SelectItem>
+            <SelectItem value={ImageBuildStatus.REJECTED}>Rejeté</SelectItem>
           </SelectContent>
         </Select>
         <Button variant="outline" size="sm" onClick={() => refetch()}>
           <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
+          Actualiser
         </Button>
       </div>
 
@@ -101,7 +101,7 @@ export const CustomImagesPage: React.FC = () => {
           <AlertDescription>
             {error instanceof Error
               ? error.message
-              : "Failed to load custom images"}
+              : "Impossible de charger les images personnalisées"}
           </AlertDescription>
         </Alert>
       )}
@@ -143,8 +143,8 @@ export const CustomImagesPage: React.FC = () => {
               {pagination && pagination.total_pages > 1 && (
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-muted-foreground">
-                    Showing {((pagination.page - 1) * pagination.page_size) + 1} to{" "}
-                    {Math.min(pagination.page * pagination.page_size, pagination.total)} of{" "}
+                    {((pagination.page - 1) * pagination.page_size) + 1} –{" "}
+                    {Math.min(pagination.page * pagination.page_size, pagination.total)} sur{" "}
                     {pagination.total} images
                   </div>
                   <div className="flex gap-2">
@@ -154,7 +154,7 @@ export const CustomImagesPage: React.FC = () => {
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={pagination.page === 1}
                     >
-                      Previous
+                      Précédent
                     </Button>
                     <Button
                       variant="outline"
@@ -162,7 +162,7 @@ export const CustomImagesPage: React.FC = () => {
                       onClick={() => setPage((p) => Math.min(pagination.total_pages, p + 1))}
                       disabled={pagination.page === pagination.total_pages}
                     >
-                      Next
+                      Suivant
                     </Button>
                   </div>
                 </div>

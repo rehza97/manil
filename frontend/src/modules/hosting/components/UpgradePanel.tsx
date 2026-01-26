@@ -59,12 +59,12 @@ export function UpgradePanel({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Plan Upgrade</CardTitle>
-          <CardDescription>Upgrade to a higher-tier plan</CardDescription>
+          <CardTitle>Changer de formule</CardTitle>
+          <CardDescription>Passer à une formule supérieure</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            No upgrade plans available. You are on the highest tier.
+            Aucune formule supérieure. Vous êtes déjà sur la formule la plus élevée.
           </p>
         </CardContent>
       </Card>
@@ -118,18 +118,18 @@ export function UpgradePanel({
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Plan Upgrade</CardTitle>
-          <CardDescription>Upgrade to a higher-tier plan</CardDescription>
+          <CardTitle>Changer de formule</CardTitle>
+          <CardDescription>Passer à une formule supérieure</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Current Plan */}
           <div className="p-4 bg-muted rounded-md">
             <div className="flex items-center justify-between mb-2">
-              <span className="font-medium">Current Plan</span>
+              <span className="font-medium">Formule actuelle</span>
               <Badge variant="secondary">{currentPlan.name}</Badge>
             </div>
             <div className="text-sm text-muted-foreground">
-              {formatDZD(currentPlan.monthly_price)}/month
+              {formatDZD(currentPlan.monthly_price)}/mois
             </div>
           </div>
 
@@ -160,16 +160,16 @@ export function UpgradePanel({
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-1/3">Spec</TableHead>
-                        <TableHead className="w-1/3">Current</TableHead>
-                        <TableHead className="w-1/3">New</TableHead>
+                        <TableHead className="w-1/3">Actuel</TableHead>
+                        <TableHead className="w-1/3">Nouveau</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       <TableRow>
                         <TableCell>CPU</TableCell>
-                        <TableCell>{currentPlan.cpu_cores} cores</TableCell>
+                        <TableCell>{currentPlan.cpu_cores} cœurs</TableCell>
                         <TableCell className="font-medium">
-                          {plan.cpu_cores} cores
+                          {plan.cpu_cores} cœurs
                         </TableCell>
                       </TableRow>
                       <TableRow>
@@ -221,22 +221,22 @@ export function UpgradePanel({
       <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Plan Upgrade</AlertDialogTitle>
+            <AlertDialogTitle>Confirmer le changement de formule</AlertDialogTitle>
             <AlertDialogDescription>
               {selectedPlan && (
                 <div className="space-y-2 mt-2">
                   <p>
-                    You are about to upgrade from{" "}
-                    <strong>{currentPlan.name}</strong> to{" "}
+                    Vous allez passer de{" "}
+                    <strong>{currentPlan.name}</strong> à{" "}
                     <strong>{selectedPlan.name}</strong>.
                   </p>
                   {calculateProratedAmount(selectedPlan) > 0 && (
                     <p className="font-medium text-foreground">
-                      Pro-rated amount: {formatDZD(calculateProratedAmount(selectedPlan))}
+                      Montant au prorata : {formatDZD(calculateProratedAmount(selectedPlan))}
                     </p>
                   )}
                   <p className="text-sm text-muted-foreground">
-                    A pro-rated invoice will be generated for the upgrade.
+                    Une facture au prorata sera générée pour ce changement.
                   </p>
                 </div>
               )}
@@ -244,10 +244,10 @@ export function UpgradePanel({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setSelectedPlanId(null)}>
-              Cancel
+              Annuler
             </AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmUpgrade}>
-              Confirm Upgrade
+              Confirmer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

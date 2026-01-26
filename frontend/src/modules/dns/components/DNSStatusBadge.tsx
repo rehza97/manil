@@ -17,22 +17,22 @@ export function DNSStatusBadge({ status, className }: DNSStatusBadgeProps) {
     [DNSZoneStatus.ACTIVE]: {
       icon: CheckCircle2,
       className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100",
-      label: "Active",
+      label: "Actif",
     },
     [DNSZoneStatus.PENDING]: {
       icon: Clock,
       className: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100",
-      label: "Pending",
+      label: "En attente",
     },
     [DNSZoneStatus.SUSPENDED]: {
       icon: AlertCircle,
       className: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100",
-      label: "Suspended",
+      label: "Suspendu",
     },
     [DNSZoneStatus.DELETED]: {
       icon: XCircle,
       className: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100",
-      label: "Deleted",
+      label: "Supprimé",
     },
   }[status];
 

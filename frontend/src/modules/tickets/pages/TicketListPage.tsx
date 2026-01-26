@@ -57,14 +57,14 @@ export const TicketListPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Support Tickets</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Tickets support</h1>
           <p className="text-slate-600 mt-1">
-            Manage and track your support tickets
+            Gérer et suivre vos tickets support
           </p>
         </div>
         <Button onClick={() => navigate("/dashboard/tickets/new")}>
           <Plus className="h-4 w-4 mr-2" />
-          Create Ticket
+          Créer un ticket
         </Button>
       </div>
 
@@ -86,7 +86,7 @@ export const TicketListPage: React.FC = () => {
           <SheetTrigger asChild>
             <Button variant="outline" className="relative">
               <Filter className="h-4 w-4 mr-2" />
-              Filters
+              Filtres
               {hasActiveFilters && (
                 <span className="ml-2 h-5 w-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">
                   {Object.values(filters).filter(v => v).length + (searchQuery ? 1 : 0)}
@@ -116,7 +116,7 @@ export const TicketListPage: React.FC = () => {
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={handleClearFilters}>
             <X className="h-4 w-4 mr-1" />
-            Clear All
+            Tout effacer
           </Button>
         )}
       </div>
@@ -137,7 +137,7 @@ export const TicketListPage: React.FC = () => {
           )}
           {filters.priority && (
             <div className="flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-              Priority: {filters.priority}
+              Priorité : {filters.priority}
               <button
                 onClick={() => setFilters({ ...filters, priority: undefined })}
                 className="ml-1 hover:text-blue-900"
@@ -163,11 +163,11 @@ export const TicketListPage: React.FC = () => {
       {/* Ticket List */}
       {isLoading ? (
         <div className="text-center py-12">
-          <div className="text-slate-600">Loading tickets...</div>
+          <div className="text-slate-600">Chargement des tickets…</div>
         </div>
       ) : error ? (
         <div className="text-center py-12">
-          <div className="text-red-600">Error loading tickets. Please try again.</div>
+          <div className="text-red-600">Erreur lors du chargement. Veuillez réessayer.</div>
         </div>
       ) : (
         <TicketListEnhanced
@@ -210,12 +210,10 @@ export const TicketListPage: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="text-sm text-slate-600">
             {data.pagination.total === 0 ? (
-              "No tickets found"
+              "Aucun ticket"
             ) : (
               <>
-                Showing {(page - 1) * pageSize + 1} to{" "}
-                {Math.min(page * pageSize, data.pagination.total)} of{" "}
-                {data.pagination.total} tickets
+                {(page - 1) * pageSize + 1} – {Math.min(page * pageSize, data.pagination.total)} sur {data.pagination.total} tickets
               </>
             )}
           </div>
@@ -228,10 +226,10 @@ export const TicketListPage: React.FC = () => {
               }}
               className="px-3 py-1 border rounded-md text-sm"
             >
-              <option value={10}>10 per page</option>
-              <option value={20}>20 per page</option>
-              <option value={50}>50 per page</option>
-              <option value={100}>100 per page</option>
+              <option value={10}>10 par page</option>
+              <option value={20}>20 par page</option>
+              <option value={50}>50 par page</option>
+              <option value={100}>100 par page</option>
             </select>
             <Button
               variant="outline"
@@ -239,10 +237,10 @@ export const TicketListPage: React.FC = () => {
               onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page === 1}
             >
-              Previous
+              Précédent
             </Button>
             <span className="text-sm text-slate-600">
-              Page {page} of {data.pagination.total_pages}
+              Page {page} / {data.pagination.total_pages}
             </span>
             <Button
               variant="outline"
@@ -250,7 +248,7 @@ export const TicketListPage: React.FC = () => {
               onClick={() => setPage(Math.min(data.pagination.total_pages, page + 1))}
               disabled={page === data.pagination.total_pages}
             >
-              Next
+              Suivant
             </Button>
           </div>
         </div>

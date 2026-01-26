@@ -1,10 +1,12 @@
 /**
  * Reports Page
  *
- * Admin page for generating and viewing system reports
+ * Admin page for generating and viewing system reports.
+ * Uses real APIs (users, activity, security, performance) and export.
  */
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import {
   Download,
   FileText,
@@ -16,11 +18,34 @@ import {
   Calendar,
   Filter,
   Loader2,
+  ExternalLink,
 } from "lucide-react";
 import { Card } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-import { Badge } from "@/shared/components/ui/badge";
+
+import {
+  useUserReport,
+  useActivityReport,
+  useSecurityReport,
+  usePerformanceReport,
+  useExportReport,
+} from "../hooks/useReports";
+import type { ReportFilters } from "../services/reportService";
+
+const REPORT_TYPE_TO_BACKEND: Record<string, string> = {
+  "user-activity": "users",
+  "security-audit": "security",
+  "system-performance": "performance",
+  "customer-analytics": "customers",
+};
+
+const SUB_PAGE_LINKS: Record<string, string> = {
+  "user-activity": "/admin/reports/users",
+  "security-audit": "/admin/reports/security",
+  "system-performance": "/admin/reports/performance",
+  "customer-analytics": "/admin/reports/users",
+};
 
 export const ReportsPage: React.FC = () => {
   const [selectedReport, setSelectedReport] = useState<string>("");
@@ -30,6 +55,21 @@ export const ReportsPage: React.FC = () => {
   const [dateTo, setDateTo] = useState<string>(
     new Date().toISOString().split("T")[0]
   );
+
+  const filters: ReportFilters = useMemo(
+    () => ({ date_from: dateFrom, date_to: dateTo }),
+    [dateFrom, dateTo]
+  );
+
+  const { data: userReport, isLoading: userLoading } = useUserReport(filters);
+  const { data: activityReport, isLoading: activityLoading } =
+    useActivityReport(filters);
+  const { data: securityReport, isLoading: securityLoading } =
+    useSecurityReport(filters);
+  const { data: performanceReport, isLoading: performanceLoading } =
+    usePerformanceReport(filters);
+
+  const exportMutation = useExportReport();
 
   const reportTypes = [
     {
@@ -62,52 +102,72 @@ export const ReportsPage: React.FC = () => {
     },
   ];
 
-  const mockReportData = {
-    "user-activity": {
-      totalUsers: 156,
-      activeUsers: 89,
-      newUsers: 12,
-      avgSessionTime: "2h 34m",
-      topPages: ["Dashboard", "Services", "Tickets"],
-    },
-    "security-audit": {
-      totalEvents: 1247,
-      failedLogins: 23,
-      suspiciousActivities: 2,
-      blockedIPs: 5,
-      securityScore: 95,
-    },
-    "system-performance": {
-      uptime: "99.9%",
-      avgResponseTime: "45ms",
-      totalRequests: 45678,
-      errorRate: "0.1%",
-      peakLoad: "78%",
-    },
-    "customer-analytics": {
-      totalCustomers: 89,
-      newCustomers: 12,
-      activeCustomers: 67,
-      churnRate: "2.1%",
-      avgRevenue: "$234.50",
-    },
-  };
+  const isLoading =
+    (selectedReport === "user-activity" && userLoading) ||
+    (selectedReport === "security-audit" && securityLoading) ||
+    (selectedReport === "system-performance" && performanceLoading) ||
+    (selectedReport === "activity" && activityLoading);
 
   const handleGenerateReport = () => {
     if (!selectedReport) return;
-    // TODO: Implement API call when endpoints are available
-    console.log("Generating report:", selectedReport, dateFrom, dateTo);
   };
 
-  const handleExportReport = (format: "pdf" | "csv" | "excel") => {
+  const handleExportReport = async (format: "pdf" | "csv" | "excel") => {
     if (!selectedReport) return;
-    // TODO: Implement export functionality when endpoints are available
-    console.log("Exporting report as:", format);
+    const backendType = REPORT_TYPE_TO_BACKEND[selectedReport];
+    if (!backendType) return;
+    try {
+      await exportMutation.mutateAsync({
+        reportType: backendType,
+        format,
+        filters,
+      });
+    } catch (e) {
+      console.error("Export failed:", e);
+    }
   };
+
+  const kpiEntries = useMemo(() => {
+    if (!selectedReport) return [];
+    if (selectedReport === "user-activity" && userReport) {
+      return [
+        ["Total Users", String(userReport.total_users)],
+        ["Active Users", String(userReport.active_users)],
+        ["New Users", String(userReport.new_users)],
+      ];
+    }
+    if (selectedReport === "security-audit" && securityReport) {
+      return [
+        ["Total Events", String(securityReport.total_security_events)],
+        ["Failed Logins", String(securityReport.failed_logins)],
+        ["Successful Logins", String(securityReport.successful_logins)],
+        ["Security Score", "-"],
+      ];
+    }
+    if (selectedReport === "system-performance" && performanceReport) {
+      return [
+        ["Uptime", `${performanceReport.system_uptime ?? 0}%`],
+        ["Avg Response", `${performanceReport.average_response_time ?? 0}ms`],
+        [
+          "DB Query Time",
+          performanceReport.database_performance
+            ? `${performanceReport.database_performance.query_time ?? 0}ms`
+            : "-",
+        ],
+      ];
+    }
+    if (selectedReport === "customer-analytics") {
+      return [
+        ["Export", "Use CSV/Excel/PDF below"],
+      ];
+    }
+    return [];
+  }, [selectedReport, userReport, securityReport, performanceReport]);
+
+  const subPageLink = selectedReport ? SUB_PAGE_LINKS[selectedReport] : null;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">System Reports</h1>
@@ -115,24 +175,8 @@ export const ReportsPage: React.FC = () => {
             Generate and export system analytics and reports
           </p>
         </div>
-        <Button className="flex items-center gap-2" disabled>
-          <Download className="w-4 h-4" />
-          Export All
-        </Button>
       </div>
 
-      {/* Info Card */}
-      <Card className="p-4 bg-blue-50 border-blue-200">
-        <div className="flex items-center gap-2">
-          <FileText className="w-5 h-5 text-blue-600" />
-          <p className="text-blue-800">
-            <strong>Note:</strong> Report generation endpoints are not yet
-            available. This page shows sample report data and interface.
-          </p>
-        </div>
-      </Card>
-
-      {/* Report Selection */}
       <Card className="p-6">
         <div className="flex items-center gap-3 mb-6">
           <Filter className="w-5 h-5 text-gray-400" />
@@ -161,14 +205,13 @@ export const ReportsPage: React.FC = () => {
                   <p className="text-sm text-gray-600">{report.description}</p>
                 </div>
                 {selectedReport === report.id && (
-                  <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+                  <div className="w-4 h-4 rounded-full bg-blue-500" />
                 )}
               </div>
             </div>
           ))}
         </div>
 
-        {/* Date Range */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -211,7 +254,6 @@ export const ReportsPage: React.FC = () => {
         </div>
       </Card>
 
-      {/* Report Preview */}
       {selectedReport && (
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
@@ -226,7 +268,7 @@ export const ReportsPage: React.FC = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => handleExportReport("pdf")}
-                disabled
+                disabled={exportMutation.isPending}
                 className="flex items-center gap-1"
               >
                 <FileText className="w-3 h-3" />
@@ -236,7 +278,7 @@ export const ReportsPage: React.FC = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => handleExportReport("csv")}
-                disabled
+                disabled={exportMutation.isPending}
                 className="flex items-center gap-1"
               >
                 <Download className="w-3 h-3" />
@@ -246,7 +288,7 @@ export const ReportsPage: React.FC = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => handleExportReport("excel")}
-                disabled
+                disabled={exportMutation.isPending}
                 className="flex items-center gap-1"
               >
                 <Download className="w-3 h-3" />
@@ -265,35 +307,47 @@ export const ReportsPage: React.FC = () => {
               <strong>Generated:</strong> {new Date().toLocaleString()}
             </div>
 
-            {/* Sample Data Display */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {Object.entries(
-                mockReportData[selectedReport as keyof typeof mockReportData] ||
-                  {}
-              ).map(([key, value]) => (
-                <div
-                  key={key}
-                  className="text-center p-3 bg-white rounded border"
-                >
-                  <div className="text-2xl font-bold text-gray-900">
-                    {value}
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {kpiEntries.map(([key, value]) => (
+                  <div
+                    key={key}
+                    className="text-center p-3 bg-white rounded border"
+                  >
+                    <div className="text-2xl font-bold text-gray-900">
+                      {value}
+                    </div>
+                    <div className="text-sm text-gray-600 capitalize">
+                      {key.replace(/([A-Z])/g, " $1").trim()}
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600 capitalize">
-                    {key.replace(/([A-Z])/g, " $1").trim()}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
+
+            {subPageLink && selectedReport !== "customer-analytics" && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <Link to={subPageLink}>
+                  <Button variant="link" className="p-0 h-auto gap-1">
+                    <ExternalLink className="w-4 h-4" />
+                    View full report
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         </Card>
       )}
 
-      {/* Recent Reports */}
       <Card className="p-6">
         <div className="flex items-center gap-3 mb-6">
           <Calendar className="w-5 h-5 text-gray-400" />
           <h3 className="text-lg font-semibold text-gray-900">
-            Recent Reports
+            Report Pages
           </h3>
         </div>
 
@@ -303,19 +357,19 @@ export const ReportsPage: React.FC = () => {
               <FileText className="w-4 h-4 text-gray-400" />
               <div>
                 <div className="font-medium text-gray-900">
-                  User Activity Report
+                  User Reports
                 </div>
                 <div className="text-sm text-gray-600">
-                  Generated 2 hours ago
+                  User analytics, registration trends, role distribution
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge className="bg-green-100 text-green-800">Completed</Badge>
-              <Button variant="outline" size="sm" disabled>
-                <Download className="w-3 h-3" />
+            <Link to="/admin/reports/users">
+              <Button variant="outline" size="sm">
+                <ExternalLink className="w-3 h-3 mr-1" />
+                Open
               </Button>
-            </div>
+            </Link>
           </div>
 
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
@@ -323,23 +377,59 @@ export const ReportsPage: React.FC = () => {
               <FileText className="w-4 h-4 text-gray-400" />
               <div>
                 <div className="font-medium text-gray-900">
-                  Security Audit Report
+                  Activity Reports
                 </div>
-                <div className="text-sm text-gray-600">Generated 1 day ago</div>
+                <div className="text-sm text-gray-600">
+                  Audit log activity, resources, trends
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge className="bg-green-100 text-green-800">Completed</Badge>
-              <Button variant="outline" size="sm" disabled>
-                <Download className="w-3 h-3" />
+            <Link to="/admin/reports/activity">
+              <Button variant="outline" size="sm">
+                <ExternalLink className="w-3 h-3 mr-1" />
+                Open
               </Button>
-            </div>
+            </Link>
           </div>
 
-          <div className="text-center py-8 text-gray-500">
-            <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-            <p>No recent reports available</p>
-            <p className="text-sm">Generate your first report to see it here</p>
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+            <div className="flex items-center gap-3">
+              <FileText className="w-4 h-4 text-gray-400" />
+              <div>
+                <div className="font-medium text-gray-900">
+                  Security Reports
+                </div>
+                <div className="text-sm text-gray-600">
+                  Security events, logins, suspicious activity
+                </div>
+              </div>
+            </div>
+            <Link to="/admin/reports/security">
+              <Button variant="outline" size="sm">
+                <ExternalLink className="w-3 h-3 mr-1" />
+                Open
+              </Button>
+            </Link>
+          </div>
+
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+            <div className="flex items-center gap-3">
+              <FileText className="w-4 h-4 text-gray-400" />
+              <div>
+                <div className="font-medium text-gray-900">
+                  Performance Reports
+                </div>
+                <div className="text-sm text-gray-600">
+                  Uptime, response times, API and DB metrics
+                </div>
+              </div>
+            </div>
+            <Link to="/admin/reports/performance">
+              <Button variant="outline" size="sm">
+                <ExternalLink className="w-3 h-3 mr-1" />
+                Open
+              </Button>
+            </Link>
           </div>
         </div>
       </Card>

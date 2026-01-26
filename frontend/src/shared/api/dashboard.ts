@@ -66,6 +66,8 @@ interface BackendRecentActivity {
   timestamp: string;
   user?: string;
   status?: string;
+  priority?: string;
+  amount?: number;
 }
 
 interface BackendDashboardResponse {
@@ -82,6 +84,8 @@ function transformDashboardResponse(
   backendData: BackendDashboardResponse
 ): DashboardResponse {
   // Transform metrics to stats
+  // Note: total_revenue from backend (business perspective) = totalSpent from customer perspective
+  // This is semantically correct - what the business earns (revenue) is what the customer spends
   const stats: DashboardStats = {
     activeServices: backendData.metrics.active_products || 0,
     openTickets: backendData.metrics.open_tickets || 0,

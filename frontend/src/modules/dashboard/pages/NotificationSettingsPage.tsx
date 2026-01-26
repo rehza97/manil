@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -10,60 +10,114 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
 import { Switch } from "@/shared/components/ui/switch";
-import { ArrowLeft, Save, Bell } from "lucide-react";
+import { ArrowLeft, Save, Bell, Loader2 } from "lucide-react";
 import { useToast } from "@/shared/hooks/use-toast";
+import { clientSettingsApi } from "@/shared/api/dashboard/client/settings";
+import { corporateSettingsApi } from "@/shared/api/dashboard/corporate/settings";
+import type { NotificationPrefs } from "@/modules/settings/types";
+
+const DEFAULT_PREFERENCES: NotificationPrefs = {
+  email: {
+    orderUpdates: true,
+    ticketUpdates: true,
+    invoiceUpdates: true,
+    marketing: false,
+  },
+  push: {
+    orderUpdates: true,
+    ticketUpdates: true,
+    invoiceUpdates: false,
+  },
+  sms: {
+    orderUpdates: false,
+    ticketUpdates: false,
+    invoiceUpdates: false,
+  },
+};
 
 export const NotificationSettingsPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
-  const [notifications, setNotifications] = useState({
-    email: {
-      orderUpdates: true,
-      ticketUpdates: true,
-      invoiceUpdates: true,
-      marketing: false,
-    },
-    push: {
-      orderUpdates: true,
-      ticketUpdates: true,
-      invoiceUpdates: false,
-    },
-    sms: {
-      orderUpdates: false,
-      ticketUpdates: false,
-      invoiceUpdates: false,
-    },
-  });
+  const [notifications, setNotifications] = useState<NotificationPrefs>(DEFAULT_PREFERENCES);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSave = () => {
-    // TODO: Implement API call to save notification preferences
-    toast({
-      title: "Settings Saved",
-      description: "Your notification preferences have been updated.",
-    });
+  const isCorporate = location.pathname.startsWith("/corporate");
+  const api = isCorporate ? corporateSettingsApi : clientSettingsApi;
+
+  const fetchPreferences = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.getNotificationSettings();
+      if (data && typeof data === "object") {
+        setNotifications({
+          email: { ...DEFAULT_PREFERENCES.email, ...(data.email ?? {}) },
+          push: { ...DEFAULT_PREFERENCES.push, ...(data.push ?? {}) },
+          sms: { ...DEFAULT_PREFERENCES.sms, ...(data.sms ?? {}) },
+        });
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Impossible de charger les préférences de notification.");
+      toast({ title: "Erreur", description: "Impossible de charger les paramètres de notification.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [api, toast]);
+
+  useEffect(() => {
+    fetchPreferences();
+  }, [fetchPreferences]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await api.updateNotificationSettings(notifications);
+      toast({ title: "Settings Saved", description: "Your notification preferences have been updated." });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to save.";
+      setError(msg);
+      toast({ title: "Error", description: "Could not save notification settings.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const backPath = isCorporate ? "/corporate/settings" : "/dashboard/settings";
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
       <div className="flex items-center space-x-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate("/dashboard/settings")}
-        >
+        <Button variant="ghost" size="sm" onClick={() => navigate(backPath)}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Settings
+          Retour aux paramètres
         </Button>
       </div>
 
       <div>
         <h1 className="text-3xl font-bold text-slate-900">
-          Notification Preferences
+          Préférences de notification
         </h1>
         <p className="text-muted-foreground mt-1">
-          Configure how and when you receive notifications
+          Configurer la réception des notifications
         </p>
+        {error && (
+          <p className="mt-2 text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        )}
       </div>
 
       {/* Email Notifications */}
@@ -99,9 +153,9 @@ export const NotificationSettingsPage: React.FC = () => {
 
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label htmlFor="email-tickets">Ticket Updates</Label>
+              <Label htmlFor="email-tickets">Mises à jour des tickets</Label>
               <p className="text-sm text-muted-foreground">
-                Get notified about support ticket updates
+                Être notifié des mises à jour des tickets support
               </p>
             </div>
             <Switch
@@ -137,9 +191,9 @@ export const NotificationSettingsPage: React.FC = () => {
 
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label htmlFor="email-marketing">Marketing Emails</Label>
+              <Label htmlFor="email-marketing">E-mails marketing</Label>
               <p className="text-sm text-muted-foreground">
-                Receive promotional emails and newsletters
+                Recevoir les offres et newsletters
               </p>
             </div>
             <Switch
@@ -186,9 +240,9 @@ export const NotificationSettingsPage: React.FC = () => {
 
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label htmlFor="push-tickets">Ticket Updates</Label>
+              <Label htmlFor="push-tickets">Mises à jour des tickets</Label>
               <p className="text-sm text-muted-foreground">
-                Get push notifications for ticket updates
+                Notifications push pour les mises à jour des tickets
               </p>
             </div>
             <Switch
@@ -227,17 +281,17 @@ export const NotificationSettingsPage: React.FC = () => {
       {/* SMS Notifications */}
       <Card>
         <CardHeader>
-          <CardTitle>SMS Notifications</CardTitle>
+          <CardTitle>Notifications SMS</CardTitle>
           <CardDescription>
-            Receive text message notifications (requires phone number)
+            Recevoir les notifications par SMS (numéro requis)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label htmlFor="sms-orders">Order Updates</Label>
+              <Label htmlFor="sms-orders">Mises à jour des commandes</Label>
               <p className="text-sm text-muted-foreground">
-                Get SMS for important order updates
+                SMS pour les mises à jour importantes des commandes
               </p>
             </div>
             <Switch
@@ -273,9 +327,9 @@ export const NotificationSettingsPage: React.FC = () => {
 
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label htmlFor="sms-invoices">Invoice Updates</Label>
+              <Label htmlFor="sms-invoices">Mises à jour des factures</Label>
               <p className="text-sm text-muted-foreground">
-                Get SMS for invoice payment reminders
+                SMS pour les rappels de paiement des factures
               </p>
             </div>
             <Switch
@@ -294,9 +348,13 @@ export const NotificationSettingsPage: React.FC = () => {
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <Button onClick={handleSave}>
-          <Save className="h-4 w-4 mr-2" />
-          Save Changes
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4 mr-2" />
+          )}
+          Enregistrer
         </Button>
       </div>
     </div>

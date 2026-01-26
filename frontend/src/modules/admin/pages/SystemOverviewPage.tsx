@@ -25,6 +25,7 @@ import {
   useRecentActivity,
   useUsersByRole,
 } from "../hooks";
+import { formatRevenue } from "@/shared/utils/revenueFormatters";
 
 interface ComponentHealth {
   status: "healthy" | "warning" | "error";
@@ -284,7 +285,7 @@ export const SystemOverviewPage: React.FC = () => {
         </div>
         <div className="flex items-baseline gap-3">
           <p className="text-4xl font-bold text-gray-900">
-            {(stats?.monthly_revenue || 0).toLocaleString()} DZD
+            {formatRevenue(Number(stats?.monthly_revenue || 0))}
           </p>
         </div>
         <div className="mt-4 text-sm text-gray-600">

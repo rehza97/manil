@@ -115,7 +115,7 @@ SYSTEM_SETTINGS: List[Dict[str, Any]] = [
     # ========================================================================
     {
         "key": "email.provider",
-        "value": {"value": "smtp", "options": ["smtp", "sendgrid"], "type": "enum"},
+        "value": {"value": "smtp", "options": ["smtp", "sendgrid", "ses"], "type": "enum"},
         "category": SettingCategory.EMAIL,
         "description": "Email service provider",
         "is_public": False,
@@ -263,6 +263,13 @@ SYSTEM_SETTINGS: List[Dict[str, Any]] = [
         },
         "category": SettingCategory.NOTIFICATION,
         "description": "Quiet hours when notifications are suppressed",
+        "is_public": False,
+    },
+    {
+        "key": "tickets.auto_close_days",
+        "value": {"value": 7, "type": "integer", "min": 1, "max": 365},
+        "category": SettingCategory.NOTIFICATION,
+        "description": "Number of days after which resolved tickets are automatically closed",
         "is_public": False,
     },
 

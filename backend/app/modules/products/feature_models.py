@@ -70,7 +70,7 @@ class ProductSpecification(Base):
         String(100),
         nullable=True,
         index=True,
-        doc="Category for grouping specs (e.g., 'Hardware', 'Software', 'Physical')",
+        doc="Category for grouping specs (e.g., 'Service', 'Technical', 'Pricing', 'Limits')",
     )
     display_order: Mapped[int] = mapped_column(
         Integer,

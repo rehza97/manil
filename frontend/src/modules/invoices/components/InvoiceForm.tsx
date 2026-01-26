@@ -37,22 +37,22 @@ import { formatCurrency } from "@/shared/utils/formatters";
 import type { CreateInvoiceDTO, InvoiceItemCreate, Invoice } from "../types/invoice.types";
 
 const invoiceSchema = z.object({
-  customer_id: z.string().uuid("Invalid customer ID"),
+  customer_id: z.string().uuid("ID client invalide"),
   quote_id: z.string().uuid().optional(),
-  title: z.string().min(1, "Title is required"),
+  title: z.string().min(1, "Le titre est requis"),
   description: z.string().optional(),
   items: z
     .array(
       z.object({
-        description: z.string().min(1, "Description is required"),
-        quantity: z.number().min(1, "Quantity must be at least 1"),
-        unit_price: z.number().min(0, "Unit price must be positive"),
+        description: z.string().min(1, "La description est requise"),
+        quantity: z.number().min(1, "La quantité doit être ≥ 1"),
+        unit_price: z.number().min(0, "Le prix unitaire doit être ≥ 0"),
         product_id: z.string().optional(),
       })
     )
-    .min(1, "At least one item is required"),
-  issue_date: z.string().min(1, "Issue date is required"),
-  due_date: z.string().min(1, "Due date is required"),
+    .min(1, "Au moins un article est requis"),
+  issue_date: z.string().min(1, "La date d'émission est requise"),
+  due_date: z.string().min(1, "L'échéance est requise"),
   tax_rate: z.number().min(0).max(100).default(19),
   discount_amount: z.number().min(0).default(0),
   notes: z.string().optional(),
@@ -198,7 +198,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
               name="customer_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Customer</FormLabel>
+                  <FormLabel>Client</FormLabel>
                   <Select
                     value={field.value}
                     onValueChange={field.onChange}
@@ -211,7 +211,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                     <SelectContent>
                       <div className="p-2">
                         <Input
-                          placeholder="Search customers..."
+                          placeholder="Rechercher un client…"
                           value={customerSearch}
                           onChange={(e) => setCustomerSearch(e.target.value)}
                           className="mb-2"
@@ -242,7 +242,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select quote to convert" />
+                        <SelectValue placeholder="Choisir un devis à convertir" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -254,7 +254,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                           className="mb-2"
                         />
                       </div>
-                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="none">Aucun</SelectItem>
                       {quotesData?.data?.filter((q: any) => q.status === "accepted").map((quote: any) => (
                         <SelectItem key={quote.id} value={quote.id}>
                           {quote.quote_number} - {quote.title || "Untitled"} ({quote.total?.toFixed(2)})
@@ -273,9 +273,9 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Invoice Title</FormLabel>
+                  <FormLabel>Titre de la facture</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Invoice title" />
+                    <Input {...field} placeholder="Titre de la facture" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -299,7 +299,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
             {/* Line Items */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <FormLabel>Line Items</FormLabel>
+                <FormLabel>Lignes</FormLabel>
                 <Button
                   type="button"
                   variant="outline"
@@ -316,8 +316,8 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                   <TableHeader>
                     <TableRow>
                       <TableHead>Description</TableHead>
-                      <TableHead className="w-24">Quantity</TableHead>
-                      <TableHead className="w-32">Unit Price</TableHead>
+                      <TableHead className="w-24">Quantité</TableHead>
+                      <TableHead className="w-32">Prix unitaire</TableHead>
                       <TableHead className="w-32">Total</TableHead>
                       <TableHead className="w-12"></TableHead>
                     </TableRow>
@@ -411,7 +411,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                   name="tax_rate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tax Rate (%)</FormLabel>
+                      <FormLabel>Taux de TVA (%)</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -432,7 +432,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                   name="discount_amount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Discount Amount</FormLabel>
+                      <FormLabel>Montant remise</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -487,7 +487,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                 name="issue_date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Issue Date</FormLabel>
+                    <FormLabel>Date d&apos;émission</FormLabel>
                     <FormControl>
                       <Input {...field} type="date" />
                     </FormControl>
@@ -559,11 +559,11 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
             <div className="flex gap-2 justify-end">
               {onCancel && (
                 <Button type="button" variant="outline" onClick={onCancel}>
-                  Cancel
+                  Annuler
                 </Button>
               )}
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Saving..." : invoice ? "Update Invoice" : "Create Invoice"}
+                {isLoading ? "Enregistrement…" : invoice ? "Enregistrer" : "Créer la facture"}
               </Button>
             </div>
           </form>

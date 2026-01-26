@@ -6,6 +6,7 @@
 
 export { AdminDashboardPage } from './AdminDashboardPage';
 export { CorporateDashboardPage } from './CorporateDashboardPage';
+export { CorporateReportsLandingPage } from './CorporateReportsLandingPage';
 export { TicketReportsPage } from './TicketReportsPage';
 export { CustomerReportsPage } from './CustomerReportsPage';
 export { OrderReportsPage } from './OrderReportsPage';

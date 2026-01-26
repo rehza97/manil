@@ -24,13 +24,27 @@ from app.core.security import (
     decode_token,
     create_reset_token,
     verify_reset_token,
+    create_pending_2fa_token,
+    decode_pending_2fa_token,
+    generate_reset_code,
+    store_reset_code,
+    verify_reset_code,
+    delete_reset_code,
 )
 from app.modules.auth.models import User
 from app.modules.auth.repository import UserRepository
-from app.modules.auth.schemas import UserCreate, UserUpdate, LoginResponse, Enable2FAResponse
+from app.modules.auth.schemas import (
+    UserCreate,
+    UserUpdate,
+    LoginResponse,
+    Enable2FAResponse,
+    VerifySetupRequired2FAResponse,
+)
 from app.modules.audit.service import AuditService
 from app.modules.audit.models import AuditAction
 from app.infrastructure.email.service import EmailService
+from app.infrastructure.sms.service import SMSService
+from app.modules.customers.repository import CustomerRepository
 from app.core.logging import logger
 
 settings = get_settings()
@@ -170,7 +184,35 @@ class AuthService:
                 await self.db.commit()
 
         # Verify password
-        if not verify_password(password, user.password_hash):
+        password_valid = verify_password(password, user.password_hash)
+        
+        # If password is valid and it's using bcrypt (old hash), migrate to Argon2
+        if password_valid:
+            # Check if password is using bcrypt (starts with $2a$, $2b$, or $2y$)
+            if user.password_hash.startswith(("$2a$", "$2b$", "$2y$")):
+                # Migrate to Argon2
+                from app.core.security import get_password_hash
+                new_hash = get_password_hash(password)
+                user.password_hash = new_hash
+                await self.db.commit()
+                logger.info(f"Password migrated to Argon2 for user {user.email}")
+                
+                # Log migration
+                try:
+                    await self.audit_service.log_action(
+                        action=AuditAction.PASSWORD_CHANGE,
+                        resource_type="user",
+                        description=f"Password hash migrated from bcrypt to Argon2",
+                        user_id=user.id,
+                        user_email=user.email,
+                        user_role=user.role,
+                        request=request,
+                        success=True,
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to log password migration: {e}")
+        
+        if not password_valid:
             # SECURITY: Increment failed attempts and lock if threshold reached
             user.failed_login_attempts += 1
             user.last_failed_login = datetime.utcnow()
@@ -238,10 +280,30 @@ class AuthService:
                 logger.error(f"Failed to log inactive account login attempt: {e}", exc_info=True)
             raise UnauthorizedException("Account is inactive")
 
+        # Role-based 2FA requirement: reject login if role requires 2FA but user has not enabled it
+        from app.modules.settings.utils import is_2fa_required
+        if await is_2fa_required(self.db, user.role.value) and not user.is_2fa_enabled:
+            raise ValidationException(
+                "2FA is required for your role. Please enable 2FA in account settings before signing in."
+            )
+
         # SECURITY: Reset failed login attempts on successful login
         user.failed_login_attempts = 0
         user.locked_until = None
         user.last_failed_login = None
+        await self.db.commit()
+
+        # 2FA required: withhold tokens until TOTP verified via /auth/2fa/complete-login
+        if user.is_2fa_enabled:
+            pending = create_pending_2fa_token(user.id)
+            return LoginResponse(
+                access_token="",
+                refresh_token="",
+                token_type="bearer",
+                user=user,
+                requires_2fa=True,
+                pending_2fa_token=pending,
+            )
 
         # Generate tokens
         access_token = create_access_token(data={"sub": user.id})
@@ -302,6 +364,59 @@ class AuthService:
             "token_type": "bearer",
         }
 
+    async def complete_login_2fa(
+        self, pending_2fa_token: str, code: str, request: Optional[Request] = None
+    ) -> LoginResponse:
+        """
+        Complete login after 2FA verification. Call when login returned requires_2fa.
+
+        Args:
+            pending_2fa_token: Token from login response (requires_2fa)
+            code: TOTP code
+            request: Optional request for audit
+
+        Returns:
+            LoginResponse with access_token, refresh_token, user
+
+        Raises:
+            UnauthorizedException: If pending token invalid
+            ValidationException: If TOTP code invalid
+        """
+        user_id = decode_pending_2fa_token(pending_2fa_token)
+        if not user_id:
+            raise UnauthorizedException("Invalid or expired 2FA login token. Please log in again.")
+
+        user = await self.repository.get_by_id(user_id)
+        if not user:
+            raise UnauthorizedException("User not found")
+
+        await self.verify_2fa(user_id, code)
+
+        access_token = create_access_token(data={"sub": user.id})
+        refresh_token = create_refresh_token(data={"sub": user.id})
+        await self.repository.update_last_login(user)
+
+        try:
+            await self.audit_service.log_action(
+                action=AuditAction.LOGIN_SUCCESS,
+                resource_type="auth",
+                description=f"Successful login for {user.email} (2FA verified)",
+                user_id=user.id,
+                user_email=user.email,
+                user_role=user.role,
+                request=request,
+                success=True,
+            )
+        except Exception as e:
+            logger.error(f"Failed to log 2FA login success: {e}", exc_info=True)
+
+        return LoginResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer",
+            user=user,
+        )
+
     async def enable_2fa(self, user_id: str) -> Enable2FAResponse:
         """
         Enable 2FA for user and generate QR code.
@@ -354,11 +469,15 @@ class AuthService:
 
     async def verify_2fa(self, user_id: str, code: str) -> bool:
         """
-        Verify 2FA code.
+        Verify 2FA code (TOTP only).
+
+        Backup codes are not validated server-side; only TOTP (6-digit) codes
+        are checked. Backup-code validation would require storing hashed
+        codes and optionally invalidating after use.
 
         Args:
             user_id: User ID
-            code: TOTP code
+            code: TOTP code (6 digits)
 
         Returns:
             True if code is valid
@@ -382,6 +501,182 @@ class AuthService:
 
         return True
 
+    async def _verify_credentials(
+        self, email: str, password: str, request: Optional[Request] = None
+    ) -> User:
+        """
+        Verify user credentials and return user if valid.
+        Internal helper method for credential verification.
+
+        Args:
+            email: User email
+            password: User password
+            request: FastAPI request for audit logging
+
+        Returns:
+            User object if credentials are valid
+
+        Raises:
+            UnauthorizedException: If credentials are invalid or account is locked/inactive
+        """
+        from datetime import datetime, timedelta
+
+        # Get user by email
+        user = await self.repository.get_by_email(email)
+        if not user:
+            raise UnauthorizedException("Email not found")
+
+        # SECURITY: Check if account is locked
+        if user.locked_until:
+            if datetime.utcnow() < user.locked_until:
+                time_remaining = user.locked_until - datetime.utcnow()
+                minutes_remaining = int(time_remaining.total_seconds() / 60) + 1
+                raise UnauthorizedException(
+                    f"Account has been locked due to multiple failed login attempts. "
+                    f"Please try again in {minutes_remaining} minute(s) or contact support."
+                )
+
+        # Verify password
+        password_valid = verify_password(password, user.password_hash)
+
+        # Handle password migration if needed
+        if password_valid and user.password_hash.startswith("$2b$"):
+            # Migrate to new hash format if using old bcrypt
+            try:
+                new_hash = get_password_hash(password)
+                user.password_hash = new_hash
+                await self.db.commit()
+            except Exception as e:
+                logger.warning(f"Failed to log password migration: {e}")
+
+        if not password_valid:
+            raise UnauthorizedException("Wrong password")
+
+        # Check if user is active
+        if not user.is_active:
+            raise UnauthorizedException("Account is inactive")
+
+        return user
+
+    async def setup_required_2fa(
+        self, email: str, password: str, request: Optional[Request] = None
+    ) -> Enable2FAResponse:
+        """
+        Setup 2FA for user when it's required (unauthenticated endpoint).
+        Verifies credentials and enables 2FA if required for role.
+
+        Args:
+            email: User email
+            password: User password
+            request: FastAPI request for audit logging
+
+        Returns:
+            2FA setup information with QR code
+
+        Raises:
+            UnauthorizedException: If credentials are invalid
+            ValidationException: If 2FA is already enabled or not required
+        """
+        # Verify credentials
+        user = await self._verify_credentials(email, password, request)
+
+        # Check if 2FA is required for this role
+        from app.modules.settings.utils import is_2fa_required
+
+        if not await is_2fa_required(self.db, user.role.value):
+            raise ValidationException("2FA is not required for your role")
+
+        # Check if 2FA is already enabled
+        if user.is_2fa_enabled:
+            raise ValidationException("2FA is already enabled")
+
+        # Log 2FA setup attempt
+        try:
+            await self.audit_service.log_action(
+                action=AuditAction.USER_UPDATED,
+                resource_type="auth",
+                description=f"2FA setup initiated for {email} (required)",
+                user_id=user.id,
+                user_email=email,
+                user_role=user.role,
+                request=request,
+                success=True,
+            )
+        except Exception as e:
+            logger.error(f"Failed to log 2FA setup audit: {e}", exc_info=True)
+
+        # Use existing enable_2fa logic
+        return await self.enable_2fa(user.id)
+
+    async def verify_setup_required_2fa(
+        self, email: str, password: str, code: str, request: Optional[Request] = None
+    ) -> VerifySetupRequired2FAResponse:
+        """
+        Verify 2FA code during required setup (unauthenticated endpoint).
+        Verifies credentials, then verifies 2FA code.
+
+        Args:
+            email: User email
+            password: User password
+            code: TOTP code
+            request: FastAPI request for audit logging
+
+        Returns:
+            Verification result
+
+        Raises:
+            UnauthorizedException: If credentials are invalid
+            ValidationException: If 2FA code is invalid
+        """
+        # Verify credentials
+        user = await self._verify_credentials(email, password, request)
+
+        # Check if 2FA is enabled and has secret
+        if not user.is_2fa_enabled or not user.totp_secret:
+            raise ValidationException("2FA is not enabled. Please complete setup first.")
+
+        # Verify TOTP code
+        totp = pyotp.TOTP(user.totp_secret)
+        is_valid = totp.verify(code, valid_window=1)
+
+        if not is_valid:
+            # Log failed verification attempt
+            try:
+                await self.audit_service.log_action(
+                    action=AuditAction.LOGIN_FAILED,
+                    resource_type="auth",
+                    description=f"Failed 2FA verification during setup for {email}",
+                    user_id=user.id,
+                    user_email=email,
+                    user_role=user.role,
+                    request=request,
+                    success=False,
+                    error_message="Invalid 2FA code",
+                )
+            except Exception as e:
+                logger.error(f"Failed to log 2FA verification audit: {e}", exc_info=True)
+
+            raise ValidationException("Invalid 2FA code")
+
+        # Log successful verification
+        try:
+            await self.audit_service.log_action(
+                action=AuditAction.USER_UPDATED,
+                resource_type="auth",
+                description=f"2FA setup verified and completed for {email}",
+                user_id=user.id,
+                user_email=email,
+                user_role=user.role,
+                request=request,
+                success=True,
+            )
+        except Exception as e:
+            logger.error(f"Failed to log 2FA verification audit: {e}", exc_info=True)
+
+        return VerifySetupRequired2FAResponse(
+            success=True, message="2FA has been successfully enabled"
+        )
+
     async def disable_2fa(self, user_id: str, code: str) -> User:
         """
         Disable 2FA for user.
@@ -403,15 +698,16 @@ class AuthService:
         user = await self.repository.get_by_id(user_id)
         return await self.repository.disable_2fa(user)
 
-    async def request_password_reset(self, email: str) -> str:
+    async def request_password_reset(self, email: str, method: str = "email") -> str:
         """
         Request password reset for user.
 
         Args:
             email: User email address
+            method: Reset method - "email" or "sms" (default: "email")
 
         Returns:
-            Password reset token
+            Password reset token (for email) or code (for SMS)
 
         Raises:
             UnauthorizedException: If user not found (but we don't reveal this)
@@ -422,8 +718,40 @@ class AuthService:
         # Don't reveal if user exists or not for security
         if not user:
             # Still return a token (fake) to prevent user enumeration
-            return create_reset_token(email)
+            if method == "email":
+                return create_reset_token(email)
+            else:
+                # Generate fake code for SMS method too
+                fake_code = generate_reset_code()
+                await store_reset_code(email, fake_code, "sms")
+                return fake_code
 
+        if method == "sms":
+            # Get customer phone number
+            customer_repo = CustomerRepository(self.db)
+            customer = await customer_repo.get_by_email(email)
+            
+            if not customer or not customer.phone or not customer.phone.strip():
+                # Fallback to email if no phone number
+                logger.warning(f"No phone number found for {email}, falling back to email method")
+                method = "email"
+            else:
+                # Generate 6-digit code
+                reset_code = generate_reset_code()
+                
+                # Store code in Redis
+                await store_reset_code(email, reset_code, "sms")
+                
+                # Send SMS with code
+                sms_service = SMSService()
+                await sms_service.send_password_reset_code(
+                    to=customer.phone,
+                    code=reset_code
+                )
+                
+                return reset_code
+
+        # Email method (default)
         # Generate reset token
         reset_token = create_reset_token(email)
 
@@ -437,28 +765,46 @@ class AuthService:
 
         return reset_token
 
-    async def reset_password(self, token: str, new_password: str) -> User:
+    async def reset_password(
+        self, 
+        token: Optional[str] = None, 
+        code: Optional[str] = None,
+        email: Optional[str] = None,
+        new_password: str = ""
+    ) -> User:
         """
-        Reset user password with token.
+        Reset user password with token or code.
 
         Args:
-            token: Password reset token
+            token: Password reset token (for email method)
+            code: Password reset code (for SMS method, 6 digits)
+            email: User email (required when using code)
             new_password: New password
 
         Returns:
             Updated user object
 
         Raises:
-            UnauthorizedException: If token is invalid
-            ValidationException: If user not found
+            UnauthorizedException: If token/code is invalid
+            ValidationException: If user not found or missing required fields
         """
-        # Verify token and get email
-        email = verify_reset_token(token)
-        if not email:
-            raise UnauthorizedException("Invalid or expired reset token")
+        user_email = None
+        
+        if token:
+            # Email method - verify token
+            user_email = verify_reset_token(token)
+            if not user_email:
+                raise UnauthorizedException("Invalid or expired reset token")
+        elif code and email:
+            # SMS method - verify code
+            if not await verify_reset_code(email, code):
+                raise UnauthorizedException("Invalid or expired reset code")
+            user_email = email
+        else:
+            raise ValidationException("Either token or (code and email) must be provided")
 
         # Get user by email
-        user = await self.repository.get_by_email(email)
+        user = await self.repository.get_by_email(user_email)
         if not user:
             raise ValidationException("User not found")
 
@@ -466,7 +812,13 @@ class AuthService:
         password_hash = get_password_hash(new_password)
 
         # Update password
-        return await self.repository.update_password(user, password_hash)
+        updated_user = await self.repository.update_password(user, password_hash)
+        
+        # Delete reset code from Redis if SMS method was used
+        if code and email:
+            await delete_reset_code(email)
+
+        return updated_user
 
     async def update_profile(self, user_id: str, profile_data: "UserUpdate") -> User:
         """

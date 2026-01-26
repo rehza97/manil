@@ -15,6 +15,26 @@ export interface NotificationSettings {
   orderUpdates: boolean;
 }
 
+/** User notification preferences (nested channels). Matches backend DEFAULT_NOTIFICATION_PREFERENCES. */
+export interface NotificationPrefs {
+  email: {
+    orderUpdates: boolean;
+    ticketUpdates: boolean;
+    invoiceUpdates: boolean;
+    marketing?: boolean;
+  };
+  push: {
+    orderUpdates: boolean;
+    ticketUpdates: boolean;
+    invoiceUpdates: boolean;
+  };
+  sms: {
+    orderUpdates: boolean;
+    ticketUpdates: boolean;
+    invoiceUpdates: boolean;
+  };
+}
+
 export interface UpdateUserSettingsDTO {
   theme?: "light" | "dark" | "system";
   language?: string;

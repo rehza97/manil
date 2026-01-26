@@ -15,14 +15,14 @@ export const InvoiceDetailPage: React.FC = () => {
 
   if (!id) {
     return (
-      <div className="text-center py-8 text-red-600">Invalid invoice ID</div>
+      <div className="text-center py-8 text-red-600">ID de facture invalide</div>
     );
   }
 
   if (isLoading) {
     return (
       <div className="text-center py-12">
-        <div className="text-slate-600">Loading invoice...</div>
+        <div className="text-slate-600">Chargement de la facture…</div>
       </div>
     );
   }
@@ -30,14 +30,13 @@ export const InvoiceDetailPage: React.FC = () => {
   if (error || !invoice) {
     return (
       <div className="text-center py-8 text-red-600">
-        {error ? "Error loading invoice" : "Invoice not found"}
+        {error ? "Erreur lors du chargement" : "Facture introuvable"}
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
@@ -45,7 +44,7 @@ export const InvoiceDetailPage: React.FC = () => {
           onClick={() => navigate("/dashboard/invoices")}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Invoices
+          Retour aux factures
         </Button>
       </div>
 
