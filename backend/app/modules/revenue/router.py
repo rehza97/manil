@@ -25,8 +25,10 @@ router = APIRouter(prefix="/api/v1/revenue", tags=["revenue"])
 
 @router.get("/overview", response_model=RevenueOverview)
 async def get_revenue_overview(
-    period: str = Query("month", description="Time period (today, week, month, quarter, year)"),
-    customer_id: Optional[str] = Query(None, description="Filter by customer ID"),
+    period: str = Query(
+        "month", description="Time period (today, week, month, quarter, year)"),
+    customer_id: Optional[str] = Query(
+        None, description="Filter by customer ID"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
 ):
@@ -77,7 +79,8 @@ async def get_revenue_by_category(
 @router.get("/by-customer", response_model=RevenueByCustomer)
 async def get_revenue_by_customer(
     period: str = Query("month", description="Time period"),
-    limit: int = Query(10, ge=1, le=100, description="Number of top customers"),
+    limit: int = Query(
+        10, ge=1, le=100, description="Number of top customers"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
 ):

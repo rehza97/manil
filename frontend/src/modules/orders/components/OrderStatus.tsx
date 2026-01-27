@@ -22,14 +22,26 @@ import { Loader2 } from "lucide-react";
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
   request: "bg-blue-100 text-blue-800",
-  validated: "bg-purple-100 text-purple-800",
+  pending_commercial: "bg-orange-100 text-orange-800",
+  commercial_approved: "bg-emerald-100 text-emerald-800",
+  commercial_rejected: "bg-red-100 text-red-800",
+  pending_technical: "bg-purple-100 text-purple-800",
+  technical_approved: "bg-teal-100 text-teal-800",
+  technical_rejected: "bg-rose-100 text-rose-800",
+  validated: "bg-green-100 text-green-800",
   in_progress: "bg-yellow-100 text-yellow-800",
   delivered: "bg-green-100 text-green-800",
-  cancelled: "bg-red-100 text-red-800",
+  cancelled: "bg-gray-100 text-gray-800",
 };
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   request: "Demande",
+  pending_commercial: "En attente validation commerciale",
+  commercial_approved: "Validation commerciale approuvée",
+  commercial_rejected: "Validation commerciale rejetée",
+  pending_technical: "En attente validation technique",
+  technical_approved: "Validation technique approuvée",
+  technical_rejected: "Validation technique rejetée",
   validated: "Validée",
   in_progress: "En cours",
   delivered: "Livrée",
@@ -38,15 +50,28 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
 
 const STATUS_DESCRIPTIONS: Record<OrderStatus, string> = {
   request: "Commande créée, en attente de validation",
+  pending_commercial: "En attente de validation par l'équipe commerciale",
+  commercial_approved: "Validation commerciale approuvée, en attente technique",
+  commercial_rejected: "Validation commerciale rejetée",
+  pending_technical: "En attente de validation par l'équipe technique",
+  technical_approved: "Validation technique approuvée",
+  technical_rejected: "Validation technique rejetée",
   validated: "Commande validée et approuvée",
   in_progress: "Commande en préparation",
   delivered: "Commande livrée au client",
   cancelled: "Commande annulée",
 };
 
-// Valid status transitions based on workflow
+// Valid status transitions for simple status changes (non-validation workflow)
+// Note: Validation workflow uses separate endpoints
 const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  request: ["validated", "cancelled"],
+  request: ["validated", "cancelled"],  // Skip validation path
+  pending_commercial: ["cancelled"],  // Use validation workflow
+  commercial_approved: ["cancelled"],  // Use validation workflow
+  commercial_rejected: ["cancelled"],  // Use validation workflow
+  pending_technical: ["cancelled"],  // Use validation workflow
+  technical_approved: ["validated", "cancelled"],  // Finalize or cancel
+  technical_rejected: ["cancelled"],  // Use validation workflow
   validated: ["in_progress", "cancelled"],
   in_progress: ["delivered", "cancelled"],
   delivered: [],
@@ -269,18 +294,24 @@ export function OrderStatus() {
             <CardDescription>Transitions de statut possibles</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <Badge variant="outline">Demande</Badge>
-              <span className="text-gray-400">→</span>
-              <Badge variant="outline">Validée</Badge>
-              <span className="text-gray-400">→</span>
-              <Badge variant="outline">En cours</Badge>
-              <span className="text-gray-400">→</span>
-              <Badge variant="outline">Livrée</Badge>
-              <br />
-              <span className="text-xs text-gray-600 italic">
-                (À tout moment : annulation possible)
-              </span>
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <Badge variant="outline">Demande</Badge>
+                <span className="text-gray-400">→</span>
+                <Badge variant="outline">Valid. Commerciale</Badge>
+                <span className="text-gray-400">→</span>
+                <Badge variant="outline">Valid. Technique</Badge>
+                <span className="text-gray-400">→</span>
+                <Badge variant="outline">Validée</Badge>
+                <span className="text-gray-400">→</span>
+                <Badge variant="outline">En cours</Badge>
+                <span className="text-gray-400">→</span>
+                <Badge variant="outline">Livrée</Badge>
+              </div>
+              <p className="text-xs text-gray-600 italic">
+                Note: Pour le workflow de validation commerciale/technique, utilisez la page "Workflow validation".
+                Cette page est pour les changements de statut simples (En cours → Livrée, etc.)
+              </p>
             </div>
           </CardContent>
         </Card>

@@ -45,9 +45,18 @@ from app.modules.audit.models import AuditAction
 from app.infrastructure.email.service import EmailService
 from app.infrastructure.sms.service import SMSService
 from app.modules.customers.repository import CustomerRepository
+from app.modules.notifications.service import create_notification
+from app.modules.auth.schemas import UserRole
 from app.core.logging import logger
 
 settings = get_settings()
+
+
+def _welcome_notification_link(role: UserRole) -> str:
+    """Default dashboard link for welcome notification by role."""
+    return {"client": "/dashboard", "corporate": "/corporate", "admin": "/admin"}.get(
+        role.value, "/dashboard"
+    )
 
 
 class AuthService:
@@ -100,6 +109,28 @@ class AuthService:
             success=True,
         )
 
+        # Welcome email and in-app notification (do not fail registration on delivery errors)
+        try:
+            await self.email_service.send_welcome_email(
+                to=user.email,
+                user_name=user.full_name or user.email,
+            )
+        except Exception as e:
+            logger.warning(
+                "Failed to send welcome email to %s: %s", user.email, e)
+        try:
+            await create_notification(
+                self.db,
+                user_id=user.id,
+                type="welcome",
+                title="Welcome to CloudManager",
+                body="Your account has been created. Complete your profile or explore the dashboard.",
+                link=_welcome_notification_link(user.role),
+            )
+        except Exception as e:
+            logger.warning(
+                "Failed to create welcome notification for user %s: %s", user.id, e)
+
         # Return login response with tokens
         return LoginResponse(
             access_token=access_token,
@@ -148,7 +179,8 @@ class AuthService:
                 )
             except Exception as e:
                 # Log error but don't prevent login error from being raised
-                logger.error(f"Failed to log failed login attempt: {e}", exc_info=True)
+                logger.error(
+                    f"Failed to log failed login attempt: {e}", exc_info=True)
             raise UnauthorizedException("Email not found")
 
         # SECURITY: Check if account is locked
@@ -156,7 +188,8 @@ class AuthService:
             if datetime.utcnow() < user.locked_until:
                 # Account is still locked
                 time_remaining = user.locked_until - datetime.utcnow()
-                minutes_remaining = int(time_remaining.total_seconds() / 60) + 1
+                minutes_remaining = int(
+                    time_remaining.total_seconds() / 60) + 1
 
                 try:
                     await self.audit_service.log_action(
@@ -171,7 +204,8 @@ class AuthService:
                         error_message=f"Account locked for {minutes_remaining} more minutes",
                     )
                 except Exception as e:
-                    logger.error(f"Failed to log locked account login attempt: {e}", exc_info=True)
+                    logger.error(
+                        f"Failed to log locked account login attempt: {e}", exc_info=True)
 
                 raise UnauthorizedException(
                     f"Account is temporarily locked due to multiple failed login attempts. "
@@ -185,7 +219,7 @@ class AuthService:
 
         # Verify password
         password_valid = verify_password(password, user.password_hash)
-        
+
         # If password is valid and it's using bcrypt (old hash), migrate to Argon2
         if password_valid:
             # Check if password is using bcrypt (starts with $2a$, $2b$, or $2y$)
@@ -195,8 +229,9 @@ class AuthService:
                 new_hash = get_password_hash(password)
                 user.password_hash = new_hash
                 await self.db.commit()
-                logger.info(f"Password migrated to Argon2 for user {user.email}")
-                
+                logger.info(
+                    f"Password migrated to Argon2 for user {user.email}")
+
                 # Log migration
                 try:
                     await self.audit_service.log_action(
@@ -211,7 +246,7 @@ class AuthService:
                     )
                 except Exception as e:
                     logger.warning(f"Failed to log password migration: {e}")
-        
+
         if not password_valid:
             # SECURITY: Increment failed attempts and lock if threshold reached
             user.failed_login_attempts += 1
@@ -236,7 +271,8 @@ class AuthService:
                         error_message="Account locked - too many failed attempts",
                     )
                 except Exception as e:
-                    logger.error(f"Failed to log account lock audit: {e}", exc_info=True)
+                    logger.error(
+                        f"Failed to log account lock audit: {e}", exc_info=True)
 
                 raise UnauthorizedException(
                     "Account has been locked due to multiple failed login attempts. "
@@ -258,7 +294,8 @@ class AuthService:
                     error_message="Wrong password",
                 )
             except Exception as e:
-                logger.error(f"Failed to log failed login attempt: {e}", exc_info=True)
+                logger.error(
+                    f"Failed to log failed login attempt: {e}", exc_info=True)
 
             raise UnauthorizedException("Wrong password")
 
@@ -277,7 +314,8 @@ class AuthService:
                     error_message="Account is inactive",
                 )
             except Exception as e:
-                logger.error(f"Failed to log inactive account login attempt: {e}", exc_info=True)
+                logger.error(
+                    f"Failed to log inactive account login attempt: {e}", exc_info=True)
             raise UnauthorizedException("Account is inactive")
 
         # Role-based 2FA requirement: reject login if role requires 2FA but user has not enabled it
@@ -384,7 +422,8 @@ class AuthService:
         """
         user_id = decode_pending_2fa_token(pending_2fa_token)
         if not user_id:
-            raise UnauthorizedException("Invalid or expired 2FA login token. Please log in again.")
+            raise UnauthorizedException(
+                "Invalid or expired 2FA login token. Please log in again.")
 
         user = await self.repository.get_by_id(user_id)
         if not user:
@@ -408,7 +447,8 @@ class AuthService:
                 success=True,
             )
         except Exception as e:
-            logger.error(f"Failed to log 2FA login success: {e}", exc_info=True)
+            logger.error(
+                f"Failed to log 2FA login success: {e}", exc_info=True)
 
         return LoginResponse(
             access_token=access_token,
@@ -530,7 +570,8 @@ class AuthService:
         if user.locked_until:
             if datetime.utcnow() < user.locked_until:
                 time_remaining = user.locked_until - datetime.utcnow()
-                minutes_remaining = int(time_remaining.total_seconds() / 60) + 1
+                minutes_remaining = int(
+                    time_remaining.total_seconds() / 60) + 1
                 raise UnauthorizedException(
                     f"Account has been locked due to multiple failed login attempts. "
                     f"Please try again in {minutes_remaining} minute(s) or contact support."
@@ -633,7 +674,8 @@ class AuthService:
 
         # Check if 2FA is enabled and has secret
         if not user.is_2fa_enabled or not user.totp_secret:
-            raise ValidationException("2FA is not enabled. Please complete setup first.")
+            raise ValidationException(
+                "2FA is not enabled. Please complete setup first.")
 
         # Verify TOTP code
         totp = pyotp.TOTP(user.totp_secret)
@@ -654,7 +696,8 @@ class AuthService:
                     error_message="Invalid 2FA code",
                 )
             except Exception as e:
-                logger.error(f"Failed to log 2FA verification audit: {e}", exc_info=True)
+                logger.error(
+                    f"Failed to log 2FA verification audit: {e}", exc_info=True)
 
             raise ValidationException("Invalid 2FA code")
 
@@ -671,7 +714,8 @@ class AuthService:
                 success=True,
             )
         except Exception as e:
-            logger.error(f"Failed to log 2FA verification audit: {e}", exc_info=True)
+            logger.error(
+                f"Failed to log 2FA verification audit: {e}", exc_info=True)
 
         return VerifySetupRequired2FAResponse(
             success=True, message="2FA has been successfully enabled"
@@ -730,25 +774,26 @@ class AuthService:
             # Get customer phone number
             customer_repo = CustomerRepository(self.db)
             customer = await customer_repo.get_by_email(email)
-            
+
             if not customer or not customer.phone or not customer.phone.strip():
                 # Fallback to email if no phone number
-                logger.warning(f"No phone number found for {email}, falling back to email method")
+                logger.warning(
+                    f"No phone number found for {email}, falling back to email method")
                 method = "email"
             else:
                 # Generate 6-digit code
                 reset_code = generate_reset_code()
-                
+
                 # Store code in Redis
                 await store_reset_code(email, reset_code, "sms")
-                
+
                 # Send SMS with code
                 sms_service = SMSService()
                 await sms_service.send_password_reset_code(
                     to=customer.phone,
                     code=reset_code
                 )
-                
+
                 return reset_code
 
         # Email method (default)
@@ -766,8 +811,8 @@ class AuthService:
         return reset_token
 
     async def reset_password(
-        self, 
-        token: Optional[str] = None, 
+        self,
+        token: Optional[str] = None,
         code: Optional[str] = None,
         email: Optional[str] = None,
         new_password: str = ""
@@ -789,7 +834,7 @@ class AuthService:
             ValidationException: If user not found or missing required fields
         """
         user_email = None
-        
+
         if token:
             # Email method - verify token
             user_email = verify_reset_token(token)
@@ -801,7 +846,8 @@ class AuthService:
                 raise UnauthorizedException("Invalid or expired reset code")
             user_email = email
         else:
-            raise ValidationException("Either token or (code and email) must be provided")
+            raise ValidationException(
+                "Either token or (code and email) must be provided")
 
         # Get user by email
         user = await self.repository.get_by_email(user_email)
@@ -813,7 +859,7 @@ class AuthService:
 
         # Update password
         updated_user = await self.repository.update_password(user, password_hash)
-        
+
         # Delete reset code from Redis if SMS method was used
         if code and email:
             await delete_reset_code(email)

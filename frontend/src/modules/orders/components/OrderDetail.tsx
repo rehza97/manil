@@ -38,14 +38,26 @@ import { Separator } from "@/shared/components/ui/separator";
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
   request: "bg-blue-100 text-blue-800",
-  validated: "bg-purple-100 text-purple-800",
+  pending_commercial: "bg-orange-100 text-orange-800",
+  commercial_approved: "bg-emerald-100 text-emerald-800",
+  commercial_rejected: "bg-red-100 text-red-800",
+  pending_technical: "bg-purple-100 text-purple-800",
+  technical_approved: "bg-teal-100 text-teal-800",
+  technical_rejected: "bg-rose-100 text-rose-800",
+  validated: "bg-green-100 text-green-800",
   in_progress: "bg-yellow-100 text-yellow-800",
   delivered: "bg-green-100 text-green-800",
-  cancelled: "bg-red-100 text-red-800",
+  cancelled: "bg-gray-100 text-gray-800",
 };
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   request: "Demande",
+  pending_commercial: "En attente validation commerciale",
+  commercial_approved: "Validation commerciale approuvée",
+  commercial_rejected: "Validation commerciale rejetée",
+  pending_technical: "En attente validation technique",
+  technical_approved: "Validation technique approuvée",
+  technical_rejected: "Validation technique rejetée",
   validated: "Validée",
   in_progress: "En cours",
   delivered: "Livrée",
@@ -92,6 +104,10 @@ export function OrderDetail() {
 
   const handleChangeStatus = () => {
     navigate(`${basePath}/${orderId}/status`);
+  };
+
+  const handleValidation = () => {
+    navigate(`${basePath}/${orderId}/validation`);
   };
 
   const handleDelete = async () => {
@@ -168,6 +184,11 @@ export function OrderDetail() {
 
         {!orderLoading && order && (
           <div className="flex gap-2">
+            {order.validation_required && (
+              <Button onClick={handleValidation} variant="default">
+                Workflow validation
+              </Button>
+            )}
             <Button onClick={handleChangeStatus} variant="outline">
               Changer le statut
             </Button>
@@ -233,6 +254,87 @@ export function OrderDetail() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Validation Status */}
+            {order.validation_required && (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Validation Commerciale</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Statut</p>
+                      <Badge
+                        variant={
+                          order.commercial_approved === true
+                            ? "default"
+                            : order.commercial_approved === false
+                            ? "destructive"
+                            : "secondary"
+                        }
+                      >
+                        {order.commercial_approved === true
+                          ? "Approuvée"
+                          : order.commercial_approved === false
+                          ? "Rejetée"
+                          : "En attente"}
+                      </Badge>
+                    </div>
+                    {order.commercial_validated_at && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Date</p>
+                        <p className="text-sm">{formatDate(order.commercial_validated_at)}</p>
+                      </div>
+                    )}
+                    {order.commercial_validation_notes && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Notes</p>
+                        <p className="text-sm">{order.commercial_validation_notes}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Validation Technique</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Statut</p>
+                      <Badge
+                        variant={
+                          order.technical_approved === true
+                            ? "default"
+                            : order.technical_approved === false
+                            ? "destructive"
+                            : "secondary"
+                        }
+                      >
+                        {order.technical_approved === true
+                          ? "Approuvée"
+                          : order.technical_approved === false
+                          ? "Rejetée"
+                          : "En attente"}
+                      </Badge>
+                    </div>
+                    {order.technical_validated_at && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Date</p>
+                        <p className="text-sm">{formatDate(order.technical_validated_at)}</p>
+                      </div>
+                    )}
+                    {order.technical_validation_notes && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Notes</p>
+                        <p className="text-sm">{order.technical_validation_notes}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
             {/* Order Items */}
             <Card>

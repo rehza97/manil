@@ -43,10 +43,11 @@ export const corporateQuotesApi = {
     await apiClient.post(`/corporate/quotes/${quoteId}/approve`);
   },
 
-  convertToOrder: async (quoteId: string): Promise<any> => {
-    const response = await apiClient.post(
-      `/corporate/quotes/${quoteId}/convert`
-    );
+  convertToOrder: async (quoteId: string, data?: any): Promise<any> => {
+    const response = await apiClient.post("/orders/convert-from-quote", {
+      quote_id: quoteId,
+      ...data,
+    });
     return response.data;
   },
 };

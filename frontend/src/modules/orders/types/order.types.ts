@@ -5,6 +5,12 @@
 
 export enum OrderStatus {
   REQUEST = "request",
+  PENDING_COMMERCIAL = "pending_commercial",
+  COMMERCIAL_APPROVED = "commercial_approved",
+  COMMERCIAL_REJECTED = "commercial_rejected",
+  PENDING_TECHNICAL = "pending_technical",
+  TECHNICAL_APPROVED = "technical_approved",
+  TECHNICAL_REJECTED = "technical_rejected",
   VALIDATED = "validated",
   IN_PROGRESS = "in_progress",
   DELIVERED = "delivered",
@@ -55,6 +61,19 @@ export interface Order {
   delivery_address?: string;
   delivery_contact?: string;
   items: OrderItem[];
+
+  // Validation workflow
+  validation_required: boolean;
+  commercial_validated_by?: string;
+  commercial_validated_at?: string;
+  commercial_validation_notes?: string;
+  commercial_approved?: boolean;
+  technical_validated_by?: string;
+  technical_validated_at?: string;
+  technical_validation_notes?: string;
+  technical_approved?: boolean;
+
+  // Status timestamps
   validated_at?: string;
   in_progress_at?: string;
   delivered_at?: string;
@@ -69,6 +88,7 @@ export interface CreateOrderDTO {
   customer_notes?: string;
   delivery_address?: string;
   delivery_contact?: string;
+  validation_required?: boolean;
   items: CreateOrderItemDTO[];
 }
 
@@ -125,4 +145,53 @@ export interface OrderSummary {
   total_amount: number;
   item_count: number;
   created_at: string;
+}
+
+/**
+ * Validation Workflow Types
+ */
+export interface SubmitForValidationDTO {
+  notes?: string;
+}
+
+export interface CommercialValidationDTO {
+  approved: boolean;
+  notes?: string;
+}
+
+export interface TechnicalValidationDTO {
+  approved: boolean;
+  notes?: string;
+}
+
+export interface ResubmitValidationDTO {
+  notes?: string;
+}
+
+export interface SkipValidationDTO {
+  notes?: string;
+}
+
+export interface ValidationSummary {
+  validation_required: boolean;
+  commercial_validation?: {
+    status: "pending" | "approved" | "rejected";
+    validated_by?: string;
+    validated_at?: string;
+    notes?: string;
+  };
+  technical_validation?: {
+    status: "pending" | "approved" | "rejected";
+    validated_by?: string;
+    validated_at?: string;
+    notes?: string;
+  };
+  fully_validated: boolean;
+  validated_at?: string;
+}
+
+export interface AllowedTransitionsResponse {
+  current_status: OrderStatus;
+  allowed_transitions: OrderStatus[];
+  validation_required: boolean;
 }

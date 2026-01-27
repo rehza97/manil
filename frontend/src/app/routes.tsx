@@ -142,6 +142,7 @@ import {
   OrderCreatePage,
   OrderEditPage,
   OrderStatusPage,
+  OrderValidationPage,
 } from "@/modules/orders/pages";
 import { OrderCreateRedirect } from "@/modules/orders/components/OrderCreateRedirect";
 import {
@@ -407,6 +408,10 @@ export const routes = [
         element: <OrderStatusPage />,
       },
       {
+        path: "orders/:orderId/validation",
+        element: <OrderValidationPage />,
+      },
+      {
         path: "orders/:orderId",
         element: <OrderDetailPage />,
       },
@@ -606,6 +611,10 @@ export const routes = [
       {
         path: "orders/:orderId/status",
         element: <OrderStatusPage />,
+      },
+      {
+        path: "orders/:orderId/validation",
+        element: <OrderValidationPage />,
       },
       {
         path: "orders/:orderId",
@@ -1037,6 +1046,10 @@ export const routes = [
       {
         path: "orders/:orderId/status",
         element: <OrderStatusPage />,
+      },
+      {
+        path: "orders/:orderId/validation",
+        element: <OrderValidationPage />,
       },
       {
         path: "orders/:orderId",

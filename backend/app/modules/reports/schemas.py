@@ -337,3 +337,94 @@ class ExportResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ============================================================================
+# Export Model Schemas
+# ============================================================================
+
+class ExportCreate(BaseModel):
+    """Schema for creating a new export job"""
+    export_type: str  # tickets, customers, orders, invoices, quotes, vps, etc.
+    export_format: str  # csv, pdf, excel
+    title: Optional[str] = None
+    description: Optional[str] = None
+    filters: Optional[Dict[str, Any]] = None
+    parameters: Optional[Dict[str, Any]] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ExportUpdate(BaseModel):
+    """Schema for updating an export job"""
+    status: Optional[str] = None
+    file_name: Optional[str] = None
+    file_path: Optional[str] = None
+    file_size: Optional[int] = None
+    total_records: Optional[int] = None
+    error_message: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ExportDetail(BaseModel):
+    """Detailed export information"""
+    id: str
+    export_number: str
+    export_type: str
+    export_format: str
+    status: str
+    file_name: Optional[str] = None
+    file_path: Optional[str] = None
+    file_size: Optional[int] = None
+    mime_type: Optional[str] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    filters: Optional[Dict[str, Any]] = None
+    parameters: Optional[Dict[str, Any]] = None
+    total_records: Optional[int] = None
+    error_message: Optional[str] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    download_count: int = 0
+    last_downloaded_at: Optional[datetime] = None
+    requested_by_id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ExportListItem(BaseModel):
+    """Export list item (summary)"""
+    id: str
+    export_number: str
+    export_type: str
+    export_format: str
+    status: str
+    title: Optional[str] = None
+    file_name: Optional[str] = None
+    file_size: Optional[int] = None
+    total_records: Optional[int] = None
+    download_count: int = 0
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ExportListResponse(BaseModel):
+    """Paginated export list response"""
+    items: List[ExportListItem]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+    class Config:
+        from_attributes = True

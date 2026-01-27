@@ -175,9 +175,18 @@ def accept_quote_request(
         quote_data = QuoteRequestUpdate(status=QuoteStatus.ACCEPTED)
         quote = QuoteRequestService.update_quote_request(db, quote_id, quote_data)
 
-        # Send acceptance notification to customer and corporate
+        # Send acceptance notification (email + SMS) with preference checks
         if quote.customer_email:
-            QuoteNotificationService.send_quote_accepted_email(quote)
+            import asyncio
+            from app.config.database import AsyncSessionLocal
+            async def send_notification():
+                async with AsyncSessionLocal() as async_db:
+                    await QuoteNotificationService.send_quote_accepted_notification(async_db, quote)
+            try:
+                asyncio.run(send_notification())
+            except Exception as e:
+                logger.warning(f"Failed to send quote accepted notification: {e}")
+                QuoteNotificationService.send_quote_accepted_email(quote)
 
         return QuoteRequestResponse.model_validate(quote)
     except NotFoundException as e:

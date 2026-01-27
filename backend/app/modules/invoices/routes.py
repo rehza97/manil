@@ -19,6 +19,7 @@ from app.modules.invoices.models import InvoiceStatus
 from app.modules.invoices.service import InvoiceService
 from app.modules.invoices.service_workflow import InvoiceWorkflowService
 from app.modules.invoices.pdf_service import InvoicePDFService
+from app.modules.invoices.html_pdf_service import get_html_pdf_service
 from app.modules.invoices.schemas import (
     InvoiceCreate,
     InvoiceUpdate,
@@ -386,8 +387,8 @@ async def generate_invoice_pdf(
         'city': invoice.customer.city if invoice.customer else 'N/A',
     }
 
-    # Generate PDF
-    pdf_service = InvoicePDFService()
+    # Generate PDF using HTMLPDFService (HTML-to-PDF for better quality)
+    pdf_service = get_html_pdf_service()
     pdf_path = pdf_service.generate_invoice_pdf(invoice, customer_data, include_qr=include_qr)
 
     # SECURITY: Sanitize filename to prevent path traversal

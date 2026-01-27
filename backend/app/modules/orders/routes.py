@@ -21,8 +21,17 @@ from app.modules.orders.schemas import (
     OrderStatusUpdate,
     OrderStatus,
     OrderTimelineListResponse,
+    SubmitForValidationRequest,
+    CommercialValidationRequest,
+    TechnicalValidationRequest,
+    ResubmitValidationRequest,
+    SkipValidationRequest,
+    ValidationSummary,
+    AllowedTransitionsResponse,
+    OrderConvertFromQuoteRequest,
 )
 from app.modules.orders.service import OrderService
+from app.modules.orders.service_workflow import OrderWorkflowService
 from app.modules.customers.models import Customer
 from app.infrastructure.email.service import EmailService
 from app.config.database import AsyncSessionLocal
@@ -143,6 +152,43 @@ def create_order(
         raise HTTPException(status_code=404, detail=str(e))
     except ForbiddenException as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/convert-from-quote", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
+def convert_quote_to_order(
+    conversion_data: OrderConvertFromQuoteRequest,
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_permission(Permission.ORDERS_CREATE)),
+):
+    """Convert an accepted quote to an order.
+
+    Security:
+    - Requires ORDERS_CREATE permission
+    - Quote must be in ACCEPTED status
+    - Quote must not have been converted to an order already
+
+    Request body:
+    - quote_id: Quote ID to convert
+    - customer_notes: Optional additional notes
+    - delivery_address: Optional delivery address
+    - delivery_contact: Optional delivery contact
+    - validation_required: Whether order requires validation workflow (default: True)
+
+    Response:
+    - Returns created order with calculated totals
+    """
+    try:
+        order = OrderService.convert_quote_to_order(
+            db,
+            conversion_data,
+            str(current_user.id)
+        )
+        return OrderResponse.model_validate(order)
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -380,6 +426,370 @@ def delete_order(
         raise HTTPException(status_code=404, detail=str(e))
     except ForbiddenException as e:
         raise HTTPException(status_code=403, detail=str(e))
+
+
+# ============================================================================
+# VALIDATION WORKFLOW
+# ============================================================================
+
+
+@router.get("/{order_id}/transitions", response_model=AllowedTransitionsResponse)
+def get_allowed_transitions(
+    order_id: str,
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_permission(Permission.ORDERS_VIEW)),
+):
+    """
+    Get allowed status transitions for an order.
+
+    **Security:**
+    - Requires authentication (valid JWT token)
+    - Requires ORDERS_VIEW permission
+
+    **Response:**
+    Returns current status and list of allowed next statuses.
+    """
+    try:
+        order = OrderService.get_order(db, order_id)
+        allowed = OrderWorkflowService.get_allowed_transitions(order)
+
+        return AllowedTransitionsResponse(
+            current_status=order.status,
+            allowed_transitions=allowed,
+            validation_required=order.validation_required,
+        )
+    except NotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/{order_id}/validation", response_model=ValidationSummary)
+def get_validation_summary(
+    order_id: str,
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_permission(Permission.ORDERS_VIEW)),
+):
+    """
+    Get validation status summary for an order.
+
+    **Security:**
+    - Requires authentication (valid JWT token)
+    - Requires ORDERS_VIEW permission
+
+    **Response:**
+    Returns commercial and technical validation status.
+    """
+    try:
+        order = OrderService.get_order(db, order_id)
+        summary = OrderWorkflowService.get_validation_summary(order)
+        return ValidationSummary(**summary)
+    except NotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/{order_id}/submit-commercial", response_model=OrderResponse)
+def submit_for_commercial_validation(
+    order_id: str,
+    request_data: SubmitForValidationRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_permission(Permission.ORDERS_EDIT)),
+):
+    """
+    Submit order for commercial validation.
+
+    **Security:**
+    - Requires authentication (valid JWT token)
+    - Requires ORDERS_EDIT permission
+
+    **Workflow:**
+    - Order must be in REQUEST status
+    - Changes status to PENDING_COMMERCIAL
+    """
+    try:
+        order = OrderWorkflowService.submit_for_commercial_validation(
+            db, order_id, str(current_user.id), request_data.notes
+        )
+        return OrderResponse.model_validate(order)
+    except NotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except BadRequestException as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{order_id}/commercial-validation", response_model=OrderResponse)
+def perform_commercial_validation(
+    order_id: str,
+    validation_data: CommercialValidationRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_permission(Permission.ORDERS_APPROVE)),
+):
+    """
+    Perform commercial validation on an order (approve or reject).
+
+    **Security:**
+    - Requires authentication (valid JWT token)
+    - Requires ORDERS_APPROVE permission (commercial team)
+
+    **Workflow:**
+    - Order must be in PENDING_COMMERCIAL status
+    - If approved: changes to COMMERCIAL_APPROVED
+    - If rejected: changes to COMMERCIAL_REJECTED
+
+    **Request body:**
+    - approved: Boolean indicating approval decision
+    - notes: Optional notes explaining the decision
+    """
+    try:
+        order = OrderWorkflowService.perform_commercial_validation(
+            db,
+            order_id,
+            validation_data.approved,
+            str(current_user.id),
+            validation_data.notes,
+        )
+
+        # Send notification to customer
+        customer = db.execute(
+            select(Customer).where(Customer.id == order.customer_id)
+        ).scalar_one_or_none()
+        if customer and customer.email:
+            status_msg = "approved" if validation_data.approved else "rejected"
+            background_tasks.add_task(
+                _send_order_status_email,
+                customer.email,
+                order_id,
+                f"commercial_validation_{status_msg}",
+            )
+            background_tasks.add_task(
+                _create_order_status_notification,
+                customer.email,
+                order_id,
+                f"Commercial validation {status_msg}",
+            )
+
+        return OrderResponse.model_validate(order)
+    except NotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except BadRequestException as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{order_id}/submit-technical", response_model=OrderResponse)
+def submit_for_technical_validation(
+    order_id: str,
+    request_data: SubmitForValidationRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_permission(Permission.ORDERS_EDIT)),
+):
+    """
+    Submit order for technical validation after commercial approval.
+
+    **Security:**
+    - Requires authentication (valid JWT token)
+    - Requires ORDERS_EDIT permission
+
+    **Workflow:**
+    - Order must be in COMMERCIAL_APPROVED status
+    - Changes status to PENDING_TECHNICAL
+    """
+    try:
+        order = OrderWorkflowService.submit_for_technical_validation(
+            db, order_id, str(current_user.id), request_data.notes
+        )
+        return OrderResponse.model_validate(order)
+    except NotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except BadRequestException as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{order_id}/technical-validation", response_model=OrderResponse)
+def perform_technical_validation(
+    order_id: str,
+    validation_data: TechnicalValidationRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_permission(Permission.ORDERS_APPROVE)),
+):
+    """
+    Perform technical validation on an order (approve or reject).
+
+    **Security:**
+    - Requires authentication (valid JWT token)
+    - Requires ORDERS_APPROVE permission (technical team)
+
+    **Workflow:**
+    - Order must be in PENDING_TECHNICAL status
+    - If approved: changes to TECHNICAL_APPROVED
+    - If rejected: changes to TECHNICAL_REJECTED
+
+    **Request body:**
+    - approved: Boolean indicating approval decision
+    - notes: Optional notes explaining the decision
+    """
+    try:
+        order = OrderWorkflowService.perform_technical_validation(
+            db,
+            order_id,
+            validation_data.approved,
+            str(current_user.id),
+            validation_data.notes,
+        )
+
+        # Send notification to customer
+        customer = db.execute(
+            select(Customer).where(Customer.id == order.customer_id)
+        ).scalar_one_or_none()
+        if customer and customer.email:
+            status_msg = "approved" if validation_data.approved else "rejected"
+            background_tasks.add_task(
+                _send_order_status_email,
+                customer.email,
+                order_id,
+                f"technical_validation_{status_msg}",
+            )
+            background_tasks.add_task(
+                _create_order_status_notification,
+                customer.email,
+                order_id,
+                f"Technical validation {status_msg}",
+            )
+
+        return OrderResponse.model_validate(order)
+    except NotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except BadRequestException as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{order_id}/finalize-validation", response_model=OrderResponse)
+def finalize_validation(
+    order_id: str,
+    request_data: SubmitForValidationRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_permission(Permission.ORDERS_APPROVE)),
+):
+    """
+    Finalize order validation after both commercial and technical approval.
+
+    **Security:**
+    - Requires authentication (valid JWT token)
+    - Requires ORDERS_APPROVE permission
+
+    **Workflow:**
+    - Order must be in TECHNICAL_APPROVED status
+    - Changes status to VALIDATED
+    """
+    try:
+        order = OrderWorkflowService.finalize_validation(
+            db, order_id, str(current_user.id), request_data.notes
+        )
+
+        # Send notification to customer
+        customer = db.execute(
+            select(Customer).where(Customer.id == order.customer_id)
+        ).scalar_one_or_none()
+        if customer and customer.email:
+            background_tasks.add_task(
+                _send_order_status_email,
+                customer.email,
+                order_id,
+                "validated",
+            )
+            background_tasks.add_task(
+                _create_order_status_notification,
+                customer.email,
+                order_id,
+                "Order fully validated",
+            )
+
+        return OrderResponse.model_validate(order)
+    except NotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except BadRequestException as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{order_id}/resubmit", response_model=OrderResponse)
+def resubmit_after_rejection(
+    order_id: str,
+    request_data: ResubmitValidationRequest,
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_permission(Permission.ORDERS_EDIT)),
+):
+    """
+    Resubmit order for validation after rejection.
+
+    **Security:**
+    - Requires authentication (valid JWT token)
+    - Requires ORDERS_EDIT permission
+
+    **Workflow:**
+    - Order must be in COMMERCIAL_REJECTED or TECHNICAL_REJECTED status
+    - Resets validation for the rejected stage and resubmits
+    """
+    try:
+        order = OrderWorkflowService.resubmit_after_rejection(
+            db, order_id, str(current_user.id), request_data.notes
+        )
+        return OrderResponse.model_validate(order)
+    except NotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except BadRequestException as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{order_id}/skip-validation", response_model=OrderResponse)
+def skip_validation(
+    order_id: str,
+    request_data: SkipValidationRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(require_permission(Permission.ORDERS_APPROVE)),
+):
+    """
+    Skip validation workflow and validate order directly.
+
+    **Security:**
+    - Requires authentication (valid JWT token)
+    - Requires ORDERS_APPROVE permission (admin only typically)
+
+    **Workflow:**
+    - Order must be in REQUEST status
+    - Skips commercial/technical validation
+    - Directly sets status to VALIDATED
+    """
+    try:
+        order = OrderWorkflowService.skip_validation(
+            db, order_id, str(current_user.id), request_data.notes
+        )
+
+        # Send notification to customer
+        customer = db.execute(
+            select(Customer).where(Customer.id == order.customer_id)
+        ).scalar_one_or_none()
+        if customer and customer.email:
+            background_tasks.add_task(
+                _send_order_status_email,
+                customer.email,
+                order_id,
+                "validated",
+            )
+            background_tasks.add_task(
+                _create_order_status_notification,
+                customer.email,
+                order_id,
+                "Order validated",
+            )
+
+        return OrderResponse.model_validate(order)
+    except NotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except BadRequestException as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ============================================================================

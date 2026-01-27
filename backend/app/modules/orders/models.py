@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
-from sqlalchemy import String, DateTime, Numeric, Integer, Boolean, ForeignKey, Text, Enum as SQLEnum
+from sqlalchemy import String, DateTime, Numeric, Integer, Boolean, ForeignKey, Text, Enum as SQLEnum, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.config.database import Base
@@ -16,7 +16,13 @@ from app.config.database import Base
 class OrderStatus(str, Enum):
     """Order status enumeration."""
     REQUEST = "request"  # Initial request submitted
-    VALIDATED = "validated"  # Request validated by corporate
+    PENDING_COMMERCIAL = "pending_commercial"  # Awaiting commercial validation
+    COMMERCIAL_APPROVED = "commercial_approved"  # Commercial validation passed
+    COMMERCIAL_REJECTED = "commercial_rejected"  # Commercial validation rejected
+    PENDING_TECHNICAL = "pending_technical"  # Awaiting technical validation
+    TECHNICAL_APPROVED = "technical_approved"  # Technical validation passed
+    TECHNICAL_REJECTED = "technical_rejected"  # Technical validation rejected
+    VALIDATED = "validated"  # Fully validated (both commercial & technical)
     IN_PROGRESS = "in_progress"  # Order being processed/prepared
     DELIVERED = "delivered"  # Order delivered to customer
     CANCELLED = "cancelled"  # Order cancelled
@@ -120,6 +126,60 @@ class Order(Base):
         doc="Contact person for delivery",
     )
 
+    # Validation Workflow
+    validation_required: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        nullable=False,
+        doc="Whether order requires commercial/technical validation",
+    )
+
+    # Commercial Validation
+    commercial_validated_by: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        doc="User who performed commercial validation",
+    )
+    commercial_validated_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        doc="When commercial validation was performed",
+    )
+    commercial_validation_notes: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+        doc="Notes from commercial validation",
+    )
+    commercial_approved: Mapped[Optional[bool]] = mapped_column(
+        Boolean,
+        nullable=True,
+        doc="Whether commercial validation was approved",
+    )
+
+    # Technical Validation
+    technical_validated_by: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        doc="User who performed technical validation",
+    )
+    technical_validated_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        doc="When technical validation was performed",
+    )
+    technical_validation_notes: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+        doc="Notes from technical validation",
+    )
+    technical_approved: Mapped[Optional[bool]] = mapped_column(
+        Boolean,
+        nullable=True,
+        doc="Whether technical validation was approved",
+    )
+
     # Status Timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -137,7 +197,7 @@ class Order(Base):
     validated_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
-        doc="When order was validated",
+        doc="When order was fully validated",
     )
     in_progress_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),

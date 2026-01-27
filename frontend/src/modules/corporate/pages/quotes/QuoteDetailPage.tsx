@@ -96,7 +96,12 @@ export const QuoteDetailPage: React.FC = () => {
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handleDownloadPdf}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
           {canApprove && <Button size="sm" onClick={() => navigate(`/corporate/quotes/${id}/approve`)}><CheckCircle className="mr-2 h-4 w-4" />Approve</Button>}
-          {canConvert && <Button size="sm" onClick={() => navigate(`/corporate/quotes/${id}/convert`)}><FileText className="mr-2 h-4 w-4" />Convert to Order</Button>}
+          {canConvert && (
+            <Button size="sm" onClick={() => navigate(`/corporate/quotes/${id}/convert`)}>
+              <FileText className="mr-2 h-4 w-4" />
+              Convert Quote
+            </Button>
+          )}
         </div>
       </div>
       <div>

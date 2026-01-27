@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quote {{ quote.quote_number }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 15mm 20mm 20mm 20mm;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 11px;
+            line-height: 1.5;
+            color: #333;
+            background: white;
+        }
+
+        .container {
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 10px;
+        }
+
+        /* Header Section */
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #059669;
+        }
+
+        .company-name {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1a56db;
+            margin-bottom: 8px;
+        }
+
+        .company-details {
+            font-size: 9px;
+            color: #6b7280;
+            line-height: 1.6;
+        }
+
+        /* Quote Title */
+        .quote-title {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .quote-title h1 {
+            font-size: 24px;
+            color: #059669;
+            margin-bottom: 10px;
+        }
+
+        /* Info Grid */
+        .info-grid {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+        }
+
+        .info-section {
+            width: 48%;
+        }
+
+        .info-section.right {
+            text-align: right;
+        }
+
+        .info-section h3 {
+            font-size: 12px;
+            color: #1e40af;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 4px;
+        }
+
+        .info-label {
+            font-weight: bold;
+            width: 120px;
+            color: #374151;
+        }
+
+        .info-value {
+            color: #4b5563;
+        }
+
+        .customer-info p {
+            margin-bottom: 3px;
+        }
+
+        .customer-name {
+            font-weight: bold;
+            font-size: 12px;
+            color: #111827;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-draft { background: #e5e7eb; color: #374151; }
+        .status-pending_approval { background: #fef3c7; color: #92400e; }
+        .status-approved { background: #dbeafe; color: #1e40af; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+        .status-sent { background: #e0e7ff; color: #3730a3; }
+        .status-accepted { background: #d1fae5; color: #065f46; }
+        .status-declined { background: #fee2e2; color: #991b1b; }
+        .status-expired { background: #f3f4f6; color: #6b7280; }
+        .status-converted { background: #fce7f3; color: #9d174d; }
+
+        /* Items Table */
+        .items-section {
+            margin-bottom: 25px;
+        }
+
+        .items-section h3 {
+            font-size: 12px;
+            color: #1e40af;
+            margin-bottom: 10px;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .items-table thead th {
+            background: #059669;
+            color: white;
+            padding: 10px 8px;
+            text-align: left;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .items-table thead th:nth-child(1) { width: 5%; text-align: center; }
+        .items-table thead th:nth-child(2) { width: 50%; }
+        .items-table thead th:nth-child(3) { width: 10%; text-align: center; }
+        .items-table thead th:nth-child(4) { width: 17%; text-align: right; }
+        .items-table thead th:nth-child(5) { width: 18%; text-align: right; }
+
+        .items-table tbody tr:nth-child(odd) {
+            background: #f0fdf4;
+        }
+
+        .items-table tbody tr:nth-child(even) {
+            background: white;
+        }
+
+        .items-table tbody td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 10px;
+        }
+
+        .items-table tbody td:nth-child(1) { text-align: center; }
+        .items-table tbody td:nth-child(3) { text-align: center; }
+        .items-table tbody td:nth-child(4) { text-align: right; }
+        .items-table tbody td:nth-child(5) { text-align: right; font-weight: bold; }
+
+        /* Tax Summary */
+        .tax-summary {
+            margin-bottom: 25px;
+        }
+
+        .tax-summary-table {
+            width: 350px;
+            margin-left: auto;
+            border-collapse: collapse;
+        }
+
+        .tax-summary-table tr td {
+            padding: 6px 10px;
+            font-size: 10px;
+        }
+
+        .tax-summary-table tr td:first-child {
+            text-align: right;
+            color: #374151;
+        }
+
+        .tax-summary-table tr td:last-child {
+            text-align: right;
+            width: 120px;
+        }
+
+        .tax-summary-table .subtotal td {
+            background: #f3f4f6;
+        }
+
+        .tax-summary-table .tax-header td {
+            background: #e5e7eb;
+            font-weight: bold;
+            color: #1e40af;
+        }
+
+        .tax-summary-table .grand-total td {
+            background: #f0fdf4;
+            border-top: 2px solid #059669;
+            font-size: 14px;
+            font-weight: bold;
+            color: #059669;
+            padding: 12px 10px;
+        }
+
+        /* Validity Section */
+        .validity-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f0fdf4;
+            border-left: 4px solid #059669;
+            border-radius: 4px;
+        }
+
+        .validity-section h3 {
+            font-size: 12px;
+            color: #1e40af;
+            margin-bottom: 10px;
+        }
+
+        .validity-section p {
+            font-size: 10px;
+            color: #4b5563;
+            margin-bottom: 5px;
+        }
+
+        .validity-warning {
+            color: #dc2626;
+            font-weight: bold;
+        }
+
+        /* Terms Section */
+        .terms-section {
+            margin-bottom: 20px;
+        }
+
+        .terms-section h3 {
+            font-size: 12px;
+            color: #1e40af;
+            margin-bottom: 10px;
+        }
+
+        .terms-list {
+            font-size: 8px;
+            color: #6b7280;
+            line-height: 1.8;
+        }
+
+        .terms-list li {
+            margin-bottom: 5px;
+            margin-left: 15px;
+        }
+
+        /* Signature Section */
+        .signature-section {
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            padding-top: 40px;
+        }
+
+        .signature-box {
+            width: 45%;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 10px;
+        }
+
+        .signature-box p {
+            font-size: 9px;
+            color: #6b7280;
+            margin-bottom: 5px;
+        }
+
+        .signature-line {
+            border-top: 1px solid #333;
+            margin-top: 40px;
+            width: 100%;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding-top: 15px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 8px;
+            color: #6b7280;
+        }
+
+        .footer .company-footer {
+            font-weight: bold;
+            color: #374151;
+        }
+
+        /* Utilities */
+        .text-bold { font-weight: bold; }
+        .text-red { color: #dc2626; }
+        .text-green { color: #059669; }
+        .amount { font-family: 'Courier New', monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="company-name">{{ company.name }}</div>
+            <div class="company-details">
+                <strong>{{ company.legal_name }}</strong><br>
+                {{ company.address }}<br>
+                Tel: {{ company.phone }} | Fax: {{ company.fax }}<br>
+                Email: {{ company.email }} | Web: {{ company.website }}<br>
+                NIF: {{ company.nif }} | RC: {{ company.rc }} | AI: {{ company.ai }}
+            </div>
+        </div>
+
+        <!-- Quote Title -->
+        <div class="quote-title">
+            <h1>DEVIS #{{ quote.quote_number }}</h1>
+            <span class="status-badge status-{{ quote.status|lower|replace(' ', '_') }}">
+                {{ quote.status_display }}
+            </span>
+        </div>
+
+        <!-- Info Grid -->
+        <div class="info-grid">
+            <!-- Quote Details -->
+            <div class="info-section">
+                <h3>Details du Devis</h3>
+                <div class="info-row">
+                    <span class="info-label">Date d'emission:</span>
+                    <span class="info-value">{{ quote.created_date }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Valide du:</span>
+                    <span class="info-value">{{ quote.valid_from }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Valide jusqu'au:</span>
+                    <span class="info-value {% if quote.is_expired %}text-red{% endif %}">
+                        {{ quote.valid_until }}
+                        {% if quote.is_expired %}
+                            <span class="validity-warning"> (EXPIRE)</span>
+                        {% endif %}
+                    </span>
+                </div>
+                {% if quote.days_until_expiry is defined %}
+                <div class="info-row">
+                    <span class="info-label">Expire dans:</span>
+                    <span class="info-value {% if quote.days_until_expiry < 0 %}text-red{% elif quote.days_until_expiry <= 7 %}text-red{% endif %}">
+                        {% if quote.days_until_expiry > 0 %}
+                            {{ quote.days_until_expiry }} jours
+                        {% elif quote.days_until_expiry == 0 %}
+                            Aujourd'hui
+                        {% else %}
+                            EXPIRE ({{ quote.days_until_expiry|abs }} jours)
+                        {% endif %}
+                    </span>
+                </div>
+                {% endif %}
+                {% if quote.version and quote.version > 1 %}
+                <div class="info-row">
+                    <span class="info-label">Version:</span>
+                    <span class="info-value">{{ quote.version }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Customer Info -->
+            <div class="info-section right">
+                <h3>Devis pour</h3>
+                <div class="customer-info">
+                    <p class="customer-name">{{ customer.name }}</p>
+                    <p>{{ customer.address }}</p>
+                    <p>{{ customer.city }}</p>
+                    <p>Tel: {{ customer.phone }}</p>
+                    <p>Email: {{ customer.email }}</p>
+                    {% if customer.nif %}
+                    <p>NIF: {{ customer.nif }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Items Table -->
+        <div class="items-section">
+            <h3>Articles du Devis</h3>
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Description</th>
+                        <th>Qte</th>
+                        <th>Prix Unitaire</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <strong>{{ item.item_name or item.description }}</strong>
+                            {% if item.description and item.item_name != item.description %}
+                            <br><span style="font-size: 9px; color: #6b7280;">{{ item.description }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ item.quantity }}</td>
+                        <td class="amount">{{ "{:,.2f}".format(item.unit_price) }} {{ currency }}</td>
+                        <td class="amount">{{ "{:,.2f}".format(item.line_total) }} {{ currency }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Tax Summary -->
+        <div class="tax-summary">
+            <table class="tax-summary-table">
+                <tr class="subtotal">
+                    <td>Sous-total:</td>
+                    <td class="amount">{{ "{:,.2f}".format(quote.subtotal) }} {{ currency }}</td>
+                </tr>
+                {% if quote.discount > 0 %}
+                <tr>
+                    <td>Remise:</td>
+                    <td class="amount text-green">-{{ "{:,.2f}".format(quote.discount) }} {{ currency }}</td>
+                </tr>
+                <tr>
+                    <td>Apres remise:</td>
+                    <td class="amount">{{ "{:,.2f}".format(quote.subtotal - quote.discount) }} {{ currency }}</td>
+                </tr>
+                {% endif %}
+                <tr class="tax-header">
+                    <td colspan="2">DETAILS DES TAXES</td>
+                </tr>
+                <tr>
+                    <td>TVA ({{ quote.tax_rate }}%):</td>
+                    <td class="amount">{{ "{:,.2f}".format(quote.tva_amount) }} {{ currency }}</td>
+                </tr>
+                <tr>
+                    <td>TAP ({{ quote.tap_rate }}%):</td>
+                    <td class="amount">{{ "{:,.2f}".format(quote.tap_amount) }} {{ currency }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Total Taxes:</strong></td>
+                    <td class="amount"><strong>{{ "{:,.2f}".format(quote.total_tax) }} {{ currency }}</strong></td>
+                </tr>
+                <tr class="grand-total">
+                    <td>TOTAL TTC:</td>
+                    <td class="amount">{{ "{:,.2f}".format(quote.total) }} {{ currency }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Validity Section -->
+        <div class="validity-section">
+            <h3>Validite du Devis</h3>
+            <p><strong>Ce devis est valide du {{ quote.valid_from }} au {{ quote.valid_until }}</strong></p>
+            {% if quote.days_until_expiry is defined %}
+            <p>
+                {% if quote.days_until_expiry > 0 %}
+                    Il reste <strong>{{ quote.days_until_expiry }} jours</strong> pour accepter ce devis.
+                {% elif quote.days_until_expiry == 0 %}
+                    <span class="validity-warning">Ce devis expire aujourd'hui.</span>
+                {% else %}
+                    <span class="validity-warning">Ce devis a expire le {{ quote.valid_until }}.</span>
+                {% endif %}
+            </p>
+            {% endif %}
+            <p style="margin-top: 10px; font-size: 9px;">
+                Pour accepter ce devis, veuillez nous contacter avant la date d'expiration.
+            </p>
+        </div>
+
+        <!-- Terms Section -->
+        <div class="terms-section">
+            <h3>Conditions Generales</h3>
+            {% if quote.terms_and_conditions %}
+            <div class="terms-list" style="white-space: pre-line;">{{ quote.terms_and_conditions }}</div>
+            {% else %}
+            <ol class="terms-list">
+                <li><strong>Validite:</strong> Ce devis est valide jusqu'au {{ quote.valid_until }}. Apres cette date, les prix peuvent etre modifies.</li>
+                <li><strong>Acceptation:</strong> L'acceptation de ce devis peut se faire par ecrit, email ou signature electronique.</li>
+                <li><strong>Prix:</strong> Tous les prix sont indiques en {{ currency_name }} ({{ currency }}) et incluent les taxes applicables (TVA et TAP) comme indique dans le detail des taxes.</li>
+                <li><strong>Paiement:</strong> Les conditions de paiement seront definies lors de la commande. Un acompte peut etre requis pour certains projets.</li>
+                <li><strong>Livraison:</strong> Les delais de livraison seront confirmes lors de l'acceptation du devis et peuvent varier selon la disponibilite des produits/services.</li>
+                <li><strong>Modifications:</strong> Toute modification de ce devis doit etre approuvee par ecrit par les deux parties.</li>
+            </ol>
+            {% endif %}
+        </div>
+
+        <!-- Notes Section -->
+        {% if quote.notes %}
+        <div class="terms-section">
+            <h3>Notes</h3>
+            <div class="terms-list" style="white-space: pre-line;">{{ quote.notes }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Signature Section -->
+        <div class="signature-section">
+            <div class="signature-box">
+                <p><strong>Pour le client:</strong></p>
+                <div class="signature-line"></div>
+                <p style="margin-top: 5px;">Nom et signature</p>
+                <p>Date: _______________</p>
+            </div>
+            <div class="signature-box">
+                <p><strong>Pour {{ company.name }}:</strong></p>
+                <div class="signature-line"></div>
+                <p style="margin-top: 5px;">Nom et signature</p>
+                <p>Date: _______________</p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p class="company-footer">{{ company.legal_name }} | NIF: {{ company.nif }} | RC: {{ company.rc }}</p>
+            <p><em>Ceci est un devis genere par ordinateur. Pour toute question, veuillez contacter {{ company.email }} ou appeler {{ company.phone }}</em></p>
+            <p>Devis #{{ quote.quote_number }} | Genere le {{ generated_at }}</p>
+        </div>
+    </div>
+</body>
+</html>

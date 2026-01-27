@@ -19,6 +19,7 @@ from app.modules.quotes.models import QuoteStatus
 from app.modules.quotes.service import QuoteService
 from app.modules.quotes.service_workflow import QuoteWorkflowService
 from app.modules.quotes.pdf_service import QuotePDFService
+from app.modules.invoices.html_pdf_service import get_html_pdf_service
 from app.modules.quotes.schemas import (
     QuoteCreate,
     QuoteUpdate,
@@ -390,8 +391,8 @@ async def generate_quote_pdf(
         'city': quote.customer.city if quote.customer else 'N/A',
     }
 
-    # Generate PDF
-    pdf_service = QuotePDFService()
+    # Generate PDF using HTMLPDFService (HTML-to-PDF for better quality)
+    pdf_service = get_html_pdf_service()
     pdf_path = pdf_service.generate_quote_pdf(quote, customer_data)
 
     # SECURITY: Sanitize filename to prevent path traversal

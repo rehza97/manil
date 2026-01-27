@@ -12,6 +12,12 @@ from pydantic import BaseModel, Field, ConfigDict
 class OrderStatus(str, Enum):
     """Order status enumeration."""
     REQUEST = "request"
+    PENDING_COMMERCIAL = "pending_commercial"
+    COMMERCIAL_APPROVED = "commercial_approved"
+    COMMERCIAL_REJECTED = "commercial_rejected"
+    PENDING_TECHNICAL = "pending_technical"
+    TECHNICAL_APPROVED = "technical_approved"
+    TECHNICAL_REJECTED = "technical_rejected"
     VALIDATED = "validated"
     IN_PROGRESS = "in_progress"
     DELIVERED = "delivered"
@@ -75,6 +81,7 @@ class OrderCreate(BaseModel):
     customer_notes: Optional[str] = None
     delivery_address: Optional[str] = None
     delivery_contact: Optional[str] = None
+    validation_required: bool = Field(default=True, description="Whether order requires commercial/technical validation")
     items: list[OrderItemCreate] = Field(..., min_items=1, description="Order items")
 
 
@@ -107,6 +114,19 @@ class OrderResponse(OrderBase):
     discount_amount: float
     total_amount: float
     items: list[OrderItemResponse]
+
+    # Validation workflow
+    validation_required: bool
+    commercial_validated_by: Optional[str]
+    commercial_validated_at: Optional[datetime]
+    commercial_validation_notes: Optional[str]
+    commercial_approved: Optional[bool]
+    technical_validated_by: Optional[str]
+    technical_validated_at: Optional[datetime]
+    technical_validation_notes: Optional[str]
+    technical_approved: Optional[bool]
+
+    # Status timestamps
     validated_at: Optional[datetime]
     in_progress_at: Optional[datetime]
     delivered_at: Optional[datetime]
@@ -152,3 +172,73 @@ class OrderTimelineListResponse(BaseModel):
 
     data: list[OrderTimelineEntry]
     total: int
+
+
+# ============================================================================
+# VALIDATION WORKFLOW SCHEMAS
+# ============================================================================
+
+
+class SubmitForValidationRequest(BaseModel):
+    """Schema for submitting order for validation."""
+
+    notes: Optional[str] = Field(None, description="Notes for submission")
+
+
+class CommercialValidationRequest(BaseModel):
+    """Schema for commercial validation decision."""
+
+    approved: bool = Field(..., description="Whether commercial validation is approved")
+    notes: Optional[str] = Field(None, description="Notes explaining the decision")
+
+
+class TechnicalValidationRequest(BaseModel):
+    """Schema for technical validation decision."""
+
+    approved: bool = Field(..., description="Whether technical validation is approved")
+    notes: Optional[str] = Field(None, description="Notes explaining the decision")
+
+
+class ResubmitValidationRequest(BaseModel):
+    """Schema for resubmitting order after rejection."""
+
+    notes: Optional[str] = Field(None, description="Notes explaining changes made")
+
+
+class SkipValidationRequest(BaseModel):
+    """Schema for skipping validation workflow."""
+
+    notes: Optional[str] = Field(None, description="Reason for skipping validation")
+
+
+class ValidationSummary(BaseModel):
+    """Summary of order validation status."""
+
+    validation_required: bool
+    commercial_validation: Optional[dict] = None
+    technical_validation: Optional[dict] = None
+    fully_validated: bool
+    validated_at: Optional[str] = None
+
+
+class AllowedTransitionsResponse(BaseModel):
+    """Response for allowed status transitions."""
+
+    current_status: OrderStatus
+    allowed_transitions: list[OrderStatus]
+    validation_required: bool
+
+
+# ============================================================================
+# QUOTE CONVERSION SCHEMAS
+# ============================================================================
+
+
+class OrderConvertFromQuoteRequest(BaseModel):
+    """Schema for converting a quote to an order."""
+
+    quote_id: str = Field(..., description="Quote ID to convert")
+    customer_notes: Optional[str] = Field(None, description="Additional customer notes for the order")
+    delivery_address: Optional[str] = Field(None, description="Delivery address")
+    delivery_contact: Optional[str] = Field(None, description="Delivery contact person")
+    validation_required: bool = Field(default=True, description="Whether order requires validation workflow")

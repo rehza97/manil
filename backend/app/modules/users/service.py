@@ -10,8 +10,12 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_password_hash
+from app.core.logging import logger
+from app.infrastructure.email.service import EmailService
 from app.modules.auth.repository import UserRepository
 from app.modules.auth.models import User
+from app.modules.auth.schemas import UserRole
+from app.modules.notifications.service import create_notification
 from app.modules.users.schemas import (
     AdminUserCreate,
     AdminUserUpdate,
@@ -19,6 +23,13 @@ from app.modules.users.schemas import (
     UserDetailResponse,
     UserStats,
 )
+
+
+def _welcome_notification_link(role: UserRole) -> str:
+    """Default dashboard link for welcome notification by role."""
+    return {"client": "/dashboard", "corporate": "/corporate", "admin": "/admin"}.get(
+        role.value, "/dashboard"
+    )
 
 
 class UserManagementService:
@@ -133,6 +144,29 @@ class UserManagementService:
         user.created_by = created_by
         await self.db.commit()
         await self.db.refresh(user)
+
+        # Welcome email and in-app notification (do not fail user creation on delivery errors)
+        email_service = EmailService()
+        try:
+            await email_service.send_welcome_email(
+                to=user.email,
+                user_name=user.full_name or user.email,
+            )
+        except Exception as e:
+            logger.warning(
+                "Failed to send welcome email to %s: %s", user.email, e)
+        try:
+            await create_notification(
+                self.db,
+                user_id=user.id,
+                type="welcome",
+                title="Welcome to CloudManager",
+                body="Your account has been created. Complete your profile or explore the dashboard.",
+                link=_welcome_notification_link(user.role),
+            )
+        except Exception as e:
+            logger.warning(
+                "Failed to create welcome notification for user %s: %s", user.id, e)
 
         return UserDetailResponse.model_validate(user)
 

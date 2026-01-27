@@ -8,3 +8,4 @@ export { OrderDetailPage } from "./OrderDetailPage";
 export { OrderCreatePage } from "./OrderCreatePage";
 export { OrderEditPage } from "./OrderEditPage";
 export { OrderStatusPage } from "./OrderStatusPage";
+export { OrderValidationPage } from "./OrderValidationPage";

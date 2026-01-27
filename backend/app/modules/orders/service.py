@@ -19,8 +19,11 @@ from app.modules.orders.schemas import (
     OrderUpdate,
     OrderStatusUpdate,
     OrderItemCreate,
+    OrderConvertFromQuoteRequest,
 )
 from app.modules.products.models import Product
+from app.modules.quotes.models import Quote, QuoteStatus
+from fastapi import HTTPException, status
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +31,16 @@ logger = logging.getLogger(__name__)
 class OrderService:
     """Service for managing orders."""
 
-    # Valid status transitions
+    # Simple status transitions (for orders without validation workflow)
+    # For full validation workflow, use OrderWorkflowService
     STATUS_TRANSITIONS = {
         OrderStatus.REQUEST: [OrderStatus.VALIDATED, OrderStatus.CANCELLED],
+        OrderStatus.PENDING_COMMERCIAL: [OrderStatus.CANCELLED],
+        OrderStatus.COMMERCIAL_APPROVED: [OrderStatus.CANCELLED],
+        OrderStatus.COMMERCIAL_REJECTED: [OrderStatus.CANCELLED],
+        OrderStatus.PENDING_TECHNICAL: [OrderStatus.CANCELLED],
+        OrderStatus.TECHNICAL_APPROVED: [OrderStatus.VALIDATED, OrderStatus.CANCELLED],
+        OrderStatus.TECHNICAL_REJECTED: [OrderStatus.CANCELLED],
         OrderStatus.VALIDATED: [OrderStatus.IN_PROGRESS, OrderStatus.CANCELLED],
         OrderStatus.IN_PROGRESS: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
         OrderStatus.DELIVERED: [],  # Final state
@@ -100,6 +110,7 @@ class OrderService:
                 quote_id=data.quote_id,
                 order_number=OrderService._generate_order_number(),
                 status=OrderStatus.REQUEST,
+                validation_required=getattr(data, 'validation_required', True),
                 customer_notes=data.customer_notes,
                 delivery_address=data.delivery_address,
                 delivery_contact=data.delivery_contact,
@@ -165,6 +176,122 @@ class OrderService:
             db.rollback()
             logger.error(f"Error creating order: {str(e)}")
             raise
+
+    @staticmethod
+    def convert_quote_to_order(
+        db: Session | AsyncSession,
+        conversion_data: OrderConvertFromQuoteRequest,
+        created_by_user_id: str,
+    ) -> Order:
+        """Convert an accepted quote to an order."""
+        db = OrderService._ensure_sync_session(db)
+        
+        # Get quote
+        quote = db.query(Quote).filter(
+            Quote.id == conversion_data.quote_id,
+            Quote.deleted_at.is_(None)
+        ).first()
+        
+        if not quote:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Quote {conversion_data.quote_id} not found"
+            )
+        
+        # Verify quote is accepted
+        if quote.status != QuoteStatus.ACCEPTED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot convert quote with status {quote.status.value}. Quote must be accepted."
+            )
+        
+        # Check if quote already converted to order
+        existing_order = db.query(Order).filter(
+            Order.quote_id == quote.id,
+            Order.deleted_at.is_(None)
+        ).first()
+        
+        if existing_order:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Quote {quote.quote_number} has already been converted to order {existing_order.order_number}"
+            )
+        
+        try:
+            # Create order from quote
+            order = Order(
+                id=str(uuid.uuid4()),
+                customer_id=quote.customer_id,
+                quote_id=quote.id,
+                order_number=OrderService._generate_order_number(),
+                status=OrderStatus.REQUEST,
+                validation_required=conversion_data.validation_required,
+                customer_notes=conversion_data.customer_notes or quote.notes,
+                delivery_address=conversion_data.delivery_address,
+                delivery_contact=conversion_data.delivery_contact,
+                created_by=created_by_user_id,
+            )
+            
+            # Convert quote items to order items
+            for quote_item in quote.items:
+                # Calculate item totals
+                item_subtotal = quote_item.unit_price * quote_item.quantity
+                item_discount = item_subtotal * (quote_item.discount_percentage / 100)
+                item_total = item_subtotal - item_discount
+                
+                order_item = OrderItem(
+                    id=str(uuid.uuid4()),
+                    product_id=quote_item.product_id,
+                    quantity=quote_item.quantity,
+                    unit_price=quote_item.unit_price,
+                    discount_percentage=quote_item.discount_percentage,
+                    discount_amount=item_discount,
+                    total_price=item_total,
+                    variant_sku=None,
+                    notes=quote_item.description,
+                )
+                
+                order.items.append(order_item)
+            
+            # Calculate order totals
+            subtotal, tax, discount, total = OrderService._calculate_order_total(order.items)
+            
+            order.subtotal = subtotal
+            order.tax_amount = tax
+            order.discount_amount = discount
+            order.total_amount = total
+            
+            # Add timeline entry
+            timeline_entry = OrderTimeline(
+                id=str(uuid.uuid4()),
+                order_id=order.id,
+                previous_status=None,
+                new_status=OrderStatus.REQUEST,
+                action_type="order_created_from_quote",
+                description=f"Order created from quote {quote.quote_number}",
+                performed_by=created_by_user_id,
+            )
+            order.timeline.append(timeline_entry)
+            
+            # Update quote status to CONVERTED
+            quote.status = QuoteStatus.CONVERTED
+            
+            db.add(order)
+            db.commit()
+            
+            logger.info(f"Order {order.order_number} created from quote {quote.quote_number}")
+            
+            return order
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error converting quote to order: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to convert quote to order: {str(e)}"
+            )
 
     @staticmethod
     def get_order(db: Session | AsyncSession, order_id: str) -> Order:
