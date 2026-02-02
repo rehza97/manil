@@ -34,7 +34,8 @@ class NotificationRepository:
 
     async def get_by_id(self, notification_id: UUID, user_id: str) -> Optional[Notification]:
         q = select(Notification).where(
-            and_(Notification.id == notification_id, Notification.user_id == user_id)
+            and_(Notification.id == notification_id,
+                 Notification.user_id == user_id)
         )
         r = await self.db.execute(q)
         return r.scalar_one_or_none()
@@ -75,3 +76,31 @@ class NotificationRepository:
         n.read_at = datetime.now(timezone.utc)
         await self.db.flush()
         return True
+
+    async def mark_all_read(self, user_id: str) -> int:
+        """
+        Mark all unread notifications as read for a user.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            Number of notifications marked as read
+        """
+        from datetime import datetime, timezone
+        from sqlalchemy import update
+
+        now = datetime.now(timezone.utc)
+        stmt = (
+            update(Notification)
+            .where(
+                and_(
+                    Notification.user_id == user_id,
+                    Notification.read_at.is_(None),
+                )
+            )
+            .values(read_at=now)
+        )
+        result = await self.db.execute(stmt)
+        await self.db.flush()
+        return result.rowcount or 0

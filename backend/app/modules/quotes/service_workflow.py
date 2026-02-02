@@ -17,6 +17,9 @@ from app.modules.quotes.service import QuoteService
 from app.modules.quotes.pdf_service import QuotePDFService
 from app.modules.customers.models import Customer
 from app.infrastructure.email.service import EmailService
+from app.modules.settings.utils import notification_gate_allows
+from app.modules.notifications.service import user_id_by_email
+from app.modules.settings.service import UserNotificationPreferencesService
 
 
 class QuoteWorkflowService:
@@ -32,7 +35,8 @@ class QuoteWorkflowService:
         quote = await self.base_service.get_by_id(quote_id)
 
         if quote.status != QuoteStatus.DRAFT:
-            raise BadRequestException("Only draft quotes can be submitted for approval")
+            raise BadRequestException(
+                "Only draft quotes can be submitted for approval")
 
         if not quote.approval_required:
             raise BadRequestException("Quote does not require approval")
@@ -62,7 +66,8 @@ class QuoteWorkflowService:
         quote = await self.base_service.get_by_id(quote_id)
 
         if quote.status != QuoteStatus.PENDING_APPROVAL:
-            raise BadRequestException("Only pending quotes can be approved/rejected")
+            raise BadRequestException(
+                "Only pending quotes can be approved/rejected")
 
         old_status = quote.status
 
@@ -104,7 +109,8 @@ class QuoteWorkflowService:
             raise BadRequestException("Quote must be approved before sending")
 
         if quote.status not in [QuoteStatus.DRAFT, QuoteStatus.APPROVED]:
-            raise BadRequestException(f"Cannot send quote with status {quote.status}")
+            raise BadRequestException(
+                f"Cannot send quote with status {quote.status}")
 
         # Check if quote is expired
         if quote.valid_until < datetime.now(timezone.utc):
@@ -142,12 +148,30 @@ class QuoteWorkflowService:
             True if email sent successfully
         """
         # Get customer data
-        customer_query = select(Customer).where(Customer.id == quote.customer_id)
+        customer_query = select(Customer).where(
+            Customer.id == quote.customer_id)
         result = await self.db.execute(customer_query)
         customer = result.scalar_one_or_none()
 
         if not customer or not customer.email:
             raise BadRequestException("Customer email not found")
+
+        # Check notification gate
+        if not await notification_gate_allows(self.db, "email", "quote.sent"):
+            return False
+
+        # Check user preferences
+        uid = await user_id_by_email(self.db, customer.email)
+        if uid:
+            prefs_svc = UserNotificationPreferencesService(self.db)
+            prefs = await prefs_svc.get(uid)
+            # Quotes use orderUpdates preference key (standardized)
+            if not prefs.get("email", {}).get("orderUpdates", True):
+                return False
+
+        # Get company info from DB
+        from app.modules.settings.utils import get_company_info_for_pdf
+        company_info = await get_company_info_for_pdf(self.db)
 
         # Generate PDF
         pdf_service = QuotePDFService()
@@ -158,7 +182,8 @@ class QuoteWorkflowService:
             'address': customer.address or 'N/A',
             'city': customer.city or 'N/A',
         }
-        pdf_path = pdf_service.generate_quote_pdf(quote, customer_data)
+        pdf_path = pdf_service.generate_quote_pdf(
+            quote, customer_data, company_info=company_info)
 
         # Send email with attachment
         email_service = EmailService()
@@ -172,6 +197,7 @@ class QuoteWorkflowService:
             total_amount=float(quote.total_amount),
             valid_until=valid_until,
             pdf_path=pdf_path,
+            db=self.db,
         )
 
         if success:

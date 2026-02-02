@@ -79,7 +79,8 @@ class InvoiceService:
                 discount_amount=invoice_data.discount_amount,
                 tax_rate=invoice_data.tax_rate
             )
-            logger.info(f"Price validation passed for invoice with {len(validated_items)} items")
+            logger.info(
+                f"Price validation passed for invoice with {len(validated_items)} items")
         except PriceValidationError as e:
             logger.error(f"Price validation failed: {str(e)}")
             raise HTTPException(
@@ -89,7 +90,8 @@ class InvoiceService:
 
         # Update invoice_data items with validated prices
         for idx, validated_item in enumerate(validated_items):
-            invoice_data.items[idx].unit_price = Decimal(str(validated_item['unit_price']))
+            invoice_data.items[idx].unit_price = Decimal(
+                str(validated_item['unit_price']))
 
         # Generate invoice number
         invoice_number = await self._generate_invoice_number()
@@ -124,7 +126,8 @@ class InvoiceService:
 
         # Add items
         for item_data in invoice_data.items:
-            line_total = Decimal(str(item_data.quantity)) * item_data.unit_price
+            line_total = Decimal(str(item_data.quantity)
+                                 ) * item_data.unit_price
             item = InvoiceItem(
                 invoice=invoice,
                 description=item_data.description,
@@ -177,7 +180,8 @@ class InvoiceService:
 
             # Add new items
             for item_data in invoice_data.items:
-                line_total = Decimal(str(item_data.quantity)) * item_data.unit_price
+                line_total = Decimal(str(item_data.quantity)
+                                     ) * item_data.unit_price
                 item = InvoiceItem(
                     invoice=invoice,
                     description=item_data.description,
@@ -226,6 +230,32 @@ class InvoiceService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Cannot delete paid invoice"
             )
+
+        # Cleanup associated PDF files
+        try:
+            from app.config.settings import get_settings
+            from pathlib import Path
+            settings = get_settings()
+            storage_base = Path(settings.STORAGE_PATH).resolve()
+            pdf_dir = storage_base / "pdfs" / "invoices"
+
+            # Find and delete PDFs for this invoice
+            # Pattern: invoice_{invoice_number}_*.pdf
+            safe_invoice_number = invoice.invoice_number.replace(
+                "/", "_").replace("\\", "_")
+            pdf_pattern = f"invoice_{safe_invoice_number}_*.pdf"
+
+            for pdf_file in pdf_dir.glob(pdf_pattern):
+                try:
+                    pdf_file.unlink()
+                    logger.info(f"Deleted PDF file: {pdf_file}")
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to delete PDF file {pdf_file}: {e}")
+        except Exception as e:
+            # Don't fail invoice deletion if PDF cleanup fails
+            logger.warning(
+                f"Failed to cleanup PDF files for invoice {invoice_id}: {e}")
 
         await self.repository.delete(invoice)
         await self.db.commit()

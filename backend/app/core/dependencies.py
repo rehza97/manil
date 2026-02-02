@@ -113,7 +113,8 @@ def require_role(allowed_roles: list[str]):
     """
 
     async def role_checker(
-        current_user: Annotated["User", Depends(get_current_active_user)],  # type: ignore
+        # type: ignore
+        current_user: Annotated["User", Depends(get_current_active_user)],
     ):
         """Check if user has required role."""
         if current_user.role.value not in allowed_roles:
@@ -127,28 +128,23 @@ def require_role(allowed_roles: list[str]):
 def require_permission(permission: Permission):
     """
     Dependency factory to require specific permission.
-
-    Args:
-        permission: Required permission
-
-    Returns:
-        Dependency function
-
-    Example:
-        @router.delete("/items/{id}")
-        async def delete_item(
-            user = Depends(require_permission(Permission.ITEMS_DELETE))
-        ):
-            return {"message": "Item deleted"}
+    Uses DB-backed role permissions when available; falls back to ROLE_PERMISSIONS.
     """
 
     async def permission_checker(
-        current_user: Annotated["User", Depends(get_current_active_user)],  # type: ignore
+        # type: ignore
+        current_user: Annotated["User", Depends(get_current_active_user)],
+        db: Annotated[AsyncSession, Depends(get_db)],
     ):
-        """Check if user has required permission."""
-        if not has_permission(current_user.role.value, permission):
-            raise ForbiddenException("Insufficient permissions")
+        from app.modules.settings.utils import get_role_permission_slugs_cached
 
+        slugs = await get_role_permission_slugs_cached(db, current_user.role.value)
+        if slugs is not None:
+            allowed = permission.value in slugs
+        else:
+            allowed = has_permission(current_user.role.value, permission)
+        if not allowed:
+            raise ForbiddenException("Insufficient permissions")
         return current_user
 
     return permission_checker
@@ -157,21 +153,23 @@ def require_permission(permission: Permission):
 def require_any_permission(permissions: list[Permission]):
     """
     Dependency factory to require any of the specified permissions.
-
-    Args:
-        permissions: List of permissions (user needs at least one)
-
-    Returns:
-        Dependency function
+    Uses DB-backed role permissions when available; falls back to ROLE_PERMISSIONS.
     """
 
     async def permission_checker(
-        current_user: Annotated["User", Depends(get_current_active_user)],  # type: ignore
+        # type: ignore
+        current_user: Annotated["User", Depends(get_current_active_user)],
+        db: Annotated[AsyncSession, Depends(get_db)],
     ):
-        """Check if user has any of the required permissions."""
-        if not has_any_permission(current_user.role.value, permissions):
-            raise ForbiddenException("Insufficient permissions")
+        from app.modules.settings.utils import get_role_permission_slugs_cached
 
+        slugs = await get_role_permission_slugs_cached(db, current_user.role.value)
+        if slugs is not None:
+            allowed = any(p.value in slugs for p in permissions)
+        else:
+            allowed = has_any_permission(current_user.role.value, permissions)
+        if not allowed:
+            raise ForbiddenException("Insufficient permissions")
         return current_user
 
     return permission_checker

@@ -43,6 +43,8 @@ from app.modules.revenue.router import router as revenue_router
 from app.modules.settings.routes import router as settings_router
 from app.modules.settings.routes.template_routes import router as template_routes
 from app.modules.settings.routes.admin_email_routes import router as admin_email_routes
+from app.modules.settings.routes.admin_sms_routes import router as admin_sms_routes
+from app.modules.settings.routes.admin_notification_routes import router as admin_notification_routes
 from app.modules.settings.notification_preferences_routes import router as notification_preferences_router
 from app.modules.notifications.router import router as notifications_router
 from app.modules.notifications.routes.send_history_routes import router as send_history_router
@@ -90,8 +92,9 @@ async def lifespan(app: FastAPI):
         logger.info("✅ Database initialized successfully")
     except Exception as e:
         logger.warning(f"⚠️  Database initialization failed: {e}")
-        logger.warning("⚠️  Continuing startup - database may need manual initialization")
-    
+        logger.warning(
+            "⚠️  Continuing startup - database may need manual initialization")
+
     # Always seed roles and permissions if they don't exist (idempotent)
     logger.info("🔐 Ensuring default roles and permissions are seeded...")
     try:
@@ -104,7 +107,8 @@ async def lifespan(app: FastAPI):
                 logger.warning("⚠️  Could not verify roles and permissions")
     except Exception as e:
         logger.warning(f"⚠️  Could not seed roles/permissions: {e}")
-        logger.warning("⚠️  Continuing startup - roles may need to be seeded manually")
+        logger.warning(
+            "⚠️  Continuing startup - roles may need to be seeded manually")
 
     logger.info("✅ Application startup complete")
     yield
@@ -153,25 +157,44 @@ if settings.RATE_LIMIT_ENABLED:
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Handle Pydantic validation errors."""
     # #region agent log
-    import json, os, time
+    import json
+    import os
+    import time
     log_path = '/tmp/debug.log'
     try:
         body_str = None
         if hasattr(exc, 'body') and exc.body:
             try:
-                body_str = exc.body.decode('utf-8') if isinstance(exc.body, bytes) else str(exc.body)
+                body_str = exc.body.decode(
+                    'utf-8') if isinstance(exc.body, bytes) else str(exc.body)
             except:
                 body_str = str(exc.body)
         with open(log_path, 'a') as f:
-            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"D","location":"main.py:validation_handler","message":"Pydantic validation error","data":{"errors":exc.errors(),"body":body_str,"url":str(request.url),"method":request.method},"timestamp":int(time.time()*1000)})+'\n')
+            f.write(json.dumps({"sessionId": "debug-session", "runId": "run1", "hypothesisId": "D", "location": "main.py:validation_handler", "message": "Pydantic validation error",
+                    "data": {"errors": exc.errors(), "body": body_str, "url": str(request.url), "method": request.method}, "timestamp": int(time.time()*1000)})+'\n')
     except Exception as e:
         pass
     # #endregion
+    
+    # Log validation errors to console for debugging
+    body_str = None
+    try:
+        if hasattr(exc, 'body') and exc.body:
+            try:
+                body_str = exc.body.decode('utf-8') if isinstance(exc.body, bytes) else str(exc.body)
+            except:
+                body_str = str(exc.body)
+    except:
+        pass
+    
+    logger.error(f"[validation_exception_handler] Validation error on {request.method} {request.url}")
+    logger.error(f"[validation_exception_handler] Validation errors: {exc.errors()}")
+    logger.error(f"[validation_exception_handler] Request body: {body_str}")
     response = JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={"detail": exc.errors()},
     )
-    
+
     # Ensure CORS headers are present
     origin = request.headers.get("origin")
     if origin and origin in settings.CORS_ORIGINS:
@@ -179,8 +202,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Methods"] = "*"
         response.headers["Access-Control-Allow-Headers"] = "*"
-    
+
     return response
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -206,7 +230,7 @@ async def global_exception_handler(request: Request, exc: Exception):
             "request_id": request_id,
         },
     )
-    
+
     # Ensure CORS headers are present even in error responses
     origin = request.headers.get("origin")
     if origin and origin in settings.CORS_ORIGINS:
@@ -214,7 +238,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Methods"] = "*"
         response.headers["Access-Control-Allow-Headers"] = "*"
-    
+
     return response
 
 
@@ -265,13 +289,19 @@ app.include_router(admin_support_router, prefix="/api/v1")
 app.include_router(products_router, prefix="/api/v1")
 app.include_router(product_quote_routes, prefix="/api/v1")
 app.include_router(orders_router, prefix="/api/v1")
-app.include_router(quotes_router)  # VPS quotes router already has /api/v1/quotes prefix
-app.include_router(invoices_router)  # Invoices router already has /api/v1/invoices prefix
-app.include_router(reports_router)  # Reports router already has /api/v1/reports prefix
-app.include_router(admin_reports_router, prefix="/api/v1")  # Admin reports router
-app.include_router(revenue_router)  # Revenue router already has /api/v1/revenue prefix
+# VPS quotes router already has /api/v1/quotes prefix
+app.include_router(quotes_router)
+# Invoices router already has /api/v1/invoices prefix
+app.include_router(invoices_router)
+# Reports router already has /api/v1/reports prefix
+app.include_router(reports_router)
+# Admin reports router
+app.include_router(admin_reports_router, prefix="/api/v1")
+# Revenue router already has /api/v1/revenue prefix
+app.include_router(revenue_router)
 app.include_router(admin_logs_router, prefix="/api/v1")  # Admin logs router
-app.include_router(settings_router)  # Settings router already has /api/v1/settings prefix
+# Settings router already has /api/v1/settings prefix
+app.include_router(settings_router)
 app.include_router(template_routes, prefix="/api/v1")  # Template routes
 app.include_router(
     notification_preferences_router,
@@ -289,18 +319,35 @@ app.include_router(
     admin_email_routes,
     prefix="/api/v1/admin/settings",
 )
+app.include_router(
+    admin_sms_routes,
+    prefix="/api/v1/admin/settings",
+)
+app.include_router(
+    admin_notification_routes,
+    prefix="/api/v1/admin/settings",
+)
 app.include_router(notifications_router, prefix="/api/v1")
 app.include_router(send_history_router, prefix="/api/v1")
 app.include_router(bounce_router, prefix="/api/v1")
 app.include_router(notification_group_router, prefix="/api/v1")
 app.include_router(system_router, prefix="/api/v1")
 app.include_router(maintenance_router, prefix="/api/v1")
-app.include_router(hosting_client_router)  # Hosting client router already has /api/v1/hosting prefix
-app.include_router(hosting_admin_router)  # Hosting admin router already has /api/v1/hosting/admin prefix
-app.include_router(custom_images_router, prefix="/api/v1/hosting")  # Custom Docker images router
-app.include_router(plan_admin_router)  # VPS Plan admin router already has /api/v1/hosting/admin/plans prefix
-app.include_router(dns_client_router, prefix="/api/v1")  # DNS client router has /hosting/dns prefix
-app.include_router(dns_admin_router, prefix="/api/v1")  # DNS admin router has /hosting/admin/dns prefix
-app.include_router(service_domains_client_router, prefix="/api/v1")  # Service domains client router has /hosting/service-domains prefix
-app.include_router(service_domains_admin_router, prefix="/api/v1")  # Service domains admin router has /hosting/admin/service-domains prefix
-app.include_router(sms_router, prefix="/api/v1")  # SMS gateway router for Flutter app
+# Hosting client router already has /api/v1/hosting prefix
+app.include_router(hosting_client_router)
+# Hosting admin router already has /api/v1/hosting/admin prefix
+app.include_router(hosting_admin_router)
+# Custom Docker images router
+app.include_router(custom_images_router, prefix="/api/v1/hosting")
+# VPS Plan admin router already has /api/v1/hosting/admin/plans prefix
+app.include_router(plan_admin_router)
+# DNS client router has /hosting/dns prefix
+app.include_router(dns_client_router, prefix="/api/v1")
+# DNS admin router has /hosting/admin/dns prefix
+app.include_router(dns_admin_router, prefix="/api/v1")
+# Service domains client router has /hosting/service-domains prefix
+app.include_router(service_domains_client_router, prefix="/api/v1")
+# Service domains admin router has /hosting/admin/service-domains prefix
+app.include_router(service_domains_admin_router, prefix="/api/v1")
+# SMS gateway router for Flutter app
+app.include_router(sms_router, prefix="/api/v1")

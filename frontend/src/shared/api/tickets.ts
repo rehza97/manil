@@ -290,14 +290,14 @@ export const ticketsApi = {
   // Email Integration
   getEmailAccounts: async () => {
     const response = await apiClient.get(
-      "/tickets/email/api/v1/email-accounts"
+      "/tickets/email/email-accounts"
     );
     return response.data;
   },
 
   createEmailAccount: async (data: any) => {
     const response = await apiClient.post(
-      "/tickets/email/api/v1/email-accounts",
+      "/tickets/email/email-accounts",
       data
     );
     return response.data;
@@ -305,7 +305,7 @@ export const ticketsApi = {
 
   updateEmailAccount: async (accountId: string, data: any) => {
     const response = await apiClient.put(
-      `/tickets/email/api/v1/email-accounts/${accountId}`,
+      `/tickets/email/email-accounts/${accountId}`,
       data
     );
     return response.data;
@@ -313,28 +313,28 @@ export const ticketsApi = {
 
   deleteEmailAccount: async (accountId: string) => {
     const response = await apiClient.delete(
-      `/tickets/email/api/v1/email-accounts/${accountId}`
+      `/tickets/email/email-accounts/${accountId}`
     );
     return response.data;
   },
 
   testEmailConnection: async (accountId: string) => {
     const response = await apiClient.post(
-      `/tickets/email/api/v1/email-accounts/${accountId}/test-connection`
+      `/tickets/email/email-accounts/${accountId}/test-connection`
     );
     return response.data;
   },
 
   syncEmailAccount: async (accountId: string) => {
     const response = await apiClient.post(
-      `/tickets/email/api/v1/email-accounts/${accountId}/sync-now`
+      `/tickets/email/email-accounts/${accountId}/sync-now`
     );
     return response.data;
   },
 
   getEmailMessages: async (params?: any) => {
     const response = await apiClient.get(
-      "/tickets/email/api/v1/email-accounts/messages",
+      "/tickets/email/email-accounts/messages",
       { params }
     );
     return response.data;
@@ -342,14 +342,14 @@ export const ticketsApi = {
 
   getEmailMessage: async (messageId: string) => {
     const response = await apiClient.get(
-      `/tickets/email/api/v1/email-accounts/messages/${messageId}`
+      `/tickets/email/email-accounts/messages/${messageId}`
     );
     return response.data;
   },
 
   markEmailAsSpam: async (messageId: string) => {
     const response = await apiClient.post(
-      `/tickets/email/api/v1/email-accounts/messages/${messageId}/mark-spam`
+      `/tickets/email/email-accounts/messages/${messageId}/mark-spam`
     );
     return response.data;
   },

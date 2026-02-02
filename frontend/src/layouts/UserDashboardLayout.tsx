@@ -37,6 +37,7 @@ import {
   AlertCircle,
   Clock,
   Loader2,
+  HelpCircle,
 } from "lucide-react";
 import { useAuth, RoleGuard, useLogout } from "@/modules/auth";
 import { customerService } from "@/modules/customers/services";
@@ -347,6 +348,12 @@ const UserDashboardLayout: React.FC = () => {
       href: "/dashboard/settings",
       icon: Settings,
       current: location.pathname.startsWith("/dashboard/settings"),
+    },
+    {
+      name: "Centre d'aide",
+      href: "/faq",
+      icon: HelpCircle,
+      current: location.pathname === "/faq",
     },
   ];
 

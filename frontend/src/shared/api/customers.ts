@@ -247,11 +247,28 @@ export const customersApi = {
     customerId: string,
     reason: string
   ): Promise<Customer> => {
-    const response: AxiosResponse<Customer> = await apiClient.post(
-      `/customers/${customerId}/activate`,
-      { reason }
-    );
-    return response.data;
+    console.log("[activateCustomer] Request payload:", {
+      customerId,
+      reason,
+      reasonLength: reason?.length,
+      reasonTrimmed: reason?.trim(),
+      reasonTrimmedLength: reason?.trim()?.length
+    });
+    
+    try {
+      const response: AxiosResponse<Customer> = await apiClient.post(
+        `/customers/${customerId}/activate`,
+        { reason }
+      );
+      
+      console.log("[activateCustomer] Response:", response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error("[activateCustomer] Error:", error);
+      console.error("[activateCustomer] Error response:", error?.response?.data);
+      console.error("[activateCustomer] Error status:", error?.response?.status);
+      throw error;
+    }
   },
 
   /**
@@ -295,9 +312,11 @@ export const customersApi = {
     customerId: string,
     notes?: string
   ): Promise<Customer> => {
+    const params = notes ? { notes } : {};
     const response: AxiosResponse<Customer> = await apiClient.post(
       `/customers/${customerId}/submit-for-approval`,
-      notes ? { notes } : {}
+      {},
+      { params }
     );
     return response.data;
   },

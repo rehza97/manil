@@ -73,6 +73,7 @@ import {
   BarChart2,
   FileEdit as FilePen,
   Receipt,
+  HelpCircle,
 } from "lucide-react";
 import { useAuth, RoleGuard, useLogout } from "@/modules/auth";
 
@@ -445,12 +446,6 @@ const AdminDashboardLayout: React.FC = () => {
           icon: BarChart2,
           current: location.pathname === "/admin/dns/monitoring",
         },
-        {
-          name: "DNS Templates",
-          href: "/admin/dns/templates",
-          icon: FileText,
-          current: location.pathname === "/admin/dns/templates",
-        },
       ],
     },
     {
@@ -489,6 +484,12 @@ const AdminDashboardLayout: React.FC = () => {
           href: "/admin/settings/sms",
           icon: MessageSquare,
           current: location.pathname === "/admin/settings/sms",
+        },
+        {
+          name: "Notifications",
+          href: "/admin/settings/notifications",
+          icon: Bell,
+          current: location.pathname === "/admin/settings/notifications",
         },
         {
           name: "Storage Config",
@@ -647,6 +648,12 @@ const AdminDashboardLayout: React.FC = () => {
           current: location.pathname === "/admin/security/login-history",
         },
       ],
+    },
+    {
+      name: "Centre d'aide",
+      href: "/faq",
+      icon: HelpCircle,
+      current: location.pathname === "/faq",
     },
   ];
 

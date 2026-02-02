@@ -333,19 +333,30 @@ async def get_coredns_status(
     """
     Get CoreDNS server health status and statistics.
 
-    Includes zone count, record count, and recent sync operations.
+    Includes zone count, record count, version, uptime, and recent sync operations.
     """
+    from datetime import datetime
+    
     coredns_service = CoreDNSConfigService(db)
 
     status_info = await coredns_service.get_coredns_status()
 
+    # Parse last_reload from ISO string to datetime if present
+    last_reload = None
+    last_reload_str = status_info.get("last_reload")
+    if last_reload_str:
+        try:
+            last_reload = datetime.fromisoformat(last_reload_str.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            logger.warning(f"Could not parse last_reload timestamp: {last_reload_str}")
+
     return CoreDNSStatusResponse(
         is_healthy=status_info.get("is_healthy", False),
-        version=None,  # TODO: Extract from CoreDNS API if available
+        version=status_info.get("version"),
         zones_loaded=status_info.get("zones_loaded", 0),
         records_total=status_info.get("records_total", 0),
-        last_reload=None,  # TODO: Track last reload timestamp
-        uptime=None  # TODO: Get from CoreDNS metrics
+        last_reload=last_reload,
+        uptime=status_info.get("uptime")
     )
 
 
@@ -358,7 +369,8 @@ async def reload_coredns(
     """
     Manually trigger CoreDNS configuration reload.
 
-    Forces CoreDNS to re-read all zone files and reload configuration.
+    Triggers CoreDNS to re-read all zone files via file-based reload mechanism.
+    CoreDNS auto-reload plugin will detect the change and reload within 10 seconds.
     """
     logger.info(f"[DNS Admin] reload_coredns endpoint called by user {current_user.id}")
     logger.info(f"[DNS Admin] Request body: force={reload_request.force}")
@@ -375,13 +387,19 @@ async def reload_coredns(
 
         logger.info(f"CoreDNS reload triggered by admin {current_user.id}, success: {reload_result.get('success', False)}")
 
+        # If reload trigger failed, still return success=False but with helpful message
+        # The files are written, so CoreDNS will pick up changes when available
         response = CoreDNSReloadResponse(
             success=reload_result.get("success", False),
             message=reload_result.get("message", "Unknown"),
             zones_reloaded=0,  # TODO: Track from reload result
             reload_time_ms=reload_time_ms
         )
-        logger.info(f"[DNS Admin] reload_coredns endpoint completed successfully")
+        
+        if not reload_result.get("success", False):
+            logger.warning(f"[DNS Admin] CoreDNS reload trigger failed, but changes will be picked up by auto-reload: {reload_result.get('message', 'Unknown')}")
+        
+        logger.info(f"[DNS Admin] reload_coredns endpoint completed")
         return response
     except Exception as e:
         logger.error(f"[DNS Admin] Error in reload_coredns endpoint: {e}", exc_info=True)
@@ -398,6 +416,7 @@ async def regenerate_all_zones(
 
     This is a full configuration regeneration from the database.
     Use this to fix configuration drift or after bulk changes.
+    Zone files are written to disk and CoreDNS will auto-reload within 10 seconds.
     """
     logger.info(f"[DNS Admin] regenerate_all_zones endpoint called by user {current_user.id}")
     
@@ -411,13 +430,26 @@ async def regenerate_all_zones(
             f"{result['zones_generated']} zones, {result['zones_failed']} errors"
         )
 
+        # Build user-friendly message
+        zones_msg = f"Generated {result['zones_generated']} zones"
+        if result.get('zones_failed', 0) > 0:
+            zones_msg += f", {result['zones_failed']} failed"
+        
+        reload_success = result.get("reload_result", {}).get("success", False)
+        if not reload_success:
+            zones_msg += ". Reload trigger failed, but changes will be picked up by auto-reload when CoreDNS is available."
+
         response = CoreDNSReloadResponse(
-            success=result.get("success", False),
-            message=f"Generated {result['zones_generated']} zones, {result['zones_failed']} failed",
+            success=result.get("success", False) and reload_success,
+            message=zones_msg,
             zones_reloaded=result.get("zones_generated", 0),
             reload_time_ms=result.get("duration_ms", 0)
         )
-        logger.info(f"[DNS Admin] regenerate_all_zones endpoint completed successfully")
+        
+        if not reload_success:
+            logger.warning(f"[DNS Admin] CoreDNS reload trigger failed after regeneration, but zone files were written successfully")
+        
+        logger.info(f"[DNS Admin] regenerate_all_zones endpoint completed")
         return response
     except Exception as e:
         logger.error(f"[DNS Admin] Error in regenerate_all_zones endpoint: {e}", exc_info=True)

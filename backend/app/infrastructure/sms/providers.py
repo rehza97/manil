@@ -1,14 +1,12 @@
 """
 SMS provider implementations.
 
-Supports multiple SMS providers:
-- Twilio
-- Infobip (planned)
-- Custom (via Flutter app)
+- Twilio: API; credentials from DB (admin UI) or env fallback.
+- Custom: queues to DB; Flutter app polls /sms/app/* (device delivery). Custom forces sms/.
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from app.config.settings import get_settings
 from app.config.database import AsyncSessionLocal
@@ -28,14 +26,22 @@ class SMSProvider(ABC):
 
 
 class TwilioProvider(SMSProvider):
-    """Twilio SMS provider implementation."""
+    """Twilio SMS provider. Credentials from config dict or env."""
 
-    def __init__(self):
-        self.account_sid = settings.TWILIO_ACCOUNT_SID
-        self.auth_token = settings.TWILIO_AUTH_TOKEN
-        self.from_number = getattr(
+    def __init__(
+        self,
+        account_sid: Optional[str] = None,
+        auth_token: Optional[str] = None,
+        from_number: Optional[str] = None,
+    ):
+        tw = account_sid or settings.TWILIO_ACCOUNT_SID
+        tok = auth_token or settings.TWILIO_AUTH_TOKEN
+        fn = from_number or getattr(
             settings, "TWILIO_FROM_NUMBER", None
         ) or getattr(settings, "TWILIO_PHONE_NUMBER", None)
+        self.account_sid = (tw or "").strip()
+        self.auth_token = (tok or "").strip()
+        self.from_number = (fn or "").strip()
 
     async def send_sms(self, to: str, message: str) -> bool:
         """
@@ -49,24 +55,22 @@ class TwilioProvider(SMSProvider):
             True if SMS sent successfully, False otherwise
         """
         if not self.account_sid or not self.auth_token:
-            print("⚠️  Twilio credentials not configured")
+            logger.warning("Twilio credentials not configured")
             return False
 
         try:
             from twilio.rest import Client
 
             client = Client(self.account_sid, self.auth_token)
-
-            message = client.messages.create(
+            msg = client.messages.create(
                 body=message,
-                from_=self.from_number,
-                to=to
+                from_=self.from_number or None,
+                to=to,
             )
-
-            print(f"✅ SMS sent via Twilio: {message.sid}")
+            logger.info("SMS sent via Twilio: sid=%s", getattr(msg, "sid", ""))
             return True
         except Exception as e:
-            print(f"❌ Twilio send error: {e}")
+            logger.error("Twilio send error: %s", e)
             return False
 
 
@@ -172,18 +176,32 @@ class MockSMSProvider(SMSProvider):
 
 def get_sms_provider() -> SMSProvider:
     """
-    Get configured SMS provider.
-
-    Returns:
-        SMSProvider instance based on settings
+    Get SMS provider from env (fallback when DB not used).
+    Prefer get_sms_provider_for_config() with get_sms_config(db) when db available.
     """
-    provider = settings.SMS_PROVIDER.lower()
-
+    provider = (getattr(settings, "SMS_PROVIDER", None)
+                or "custom").strip().lower()
     if provider == "twilio":
         return TwilioProvider()
-    elif provider == "infobip":
+    if provider == "infobip":
         return InfobipProvider()
-    elif provider == "custom":
+    if provider == "custom":
         return CustomSMSProvider()
-    else:
-        return MockSMSProvider()
+    return MockSMSProvider()
+
+
+def get_sms_provider_for_config(config: Dict[str, Any]) -> SMSProvider:
+    """
+    Build SMS provider from get_sms_config(db) result.
+    Custom -> CustomSMSProvider (forces sms/ queue -> Flutter).
+    Twilio -> TwilioProvider with DB UI keys (or env fallback).
+    """
+    provider = (config.get("provider") or "custom").strip().lower()
+    if provider == "twilio":
+        tw = config.get("twilio") or {}
+        return TwilioProvider(
+            account_sid=tw.get("account_sid") or None,
+            auth_token=tw.get("auth_token") or None,
+            from_number=tw.get("from_number") or None,
+        )
+    return CustomSMSProvider()

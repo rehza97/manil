@@ -46,6 +46,8 @@ from app.infrastructure.email.service import EmailService
 from app.infrastructure.sms.service import SMSService
 from app.modules.customers.repository import CustomerRepository
 from app.modules.notifications.service import create_notification
+from app.modules.settings.utils import notification_gate_allows
+from app.modules.settings.service import UserNotificationPreferencesService
 from app.modules.auth.schemas import UserRole
 from app.core.logging import logger
 
@@ -57,6 +59,14 @@ def _welcome_notification_link(role: UserRole) -> str:
     return {"client": "/dashboard", "corporate": "/corporate", "admin": "/admin"}.get(
         role.value, "/dashboard"
     )
+
+
+async def _access_token_expires_delta(db: AsyncSession):
+    """Session timeout from DB (seconds) as timedelta for JWT access token."""
+    from datetime import datetime, timedelta
+    from app.modules.settings.utils import get_session_timeout
+    secs = await get_session_timeout(db)
+    return timedelta(seconds=secs)
 
 
 class AuthService:
@@ -93,8 +103,9 @@ class AuthService:
         # Create user
         user = await self.repository.create(user_data, password_hash)
 
-        # Generate tokens for automatic login
-        access_token = create_access_token(data={"sub": user.id})
+        expires = await _access_token_expires_delta(self.db)
+        access_token = create_access_token(
+            data={"sub": user.id}, expires_delta=expires)
         refresh_token = create_refresh_token(data={"sub": user.id})
 
         # Log successful registration
@@ -114,16 +125,19 @@ class AuthService:
             await self.email_service.send_welcome_email(
                 to=user.email,
                 user_name=user.full_name or user.email,
+                db=self.db,
             )
         except Exception as e:
             logger.warning(
                 "Failed to send welcome email to %s: %s", user.email, e)
         try:
+            from app.modules.settings.utils import get_app_name
+            app_name = await get_app_name(self.db)
             await create_notification(
                 self.db,
                 user_id=user.id,
                 type="welcome",
-                title="Welcome to CloudManager",
+                title=f"Welcome to {app_name}",
                 body="Your account has been created. Complete your profile or explore the dashboard.",
                 link=_welcome_notification_link(user.role),
             )
@@ -162,6 +176,14 @@ class AuthService:
             UnauthorizedException: If credentials are invalid or account is locked
         """
         from datetime import datetime, timedelta
+
+        from app.modules.settings.utils import (
+            get_lockout_duration,
+            get_max_login_attempts,
+        )
+
+        max_attempts = await get_max_login_attempts(self.db)
+        lockout_seconds = await get_lockout_duration(self.db)
 
         # Get user by email
         user = await self.repository.get_by_email(email)
@@ -252,9 +274,8 @@ class AuthService:
             user.failed_login_attempts += 1
             user.last_failed_login = datetime.utcnow()
 
-            if user.failed_login_attempts >= 5:
-                # Lock account for 30 minutes
-                user.locked_until = datetime.utcnow() + timedelta(minutes=30)
+            if user.failed_login_attempts >= max_attempts:
+                user.locked_until = datetime.utcnow() + timedelta(seconds=lockout_seconds)
 
                 await self.db.commit()
 
@@ -272,11 +293,12 @@ class AuthService:
                     )
                 except Exception as e:
                     logger.error(
-                        f"Failed to log account lock audit: {e}", exc_info=True)
+                        "Failed to log account lock audit: %s", e, exc_info=True)
 
+                mins = max(1, (lockout_seconds + 59) // 60)
                 raise UnauthorizedException(
                     "Account has been locked due to multiple failed login attempts. "
-                    "Please try again in 30 minutes or contact support."
+                    f"Please try again in {mins} minutes or contact support."
                 )
 
             await self.db.commit()
@@ -285,7 +307,7 @@ class AuthService:
                 await self.audit_service.log_action(
                     action=AuditAction.LOGIN_FAILED,
                     resource_type="auth",
-                    description=f"Failed login attempt for {email} - invalid password (attempt {user.failed_login_attempts}/5)",
+                    description=f"Failed login attempt for {email} - invalid password (attempt {user.failed_login_attempts}/{max_attempts})",
                     user_id=user.id,
                     user_email=email,
                     user_role=user.role,
@@ -343,8 +365,9 @@ class AuthService:
                 pending_2fa_token=pending,
             )
 
-        # Generate tokens
-        access_token = create_access_token(data={"sub": user.id})
+        expires = await _access_token_expires_delta(self.db)
+        access_token = create_access_token(
+            data={"sub": user.id}, expires_delta=expires)
         refresh_token = create_refresh_token(data={"sub": user.id})
 
         # Update last login
@@ -394,8 +417,9 @@ class AuthService:
         if not user:
             raise UnauthorizedException("User not found")
 
-        # Generate new access token
-        access_token = create_access_token(data={"sub": user.id})
+        expires = await _access_token_expires_delta(self.db)
+        access_token = create_access_token(
+            data={"sub": user.id}, expires_delta=expires)
 
         return {
             "access_token": access_token,
@@ -431,7 +455,9 @@ class AuthService:
 
         await self.verify_2fa(user_id, code)
 
-        access_token = create_access_token(data={"sub": user.id})
+        expires = await _access_token_expires_delta(self.db)
+        access_token = create_access_token(
+            data={"sub": user.id}, expires_delta=expires)
         refresh_token = create_refresh_token(data={"sub": user.id})
         await self.repository.update_last_login(user)
 
@@ -787,11 +813,11 @@ class AuthService:
                 # Store code in Redis
                 await store_reset_code(email, reset_code, "sms")
 
-                # Send SMS with code
                 sms_service = SMSService()
                 await sms_service.send_password_reset_code(
-                    to=customer.phone,
-                    code=reset_code
+                    customer.phone,
+                    reset_code,
+                    db=self.db,
                 )
 
                 return reset_code
@@ -805,7 +831,8 @@ class AuthService:
         await self.email_service.send_password_reset_email(
             to_email=email,
             user_name=user.full_name or user.email,
-            reset_url=reset_url
+            reset_url=reset_url,
+            db=self.db,
         )
 
         return reset_token
@@ -922,3 +949,49 @@ class AuthService:
             request=request,
             success=True,
         )
+
+        # Send security notification for password change
+        try:
+            # Get IP address from request if available
+            client_ip = None
+            if request:
+                client_ip = request.client.host if hasattr(
+                    request, 'client') and request.client else None
+
+            # Check notification gate
+            gate_allows_email = await notification_gate_allows(self.db, "email", "user.password_changed")
+
+            if gate_allows_email and user.email:
+                # Check user preferences (security notifications should default to True)
+                prefs_svc = UserNotificationPreferencesService(self.db)
+                prefs = await prefs_svc.get(user_id)
+                should_send_email = bool(
+                    prefs.get("email", {}).get("securityUpdates", True))
+
+                if should_send_email:
+                    email_service = EmailService()
+                    ip_info = f" from IP {client_ip}" if client_ip else ""
+                    timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+                    await email_service.send_email(
+                        to=[user.email],
+                        subject="Password Changed - Security Alert",
+                        html_body=f"<p>Hello {user.full_name or user.email},</p><p>This is a security notification to inform you that your password was changed{ip_info} on {timestamp}.</p><p>If you did not make this change, please contact support immediately and reset your password.</p>",
+                        text_body=f"Hello {user.full_name or user.email},\n\nThis is a security notification to inform you that your password was changed{ip_info} on {timestamp}.\n\nIf you did not make this change, please contact support immediately and reset your password.",
+                        db=self.db
+                    )
+
+                # Create in-app notification
+                try:
+                    await create_notification(
+                        self.db,
+                        user_id,
+                        "password_changed",
+                        "Password Changed",
+                        body=f"Your password was changed{ip_info if client_ip else ''}. If this wasn't you, please contact support.",
+                        link="/dashboard/profile"
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to create in-app notification for password change: {e}")
+        except Exception as e:
+            logger.warning(f"Failed to send password change notification: {e}")

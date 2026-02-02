@@ -20,6 +20,7 @@ import { Label } from "@/shared/components/ui/label";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
+import { toast } from "sonner";
 
 const STATUS_COLORS: Record<CustomerStatus, string> = {
   pending: "bg-yellow-100 text-yellow-800",
@@ -82,6 +83,14 @@ export function StatusTransition({ customerId }: StatusTransitionProps) {
   const handleStatusChange = async () => {
     if (!selectedStatus) return;
     
+    console.log("[StatusTransition.handleStatusChange] Before validation:", {
+      selectedStatus,
+      reason,
+      reasonLength: reason?.length,
+      reasonTrimmed: reason?.trim(),
+      reasonTrimmedLength: reason?.trim()?.length
+    });
+    
     if (!reason.trim()) {
       setError("Reason is required for status transitions");
       return;
@@ -90,6 +99,11 @@ export function StatusTransition({ customerId }: StatusTransitionProps) {
     setError(null);
 
     try {
+      console.log("[StatusTransition.handleStatusChange] Calling mutation with:", {
+        id: customerId,
+        reason
+      });
+      
       if (selectedStatus === "active") {
         await activateCustomer.mutateAsync({ id: customerId, reason });
       } else if (selectedStatus === "suspended") {
@@ -97,8 +111,13 @@ export function StatusTransition({ customerId }: StatusTransitionProps) {
       }
       setReason("");
       setSelectedStatus(null);
+      toast.success(`Customer status changed to ${selectedStatus} successfully`);
     } catch (err: any) {
-      setError(err?.response?.data?.detail || "Failed to change status");
+      console.error("[StatusTransition.handleStatusChange] Error:", err);
+      console.error("[StatusTransition.handleStatusChange] Error response:", err?.response?.data);
+      const errorMessage = err?.response?.data?.detail || "Failed to change status";
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
   };
 

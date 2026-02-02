@@ -5,7 +5,7 @@ Professional PDF templates for invoices with payment details, bank info,
 tax calculations, and optional QR codes.
 """
 
-from typing import List, Optional
+from typing import List, Optional, Optional
 from datetime import datetime
 from pathlib import Path
 from decimal import Decimal
@@ -32,9 +32,19 @@ from app.modules.invoices.models import Invoice, InvoiceItem
 class InvoicePDFService:
     """Service for generating professional invoice PDFs."""
 
-    def __init__(self, output_dir: str = "storage/pdfs/invoices"):
+    def __init__(self, output_dir: Optional[str] = None):
         """Initialize PDF service with output directory."""
-        self.output_dir = Path(output_dir)
+        from app.config.settings import get_settings
+        settings = get_settings()
+
+        # Use STORAGE_PATH from settings, resolve to absolute path
+        if output_dir:
+            self.output_dir = Path(output_dir).resolve()
+        else:
+            storage_base = Path(settings.STORAGE_PATH).resolve()
+            self.output_dir = storage_base / "pdfs" / "invoices"
+
+        # Ensure output directory exists
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.styles = getSampleStyleSheet()
         self._setup_custom_styles()
@@ -94,7 +104,8 @@ class InvoicePDFService:
         self,
         invoice: Invoice,
         customer_data: dict,
-        include_qr: bool = True
+        include_qr: bool = True,
+        company_info: Optional[dict] = None
     ) -> str:
         """
         Generate complete invoice PDF.
@@ -124,7 +135,7 @@ class InvoicePDFService:
         elements = []
 
         # Build PDF sections
-        elements.extend(self._create_header())
+        elements.extend(self._create_header(company_info))
         elements.extend(self._create_invoice_info(invoice))
         elements.extend(self._create_customer_info(customer_data))
         elements.append(Spacer(1, 10))
@@ -134,7 +145,7 @@ class InvoicePDFService:
         elements.append(Spacer(1, 20))
         elements.extend(self._create_payment_section(invoice, include_qr))
         elements.append(Spacer(1, 15))
-        elements.extend(self._create_bank_details())
+        elements.extend(self._create_bank_details(company_info))
         elements.append(Spacer(1, 15))
         elements.extend(self._create_payment_terms(invoice))
 
@@ -143,25 +154,33 @@ class InvoicePDFService:
 
         return str(filepath)
 
-    def _create_header(self) -> List:
+    def _create_header(self, company_info: Optional[dict] = None) -> List:
         """Create company information header."""
         elements = []
 
+        # Use provided company info or fallback to defaults
+        if company_info:
+            app_name = company_info.get("name", "CloudManager")
+            legal_name = company_info.get("legal_name", "CloudManager SARL")
+        else:
+            app_name = "CloudManager"
+            legal_name = "CloudManager SARL"
+
         # Company name
-        company_name = Paragraph("CloudManager", self.styles['CompanyName'])
+        company_name = Paragraph(app_name, self.styles['CompanyName'])
         elements.append(company_name)
 
-        # Company details
-        company_info = """
+        # Company details (simplified - full details would require more DB fields)
+        company_info_html = f"""
         <para align="center">
-        <b>CloudManager SARL</b><br/>
+        <b>{legal_name}</b><br/>
         123 Rue Didouche Mourad, Algiers 16000, Algeria<br/>
         Tel: +213 (0) 21 123 456 | Fax: +213 (0) 21 123 457<br/>
         Email: billing@cloudmanager.dz | Web: www.cloudmanager.dz<br/>
         NIF: 001234567890123 | RC: 16/00-1234567 | AI: 16123456789012
         </para>
         """
-        elements.append(Paragraph(company_info, self.styles['SmallText']))
+        elements.append(Paragraph(company_info_html, self.styles['SmallText']))
         elements.append(Spacer(1, 15))
 
         # Horizontal line
@@ -188,7 +207,8 @@ class InvoicePDFService:
         due_date = invoice.due_date.strftime('%d/%m/%Y')
 
         # Calculate days until due
-        days_until_due = (invoice.due_date - datetime.now(invoice.issue_date.tzinfo)).days
+        days_until_due = (invoice.due_date -
+                          datetime.now(invoice.issue_date.tzinfo)).days
 
         data = [
             ['Invoice Date:', invoice_date, 'Due Date:', due_date],
@@ -215,7 +235,8 @@ class InvoicePDFService:
         elements = []
 
         # Section heading
-        elements.append(Paragraph('<b>Bill To:</b>', self.styles['SectionHeading']))
+        elements.append(Paragraph('<b>Bill To:</b>',
+                        self.styles['SectionHeading']))
 
         # Customer details
         customer_name = customer_data.get('name', 'N/A')
@@ -241,7 +262,8 @@ class InvoicePDFService:
         elements = []
 
         # Section heading
-        elements.append(Paragraph('<b>Invoice Items</b>', self.styles['SectionHeading']))
+        elements.append(Paragraph('<b>Invoice Items</b>',
+                        self.styles['SectionHeading']))
         elements.append(Spacer(1, 8))
 
         # Table header
@@ -372,7 +394,8 @@ class InvoicePDFService:
         elements = []
 
         # Section heading
-        elements.append(Paragraph('<b>Payment Instructions</b>', self.styles['SectionHeading']))
+        elements.append(Paragraph('<b>Payment Instructions</b>',
+                        self.styles['SectionHeading']))
         elements.append(Spacer(1, 6))
 
         # Create two-column layout for payment info and QR code
@@ -441,18 +464,24 @@ class InvoicePDFService:
 
         return qr_image
 
-    def _create_bank_details(self) -> List:
+    def _create_bank_details(self, company_info: Optional[dict] = None) -> List:
         """Create bank details section."""
         elements = []
 
         # Section heading
-        elements.append(Paragraph('<b>Bank Details for Transfer</b>', self.styles['SectionHeading']))
+        elements.append(
+            Paragraph('<b>Bank Details for Transfer</b>', self.styles['SectionHeading']))
         elements.append(Spacer(1, 6))
+
+        # Use company legal name if provided
+        legal_name = "CloudManager SARL"
+        if company_info:
+            legal_name = company_info.get("legal_name", legal_name)
 
         # Bank details table
         bank_data = [
             ['Bank Name:', 'Banque Nationale d\'Algérie (BNA)'],
-            ['Account Name:', 'CloudManager SARL'],
+            ['Account Name:', legal_name],
             ['Account Number:', '007 123 456789 01'],
             ['SWIFT/BIC:', 'BNAADZAL'],
             ['IBAN:', 'DZ59 0001 2345 6789 0123 4567'],
@@ -481,7 +510,8 @@ class InvoicePDFService:
         elements = []
 
         # Section heading
-        elements.append(Paragraph('<b>Payment Terms & Conditions</b>', self.styles['SectionHeading']))
+        elements.append(
+            Paragraph('<b>Payment Terms & Conditions</b>', self.styles['SectionHeading']))
         elements.append(Spacer(1, 6))
 
         # Terms text
@@ -512,9 +542,12 @@ class InvoicePDFService:
 
         # Footer
         elements.append(Spacer(1, 10))
-        footer_text = """
+        legal_name = "CloudManager SARL"
+        if company_info:
+            legal_name = company_info.get("legal_name", legal_name)
+        footer_text = f"""
         <para align="center">
-        <b>CloudManager SARL</b> | NIF: 001234567890123 | RC: 16/00-1234567<br/>
+        <b>{legal_name}</b> | NIF: 001234567890123 | RC: 16/00-1234567<br/>
         <i>This is a computer-generated invoice and is valid without signature.</i>
         </para>
         """

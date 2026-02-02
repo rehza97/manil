@@ -2,19 +2,9 @@
 User registration API routes.
 Endpoints for user registration, email verification, and account activation.
 """
-import asyncio
-import logging
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
-
-logger = logging.getLogger(__name__)
-
-from app.config.database import get_db
-from app.core.exceptions import (
-    NotFoundException,
-    ConflictException,
-    BadRequestException,
-)
+from app.infrastructure.email import templates
+from app.infrastructure.email.service import EmailService
+from app.modules.auth.registration_service import RegistrationService
 from app.modules.auth.registration_schemas import (
     RegistrationRequest as RegistrationRequestSchema,
     RegistrationResponse,
@@ -27,9 +17,19 @@ from app.modules.auth.registration_schemas import (
     ResendVerificationEmailResponse,
     RegistrationStatus,
 )
-from app.modules.auth.registration_service import RegistrationService
-from app.infrastructure.email.service import EmailService
-from app.infrastructure.email import templates
+from app.core.exceptions import (
+    NotFoundException,
+    ConflictException,
+    BadRequestException,
+)
+from app.config.database import get_db
+import asyncio
+import logging
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
+
 
 router = APIRouter(prefix="/auth/register", tags=["registration"])
 email_service = EmailService()
@@ -58,7 +58,8 @@ def register(
     - Verification email sent to provided email address
     """
     try:
-        registration = RegistrationService.initiate_registration(db, registration_data)
+        registration = RegistrationService.initiate_registration(
+            db, registration_data)
 
         # Get the verification token that was created during registration
         from app.modules.auth.registration_models import EmailVerificationToken
@@ -75,15 +76,27 @@ def register(
                 # Fallback if token creation failed
                 verification_link = f"http://localhost:3000/verify-email?registration_id={registration.id}"
 
-            asyncio.run(email_service.send_email_verification(
-                to=registration.email,
-                full_name=registration.full_name,
-                verification_link=verification_link,
-                expires_in_hours=24
-            ))
+            # Check notification gate before sending
+            from app.config.database import AsyncSessionLocal
+            from app.modules.settings.utils import notification_gate_allows
+
+            async def check_and_send_verification():
+                async with AsyncSessionLocal() as async_db:
+                    gate_allows = await notification_gate_allows(async_db, "email", "registration.email_verification")
+                    if gate_allows:
+                        await email_service.send_email_verification(
+                            to=registration.email,
+                            full_name=registration.full_name,
+                            verification_link=verification_link,
+                            expires_in_hours=24,
+                            db=async_db
+                        )
+
+            asyncio.run(check_and_send_verification())
         except Exception as e:
             # Log email error but don't fail registration
-            logger.warning(f"Failed to send verification email to {registration.email}: {str(e)}")
+            logger.warning(
+                f"Failed to send verification email to {registration.email}: {str(e)}")
 
         return RegistrationResponse.model_validate(registration)
 
@@ -97,7 +110,8 @@ def register(
 def get_registration(
     registration_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.REGISTRATIONS_VIEW)),
+    current_user: User = Depends(
+        require_permission(Permission.REGISTRATIONS_VIEW)),
 ):
     """
     Get registration request details by ID.
@@ -105,7 +119,8 @@ def get_registration(
     Returns current status and information about a registration request.
     """
     try:
-        registration = RegistrationService.get_registration(db, registration_id)
+        registration = RegistrationService.get_registration(
+            db, registration_id)
         return RegistrationResponse.model_validate(registration)
     except NotFoundException as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -163,7 +178,8 @@ def resend_verification_email(
     - New verification email sent
     """
     try:
-        registration, token = RegistrationService.resend_verification_email(db, data.registration_id)
+        registration, token = RegistrationService.resend_verification_email(
+            db, data.registration_id)
 
         try:
             # Send new verification email
@@ -212,13 +228,39 @@ def activate_account(
         )
 
         try:
-            # Send welcome email
-            asyncio.run(email_service.send_welcome_email(
-                to=registration.email,
-                user_name=registration.full_name or registration.email
-            ))
+            # Send welcome email with gate check
+            from app.config.database import AsyncSessionLocal
+            from app.modules.settings.utils import notification_gate_allows
+            from app.infrastructure.sms.service import SMSService
+
+            async def check_and_send_welcome():
+                async with AsyncSessionLocal() as async_db:
+                    gate_allows_email = await notification_gate_allows(async_db, "email", "registration.welcome")
+                    gate_allows_sms = await notification_gate_allows(async_db, "sms", "registration.welcome")
+
+                    if gate_allows_email:
+                        await email_service.send_welcome_email(
+                            to=registration.email,
+                            user_name=registration.full_name or registration.email,
+                            db=async_db
+                        )
+
+                    # Send SMS welcome message if phone is available and gate allows
+                    if gate_allows_sms and customer and customer.phone and customer.phone.strip():
+                        try:
+                            sms_service = SMSService()
+                            await sms_service.send_sms(
+                                customer.phone,
+                                f"Welcome to CloudManager! Your account has been activated. You can now log in and access all features.",
+                                db=async_db
+                            )
+                        except Exception as sms_error:
+                            logger.warning(
+                                f"Failed to send welcome SMS: {sms_error}")
+
+            asyncio.run(check_and_send_welcome())
         except Exception as e:
-            print(f"Failed to send welcome email: {str(e)}")
+            logger.warning(f"Failed to send welcome email: {str(e)}")
 
         return ActivateAccountResponse(
             id=registration.id,
@@ -258,7 +300,8 @@ def list_registrations(
     status: RegistrationStatus | None = Query(None),
     email: str | None = Query(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.REGISTRATIONS_VIEW)),
+    current_user: User = Depends(
+        require_permission(Permission.REGISTRATIONS_VIEW)),
 ):
     """
     List registration requests with filtering.

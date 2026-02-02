@@ -46,15 +46,15 @@ async def get_customer_id_for_user(
     """
     Get customer_id for a client user by finding customer by email.
     Auto-creates customer if it doesn't exist (if auto_create=True).
-    
+
     Returns None for non-client users or if customer not found and auto_create=False.
     """
     if current_user.role.value != "client":
         return None
-    
+
     from app.modules.customers.models import Customer
     from sqlalchemy import select
-    
+
     # Find customer by email
     result = await db.execute(
         select(Customer).where(
@@ -63,12 +63,12 @@ async def get_customer_id_for_user(
         )
     )
     customer = result.scalar_one_or_none()
-    
+
     # Auto-create if doesn't exist
     if not customer and auto_create:
         from app.modules.customers.schemas import CustomerCreate, CustomerType
         from app.modules.customers.service import CustomerService
-        
+
         customer_service = CustomerService(db)
         customer_data = CustomerCreate(
             name=current_user.full_name,
@@ -87,7 +87,7 @@ async def get_customer_id_for_user(
                 )
             )
             customer = result.scalar_one_or_none()
-    
+
     return str(customer.id) if customer else None
 
 
@@ -120,7 +120,8 @@ async def get_invoices(
         # Clients can only see their own invoices
         customer_id = await get_customer_id_for_user(db, current_user)
         if not customer_id:
-            raise ForbiddenException("Client account not properly configured. Please contact support.")
+            raise ForbiddenException(
+                "Client account not properly configured. Please contact support.")
     # Admin and corporate can see all invoices (no filtering override)
 
     invoices, total = await service.get_all(
@@ -161,7 +162,8 @@ async def get_invoice(
     if current_user.role.value == "client":
         user_customer_id = await get_customer_id_for_user(db, current_user)
         if not user_customer_id:
-            raise ForbiddenException("Client account not properly configured. Please contact support.")
+            raise ForbiddenException(
+                "Client account not properly configured. Please contact support.")
         if str(invoice.customer_id) != user_customer_id:
             raise ForbiddenException("You can only view your own invoices")
 
@@ -172,7 +174,8 @@ async def get_invoice(
 async def create_invoice(
     invoice_data: InvoiceCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_any_permission([Permission.INVOICES_CREATE, Permission.INVOICES_EDIT]))
+    current_user: User = Depends(require_any_permission(
+        [Permission.INVOICES_CREATE, Permission.INVOICES_EDIT]))
 ):
     """Create a new invoice.
 
@@ -189,7 +192,8 @@ async def update_invoice(
     invoice_id: str,
     invoice_data: InvoiceUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_any_permission([Permission.INVOICES_CREATE, Permission.INVOICES_EDIT]))
+    current_user: User = Depends(require_any_permission(
+        [Permission.INVOICES_CREATE, Permission.INVOICES_EDIT]))
 ):
     """Update an existing invoice.
 
@@ -203,7 +207,8 @@ async def update_invoice(
     # SECURITY: Cannot update paid invoices
     if invoice.status == InvoiceStatus.PAID:
         from fastapi import HTTPException
-        raise HTTPException(status_code=400, detail="Cannot update paid invoices")
+        raise HTTPException(
+            status_code=400, detail="Cannot update paid invoices")
 
     return await service.update(invoice_id, invoice_data)
 
@@ -226,7 +231,8 @@ async def delete_invoice(
     # SECURITY: Cannot delete paid invoices
     if invoice.status == InvoiceStatus.PAID:
         from fastapi import HTTPException
-        raise HTTPException(status_code=400, detail="Cannot delete paid invoices")
+        raise HTTPException(
+            status_code=400, detail="Cannot delete paid invoices")
 
     await service.delete(invoice_id)
 
@@ -239,7 +245,8 @@ async def delete_invoice(
 async def issue_invoice(
     invoice_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_any_permission([Permission.INVOICES_CREATE, Permission.INVOICES_EDIT]))
+    current_user: User = Depends(require_any_permission(
+        [Permission.INVOICES_CREATE, Permission.INVOICES_EDIT]))
 ):
     """Issue a draft invoice.
 
@@ -254,7 +261,8 @@ async def issue_invoice(
 async def send_invoice(
     invoice_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_any_permission([Permission.INVOICES_CREATE, Permission.INVOICES_EDIT]))
+    current_user: User = Depends(require_any_permission(
+        [Permission.INVOICES_CREATE, Permission.INVOICES_EDIT]))
 ):
     """Send invoice to customer.
 
@@ -287,7 +295,8 @@ async def record_payment(
 async def cancel_invoice(
     invoice_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_any_permission([Permission.INVOICES_CREATE, Permission.INVOICES_EDIT]))
+    current_user: User = Depends(require_any_permission(
+        [Permission.INVOICES_CREATE, Permission.INVOICES_EDIT]))
 ):
     """Cancel an invoice.
 
@@ -306,7 +315,8 @@ async def cancel_invoice(
 async def convert_quote_to_invoice(
     conversion_data: InvoiceConvertFromQuoteRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_any_permission([Permission.INVOICES_CREATE, Permission.INVOICES_EDIT]))
+    current_user: User = Depends(require_any_permission(
+        [Permission.INVOICES_CREATE, Permission.INVOICES_EDIT]))
 ):
     """Convert an accepted quote to an invoice.
 
@@ -340,9 +350,11 @@ async def get_invoice_timeline(
     if current_user.role.value == "client":
         user_customer_id = await get_customer_id_for_user(db, current_user)
         if not user_customer_id:
-            raise ForbiddenException("Client account not properly configured. Please contact support.")
+            raise ForbiddenException(
+                "Client account not properly configured. Please contact support.")
         if str(invoice.customer_id) != user_customer_id:
-            raise ForbiddenException("You can only view your own invoice timeline")
+            raise ForbiddenException(
+                "You can only view your own invoice timeline")
 
     return invoice.timeline_events
 
@@ -374,7 +386,8 @@ async def generate_invoice_pdf(
     if current_user.role.value == "client":
         user_customer_id = await get_customer_id_for_user(db, current_user)
         if not user_customer_id:
-            raise ForbiddenException("Client account not properly configured. Please contact support.")
+            raise ForbiddenException(
+                "Client account not properly configured. Please contact support.")
         if str(invoice.customer_id) != user_customer_id:
             raise ForbiddenException("You can only download your own invoices")
 
@@ -387,9 +400,14 @@ async def generate_invoice_pdf(
         'city': invoice.customer.city if invoice.customer else 'N/A',
     }
 
+    from app.modules.settings.utils import get_company_info_for_pdf
+    company_info = await get_company_info_for_pdf(db)
+
     # Generate PDF using HTMLPDFService (HTML-to-PDF for better quality)
     pdf_service = get_html_pdf_service()
-    pdf_path = pdf_service.generate_invoice_pdf(invoice, customer_data, include_qr=include_qr)
+    pdf_path = pdf_service.generate_invoice_pdf(
+        invoice, customer_data, include_qr=include_qr, company_info=company_info
+    )
 
     # SECURITY: Sanitize filename to prevent path traversal
     safe_invoice_number = re.sub(r'[^a-zA-Z0-9_-]', '', invoice.invoice_number)
@@ -431,7 +449,8 @@ async def get_invoice_statistics(
         # Clients can only see their own statistics
         customer_id = await get_customer_id_for_user(db, current_user)
         if not customer_id:
-            raise ForbiddenException("Client account not properly configured. Please contact support.")
+            raise ForbiddenException(
+                "Client account not properly configured. Please contact support.")
     # Admin and corporate can see all statistics or filter by customer_id
 
     repository = InvoiceRepository(db)

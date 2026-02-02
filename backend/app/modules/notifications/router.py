@@ -33,7 +33,8 @@ async def list_notifications(
     page_size: int = Query(20, ge=1, le=100),
     unread_only: bool = Query(False),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.NOTIFICATIONS_VIEW)),
+    current_user: User = Depends(
+        require_permission(Permission.NOTIFICATIONS_VIEW)),
 ):
     """List notifications for the current user."""
     repo = NotificationRepository(db)
@@ -66,7 +67,8 @@ async def unread_count(
 async def mark_read(
     notification_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.NOTIFICATIONS_VIEW)),
+    current_user: User = Depends(
+        require_permission(Permission.NOTIFICATIONS_VIEW)),
 ):
     """Mark a notification as read."""
     repo = NotificationRepository(db)
@@ -75,6 +77,19 @@ async def mark_read(
         raise HTTPException(status_code=404, detail="Notification not found")
     await db.commit()
     return {"ok": True}
+
+
+@router.patch("/read-all")
+async def mark_all_read(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_permission(Permission.NOTIFICATIONS_VIEW)),
+):
+    """Mark all unread notifications as read for the current user."""
+    repo = NotificationRepository(db)
+    count = await repo.mark_all_read(str(current_user.id))
+    await db.commit()
+    return {"ok": True, "marked_count": count}
 
 
 async def _sse_generator(user_id: str):
@@ -116,7 +131,8 @@ async def _sse_generator(user_id: str):
 
 @router.get("/stream")
 async def stream_notifications(
-    current_user: User = Depends(require_permission(Permission.NOTIFICATIONS_VIEW)),
+    current_user: User = Depends(
+        require_permission(Permission.NOTIFICATIONS_VIEW)),
 ):
     """Stream notifications via SSE. Requires Authorization header."""
     return StreamingResponse(

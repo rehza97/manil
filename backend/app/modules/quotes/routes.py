@@ -114,7 +114,8 @@ async def get_quote(
 async def create_quote(
     quote_data: QuoteCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT]))
+    current_user: User = Depends(require_any_permission(
+        [Permission.QUOTES_CREATE, Permission.QUOTES_EDIT]))
 ):
     """Create a new quote.
 
@@ -131,7 +132,8 @@ async def update_quote(
     quote_id: str,
     quote_data: QuoteUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT]))
+    current_user: User = Depends(require_any_permission(
+        [Permission.QUOTES_CREATE, Permission.QUOTES_EDIT]))
 ):
     """Update a quote.
 
@@ -145,7 +147,8 @@ async def update_quote(
     # SECURITY: Cannot update accepted quotes
     if quote.status == QuoteStatus.ACCEPTED:
         from fastapi import HTTPException
-        raise HTTPException(status_code=400, detail="Cannot update accepted quotes")
+        raise HTTPException(
+            status_code=400, detail="Cannot update accepted quotes")
 
     return await service.update(quote_id, quote_data, updated_by_id=current_user.id)
 
@@ -168,7 +171,8 @@ async def delete_quote(
     # SECURITY: Cannot delete accepted quotes
     if quote.status == QuoteStatus.ACCEPTED:
         from fastapi import HTTPException
-        raise HTTPException(status_code=400, detail="Cannot delete accepted quotes")
+        raise HTTPException(
+            status_code=400, detail="Cannot delete accepted quotes")
 
     await service.delete(quote_id)
 
@@ -181,7 +185,8 @@ async def delete_quote(
 async def submit_for_approval(
     quote_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT]))
+    current_user: User = Depends(require_any_permission(
+        [Permission.QUOTES_CREATE, Permission.QUOTES_EDIT]))
 ):
     """Submit quote for approval.
 
@@ -197,7 +202,8 @@ async def approve_quote(
     quote_id: str,
     approval_data: QuoteApprovalRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT]))
+    current_user: User = Depends(require_any_permission(
+        [Permission.QUOTES_CREATE, Permission.QUOTES_EDIT]))
 ):
     """Approve or reject a quote.
 
@@ -213,7 +219,8 @@ async def send_quote(
     quote_id: str,
     send_data: QuoteSendRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT]))
+    current_user: User = Depends(require_any_permission(
+        [Permission.QUOTES_CREATE, Permission.QUOTES_EDIT]))
 ):
     """Send quote to customer.
 
@@ -286,7 +293,8 @@ async def create_new_version(
     quote_id: str,
     version_data: QuoteVersionRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_any_permission([Permission.QUOTES_CREATE, Permission.QUOTES_EDIT]))
+    current_user: User = Depends(require_any_permission(
+        [Permission.QUOTES_CREATE, Permission.QUOTES_EDIT]))
 ):
     """Create a new version of a quote.
 
@@ -319,7 +327,8 @@ async def get_quote_versions(
         if not hasattr(current_user, 'customer_id'):
             raise ForbiddenException("Client account not properly configured")
         if str(quote.customer_id) != str(current_user.customer_id):
-            raise ForbiddenException("You can only view your own quote versions")
+            raise ForbiddenException(
+                "You can only view your own quote versions")
 
     return await service.get_quote_versions(quote_id)
 
@@ -348,7 +357,8 @@ async def get_quote_timeline(
         if not hasattr(current_user, 'customer_id'):
             raise ForbiddenException("Client account not properly configured")
         if str(quote.customer_id) != str(current_user.customer_id):
-            raise ForbiddenException("You can only view your own quote timeline")
+            raise ForbiddenException(
+                "You can only view your own quote timeline")
 
     return quote.timeline_events
 
@@ -391,9 +401,13 @@ async def generate_quote_pdf(
         'city': quote.customer.city if quote.customer else 'N/A',
     }
 
+    from app.modules.settings.utils import get_company_info_for_pdf
+    company_info = await get_company_info_for_pdf(db)
+
     # Generate PDF using HTMLPDFService (HTML-to-PDF for better quality)
     pdf_service = get_html_pdf_service()
-    pdf_path = pdf_service.generate_quote_pdf(quote, customer_data)
+    pdf_path = pdf_service.generate_quote_pdf(
+        quote, customer_data, company_info=company_info)
 
     # SECURITY: Sanitize filename to prevent path traversal
     safe_quote_number = re.sub(r'[^a-zA-Z0-9_-]', '', quote.quote_number)

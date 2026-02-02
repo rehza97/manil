@@ -44,6 +44,16 @@ export function useMarkNotificationRead() {
   });
 }
 
+export function useMarkAllNotificationsRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => notificationsApi.markAllRead(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: NOTIFICATIONS_QUERY_KEY });
+    },
+  });
+}
+
 /**
  * Connects to /notifications/stream and invalidates notification queries
  * on each "notification" event. Call only when user is authenticated.

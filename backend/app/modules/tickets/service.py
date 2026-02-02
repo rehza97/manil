@@ -17,6 +17,7 @@ from app.modules.customers.repository import CustomerRepository
 from app.modules.auth.models import User
 from app.modules.notifications.service import create_notification, user_id_by_email
 from app.modules.settings.service import UserNotificationPreferencesService
+from app.modules.settings.utils import notification_gate_allows
 from app.infrastructure.sms.service import SMSService
 
 
@@ -55,6 +56,19 @@ class TicketService:
         prefs = await prefs_svc.get(uid)
         return bool(prefs.get("sms", {}).get("ticketUpdates", False))
 
+    async def _should_send_ticket_push(
+        self, *, email: Optional[str] = None, user_id: Optional[str] = None
+    ) -> bool:
+        """Check user push/in-app notification preferences for tickets."""
+        uid = user_id
+        if not uid and email:
+            uid = await user_id_by_email(self.db, email)
+        if not uid:
+            return True  # Default allow if no user found (backward compatible)
+        prefs_svc = UserNotificationPreferencesService(self.db)
+        prefs = await prefs_svc.get(uid)
+        return bool(prefs.get("push", {}).get("ticketUpdates", True))
+
     async def _get_user(self, user_id: str) -> Optional[User]:
         """Fetch user by id."""
         result = await self.db.execute(select(User).where(User.id == user_id))
@@ -73,29 +87,66 @@ class TicketService:
                     f"Customer with ID {ticket_data.customer_id} not found. "
                     "Please ensure the customer exists before creating a ticket."
                 )
-            
+
+            # Validate category if provided
+            if ticket_data.category_id:
+                from app.modules.tickets.response_templates import TicketCategory
+                category_query = select(TicketCategory).where(
+                    and_(
+                        TicketCategory.id == ticket_data.category_id,
+                        TicketCategory.is_active == True
+                    )
+                )
+                category_result = await self.db.execute(category_query)
+                category = category_result.scalar_one_or_none()
+                if not category:
+                    raise NotFoundException(
+                        f"Category with ID {ticket_data.category_id} not found or inactive."
+                    )
+
             ticket = await self.repository.create(ticket_data, created_by)
             logger.info(
                 f"Ticket created: {ticket.id} for customer {ticket.customer_id}"
             )
             try:
-                if customer.email and await self._should_send_ticket_email(
-                    email=customer.email
+                if (
+                    customer.email
+                    and await notification_gate_allows(self.db, "email", "ticket.created")
+                    and await self._should_send_ticket_email(email=customer.email)
                 ):
                     await self._notification_service.notify_ticket_created(
                         customer_email=customer.email,
                         ticket_id=ticket.id,
                         subject=ticket.title,
+                        db=self.db,
                     )
             except Exception as e:
-                logger.warning(f"Ticket creation notification failed: {e}")
-            
+                logger.warning(
+                    f"Ticket creation email notification failed: {e}")
+
+            # Send SMS notification for ticket creation
+            try:
+                if (
+                    customer.phone
+                    and customer.phone.strip()
+                    and await notification_gate_allows(self.db, "sms", "ticket.created")
+                    and await self._should_send_ticket_sms(email=customer.email)
+                ):
+                    sms_service = SMSService()
+                    await sms_service.send_ticket_update(
+                        customer.phone,
+                        ticket.id,
+                        db=self.db,
+                    )
+            except Exception as e:
+                logger.warning(f"Ticket creation SMS notification failed: {e}")
+
             # Notify notification groups if ticket has category
             if ticket.category_id:
                 try:
                     from app.modules.notifications.services.group_service import NotificationGroupService
                     from app.modules.notifications.models import NotificationTargetType
-                    
+
                     group_service = NotificationGroupService(self.db)
                     groups, _ = await group_service.list_groups(
                         is_active=True,
@@ -103,11 +154,11 @@ class TicketService:
                         skip=0,
                         limit=100,
                     )
-                    
+
                     # Find groups targeting this category
                     for group in groups:
-                        if (group.target_criteria and 
-                            group.target_criteria.get("category_id") == ticket.category_id):
+                        if (group.target_criteria and
+                                group.target_criteria.get("category_id") == ticket.category_id):
                             try:
                                 await create_notification(
                                     self.db,
@@ -118,16 +169,18 @@ class TicketService:
                                     link=f"/tickets/{ticket.id}",
                                 )
                             except Exception as e:
-                                logger.warning(f"Failed to notify group {group.id} for ticket {ticket.id}: {e}")
+                                logger.warning(
+                                    f"Failed to notify group {group.id} for ticket {ticket.id}: {e}")
                 except Exception as e:
-                    logger.warning(f"Failed to process notification groups for ticket {ticket.id}: {e}")
-            
+                    logger.warning(
+                        f"Failed to process notification groups for ticket {ticket.id}: {e}")
+
             # Notify groups targeting customer type
             if customer.customer_type:
                 try:
                     from app.modules.notifications.services.group_service import NotificationGroupService
                     from app.modules.notifications.models import NotificationTargetType
-                    
+
                     group_service = NotificationGroupService(self.db)
                     groups, _ = await group_service.list_groups(
                         is_active=True,
@@ -135,12 +188,13 @@ class TicketService:
                         skip=0,
                         limit=100,
                     )
-                    
+
                     # Find groups targeting this customer type
                     for group in groups:
-                        customer_type_value = customer.customer_type.value if hasattr(customer.customer_type, 'value') else str(customer.customer_type)
-                        if (group.target_criteria and 
-                            group.target_criteria.get("customer_type") == customer_type_value):
+                        customer_type_value = customer.customer_type.value if hasattr(
+                            customer.customer_type, 'value') else str(customer.customer_type)
+                        if (group.target_criteria and
+                                group.target_criteria.get("customer_type") == customer_type_value):
                             try:
                                 await create_notification(
                                     self.db,
@@ -151,10 +205,12 @@ class TicketService:
                                     link=f"/tickets/{ticket.id}",
                                 )
                             except Exception as e:
-                                logger.warning(f"Failed to notify group {group.id} for ticket {ticket.id}: {e}")
+                                logger.warning(
+                                    f"Failed to notify group {group.id} for ticket {ticket.id}: {e}")
                 except Exception as e:
-                    logger.warning(f"Failed to process customer type notification groups for ticket {ticket.id}: {e}")
-            
+                    logger.warning(
+                        f"Failed to process customer type notification groups for ticket {ticket.id}: {e}")
+
             return ticket
         except NotFoundException:
             raise
@@ -191,7 +247,7 @@ class TicketService:
         if filters is None:
             filters = {}
 
-        return await self.repository.get_all(skip, limit, filters.get("customer_id"))
+        return await self.repository.get_all_with_filters(skip, limit, filters)
 
     async def update_ticket(
         self, ticket_id: str, ticket_data: TicketUpdate, updated_by: str
@@ -238,9 +294,11 @@ class TicketService:
         try:
             customer_repo = CustomerRepository(self.db)
             customer = await customer_repo.get_by_id(ticket.customer_id)
+            ev = "ticket.closed" if new_status == "closed" else "ticket.status_changed"
             if (
                 customer
                 and customer.email
+                and await notification_gate_allows(self.db, "email", ev)
                 and await self._should_send_ticket_email(email=customer.email)
             ):
                 if new_status == "closed":
@@ -248,6 +306,7 @@ class TicketService:
                         recipient_email=customer.email,
                         ticket_id=ticket_id,
                         ticket_subject=ticket.title,
+                        db=self.db,
                     )
                 else:
                     await self._notification_service.notify_ticket_status_change(
@@ -256,8 +315,9 @@ class TicketService:
                         ticket_subject=ticket.title,
                         old_status=old_status,
                         new_status=new_status,
+                        db=self.db,
                     )
-            
+
             # Create in-app notification for customer
             if customer and customer.email:
                 try:
@@ -273,36 +333,46 @@ class TicketService:
                             link=f"/tickets/{ticket_id}",
                         )
                 except Exception as e:
-                    logger.warning("In-app ticket status change notification failed: %s", e)
-            
+                    logger.warning(
+                        "In-app ticket status change notification failed: %s", e)
+
             # Notify assigned agent if ticket is assigned
             if ticket.assigned_to and ticket.assigned_to != ticket.created_by:
                 try:
-                    status_display = new_status.replace("_", " ").title()
-                    await create_notification(
-                        self.db,
-                        ticket.assigned_to,
-                        "ticket_status_change",
-                        f"Ticket status updated: {ticket.title}",
-                        body=f"Ticket {ticket_id} status changed from {old_status.replace('_', ' ').title()} to {status_display}.",
-                        link=f"/tickets/{ticket_id}",
-                    )
+                    if await self._should_send_ticket_push(user_id=ticket.assigned_to):
+                        status_display = new_status.replace("_", " ").title()
+                        await create_notification(
+                            self.db,
+                            ticket.assigned_to,
+                            "ticket_status_change",
+                            f"Ticket status updated: {ticket.title}",
+                            body=f"Ticket {ticket_id} status changed from {old_status.replace('_', ' ').title()} to {status_display}.",
+                            link=f"/tickets/{ticket_id}",
+                        )
                 except Exception as e:
-                    logger.warning("In-app ticket status change notification for agent failed: %s", e)
-            
+                    logger.warning(
+                        "In-app ticket status change notification for agent failed: %s", e)
+
             # Send SMS notification to customer if phone exists and preferences allow
-            if customer and customer.phone and customer.phone.strip():
+            if (
+                customer
+                and customer.phone
+                and customer.phone.strip()
+                and await notification_gate_allows(self.db, "sms", ev)
+            ):
                 try:
                     if await self._should_send_ticket_sms(email=customer.email):
                         sms_service = SMSService()
                         await sms_service.send_ticket_update(
-                            to=customer.phone,
-                            ticket_id=ticket_id
+                            customer.phone,
+                            ticket_id,
+                            db=self.db,
                         )
                 except Exception as e:
-                    logger.warning(f"Ticket status change SMS notification failed: {e}")
+                    logger.warning(
+                        "Ticket status change SMS notification failed: %s", e)
         except Exception as e:
-            logger.warning(f"Ticket status change notification failed: {e}")
+            logger.warning("Ticket status change notification failed: %s", e)
 
         return updated
 
@@ -323,6 +393,7 @@ class TicketService:
             if (
                 agent
                 and agent.email
+                and await notification_gate_allows(self.db, "email", "ticket.assigned")
                 and await self._should_send_ticket_email(user_id=user_id)
             ):
                 await self._notification_service.notify_ticket_assigned(
@@ -330,6 +401,7 @@ class TicketService:
                     ticket_id=ticket_id,
                     ticket_subject=ticket.title,
                     assigned_to=agent.full_name or agent.email,
+                    db=self.db,
                 )
             try:
                 await create_notification(
@@ -341,23 +413,30 @@ class TicketService:
                     link=f"/tickets/{ticket_id}",
                 )
             except Exception as e:
-                logger.warning("In-app ticket assign notification failed: %s", e)
-            
-            # Send SMS notification to customer if phone exists and preferences allow
+                logger.warning(
+                    "In-app ticket assign notification failed: %s", e)
+
             customer_repo = CustomerRepository(self.db)
             customer = await customer_repo.get_by_id(ticket.customer_id)
-            if customer and customer.phone and customer.phone.strip():
+            if (
+                customer
+                and customer.phone
+                and customer.phone.strip()
+                and await notification_gate_allows(self.db, "sms", "ticket.assigned")
+            ):
                 try:
                     if await self._should_send_ticket_sms(email=customer.email):
                         sms_service = SMSService()
                         await sms_service.send_ticket_update(
-                            to=customer.phone,
-                            ticket_id=ticket_id
+                            customer.phone,
+                            ticket_id,
+                            db=self.db,
                         )
                 except Exception as e:
-                    logger.warning(f"Ticket assignment SMS notification failed: {e}")
+                    logger.warning(
+                        "Ticket assignment SMS notification failed: %s", e)
         except Exception as e:
-            logger.warning(f"Ticket assignment notification failed: {e}")
+            logger.warning("Ticket assignment notification failed: %s", e)
 
         return assigned
 
@@ -380,6 +459,7 @@ class TicketService:
             if (
                 agent
                 and agent.email
+                and await notification_gate_allows(self.db, "email", "ticket.assigned")
                 and await self._should_send_ticket_email(user_id=new_user_id)
             ):
                 await self._notification_service.notify_ticket_assigned(
@@ -387,18 +467,21 @@ class TicketService:
                     ticket_id=ticket_id,
                     ticket_subject=ticket.title,
                     assigned_to=agent.full_name or agent.email,
+                    db=self.db,
                 )
             try:
-                await create_notification(
-                    self.db,
-                    new_user_id,
-                    "ticket_assigned",
-                    f"Ticket transferred: {ticket.title}",
-                    body=f"Ticket {ticket_id} has been transferred to you.",
-                    link=f"/tickets/{ticket_id}",
-                )
+                if await self._should_send_ticket_push(user_id=new_user_id):
+                    await create_notification(
+                        self.db,
+                        new_user_id,
+                        "ticket_assigned",
+                        f"Ticket transferred: {ticket.title}",
+                        body=f"Ticket {ticket_id} has been transferred to you.",
+                        link=f"/tickets/{ticket_id}",
+                    )
             except Exception as e:
-                logger.warning("In-app ticket transfer notification failed: %s", e)
+                logger.warning(
+                    "In-app ticket transfer notification failed: %s", e)
         except Exception as e:
             logger.warning(f"Ticket transfer notification failed: {e}")
 
@@ -445,6 +528,9 @@ class TicketService:
                         if (
                             agent
                             and agent.email
+                            and await notification_gate_allows(
+                                self.db, "email", "ticket.replied"
+                            )
                             and await self._should_send_ticket_email(
                                 user_id=ticket.assigned_to
                             )
@@ -455,6 +541,7 @@ class TicketService:
                                 ticket_subject=ticket.title,
                                 reply_author=reply_author,
                                 is_internal=False,
+                                db=self.db,
                             )
                             try:
                                 await create_notification(
@@ -466,10 +553,14 @@ class TicketService:
                                     link=f"/tickets/{ticket_id}",
                                 )
                             except Exception as e:
-                                logger.warning("In-app ticket reply notification failed: %s", e)
+                                logger.warning(
+                                    "In-app ticket reply notification failed: %s", e)
                 elif (
                     customer
                     and customer.email
+                    and await notification_gate_allows(
+                        self.db, "email", "ticket.replied"
+                    )
                     and await self._should_send_ticket_email(email=customer.email)
                 ):
                     await self._notification_service.notify_ticket_reply(
@@ -478,10 +569,11 @@ class TicketService:
                         ticket_subject=ticket.title,
                         reply_author=reply_author,
                         is_internal=False,
+                        db=self.db,
                     )
                     try:
                         uid = await user_id_by_email(self.db, customer.email)
-                        if uid:
+                        if uid and await self._should_send_ticket_push(email=customer.email):
                             await create_notification(
                                 self.db,
                                 uid,
@@ -491,19 +583,28 @@ class TicketService:
                                 link=f"/tickets/{ticket_id}",
                             )
                     except Exception as e:
-                        logger.warning("In-app ticket reply notification failed: %s", e)
-                    
-                    # Send SMS notification to customer if phone exists and preferences allow
-                    if customer.phone and customer.phone.strip():
+                        logger.warning(
+                            "In-app ticket reply notification failed: %s", e)
+
+                    if (
+                        customer.phone
+                        and customer.phone.strip()
+                        and await notification_gate_allows(
+                            self.db, "sms", "ticket.replied"
+                        )
+                    ):
                         try:
                             if await self._should_send_ticket_sms(email=customer.email):
                                 sms_service = SMSService()
                                 await sms_service.send_ticket_update(
-                                    to=customer.phone,
-                                    ticket_id=ticket_id
+                                    customer.phone,
+                                    ticket_id,
+                                    db=self.db,
                                 )
                         except Exception as e:
-                            logger.warning(f"Ticket reply SMS notification failed: {e}")
+                            logger.warning(
+                                "Ticket reply SMS notification failed: %s", e
+                            )
             except Exception as e:
                 logger.warning(f"Ticket reply notification failed: {e}")
 

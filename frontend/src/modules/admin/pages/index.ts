@@ -19,6 +19,7 @@ export {
   SMSConfigPage,
   StorageConfigPage,
   BackupSettingsPage,
+  NotificationSettingsPage,
 } from "./settings";// Overview Pages
 export {
   SystemHealthPage,

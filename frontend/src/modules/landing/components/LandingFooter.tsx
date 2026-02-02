@@ -60,6 +60,11 @@ export const LandingFooter = () => {
                 </Link>
               </li>
               <li>
+                <Link to="/faq" className="text-slate-600 transition hover:text-[#38ada9]">
+                  Centre d&apos;aide
+                </Link>
+              </li>
+              <li>
                 <Link to="/login" className="text-slate-600 transition hover:text-[#38ada9]">
                   Espace client
                 </Link>

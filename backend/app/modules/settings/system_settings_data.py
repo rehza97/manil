@@ -11,6 +11,7 @@ class SettingCategory:
     """Setting category constants."""
     GENERAL = "general"
     EMAIL = "email"
+    SMS = "sms"
     NOTIFICATION = "notification"
     SECURITY = "security"
     BACKUP = "backup"
@@ -182,6 +183,38 @@ SYSTEM_SETTINGS: List[Dict[str, Any]] = [
     },
 
     # ========================================================================
+    # SMS Settings (provider switch Twilio vs Custom; Twilio keys from UI)
+    # ========================================================================
+    {
+        "key": "sms.provider",
+        "value": {"value": "custom", "options": ["twilio", "custom"], "type": "enum"},
+        "category": SettingCategory.SMS,
+        "description": "SMS provider: twilio (API) or custom (queue -> Flutter /sms/app)",
+        "is_public": False,
+    },
+    {
+        "key": "sms.twilio.account_sid",
+        "value": {"value": "", "type": "string"},
+        "category": SettingCategory.SMS,
+        "description": "Twilio Account SID (from admin UI); fallback to env if empty",
+        "is_public": False,
+    },
+    {
+        "key": "sms.twilio.auth_token",
+        "value": {"value": "", "type": "string"},
+        "category": SettingCategory.SMS,
+        "description": "Twilio Auth Token (from admin UI); fallback to env if empty",
+        "is_public": False,
+    },
+    {
+        "key": "sms.twilio.from_number",
+        "value": {"value": "", "type": "string"},
+        "category": SettingCategory.SMS,
+        "description": "Twilio From number (from admin UI); fallback to env if empty",
+        "is_public": False,
+    },
+
+    # ========================================================================
     # Notification Settings
     # ========================================================================
     {
@@ -237,6 +270,20 @@ SYSTEM_SETTINGS: List[Dict[str, Any]] = [
         },
         "category": SettingCategory.NOTIFICATION,
         "description": "Invoice notification events to trigger",
+        "is_public": False,
+    },
+    {
+        "key": "notification.quote_events",
+        "value": {
+            "created": True,
+            "approved": True,
+            "sent": True,
+            "rejected": True,
+            "accepted": True,
+            "type": "object"
+        },
+        "category": SettingCategory.NOTIFICATION,
+        "description": "Quote notification events to trigger",
         "is_public": False,
     },
     {
@@ -513,6 +560,7 @@ def get_setting_categories() -> List[str]:
     return [
         SettingCategory.GENERAL,
         SettingCategory.EMAIL,
+        SettingCategory.SMS,
         SettingCategory.NOTIFICATION,
         SettingCategory.SECURITY,
         SettingCategory.BACKUP,

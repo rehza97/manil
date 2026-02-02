@@ -35,11 +35,22 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 # Install system dependencies (runtime only)
-RUN apt-get update && apt-get install -y \
+# WeasyPrint (PDF) needs Cairo, Pango, GLib/GObject; postgres/redis for app
+RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     libpq5 \
     redis-tools \
     curl \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libpangoft2-1.0-0 \
+    libharfbuzz0b \
+    libgdk-pixbuf-2.0-0 \
+    libffi-dev \
+    shared-mime-info \
+    libglib2.0-0 \
+    fontconfig \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python dependencies from builder to system location

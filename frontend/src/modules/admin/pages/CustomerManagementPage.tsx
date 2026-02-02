@@ -14,23 +14,95 @@ import {
   Edit,
   Ban,
   CheckCircle,
+  Loader2,
 } from "lucide-react";
-import { useCustomers } from "@/modules/customers/hooks";
+import { useCustomers, useActivateCustomer, useSuspendCustomer } from "@/modules/customers/hooks";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Card } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/components/ui/dialog";
+import { Label } from "@/shared/components/ui/label";
+import { useToast } from "@/shared/components/ui/use-toast";
 
 export const CustomerManagementPage: React.FC = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Dialog states
+  const [activateDialogOpen, setActivateDialogOpen] = useState(false);
+  const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<{ id: string; name: string } | null>(null);
+  const [reason, setReason] = useState("");
+
   const { data, isLoading } = useCustomers(page, 20);
+  const activateCustomer = useActivateCustomer();
+  const suspendCustomer = useSuspendCustomer();
 
   const handleSearch = () => {
     // Search is handled by the useCustomers hook with filters
     // This can be extended to include search parameters
+  };
+
+  const openActivateDialog = (id: string, name: string) => {
+    setSelectedCustomer({ id, name });
+    setActivateDialogOpen(true);
+  };
+
+  const openSuspendDialog = (id: string, name: string) => {
+    setSelectedCustomer({ id, name });
+    setSuspendDialogOpen(true);
+  };
+
+  const handleActivate = async () => {
+    if (selectedCustomer && reason.trim()) {
+      try {
+        await activateCustomer.mutateAsync({ id: selectedCustomer.id, reason: reason.trim() });
+        toast({
+          title: "Customer Activated",
+          description: `${selectedCustomer.name} has been successfully activated.`,
+        });
+        setActivateDialogOpen(false);
+        setSelectedCustomer(null);
+        setReason("");
+      } catch (error: any) {
+        toast({
+          title: "Activation Failed",
+          description: error?.response?.data?.detail || "Failed to activate customer.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleSuspend = async () => {
+    if (selectedCustomer && reason.trim()) {
+      try {
+        await suspendCustomer.mutateAsync({ id: selectedCustomer.id, reason: reason.trim() });
+        toast({
+          title: "Customer Suspended",
+          description: `${selectedCustomer.name} has been suspended.`,
+        });
+        setSuspendDialogOpen(false);
+        setSelectedCustomer(null);
+        setReason("");
+      } catch (error: any) {
+        toast({
+          title: "Suspension Failed",
+          description: error?.response?.data?.detail || "Failed to suspend customer.",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   return (
@@ -195,7 +267,18 @@ export const CustomerManagementPage: React.FC = () => {
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (customer.status === "active") {
+                              openSuspendDialog(customer.id, customer.name);
+                            } else {
+                              openActivateDialog(customer.id, customer.name);
+                            }
+                          }}
+                          title={customer.status === "active" ? "Suspend customer" : "Activate customer"}
+                        >
                           {customer.status === "active" ? (
                             <Ban className="w-4 h-4 text-red-600" />
                           ) : (
@@ -239,6 +322,70 @@ export const CustomerManagementPage: React.FC = () => {
           </div>
         )}
       </Card>
+
+      {/* Activate Dialog */}
+      <Dialog open={activateDialogOpen} onOpenChange={(open) => { setActivateDialogOpen(open); if (!open) { setReason(""); setSelectedCustomer(null); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Activate Customer</DialogTitle>
+            <DialogDescription>
+              Enter a reason for activating {selectedCustomer?.name}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="activate-reason">Reason</Label>
+              <Input
+                id="activate-reason"
+                placeholder="Enter reason for activation"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setActivateDialogOpen(false); setReason(""); setSelectedCustomer(null); }}>
+              Cancel
+            </Button>
+            <Button onClick={handleActivate} disabled={!reason.trim() || activateCustomer.isPending}>
+              {activateCustomer.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Activate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Suspend Dialog */}
+      <Dialog open={suspendDialogOpen} onOpenChange={(open) => { setSuspendDialogOpen(open); if (!open) { setReason(""); setSelectedCustomer(null); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Suspend Customer</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to suspend {selectedCustomer?.name}? Enter a reason below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="suspend-reason">Reason</Label>
+              <Input
+                id="suspend-reason"
+                placeholder="Enter reason for suspension"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setSuspendDialogOpen(false); setReason(""); setSelectedCustomer(null); }}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleSuspend} disabled={!reason.trim() || suspendCustomer.isPending}>
+              {suspendCustomer.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Suspend
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

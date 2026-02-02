@@ -88,7 +88,7 @@ class HTMLPDFService:
     def __init__(
         self,
         templates_dir: str = "app/templates",
-        output_dir: str = "storage/pdfs",
+        output_dir: Optional[str] = None,
         company_info: Optional[Dict[str, str]] = None,
         bank_info: Optional[Dict[str, str]] = None
     ):
@@ -97,12 +97,23 @@ class HTMLPDFService:
 
         Args:
             templates_dir: Directory containing Jinja2 templates
-            output_dir: Directory for generated PDF files
+            output_dir: Directory for generated PDF files (defaults to STORAGE_PATH/pdfs/invoices)
             company_info: Company information to use in templates
             bank_info: Bank information for payment details
         """
+        from app.config.settings import get_settings
+        settings = get_settings()
+
         self.templates_dir = Path(templates_dir)
-        self.output_dir = Path(output_dir)
+
+        # Use STORAGE_PATH from settings, resolve to absolute path
+        if output_dir:
+            self.output_dir = Path(output_dir).resolve()
+        else:
+            storage_base = Path(settings.STORAGE_PATH).resolve()
+            self.output_dir = storage_base / "pdfs" / "invoices"
+
+        # Ensure output directory exists
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         self.company = company_info or self.DEFAULT_COMPANY
@@ -183,7 +194,8 @@ class HTMLPDFService:
             with open(output_path, "wb") as pdf_file:
                 pisa_status = pisa.CreatePDF(html_content, dest=pdf_file)
                 if pisa_status.err:
-                    raise Exception(f"PDF generation failed: {pisa_status.err}")
+                    raise Exception(
+                        f"PDF generation failed: {pisa_status.err}")
         else:
             raise ImportError("No PDF engine available")
 
@@ -194,7 +206,8 @@ class HTMLPDFService:
         invoice: Invoice,
         customer_data: Dict[str, Any],
         include_qr: bool = True,
-        custom_template: Optional[str] = None
+        custom_template: Optional[str] = None,
+        company_info: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
         Generate invoice PDF from HTML template.
@@ -204,12 +217,14 @@ class HTMLPDFService:
             customer_data: Customer information dictionary
             include_qr: Whether to include QR code for payment
             custom_template: Optional custom template path
+            company_info: Optional company dict from general settings (app_name, company_name, etc.)
 
         Returns:
             Path to generated PDF file
         """
         template_name = custom_template or "invoices/invoice.html"
         template = self.env.get_template(template_name)
+        company = {**self.company, **(company_info or {})}
 
         # Calculate financial details
         subtotal = float(invoice.subtotal_amount)
@@ -276,14 +291,15 @@ class HTMLPDFService:
             invoice=invoice_data,
             customer=customer_data,
             items=items_data,
-            company=self.company,
+            company=company,
             bank=self.bank,
             currency="DZD",
             currency_name="Dinars Algeriens",
             late_fee_rate=1,
             show_qr=include_qr,
             qr_code_base64=qr_code_base64,
-            generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            generated_at=datetime.now(timezone.utc).strftime(
+                "%Y-%m-%d %H:%M:%S UTC")
         )
 
         # Generate PDF
@@ -300,7 +316,8 @@ class HTMLPDFService:
         self,
         quote: Quote,
         customer_data: Dict[str, Any],
-        custom_template: Optional[str] = None
+        custom_template: Optional[str] = None,
+        company_info: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
         Generate quote PDF from HTML template.
@@ -309,12 +326,14 @@ class HTMLPDFService:
             quote: Quote model instance with items loaded
             customer_data: Customer information dictionary
             custom_template: Optional custom template path
+            company_info: Optional company dict from general settings
 
         Returns:
             Path to generated PDF file
         """
         template_name = custom_template or "quotes/quote.html"
         template = self.env.get_template(template_name)
+        company = {**self.company, **(company_info or {})}
 
         # Calculate financial details
         subtotal = float(quote.subtotal_amount)
@@ -376,11 +395,12 @@ class HTMLPDFService:
             quote=quote_data,
             customer=customer_data,
             items=items_data,
-            company=self.company,
+            company=company,
             bank=self.bank,
             currency="DZD",
             currency_name="Dinars Algeriens",
-            generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            generated_at=datetime.now(timezone.utc).strftime(
+                "%Y-%m-%d %H:%M:%S UTC")
         )
 
         # Generate PDF
@@ -419,7 +439,8 @@ class HTMLPDFService:
 
         # Calculate totals if not provided
         if "subtotal" not in invoice_data:
-            invoice_data["subtotal"] = sum(item.get("line_total", 0) for item in items_data)
+            invoice_data["subtotal"] = sum(
+                item.get("line_total", 0) for item in items_data)
 
         if "total_tax" not in invoice_data:
             tax_rate = invoice_data.get("tax_rate", 19)
@@ -429,13 +450,16 @@ class HTMLPDFService:
             base = subtotal - discount
             invoice_data["tva_amount"] = base * (tax_rate / 100)
             invoice_data["tap_amount"] = base * (tap_rate / 100)
-            invoice_data["total_tax"] = invoice_data["tva_amount"] + invoice_data["tap_amount"]
+            invoice_data["total_tax"] = invoice_data["tva_amount"] + \
+                invoice_data["tap_amount"]
 
         if "total" not in invoice_data:
-            invoice_data["total"] = invoice_data["subtotal"] - invoice_data.get("discount", 0) + invoice_data["total_tax"]
+            invoice_data["total"] = invoice_data["subtotal"] - \
+                invoice_data.get("discount", 0) + invoice_data["total_tax"]
 
         if "balance_due" not in invoice_data:
-            invoice_data["balance_due"] = invoice_data["total"] - invoice_data.get("paid_amount", 0)
+            invoice_data["balance_due"] = invoice_data["total"] - \
+                invoice_data.get("paid_amount", 0)
 
         # Set status display
         if "status_display" not in invoice_data:
@@ -458,11 +482,13 @@ class HTMLPDFService:
             company=self.company,
             bank=self.bank,
             currency=invoice_data.get("currency", "DZD"),
-            currency_name=invoice_data.get("currency_name", "Dinars Algeriens"),
+            currency_name=invoice_data.get(
+                "currency_name", "Dinars Algeriens"),
             late_fee_rate=invoice_data.get("late_fee_rate", 1),
             show_qr=include_qr,
             qr_code_base64=qr_code_base64,
-            generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            generated_at=datetime.now(timezone.utc).strftime(
+                "%Y-%m-%d %H:%M:%S UTC")
         )
 
         # Generate PDF
@@ -513,11 +539,13 @@ class HTMLPDFService:
             company=self.company,
             bank=self.bank,
             currency=invoice_data.get("currency", "DZD"),
-            currency_name=invoice_data.get("currency_name", "Dinars Algeriens"),
+            currency_name=invoice_data.get(
+                "currency_name", "Dinars Algeriens"),
             late_fee_rate=invoice_data.get("late_fee_rate", 1),
             show_qr=False,
             qr_code_base64=None,
-            generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            generated_at=datetime.now(timezone.utc).strftime(
+                "%Y-%m-%d %H:%M:%S UTC")
         )
 
     def generate_custom_pdf(
@@ -544,7 +572,8 @@ class HTMLPDFService:
         # Add common context
         context.setdefault("company", self.company)
         context.setdefault("bank", self.bank)
-        context.setdefault("generated_at", datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"))
+        context.setdefault("generated_at", datetime.now(
+            timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"))
 
         html_content = template.render(**context)
 

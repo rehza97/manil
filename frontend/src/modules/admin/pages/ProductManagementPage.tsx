@@ -9,6 +9,7 @@ import {
   useCreateProduct,
   useDeleteProduct,
 } from "@/modules/products/hooks/useProducts";
+import { ServiceConfigEditor } from "@/modules/products/components";
 import {
   CreateProductDTO,
   UpdateProductDTO,
@@ -31,7 +32,9 @@ export const ProductManagementPage: React.FC = () => {
   const deleteMutation = useDeleteProduct();
 
   // Form state for new product
-  const [formData, setFormData] = useState<CreateProductDTO & { service_config?: string }>({
+  const [formData, setFormData] = useState<
+    CreateProductDTO & { service_config?: Record<string, any> | null }
+  >({
     name: "",
     description: "",
     short_description: "",
@@ -45,24 +48,15 @@ export const ProductManagementPage: React.FC = () => {
     provisioning_type: undefined,
     auto_renew: false,
     trial_period_days: undefined,
-    service_config: "",
+    service_config: null,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Parse service_config JSON if provided
       const submitData: CreateProductDTO = {
         ...formData,
-        service_config: formData.service_config
-          ? (() => {
-              try {
-                return JSON.parse(formData.service_config);
-              } catch {
-                return undefined;
-              }
-            })()
-          : undefined,
+        service_config: formData.service_config ?? undefined,
       };
       
       if (editingProductId) {
@@ -88,7 +82,7 @@ export const ProductManagementPage: React.FC = () => {
         provisioning_type: undefined,
         auto_renew: false,
         trial_period_days: undefined,
-        service_config: "",
+        service_config: null,
       });
       setShowForm(false);
     } catch (error) {
@@ -367,21 +361,12 @@ export const ProductManagementPage: React.FC = () => {
                   </div>
 
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Service Configuration (JSON)
-                    </label>
-                    <textarea
-                      value={formData.service_config || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, service_config: e.target.value })
+                    <ServiceConfigEditor
+                      value={formData.service_config ?? null}
+                      onChange={(config) =>
+                        setFormData({ ...formData, service_config: config })
                       }
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm"
-                      rows={4}
-                      placeholder='{"key": "value"}'
                     />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Optional JSON configuration for service-specific settings
-                    </p>
                   </div>
                 </div>
 
@@ -581,9 +566,7 @@ export const ProductManagementPage: React.FC = () => {
                                 provisioning_type: product.provisioning_type,
                                 auto_renew: product.auto_renew || false,
                                 trial_period_days: product.trial_period_days,
-                                service_config: product.service_config
-                                  ? JSON.stringify(product.service_config, null, 2)
-                                  : "",
+                                service_config: product.service_config ?? null,
                               });
                               setShowForm(true);
                             }}

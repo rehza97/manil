@@ -145,7 +145,8 @@ export const ticketService = {
   },
 
   async update(id: string, data: UpdateTicketDTO): Promise<Ticket> {
-    return await ticketsApi.updateTicket(id, data);
+    const ticket = await ticketsApi.updateTicket(id, data);
+    return transformTicket(ticket);
   },
 
   async delete(id: string): Promise<void> {

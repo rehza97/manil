@@ -23,10 +23,13 @@ class TicketRepository:
     async def create(self, ticket_data: TicketCreate, created_by: str) -> Ticket:
         """Create new ticket with transaction safety."""
         try:
+            ticket_data_dict = ticket_data.model_dump(
+                exclude={"customer_id", "category_id"})
             ticket = Ticket(
                 id=str(uuid.uuid4()),
-                **ticket_data.model_dump(exclude={"customer_id"}),
+                **ticket_data_dict,
                 customer_id=ticket_data.customer_id,
+                category_id=ticket_data.category_id,
                 created_by=created_by,
             )
             self.db.add(ticket)
@@ -54,7 +57,46 @@ class TicketRepository:
             conditions.append(Ticket.customer_id == customer_id)
 
         # Efficient count query using func.count()
-        count_query = select(func.count()).select_from(Ticket).where(and_(*conditions))
+        count_query = select(func.count()).select_from(
+            Ticket).where(and_(*conditions))
+        count_result = await self.db.execute(count_query)
+        total = count_result.scalar() or 0
+
+        # Get paginated results
+        query = (
+            select(Ticket)
+            .where(and_(*conditions))
+            .order_by(Ticket.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+        result = await self.db.execute(query)
+        return result.scalars().all(), total
+
+    async def get_all_with_filters(
+        self, skip: int = 0, limit: int = 20, filters: Optional[dict] = None
+    ) -> tuple[list[Ticket], int]:
+        """Get all tickets with advanced filtering."""
+        if filters is None:
+            filters = {}
+
+        conditions = [Ticket.deleted_at.is_(None)]
+
+        # Apply filters
+        if filters.get("customer_id"):
+            conditions.append(Ticket.customer_id == filters["customer_id"])
+        if filters.get("assigned_to"):
+            conditions.append(Ticket.assigned_to == filters["assigned_to"])
+        if filters.get("status"):
+            conditions.append(Ticket.status == filters["status"])
+        if filters.get("priority"):
+            conditions.append(Ticket.priority == filters["priority"])
+        if filters.get("category_id"):
+            conditions.append(Ticket.category_id == filters["category_id"])
+
+        # Efficient count query
+        count_query = select(func.count()).select_from(
+            Ticket).where(and_(*conditions))
         count_result = await self.db.execute(count_query)
         total = count_result.scalar() or 0
 
@@ -172,7 +214,8 @@ class TicketRepository:
             # Prevent replies to closed tickets
             if ticket.status == "closed":
                 from app.core.exceptions import ForbiddenException
-                raise ForbiddenException("Cannot add replies to closed tickets")
+                raise ForbiddenException(
+                    "Cannot add replies to closed tickets")
 
             reply = TicketReply(
                 id=str(uuid.uuid4()),

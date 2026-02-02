@@ -2,18 +2,21 @@
 Admin email settings API routes.
 
 Endpoints for testing and managing email configuration.
+Uses same path as production: SMTP from .env, from/name/reply_to from DB.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
+from app.config.settings import get_settings
 from app.core.dependencies import require_permission
 from app.core.logging import logger
 from app.core.permissions import Permission
+from app.infrastructure.email.service import EmailService
 from app.modules.auth.models import User
-from app.config.settings import get_settings
-from app.infrastructure.email.providers import get_email_provider
-from pydantic import BaseModel
 
 router = APIRouter(prefix="/email", tags=["admin-email-settings"])
 
@@ -31,63 +34,57 @@ async def test_email_configuration(
 ) -> EmailTestResponse:
     """
     Test email configuration by sending a test email.
-    
-    Attempts to connect to SMTP server and send a test email to the admin email.
-    Returns success/failure status with detailed error message if failed.
-    
-    Requires SETTINGS_EDIT permission.
+    Uses same config as production: SMTP from .env, from/name from DB.
     """
     try:
+        from app.modules.settings.utils import get_app_name
+
         settings = get_settings()
-        provider = get_email_provider()
-        
-        # Get admin email or use EMAIL_FROM as fallback
         test_email = settings.ADMIN_EMAIL or settings.EMAIL_FROM
-        
-        if not test_email or test_email == "admin@cloudmanager.dz":
-            # Use a test email if admin email is not configured
+        if not test_email or test_email == "algerietelecomd@gmail.com":
             test_email = settings.EMAIL_FROM
-        
-        # Prepare test email content
-        subject = "CloudManager Email Configuration Test"
+
+        app_name = await get_app_name(db)
+        subject = f"{app_name} Email Configuration Test"
         html_body = f"""
         <html>
             <body>
                 <h2>Email Configuration Test</h2>
-                <p>This is a test email from CloudManager to verify your SMTP configuration.</p>
+                <p>This is a test email from {app_name} to verify your SMTP configuration.</p>
                 <p>If you received this email, your email settings are working correctly!</p>
                 <hr>
-                <p><small>Test sent at: {__import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()}</small></p>
+                <p><small>Test sent at: {datetime.now(timezone.utc).isoformat()}</small></p>
             </body>
         </html>
         """
-        text_body = "This is a test email from CloudManager to verify your SMTP configuration.\n\nIf you received this email, your email settings are working correctly!"
-        
-        # Attempt to send test email
-        success = await provider.send_email(
-            to=[test_email],
-            subject=subject,
-            html_body=html_body,
+        text_body = f"This is a test email from {app_name} to verify your SMTP configuration.\n\nIf you received this email, your email settings are working correctly!"
+
+        email_service = EmailService()
+        success = await email_service.send_email(
+            [test_email],
+            subject,
+            html_body,
             text_body=text_body,
+            db=db,
         )
-        
+
         if success:
-            logger.info(f"Email test successful - test email sent to {test_email}")
+            logger.info(
+                "Email test successful - test email sent to %s", test_email)
             return EmailTestResponse(
                 success=True,
                 message=f"Test email sent successfully to {test_email}. Please check your inbox."
             )
-        else:
-            logger.error("Email test failed - provider returned False")
-            return EmailTestResponse(
-                success=False,
-                message="Failed to send test email. Please check your SMTP configuration and credentials."
-            )
-            
+        logger.error("Email test failed - provider returned False")
+        return EmailTestResponse(
+            success=False,
+            message="Failed to send test email. Please check your SMTP configuration and credentials."
+        )
+
     except Exception as e:
         error_msg = str(e)
         logger.error(f"Email test error: {error_msg}")
-        
+
         # Provide more helpful error messages
         if "authentication failed" in error_msg.lower() or "login" in error_msg.lower():
             return EmailTestResponse(

@@ -12,7 +12,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
-from typing import List, Optional, Dict
+from typing import Any, Dict, List, Optional
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -32,6 +32,10 @@ class EmailProvider(ABC):
         html_body: str,
         text_body: Optional[str] = None,
         attachments: Optional[List[Dict[str, str]]] = None,
+        *,
+        from_email: Optional[str] = None,
+        from_name: Optional[str] = None,
+        reply_to: Optional[str] = None,
     ) -> bool:
         """
         Send email via provider.
@@ -42,6 +46,9 @@ class EmailProvider(ABC):
             html_body: HTML email body
             text_body: Plain text email body (optional)
             attachments: List of attachments with 'path' and 'filename' keys
+            from_email: Override From address (from DB); else use env
+            from_name: Override From name (from DB); else use env
+            reply_to: Reply-To address (from DB); optional
 
         Returns:
             True if email sent successfully
@@ -50,15 +57,21 @@ class EmailProvider(ABC):
 
 
 class SMTPProvider(EmailProvider):
-    """SMTP email provider implementation."""
+    """
+    SMTP email provider.
+    Connection (host, port, user, password, TLS) from DB when smtp_config provided,
+    otherwise falls back to env.
+    """
 
     def __init__(self):
+        # Defaults from env (fallback)
         self.smtp_host = getattr(settings, "SMTP_HOST", "localhost")
         self.smtp_port = getattr(settings, "SMTP_PORT", 587)
         self.smtp_user = getattr(settings, "SMTP_USERNAME", "")
         self.smtp_password = getattr(settings, "SMTP_PASSWORD", "")
         self.smtp_tls = getattr(settings, "SMTP_USE_TLS", True)
-        self.from_email = settings.EMAIL_FROM
+        self._from_email = settings.EMAIL_FROM
+        self._from_name = getattr(settings, "EMAIL_FROM_NAME", "CloudManager")
 
     async def send_email(
         self,
@@ -67,26 +80,41 @@ class SMTPProvider(EmailProvider):
         html_body: str,
         text_body: Optional[str] = None,
         attachments: Optional[List[Dict[str, str]]] = None,
+        *,
+        from_email: Optional[str] = None,
+        from_name: Optional[str] = None,
+        reply_to: Optional[str] = None,
+        smtp_config: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """
         Send email via SMTP.
-
-        Args:
-            to: List of recipient email addresses
-            subject: Email subject
-            html_body: HTML email body
-            text_body: Plain text email body (optional)
-            attachments: List of attachments with 'path' and 'filename' keys
-
-        Returns:
-            True if email sent successfully, False otherwise
+        SMTP connection from smtp_config (DB) if provided, else uses env defaults.
+        From/Reply-To overridable per call.
         """
         try:
-            # Create message
+            # Use provided SMTP config (from DB) or fall back to instance defaults (env)
+            smtp_host = (smtp_config.get("host")
+                         if smtp_config else None) or self.smtp_host
+            smtp_port = int(
+                (smtp_config.get("port") if smtp_config else None) or self.smtp_port)
+            smtp_user = (smtp_config.get("user")
+                         if smtp_config else None) or self.smtp_user
+            smtp_password = (smtp_config.get("password")
+                             if smtp_config else None) or self.smtp_password
+            smtp_tls = (smtp_config.get("use_tls") if smtp_config else None)
+            if smtp_tls is None:
+                smtp_tls = self.smtp_tls
+
+            addr = from_email or self._from_email
+            name = from_name or self._from_name
+            from_header = f'"{name}" <{addr}>' if name else addr
+
             msg = MIMEMultipart("mixed")
             msg["Subject"] = subject
-            msg["From"] = self.from_email
+            msg["From"] = from_header
             msg["To"] = ", ".join(to)
+            if reply_to:
+                msg["Reply-To"] = reply_to
 
             # Create alternative part for text/html
             msg_alternative = MIMEMultipart("alternative")
@@ -100,23 +128,42 @@ class SMTPProvider(EmailProvider):
 
             # Add attachments if provided
             if attachments:
+                from app.config.settings import get_settings
+                settings = get_settings()
+                storage_base = Path(settings.STORAGE_PATH).resolve()
+
                 for attachment in attachments:
                     file_path = attachment.get('path')
                     filename = attachment.get('filename')
 
-                    if file_path and Path(file_path).exists():
-                        with open(file_path, 'rb') as f:
-                            part = MIMEApplication(f.read(), Name=filename)
-                            part['Content-Disposition'] = f'attachment; filename="{filename}"'
-                            msg.attach(part)
+                    if file_path:
+                        # Resolve and validate path to prevent path traversal
+                        try:
+                            resolved_path = Path(file_path).resolve()
+                            # Ensure path is within storage directory
+                            if not str(resolved_path).startswith(str(storage_base)):
+                                logger.warning(
+                                    f"Invalid attachment path (outside storage): {file_path}")
+                                continue
+
+                            if resolved_path.exists() and resolved_path.is_file():
+                                with open(resolved_path, 'rb') as f:
+                                    part = MIMEApplication(
+                                        f.read(), Name=filename)
+                                    part['Content-Disposition'] = f'attachment; filename="{filename}"'
+                                    msg.attach(part)
+                        except Exception as e:
+                            logger.warning(
+                                f"Failed to attach file {file_path}: {e}")
+                            continue
 
             # Connect to SMTP server
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                if self.smtp_tls:
+            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                if smtp_tls:
                     server.starttls()
 
-                if self.smtp_user and self.smtp_password:
-                    server.login(self.smtp_user, self.smtp_password)
+                if smtp_user and smtp_password:
+                    server.login(smtp_user, smtp_password)
 
                 server.send_message(msg)
 
@@ -127,11 +174,12 @@ class SMTPProvider(EmailProvider):
 
 
 class SendGridProvider(EmailProvider):
-    """SendGrid email provider implementation."""
+    """SendGrid email provider. From/name/reply_to overridable per call from DB."""
 
     def __init__(self):
         self.api_key = settings.SENDGRID_API_KEY
-        self.from_email = settings.EMAIL_FROM
+        self._from_email = settings.EMAIL_FROM
+        self._from_name = getattr(settings, "EMAIL_FROM_NAME", "CloudManager")
 
     async def send_email(
         self,
@@ -140,32 +188,29 @@ class SendGridProvider(EmailProvider):
         html_body: str,
         text_body: Optional[str] = None,
         attachments: Optional[List[Dict[str, str]]] = None,
+        *,
+        from_email: Optional[str] = None,
+        from_name: Optional[str] = None,
+        reply_to: Optional[str] = None,
     ) -> bool:
-        """
-        Send email via SendGrid.
-
-        Args:
-            to: List of recipient email addresses
-            subject: Email subject
-            html_body: HTML email body
-            text_body: Plain text email body (optional)
-            attachments: List of attachments with 'path' and 'filename' keys
-
-        Returns:
-            True if email sent successfully, False otherwise
-        """
+        """Send email via SendGrid."""
         try:
             from sendgrid import SendGridAPIClient
-            from sendgrid.helpers.mail import Mail, Content, Attachment, FileContent, FileName, FileType, Disposition
+            from sendgrid.helpers.mail import Mail, Content, Attachment, FileContent, FileName, FileType, Disposition, Email
             import base64
 
-            # Create message
+            addr = from_email or self._from_email
+            name = from_name or self._from_name
+            from_addr = Email(addr, name) if name else Email(addr)
+
             mail = Mail(
-                from_email=self.from_email,
+                from_email=from_addr,
                 to_emails=to,
                 subject=subject,
                 html_content=html_body,
             )
+            if reply_to:
+                mail.reply_to = Email(reply_to)
 
             if text_body:
                 mail.content = [
@@ -203,11 +248,12 @@ class SendGridProvider(EmailProvider):
 
 
 class SESProvider(EmailProvider):
-    """AWS SES email provider implementation."""
+    """AWS SES. From/name/reply_to overridable per call from DB."""
 
     def __init__(self):
         self.region = getattr(settings, "AWS_SES_REGION", "us-east-1")
-        self.from_email = settings.EMAIL_FROM
+        self._from_email = settings.EMAIL_FROM
+        self._from_name = getattr(settings, "EMAIL_FROM_NAME", "CloudManager")
         self.access_key = getattr(settings, "AWS_ACCESS_KEY_ID", None)
         self.secret_key = getattr(settings, "AWS_SECRET_ACCESS_KEY", None)
 
@@ -218,15 +264,18 @@ class SESProvider(EmailProvider):
         html_body: str,
         text_body: Optional[str] = None,
         attachments: Optional[List[Dict[str, str]]] = None,
+        *,
+        from_email: Optional[str] = None,
+        from_name: Optional[str] = None,
+        reply_to: Optional[str] = None,
     ) -> bool:
-        """
-        Send email via AWS SES.
-
-        Uses boto3 SES client. Credentials via AWS_ACCESS_KEY_ID,
-        AWS_SECRET_ACCESS_KEY, or default boto3 resolution (env/instance).
-        """
+        """Send email via AWS SES."""
         try:
             import boto3
+
+            addr = from_email or self._from_email
+            name = from_name or self._from_name
+            from_header = f'"{name}" <{addr}>' if name else addr
 
             client_kw: dict = {"region_name": self.region}
             if self.access_key and self.secret_key:
@@ -236,8 +285,10 @@ class SESProvider(EmailProvider):
 
             msg = MIMEMultipart("alternative")
             msg["Subject"] = subject
-            msg["From"] = self.from_email
+            msg["From"] = from_header
             msg["To"] = ", ".join(to)
+            if reply_to:
+                msg["Reply-To"] = reply_to
             if text_body:
                 msg.attach(MIMEText(text_body, "plain"))
             msg.attach(MIMEText(html_body, "html"))
@@ -246,7 +297,7 @@ class SESProvider(EmailProvider):
 
             def _send() -> dict:
                 return ses.send_raw_email(
-                    Source=self.from_email,
+                    Source=addr,
                     Destinations=to,
                     RawMessage={"Data": raw.encode("utf-8")},
                 )

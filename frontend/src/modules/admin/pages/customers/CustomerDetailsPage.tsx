@@ -22,9 +22,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/shared/components/ui/tabs";
-import {
-  useCustomer,
-} from "@/modules/customers/hooks";
+import { useCustomer } from "@/modules/customers/hooks";
 import { CustomerDetail } from "@/modules/customers/components/CustomerDetail";
 import { KYCPanel } from "@/modules/customers/components/KYCPanel";
 import { StatusTransition } from "@/modules/customers/components/StatusTransition";
@@ -36,23 +34,6 @@ export const CustomerDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: customer, isLoading } = useCustomer(id || "");
-  const activateCustomer = useActivateCustomer();
-  const suspendCustomer = useSuspendCustomer();
-
-  const handleActivate = async () => {
-    if (id) {
-      await activateCustomer.mutateAsync(id);
-    }
-  };
-
-  const handleSuspend = async () => {
-    if (
-      id &&
-      window.confirm("Are you sure you want to suspend this customer?")
-    ) {
-      await suspendCustomer.mutateAsync(id);
-    }
-  };
 
   if (isLoading) {
     return (

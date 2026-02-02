@@ -503,26 +503,134 @@ SYSTEM_SETTINGS = [
         "is_public": False,
     },
 
-    # Notification settings
+    # Notification settings - Global toggles
+    {
+        "key": "notification.email_enabled",
+        "value": {"value": True, "type": "boolean"},
+        "category": "notification",
+        "description": "Enable email notifications system-wide",
+        "is_public": False,
+    },
+    {
+        "key": "notification.sms_enabled",
+        "value": {"value": False, "type": "boolean"},
+        "category": "notification",
+        "description": "Enable SMS notifications system-wide",
+        "is_public": False,
+    },
+    {
+        "key": "notification.push_enabled",
+        "value": {"value": False, "type": "boolean"},
+        "category": "notification",
+        "description": "Enable push notifications system-wide",
+        "is_public": False,
+    },
+
+    # Notification settings - Event toggles for Tickets
+    {
+        "key": "notification.ticket_events",
+        "value": {
+            "value": {
+                "created": True,
+                "replied": True,
+                "assigned": True,
+                "status_changed": True,
+                "closed": True
+            },
+            "type": "object"
+        },
+        "category": "notification",
+        "description": "Enable/disable notifications for ticket events",
+        "is_public": False,
+    },
+
+    # Notification settings - Event toggles for Orders
+    {
+        "key": "notification.order_events",
+        "value": {
+            "value": {
+                "created": True,
+                "approved": True,
+                "shipped": True,
+                "delivered": True,
+                "cancelled": True
+            },
+            "type": "object"
+        },
+        "category": "notification",
+        "description": "Enable/disable notifications for order events",
+        "is_public": False,
+    },
+
+    # Notification settings - Event toggles for Invoices
+    {
+        "key": "notification.invoice_events",
+        "value": {
+            "value": {
+                "issued": True,
+                "sent": True,
+                "payment_received": True,
+                "overdue": True
+            },
+            "type": "object"
+        },
+        "category": "notification",
+        "description": "Enable/disable notifications for invoice events",
+        "is_public": False,
+    },
+
+    # Notification settings - Quiet Hours
+    {
+        "key": "notification.quiet_hours",
+        "value": {
+            "value": {
+                "enabled": False,
+                "start": 22,
+                "end": 7
+            },
+            "type": "object"
+        },
+        "category": "notification",
+        "description": "Quiet hours - no notifications during this time period (24h format)",
+        "is_public": False,
+    },
+
+    # Notification settings - Digest
+    {
+        "key": "notification.digest_enabled",
+        "value": {"value": False, "type": "boolean"},
+        "category": "notification",
+        "description": "Enable daily notification digest instead of individual notifications",
+        "is_public": False,
+    },
+    {
+        "key": "notification.digest_time",
+        "value": {"value": "09:00", "type": "string"},
+        "category": "notification",
+        "description": "Time to send daily digest (HH:MM format)",
+        "is_public": False,
+    },
+
+    # Legacy notification settings (for backwards compatibility)
     {
         "key": "email_notifications",
         "value": True,
         "category": "notifications",
-        "description": "Enable email notifications",
+        "description": "Enable email notifications (legacy)",
         "is_public": False,
     },
     {
         "key": "sms_notifications",
         "value": False,
         "category": "notifications",
-        "description": "Enable SMS notifications",
+        "description": "Enable SMS notifications (legacy)",
         "is_public": False,
     },
     {
         "key": "push_notifications",
         "value": False,
         "category": "notifications",
-        "description": "Enable push notifications",
+        "description": "Enable push notifications (legacy)",
         "is_public": False,
     },
     {
@@ -672,47 +780,33 @@ SYSTEM_SETTINGS = [
         "is_public": False,
     },
 
-    # SMS settings
+    # SMS settings (keys must match what get_sms_config() expects)
     {
-        "key": "sms_provider",
-        "value": "custom",
+        "key": "sms.provider",
+        "value": {"value": "custom", "type": "string"},
         "category": "sms",
-        "description": "SMS provider (custom, twilio, infobip, mock)",
+        "description": "SMS provider: 'custom' (Flutter app) or 'twilio' (API)",
         "is_public": False,
     },
     {
-        "key": "sms_enabled",
-        "value": False,
+        "key": "sms.twilio.account_sid",
+        "value": {"value": "", "type": "string"},
         "category": "sms",
-        "description": "Enable SMS functionality",
+        "description": "Twilio account SID (only if using Twilio provider)",
         "is_public": False,
     },
     {
-        "key": "twilio_account_sid",
-        "value": "",
+        "key": "sms.twilio.auth_token",
+        "value": {"value": "", "type": "string"},
         "category": "sms",
-        "description": "Twilio account SID",
+        "description": "Twilio authentication token (only if using Twilio provider)",
         "is_public": False,
     },
     {
-        "key": "twilio_auth_token",
-        "value": "",
+        "key": "sms.twilio.from_number",
+        "value": {"value": "", "type": "string"},
         "category": "sms",
-        "description": "Twilio authentication token",
-        "is_public": False,
-    },
-    {
-        "key": "twilio_phone_number",
-        "value": "",
-        "category": "sms",
-        "description": "Twilio phone number for sending SMS",
-        "is_public": False,
-    },
-    {
-        "key": "sms_sender_name",
-        "value": "CloudHost",
-        "category": "sms",
-        "description": "SMS sender name/ID",
+        "description": "Twilio phone number for sending SMS (only if using Twilio provider)",
         "is_public": False,
     },
 ]

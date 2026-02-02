@@ -34,10 +34,10 @@ export const orderService = {
       status?: OrderStatus;
     }
   ): Promise<OrderListResponse> {
-    // Use centralized API
+    // Use centralized API - backend expects page/page_size, not skip/limit
     const response = await ordersApi.getOrders({
-      skip: (page - 1) * pageSize,
-      limit: pageSize,
+      page,
+      page_size: pageSize,
       ...filters,
     });
     return response as OrderListResponse;
@@ -99,5 +99,13 @@ export const orderService = {
   ): Promise<OrderListResponse> {
     const response = await ordersApi.getCustomerOrders(customerId);
     return response as OrderListResponse;
+  },
+
+  /**
+   * Get allowed status transitions for an order
+   */
+  async getAllowedTransitions(orderId: string): Promise<{ allowed_transitions: OrderStatus[] }> {
+    const response = await ordersApi.getAllowedTransitions(orderId);
+    return response as { allowed_transitions: OrderStatus[] };
   },
 };

@@ -144,3 +144,18 @@ export const useCustomerOrders = (
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 };
+
+/**
+ * Get allowed status transitions for an order
+ */
+export const useOrderTransitions = (orderId: string | null) => {
+  return useQuery({
+    queryKey: ["orders", orderId, "transitions"],
+    queryFn: () => {
+      if (!orderId) throw new Error("Order ID required");
+      return orderService.getAllowedTransitions(orderId);
+    },
+    enabled: !!orderId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+};

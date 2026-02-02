@@ -20,3 +20,9 @@ health :8080
 
 # Include zone-specific configs (will be auto-generated)
 import /etc/coredns/zones/*.conf
+
+# Reload triggered at 2026-01-28T02:29:02.736523
+
+# Reload triggered at 2026-01-28T02:29:43.214533
+
+# Reload triggered at 2026-01-28T02:29:49.573111

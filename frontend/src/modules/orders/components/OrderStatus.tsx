@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { useOrder, useUpdateOrderStatus } from "../hooks/useOrders";
+import { useOrder, useUpdateOrderStatus, useOrderTransitions } from "../hooks/useOrders";
 import type { OrderStatus } from "../types/order.types";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
@@ -62,16 +62,15 @@ const STATUS_DESCRIPTIONS: Record<OrderStatus, string> = {
   cancelled: "Commande annulée",
 };
 
-// Valid status transitions for simple status changes (non-validation workflow)
-// Note: Validation workflow uses separate endpoints
-const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  request: ["validated", "cancelled"],  // Skip validation path
-  pending_commercial: ["cancelled"],  // Use validation workflow
-  commercial_approved: ["cancelled"],  // Use validation workflow
-  commercial_rejected: ["cancelled"],  // Use validation workflow
-  pending_technical: ["cancelled"],  // Use validation workflow
-  technical_approved: ["validated", "cancelled"],  // Finalize or cancel
-  technical_rejected: ["cancelled"],  // Use validation workflow
+// Fallback transitions if API fails (for non-validation workflow orders)
+const FALLBACK_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  request: ["validated", "cancelled"],
+  pending_commercial: ["cancelled"],
+  commercial_approved: ["cancelled"],
+  commercial_rejected: ["cancelled"],
+  pending_technical: ["cancelled"],
+  technical_approved: ["validated", "cancelled"],
+  technical_rejected: ["cancelled"],
   validated: ["in_progress", "cancelled"],
   in_progress: ["delivered", "cancelled"],
   delivered: [],
@@ -110,6 +109,7 @@ export function OrderStatus() {
   }
 
   const { data: order, isLoading: orderLoading, isError: orderError } = useOrder(orderId);
+  const { data: transitionsData, isLoading: transitionsLoading } = useOrderTransitions(orderId);
   const updateStatusMutation = useUpdateOrderStatus();
 
   const handleStatusChange = async () => {
@@ -129,7 +129,9 @@ export function OrderStatus() {
     }
   };
 
-  const availableTransitions = order ? VALID_TRANSITIONS[order.status] : [];
+  // Use API transitions if available, fallback to hardcoded for non-validation workflow orders
+  const availableTransitions = transitionsData?.allowed_transitions || 
+    (order ? FALLBACK_TRANSITIONS[order.status] || [] : []);
   const isTransitionAvailable = selectedStatus && availableTransitions.includes(selectedStatus);
 
   if (orderError) {

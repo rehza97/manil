@@ -14,6 +14,7 @@ from app.modules.products.quote_models import QuoteRequest, ServiceRequest
 from app.modules.customers.models import Customer
 from app.modules.notifications.service import user_id_by_email
 from app.modules.settings.service import UserNotificationPreferencesService
+from app.modules.settings.utils import notification_gate_allows
 from app.config.settings import get_settings
 from sqlalchemy import select
 
@@ -33,21 +34,31 @@ class QuoteNotificationService:
         customer_email = quote.customer_email or quote.customer_name
         if not customer_email:
             return
-        
-        # Check email preferences
+
+        # Check notification gates first
+        gate_allows_email = await notification_gate_allows(db, "email", "quote.created")
+        gate_allows_sms = await notification_gate_allows(db, "sms", "quote.created")
+
+        if not gate_allows_email and not gate_allows_sms:
+            return  # Both channels blocked by gate
+
+        # Check user preferences
         uid = await user_id_by_email(db, customer_email)
         should_send_email = True
         should_send_sms = False
         customer_phone = None
-        
+
         if uid:
             prefs_svc = UserNotificationPreferencesService(db)
             prefs = await prefs_svc.get(uid)
-            should_send_email = bool(prefs.get("email", {}).get("quoteUpdates", True))
-            should_send_sms = bool(prefs.get("sms", {}).get("quoteUpdates", False))
-        
+            # Quotes use orderUpdates preference key (standardized)
+            should_send_email = bool(
+                prefs.get("email", {}).get("orderUpdates", True))
+            should_send_sms = bool(
+                prefs.get("sms", {}).get("orderUpdates", False))
+
         # Get customer phone if SMS is enabled
-        if should_send_sms:
+        if should_send_sms and gate_allows_sms:
             try:
                 result = await db.execute(
                     select(Customer).where(Customer.email == customer_email)
@@ -57,20 +68,22 @@ class QuoteNotificationService:
                     customer_phone = customer.phone
             except Exception as e:
                 logger.warning(f"Failed to get customer phone for SMS: {e}")
-        
-        # Send email if preferences allow
-        if should_send_email:
-            QuoteNotificationService.send_quote_creation_email(quote, frontend_url)
-        
-        # Send SMS if preferences allow and phone exists
-        if should_send_sms and customer_phone:
+
+        # Send email if gate and preferences allow
+        if should_send_email and gate_allows_email:
+            QuoteNotificationService.send_quote_creation_email(
+                quote, frontend_url)
+
+        # Send SMS if gate, preferences allow and phone exists
+        if should_send_sms and gate_allows_sms and customer_phone:
             try:
                 sms_service = SMSService()
                 await sms_service.send_quote_notification(
                     to=customer_phone,
                     quote_id=quote.id,
                     status="created",
-                    message=f"Quote request {quote.id} created. We'll review it soon."
+                    message=f"Quote request {quote.id} created. We'll review it soon.",
+                    db=db
                 )
             except Exception as e:
                 logger.warning(f"Failed to send quote creation SMS: {e}")
@@ -103,23 +116,34 @@ class QuoteNotificationService:
     async def send_quote_approved_notification(
         db: AsyncSession, quote: QuoteRequest, frontend_url: str = "http://localhost:3000"
     ) -> None:
-        """Send quote approved notification (email + SMS) with preference checks."""
+        """Send quote approved notification (email + SMS) with gate checks and preference checks."""
         customer_email = quote.customer_email
         if not customer_email:
             return
-        
+
+        # Check notification gates first
+        gate_allows_email = await notification_gate_allows(db, "email", "quote.approved")
+        gate_allows_sms = await notification_gate_allows(db, "sms", "quote.approved")
+
+        if not gate_allows_email and not gate_allows_sms:
+            return  # Both channels blocked by gate
+
+        # Check user preferences
         uid = await user_id_by_email(db, customer_email)
         should_send_email = True
         should_send_sms = False
         customer_phone = None
-        
+
         if uid:
             prefs_svc = UserNotificationPreferencesService(db)
             prefs = await prefs_svc.get(uid)
-            should_send_email = bool(prefs.get("email", {}).get("quoteUpdates", True))
-            should_send_sms = bool(prefs.get("sms", {}).get("quoteUpdates", False))
-        
-        if should_send_sms:
+            # Quotes use orderUpdates preference key (standardized)
+            should_send_email = bool(
+                prefs.get("email", {}).get("orderUpdates", True))
+            should_send_sms = bool(
+                prefs.get("sms", {}).get("orderUpdates", False))
+
+        if should_send_sms and gate_allows_sms:
             try:
                 result = await db.execute(
                     select(Customer).where(Customer.email == customer_email)
@@ -129,18 +153,20 @@ class QuoteNotificationService:
                     customer_phone = customer.phone
             except Exception as e:
                 logger.warning(f"Failed to get customer phone for SMS: {e}")
-        
-        if should_send_email:
-            QuoteNotificationService.send_quote_approved_email(quote, frontend_url)
-        
-        if should_send_sms and customer_phone:
+
+        if should_send_email and gate_allows_email:
+            QuoteNotificationService.send_quote_approved_email(
+                quote, frontend_url)
+
+        if should_send_sms and gate_allows_sms and customer_phone:
             try:
                 sms_service = SMSService()
                 await sms_service.send_quote_notification(
                     to=customer_phone,
                     quote_id=quote.id,
                     status="approved",
-                    message=f"Quote {quote.id} has been reviewed and is ready."
+                    message=f"Quote {quote.id} has been reviewed and is ready.",
+                    db=db
                 )
             except Exception as e:
                 logger.warning(f"Failed to send quote approved SMS: {e}")
@@ -177,19 +203,44 @@ class QuoteNotificationService:
         customer_email = quote.customer_email
         if not customer_email:
             return
-        
+
         uid = await user_id_by_email(db, customer_email)
         should_send_email = True
         should_send_sms = False
         customer_phone = None
-        
+
         if uid:
             prefs_svc = UserNotificationPreferencesService(db)
             prefs = await prefs_svc.get(uid)
-            should_send_email = bool(prefs.get("email", {}).get("quoteUpdates", True))
-            should_send_sms = bool(prefs.get("sms", {}).get("quoteUpdates", False))
-        
-        if should_send_sms:
+            # Quotes use orderUpdates preference key (standardized)
+            should_send_email = bool(
+                prefs.get("email", {}).get("orderUpdates", True))
+            should_send_sms = bool(
+                prefs.get("sms", {}).get("orderUpdates", False))
+
+        # Check notification gates first
+        gate_allows_email = await notification_gate_allows(db, "email", "quote.quoted")
+        gate_allows_sms = await notification_gate_allows(db, "sms", "quote.quoted")
+
+        if not gate_allows_email and not gate_allows_sms:
+            return  # Both channels blocked by gate
+
+        # Check user preferences
+        uid = await user_id_by_email(db, customer_email)
+        should_send_email = True
+        should_send_sms = False
+        customer_phone = None
+
+        if uid:
+            prefs_svc = UserNotificationPreferencesService(db)
+            prefs = await prefs_svc.get(uid)
+            # Quotes use orderUpdates preference key (standardized)
+            should_send_email = bool(
+                prefs.get("email", {}).get("orderUpdates", True))
+            should_send_sms = bool(
+                prefs.get("sms", {}).get("orderUpdates", False))
+
+        if should_send_sms and gate_allows_sms:
             try:
                 result = await db.execute(
                     select(Customer).where(Customer.email == customer_email)
@@ -199,11 +250,12 @@ class QuoteNotificationService:
                     customer_phone = customer.phone
             except Exception as e:
                 logger.warning(f"Failed to get customer phone for SMS: {e}")
-        
-        if should_send_email:
-            QuoteNotificationService.send_quote_quoted_email(quote, frontend_url)
-        
-        if should_send_sms and customer_phone:
+
+        if should_send_email and gate_allows_email:
+            QuoteNotificationService.send_quote_quoted_email(
+                quote, frontend_url)
+
+        if should_send_sms and gate_allows_sms and customer_phone:
             try:
                 price = float(quote.estimated_price or quote.final_price or 0)
                 sms_service = SMSService()
@@ -211,7 +263,8 @@ class QuoteNotificationService:
                     to=customer_phone,
                     quote_id=quote.id,
                     status="quoted",
-                    message=f"Quote {quote.id} ready: {price:.2f} DZD. Please review."
+                    message=f"Quote {quote.id} ready: {price:.2f} DZD. Please review.",
+                    db=db
                 )
             except Exception as e:
                 logger.warning(f"Failed to send quote quoted SMS: {e}")
@@ -246,23 +299,34 @@ class QuoteNotificationService:
     async def send_quote_accepted_notification(
         db: AsyncSession, quote: QuoteRequest, frontend_url: str = "http://localhost:3000"
     ) -> None:
-        """Send quote accepted notification (email + SMS) with preference checks."""
+        """Send quote accepted notification (email + SMS) with gate checks and preference checks."""
         customer_email = quote.customer_email
         if not customer_email:
             return
-        
+
+        # Check notification gates first
+        gate_allows_email = await notification_gate_allows(db, "email", "quote.accepted")
+        gate_allows_sms = await notification_gate_allows(db, "sms", "quote.accepted")
+
+        if not gate_allows_email and not gate_allows_sms:
+            return  # Both channels blocked by gate
+
+        # Check user preferences
         uid = await user_id_by_email(db, customer_email)
         should_send_email = True
         should_send_sms = False
         customer_phone = None
-        
+
         if uid:
             prefs_svc = UserNotificationPreferencesService(db)
             prefs = await prefs_svc.get(uid)
-            should_send_email = bool(prefs.get("email", {}).get("quoteUpdates", True))
-            should_send_sms = bool(prefs.get("sms", {}).get("quoteUpdates", False))
-        
-        if should_send_sms:
+            # Quotes use orderUpdates preference key (standardized)
+            should_send_email = bool(
+                prefs.get("email", {}).get("orderUpdates", True))
+            should_send_sms = bool(
+                prefs.get("sms", {}).get("orderUpdates", False))
+
+        if should_send_sms and gate_allows_sms:
             try:
                 result = await db.execute(
                     select(Customer).where(Customer.email == customer_email)
@@ -272,18 +336,20 @@ class QuoteNotificationService:
                     customer_phone = customer.phone
             except Exception as e:
                 logger.warning(f"Failed to get customer phone for SMS: {e}")
-        
-        if should_send_email:
-            QuoteNotificationService.send_quote_accepted_email(quote, frontend_url)
-        
-        if should_send_sms and customer_phone:
+
+        if should_send_email and gate_allows_email:
+            QuoteNotificationService.send_quote_accepted_email(
+                quote, frontend_url)
+
+        if should_send_sms and gate_allows_sms and customer_phone:
             try:
                 sms_service = SMSService()
                 await sms_service.send_quote_notification(
                     to=customer_phone,
                     quote_id=quote.id,
                     status="accepted",
-                    message=f"Quote {quote.id} accepted! We'll proceed with your order."
+                    message=f"Quote {quote.id} accepted! We'll proceed with your order.",
+                    db=db
                 )
             except Exception as e:
                 logger.warning(f"Failed to send quote accepted SMS: {e}")
@@ -333,29 +399,41 @@ class QuoteNotificationService:
             ))
             logger.info(f"Quote accepted corporate email sent")
         except Exception as e:
-            logger.warning(f"Failed to send quote accepted corporate email: {str(e)}")
+            logger.warning(
+                f"Failed to send quote accepted corporate email: {str(e)}")
 
     @staticmethod
     async def send_quote_rejected_notification(
         db: AsyncSession, quote: QuoteRequest, reason: Optional[str] = None, frontend_url: str = "http://localhost:3000"
     ) -> None:
-        """Send quote rejected notification (email + SMS) with preference checks."""
+        """Send quote rejected notification (email + SMS) with gate checks and preference checks."""
         customer_email = quote.customer_email
         if not customer_email:
             return
-        
+
+        # Check notification gates first
+        gate_allows_email = await notification_gate_allows(db, "email", "quote.rejected")
+        gate_allows_sms = await notification_gate_allows(db, "sms", "quote.rejected")
+
+        if not gate_allows_email and not gate_allows_sms:
+            return  # Both channels blocked by gate
+
+        # Check user preferences
         uid = await user_id_by_email(db, customer_email)
         should_send_email = True
         should_send_sms = False
         customer_phone = None
-        
+
         if uid:
             prefs_svc = UserNotificationPreferencesService(db)
             prefs = await prefs_svc.get(uid)
-            should_send_email = bool(prefs.get("email", {}).get("quoteUpdates", True))
-            should_send_sms = bool(prefs.get("sms", {}).get("quoteUpdates", False))
-        
-        if should_send_sms:
+            # Quotes use orderUpdates preference key (standardized)
+            should_send_email = bool(
+                prefs.get("email", {}).get("orderUpdates", True))
+            should_send_sms = bool(
+                prefs.get("sms", {}).get("orderUpdates", False))
+
+        if should_send_sms and gate_allows_sms:
             try:
                 result = await db.execute(
                     select(Customer).where(Customer.email == customer_email)
@@ -365,18 +443,20 @@ class QuoteNotificationService:
                     customer_phone = customer.phone
             except Exception as e:
                 logger.warning(f"Failed to get customer phone for SMS: {e}")
-        
-        if should_send_email:
-            QuoteNotificationService.send_quote_rejected_email(quote, reason, frontend_url)
-        
-        if should_send_sms and customer_phone:
+
+        if should_send_email and gate_allows_email:
+            QuoteNotificationService.send_quote_rejected_email(
+                quote, reason, frontend_url)
+
+        if should_send_sms and gate_allows_sms and customer_phone:
             try:
                 sms_service = SMSService()
                 await sms_service.send_quote_notification(
                     to=customer_phone,
                     quote_id=quote.id,
                     status="rejected",
-                    message=f"Quote {quote.id} was not approved. Contact us for details."
+                    message=f"Quote {quote.id} was not approved. Contact us for details.",
+                    db=db
                 )
             except Exception as e:
                 logger.warning(f"Failed to send quote rejected SMS: {e}")
@@ -426,7 +506,8 @@ class QuoteNotificationService:
             ))
             logger.info(f"Quote rejected corporate email sent")
         except Exception as e:
-            logger.warning(f"Failed to send quote rejected corporate email: {str(e)}")
+            logger.warning(
+                f"Failed to send quote rejected corporate email: {str(e)}")
 
     @staticmethod
     def send_service_request_email(service: ServiceRequest, frontend_url: str = "http://localhost:3000") -> None:
@@ -448,6 +529,7 @@ class QuoteNotificationService:
                 html_body=template["html"],
                 text_body=template.get("text")
             ))
-            logger.info(f"Service request email sent to {service.customer_email}")
+            logger.info(
+                f"Service request email sent to {service.customer_email}")
         except Exception as e:
             logger.warning(f"Failed to send service request email: {str(e)}")

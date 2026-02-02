@@ -13,6 +13,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.core.logging import logger, log_request
 from app.config.redis import get_redis
 from app.config.settings import get_settings
+from app.modules.settings.utils import get_rate_limit_cached
 
 settings = get_settings()
 
@@ -106,7 +107,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 if "No response returned" in str(e):
                     return Response(status_code=204)
                 raise
-        
+
         if request.url.path in excluded_paths:
             try:
                 return await call_next(request)
@@ -116,29 +117,35 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 raise
 
         try:
+            limit_cfg = await get_rate_limit_cached()
+            enabled = limit_cfg.get("enabled", True)
+            requests_per_minute = int(limit_cfg.get(
+                "requests_per_minute") or settings.RATE_LIMIT_PER_MINUTE or 60)
+            if not enabled:
+                try:
+                    return await call_next(request)
+                except RuntimeError as e:
+                    if "No response returned" in str(e):
+                        return Response(status_code=204)
+                    raise
+
             redis = await get_redis()
             if redis:
-                # Create rate limit key
                 key = f"rate_limit:{client_ip}"
-
-                # Increment request count
                 current_requests = await redis.incr(key)
-
-                # Set expiration on first request
                 if current_requests == 1:
-                    await redis.expire(key, 60)  # 60 seconds window
+                    await redis.expire(key, 60)
 
-                # Check if limit exceeded
-                if current_requests > settings.RATE_LIMIT_PER_MINUTE:
+                if current_requests > requests_per_minute:
                     logger.warning(
-                        f"Rate limit exceeded for IP: {client_ip} ({current_requests} requests)")
+                        "Rate limit exceeded for IP %s (%s requests)",
+                        client_ip, current_requests)
                     raise HTTPException(
                         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                         detail="Rate limit exceeded. Please try again later.",
                         headers={"Retry-After": "60"},
                     )
 
-                # Add rate limit headers to response
                 try:
                     response = await call_next(request)
                 except RuntimeError as e:
@@ -146,9 +153,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                         return Response(status_code=204)
                     raise
                 response.headers["X-RateLimit-Limit"] = str(
-                    settings.RATE_LIMIT_PER_MINUTE)
+                    requests_per_minute)
                 response.headers["X-RateLimit-Remaining"] = str(
-                    max(0, settings.RATE_LIMIT_PER_MINUTE - current_requests))
+                    max(0, requests_per_minute - current_requests))
                 return response
             else:
                 # Redis not available, skip rate limiting

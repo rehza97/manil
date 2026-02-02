@@ -168,6 +168,26 @@ export const settingsService = {
   },
 
   /**
+   * Test SMS configuration
+   */
+  async testSMSConfig(): Promise<{ success: boolean; message: string }> {
+    const response = await apiClient.post("/admin/settings/sms/test");
+    return response.data;
+  },
+
+  /**
+   * Test notification configuration
+   */
+  async testNotificationConfig(): Promise<{ 
+    success: boolean; 
+    message: string; 
+    details?: Record<string, any> 
+  }> {
+    const response = await apiClient.post("/admin/settings/notification/test");
+    return response.data;
+  },
+
+  /**
    * Get settings by category (new backend API)
    */
   async getSettingsByCategory(category: string): Promise<Setting[]> {

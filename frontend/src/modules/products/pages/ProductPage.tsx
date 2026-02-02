@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { formatCurrency } from "@/shared/utils/formatters";
 import {
   ProductCarousel,
@@ -13,8 +13,37 @@ import type { ProductVariant } from "../types";
 export const ProductPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const catalogBase = useCatalogBase();
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+
+  const getOrderCreatePath = () => {
+    if (location.pathname.startsWith("/dashboard")) return "/dashboard/orders/create";
+    if (location.pathname.startsWith("/corporate")) return "/corporate/orders/create";
+    if (location.pathname.startsWith("/admin")) return "/admin/orders/create";
+    return "/dashboard/orders/create";
+  };
+
+  const handleOrderProduct = () => {
+    if (!product || !product.is_active) return;
+    const unitPrice = selectedVariant?.price_adjustment != null
+      ? product.regular_price + selectedVariant.price_adjustment
+      : (product.sale_price ?? product.regular_price);
+    navigate(getOrderCreatePath(), {
+      state: {
+        product: {
+          id: product.id,
+          name: product.name,
+          sku: product.sku,
+          regular_price: product.regular_price,
+          sale_price: product.sale_price,
+        },
+        selectedVariant: selectedVariant ?? undefined,
+        quantity: 1,
+        unit_price: unitPrice,
+      },
+    });
+  };
 
   // Fetch product details
   const {
@@ -109,14 +138,14 @@ export const ProductPage: React.FC = () => {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Image Carousel */}
-            <div>
+            {/* Image Carousel - commented out */}
+            {/* <div>
               <ProductCarousel
                 images={product.images || []}
                 productName={product.name}
                 autoplay={true}
               />
-            </div>
+            </div> */}
 
             {/* Product Information */}
             <div className="rounded-lg border border-gray-200 bg-white p-6">
@@ -226,9 +255,11 @@ export const ProductPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Add to Cart / Request Service Button */}
+              {/* Add to Cart / Order this product Button */}
               <button
+                type="button"
                 disabled={!product.is_active}
+                onClick={handleOrderProduct}
                 className="mt-8 w-full rounded-lg bg-blue-600 px-6 py-3 text-center font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {product.billing_cycle === "one_time" ? "Ajouter au panier" : "Demander le service"}
@@ -239,6 +270,16 @@ export const ProductPage: React.FC = () => {
             <div className="rounded-lg border border-gray-200 bg-white p-6">
               <h3 className="text-lg font-semibold text-gray-900">Product Details</h3>
               <dl className="mt-4 space-y-4">
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">SKU / Reference</dt>
+                  <dd className="text-sm text-gray-900">{product.sku}</dd>
+                </div>
+                {product.category && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Category</dt>
+                    <dd className="text-sm text-gray-900">{product.category.name}</dd>
+                  </div>
+                )}
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Service Type</dt>
                   <dd className="text-sm text-gray-900 capitalize">{product.service_type || "general"}</dd>
@@ -253,7 +294,15 @@ export const ProductPage: React.FC = () => {
                     <dd className="text-sm text-gray-900 capitalize">{product.provisioning_type}</dd>
                   </div>
                 )}
-                {product.trial_period_days && (
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Recurring Service</dt>
+                  <dd className="text-sm text-gray-900">{product.is_recurring ? "Yes" : "No"}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Auto Renew</dt>
+                  <dd className="text-sm text-gray-900">{product.auto_renew ? "Yes" : "No"}</dd>
+                </div>
+                {product.trial_period_days != null && product.trial_period_days > 0 && (
                   <div>
                     <dt className="text-sm font-medium text-gray-500">Trial Period</dt>
                     <dd className="text-sm text-gray-900">{product.trial_period_days} days</dd>
@@ -263,12 +312,29 @@ export const ProductPage: React.FC = () => {
                   <dt className="text-sm font-medium text-gray-500">Regular Price</dt>
                   <dd className="text-sm text-gray-900">{formatCurrency(product.regular_price)}</dd>
                 </div>
-                {product.sale_price && (
+                {product.sale_price != null && (
                   <div>
                     <dt className="text-sm font-medium text-gray-500">Sale Price</dt>
                     <dd className="text-sm text-gray-900">{formatCurrency(product.sale_price)}</dd>
                   </div>
                 )}
+                {product.service_config &&
+                  typeof product.service_config === "object" &&
+                  Object.keys(product.service_config).length > 0 && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Service Configuration</dt>
+                      <dd className="mt-2 text-sm text-gray-900">
+                        <ul className="space-y-1 rounded-md bg-gray-50 p-3">
+                          {Object.entries(product.service_config).map(([key, val]) => (
+                            <li key={key} className="flex justify-between gap-4">
+                              <span className="font-medium capitalize">{key.replace(/_/g, " ")}</span>
+                              <span>{String(val)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </dd>
+                    </div>
+                  )}
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Views</dt>
                   <dd className="text-sm text-gray-900">{product.view_count}</dd>

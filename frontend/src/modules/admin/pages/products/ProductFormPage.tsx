@@ -15,6 +15,7 @@ import {
 } from "@/shared/components/ui/select";
 import { Switch } from "@/shared/components/ui/switch";
 import { apiClient } from "@/shared/api/client";
+import { ServiceConfigEditor } from "@/modules/products/components";
 import type {
   ServiceType,
   BillingCycle,
@@ -28,7 +29,7 @@ interface ProductCategory {
 }
 
 interface ProductFormData extends Omit<CreateProductDTO, "service_config"> {
-  service_config?: string; // JSON string for textarea input
+  service_config?: Record<string, any> | null;
 }
 
 const ProductFormPage: React.FC = () => {
@@ -51,7 +52,7 @@ const ProductFormPage: React.FC = () => {
     provisioning_type: undefined,
     auto_renew: false,
     trial_period_days: undefined,
-    service_config: "",
+    service_config: null,
     is_featured: false,
     is_active: true,
     is_visible: true,
@@ -93,9 +94,7 @@ const ProductFormPage: React.FC = () => {
         provisioning_type: product.provisioning_type,
         auto_renew: product.auto_renew || false,
         trial_period_days: product.trial_period_days,
-        service_config: product.service_config
-          ? JSON.stringify(product.service_config, null, 2)
-          : "",
+        service_config: product.service_config ?? null,
         is_featured: product.is_featured || false,
         is_active: product.is_active !== undefined ? product.is_active : true,
         is_visible: product.is_visible !== undefined ? product.is_visible : true,
@@ -122,27 +121,16 @@ const ProductFormPage: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Parse service_config JSON if provided
     const submitData: CreateProductDTO = {
       ...formData,
-      service_config: formData.service_config
-        ? (() => {
-            try {
-              return JSON.parse(formData.service_config);
-            } catch {
-              return undefined;
-            }
-          })()
-        : undefined,
+      service_config: formData.service_config ?? undefined,
     };
-    
     mutation.mutate(submitData as any);
   };
 
   const handleChange = (
     field: keyof ProductFormData,
-    value: string | number | boolean | null
+    value: string | number | boolean | Record<string, any> | null
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -336,18 +324,10 @@ const ProductFormPage: React.FC = () => {
               </div>
 
               <div className="md:col-span-2">
-                <Label htmlFor="service_config">Service Configuration (JSON)</Label>
-                <Textarea
-                  id="service_config"
-                  value={formData.service_config || ""}
-                  onChange={(e) => handleChange("service_config", e.target.value)}
-                  rows={6}
-                  placeholder='{"key": "value"}'
-                  className="font-mono text-sm"
+                <ServiceConfigEditor
+                  value={formData.service_config ?? null}
+                  onChange={(config) => handleChange("service_config", config)}
                 />
-                <p className="mt-1 text-xs text-gray-500">
-                  Optional JSON configuration for service-specific settings
-                </p>
               </div>
             </div>
 

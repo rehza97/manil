@@ -27,6 +27,7 @@ from app.infrastructure.email import templates
 from app.infrastructure.sms.service import SMSService
 from app.modules.notifications.service import user_id_by_email
 from app.modules.settings.service import UserNotificationPreferencesService
+from app.modules.settings.utils import notification_gate_allows
 
 
 class SubscriptionBillingService:
@@ -147,23 +148,29 @@ class SubscriptionBillingService:
         try:
             customer_email = subscription.customer.email if subscription.customer else None
             if customer_email:
-                from app.infrastructure.email import templates as email_templates
-                template = email_templates.invoice_initial_template(
-                    subscription_number=subscription.subscription_number,
-                    invoice_number=invoice.invoice_number,
-                    total_amount=float(total),
-                    due_date=invoice.due_date.strftime('%Y-%m-%d'),
-                    invoice_link=f"https://cloudmanager.dz/invoices/{invoice.id}"
-                )
-                await self.email_service.send_email(
-                    [customer_email],
-                    template["subject"],
-                    template["html"],
-                    template.get("text")
-                )
+                # Check notification gates
+                gate_allows_email = await notification_gate_allows(self.db, "email", "vps.invoice.initial")
+                gate_allows_sms = await notification_gate_allows(self.db, "sms", "vps.invoice.initial")
                 
-                # Send SMS notification if customer has phone and preferences allow
-                if subscription.customer and subscription.customer.phone and subscription.customer.phone.strip():
+                if gate_allows_email:
+                    from app.infrastructure.email import templates as email_templates
+                    template = email_templates.invoice_initial_template(
+                        subscription_number=subscription.subscription_number,
+                        invoice_number=invoice.invoice_number,
+                        total_amount=float(total),
+                        due_date=invoice.due_date.strftime('%Y-%m-%d'),
+                        invoice_link=f"https://cloudmanager.dz/invoices/{invoice.id}"
+                    )
+                    await self.email_service.send_email(
+                        [customer_email],
+                        template["subject"],
+                        template["html"],
+                        template.get("text"),
+                        db=self.db
+                    )
+                
+                # Send SMS notification if customer has phone, gate allows, and preferences allow
+                if subscription.customer and subscription.customer.phone and subscription.customer.phone.strip() and gate_allows_sms:
                     try:
                         uid = await user_id_by_email(self.db, customer_email)
                         if uid:
@@ -173,7 +180,8 @@ class SubscriptionBillingService:
                                 sms_service = SMSService()
                                 await sms_service.send_billing_notification(
                                     to=subscription.customer.phone,
-                                    message=f"Initial invoice {invoice.invoice_number} for {subscription.subscription_number}: {total:.2f} DZD. Due: {invoice.due_date.strftime('%d/%m/%Y')}"
+                                    message=f"Initial invoice {invoice.invoice_number} for {subscription.subscription_number}: {total:.2f} DZD. Due: {invoice.due_date.strftime('%d/%m/%Y')}",
+                                    db=self.db
                                 )
                     except Exception as e:
                         logger.warning(f"Failed to send initial invoice SMS: {e}")
@@ -263,22 +271,28 @@ class SubscriptionBillingService:
         try:
             customer_email = subscription.customer.email if subscription.customer else None
             if customer_email:
-                template = templates.invoice_recurring_template(
-                    subscription_number=subscription.subscription_number,
-                    invoice_number=invoice.invoice_number,
-                    total_amount=float(total),
-                    due_date=invoice.due_date.strftime('%Y-%m-%d'),
-                    invoice_link=f"https://cloudmanager.dz/invoices/{invoice.id}"
-                )
-                await self.email_service.send_email(
-                    [customer_email],
-                    template["subject"],
-                    template["html"],
-                    template.get("text")
-                )
+                # Check notification gates
+                gate_allows_email = await notification_gate_allows(self.db, "email", "vps.invoice.recurring")
+                gate_allows_sms = await notification_gate_allows(self.db, "sms", "vps.invoice.recurring")
                 
-                # Send SMS notification if customer has phone and preferences allow
-                if subscription.customer and subscription.customer.phone and subscription.customer.phone.strip():
+                if gate_allows_email:
+                    template = templates.invoice_recurring_template(
+                        subscription_number=subscription.subscription_number,
+                        invoice_number=invoice.invoice_number,
+                        total_amount=float(total),
+                        due_date=invoice.due_date.strftime('%Y-%m-%d'),
+                        invoice_link=f"https://cloudmanager.dz/invoices/{invoice.id}"
+                    )
+                    await self.email_service.send_email(
+                        [customer_email],
+                        template["subject"],
+                        template["html"],
+                        template.get("text"),
+                        db=self.db
+                    )
+                
+                # Send SMS notification if customer has phone, gate allows, and preferences allow
+                if subscription.customer and subscription.customer.phone and subscription.customer.phone.strip() and gate_allows_sms:
                     try:
                         uid = await user_id_by_email(self.db, customer_email)
                         if uid:
@@ -288,7 +302,8 @@ class SubscriptionBillingService:
                                 sms_service = SMSService()
                                 await sms_service.send_billing_notification(
                                     to=subscription.customer.phone,
-                                    message=f"Recurring invoice {invoice.invoice_number} for {subscription.subscription_number}: {total:.2f} DZD. Due: {invoice.due_date.strftime('%d/%m/%Y')}"
+                                    message=f"Recurring invoice {invoice.invoice_number} for {subscription.subscription_number}: {total:.2f} DZD. Due: {invoice.due_date.strftime('%d/%m/%Y')}",
+                                    db=self.db
                                 )
                     except Exception as e:
                         logger.warning(f"Failed to send recurring invoice SMS: {e}")
@@ -519,19 +534,25 @@ class SubscriptionBillingService:
                             latest_invoice = invoice_result.scalar_one_or_none()
                             
                             if latest_invoice:
-                                template = templates.invoice_overdue_template(
-                                    subscription_number=subscription.subscription_number,
-                                    invoice_number=latest_invoice.invoice_number,
-                                    total_amount=float(latest_invoice.total_amount),
-                                    days_overdue=days_overdue,
-                                    invoice_link=f"https://cloudmanager.dz/invoices/{latest_invoice.id}"
-                                )
-                                await self.email_service.send_email(
-                                    [customer_email],
-                                    template["subject"],
-                                    template["html"],
-                                    template.get("text")
-                                )
+                                # Check notification gates
+                                gate_allows_email = await notification_gate_allows(self.db, "email", "vps.invoice.overdue")
+                                gate_allows_sms = await notification_gate_allows(self.db, "sms", "vps.invoice.overdue")
+                                
+                                if gate_allows_email:
+                                    template = templates.invoice_overdue_template(
+                                        subscription_number=subscription.subscription_number,
+                                        invoice_number=latest_invoice.invoice_number,
+                                        total_amount=float(latest_invoice.total_amount),
+                                        days_overdue=days_overdue,
+                                        invoice_link=f"https://cloudmanager.dz/invoices/{latest_invoice.id}"
+                                    )
+                                    await self.email_service.send_email(
+                                        [customer_email],
+                                        template["subject"],
+                                        template["html"],
+                                        template.get("text"),
+                                        db=self.db
+                                    )
                                 
                                 # Send SMS notification if customer has phone and preferences allow
                                 if subscription.customer and subscription.customer.phone and subscription.customer.phone.strip():

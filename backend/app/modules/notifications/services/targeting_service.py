@@ -54,7 +54,7 @@ class TargetingService:
         # Customers are linked to users by email
         from sqlalchemy.orm import Query
         from app.modules.customers.schemas import CustomerType
-        
+
         # Convert string to enum if needed
         if isinstance(customer_type, str):
             try:
@@ -64,7 +64,7 @@ class TargetingService:
                 return []
         else:
             customer_type_enum = customer_type
-        
+
         query: Query = select(distinct(User.id)).join(
             Customer, User.email == Customer.email
         ).where(
@@ -90,15 +90,17 @@ class TargetingService:
             List of user IDs
         """
         from app.modules.tickets.models import Ticket
+        from app.modules.customers.models import Customer
         from sqlalchemy.orm import Query
 
         # Query users who have tickets in this category
         # This includes both ticket creators (customers) and assigned agents
-        query: Query = select(distinct(User.id)).join(
-            Ticket, or_(
-                User.id == Ticket.customer_id,
-                User.id == Ticket.assigned_to
-            )
+        # Ticket creators: Ticket.customer_id -> Customer.id -> Customer.email -> User.email
+        # Assigned agents: Ticket.assigned_to -> User.id (direct)
+
+        # Get assigned agents (direct user_id relationship)
+        assigned_query: Query = select(distinct(User.id)).join(
+            Ticket, User.id == Ticket.assigned_to
         ).where(
             and_(
                 Ticket.category_id == category_id,
@@ -108,7 +110,24 @@ class TargetingService:
             )
         )
 
-        result = await self.db.execute(query)
+        # Get ticket creators (via Customer.email -> User.email)
+        creator_query: Query = select(distinct(User.id)).join(
+            Customer, User.email == Customer.email
+        ).join(
+            Ticket, Ticket.customer_id == Customer.id
+        ).where(
+            and_(
+                Ticket.category_id == category_id,
+                Ticket.deleted_at.is_(None),
+                Customer.deleted_at.is_(None),
+                User.is_active.is_(True),
+                User.deleted_at.is_(None),
+            )
+        )
+
+        # Combine both queries using UNION
+        combined_query = assigned_query.union(creator_query)
+        result = await self.db.execute(combined_query)
         return [str(user_id) for user_id in result.scalars().all()]
 
     async def get_users_by_custom_criteria(self, criteria: Dict[str, Any]) -> List[str]:
@@ -149,17 +168,18 @@ class TargetingService:
         # Filter by customer type (join by email since customers don't have direct user_id)
         if "customer_type" in criteria:
             from app.modules.customers.schemas import CustomerType
-            
+
             customer_type_value = criteria["customer_type"]
             if isinstance(customer_type_value, str):
                 try:
                     customer_type_enum = CustomerType(customer_type_value)
                 except ValueError:
-                    logger.warning(f"Invalid customer_type in criteria: {customer_type_value}")
+                    logger.warning(
+                        f"Invalid customer_type in criteria: {customer_type_value}")
                     return []
             else:
                 customer_type_enum = customer_type_value
-            
+
             query = query.join(Customer, User.email == Customer.email)
             conditions.append(Customer.customer_type == customer_type_enum)
             conditions.append(Customer.deleted_at.is_(None))
@@ -179,7 +199,8 @@ class TargetingService:
             )
 
             if "min_tickets" in criteria:
-                conditions.append(ticket_subquery.c.ticket_count >= criteria["min_tickets"])
+                conditions.append(
+                    ticket_subquery.c.ticket_count >= criteria["min_tickets"])
 
             if criteria.get("has_tickets"):
                 conditions.append(ticket_subquery.c.ticket_count > 0)
@@ -206,14 +227,16 @@ class TargetingService:
 
             elif group.target_type == NotificationTargetType.CUSTOMER_TYPE.value:
                 if not group.target_criteria or "customer_type" not in group.target_criteria:
-                    logger.warning(f"Group {group.id} missing customer_type in criteria")
+                    logger.warning(
+                        f"Group {group.id} missing customer_type in criteria")
                     return []
                 customer_type = group.target_criteria["customer_type"]
                 return await self.get_users_by_customer_type(customer_type)
 
             elif group.target_type == NotificationTargetType.CATEGORY.value:
                 if not group.target_criteria or "category_id" not in group.target_criteria:
-                    logger.warning(f"Group {group.id} missing category_id in criteria")
+                    logger.warning(
+                        f"Group {group.id} missing category_id in criteria")
                     return []
                 category_id = group.target_criteria["category_id"]
                 return await self.get_users_by_category(category_id)
@@ -225,9 +248,11 @@ class TargetingService:
                 return await self.get_users_by_custom_criteria(group.target_criteria)
 
             else:
-                logger.error(f"Unknown target_type for group {group.id}: {group.target_type}")
+                logger.error(
+                    f"Unknown target_type for group {group.id}: {group.target_type}")
                 return []
 
         except Exception as e:
-            logger.error(f"Failed to resolve targets for group {group.id}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to resolve targets for group {group.id}: {e}", exc_info=True)
             return []

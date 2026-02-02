@@ -284,6 +284,44 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Flower - Celery monitoring (tasks and workers)
+  flower:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cloudmanager-flower
+    command: ["sh", "-c", "celery -A app.core.celery_app flower --port=5555 --basic_auth=$$FLOWER_BASIC_AUTH"]
+    volumes:
+      - ./backend:/app
+      - logs_data:/app/logs
+    environment:
+      # Database (required by shared entrypoint)
+      - DATABASE_URL=postgresql+asyncpg://cloudmanager:${DB_PASSWORD:-cloudmanager_password}@postgres:5432/cloudmanager
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=cloudmanager
+      - DB_PASSWORD=${DB_PASSWORD:-cloudmanager_password}
+      - DB_NAME=cloudmanager
+      # Redis Configuration (broker for Celery)
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_password}@redis:6379/0
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
+      # Flower basic auth (set FLOWER_BASIC_AUTH in production)
+      - FLOWER_BASIC_AUTH=${FLOWER_BASIC_AUTH:-admin:admin}
+    ports:
+      - "5555:5555"
+    networks:
+      - cloudmanager-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      celery-worker:
+        condition: service_started
+    restart: unless-stopped
+
   # React Frontend (Development Mode)
   # Cross-platform: Volume mounts use relative paths and anonymous volumes
   frontend:

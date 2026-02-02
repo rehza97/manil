@@ -50,3 +50,63 @@ export const useUpdateInvoice = () => {
     },
   });
 };
+
+export const useSendInvoice = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => invoiceService.send(id),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["invoices", data.id], data);
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    },
+  });
+};
+
+export const useRecordPayment = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: {
+        amount: number;
+        payment_method: string;
+        payment_date?: string;
+        payment_notes?: string;
+      };
+    }) => invoiceService.recordPayment(id, data),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["invoices", data.id], data);
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    },
+  });
+};
+
+export const useCancelInvoice = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      invoiceService.cancel(id, reason),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["invoices", data.id], data);
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    },
+  });
+};
+
+export const useDownloadInvoicePDF = () => {
+  return useMutation({
+    mutationFn: ({
+      id,
+      includeQr = true,
+    }: {
+      id: string;
+      includeQr?: boolean;
+    }) => invoiceService.downloadPDF(id, includeQr),
+  });
+};

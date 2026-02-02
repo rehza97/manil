@@ -1,4 +1,5 @@
 export { ProductCard } from "./ProductCard";
+export { ServiceConfigEditor } from "./ServiceConfigEditor";
 export { ProductGrid } from "./ProductGrid";
 export { ProductFilters, type FilterState } from "./ProductFilters";
 export { ProductCarousel } from "./ProductCarousel";

@@ -27,7 +27,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
-import { MoreHorizontal, Plus, Search } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/components/ui/dialog";
+import { Label } from "@/shared/components/ui/label";
+import { MoreHorizontal, Plus, Search, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card";
 
 interface CustomerListProps {
@@ -41,6 +50,13 @@ export function CustomerList({ onEdit, onView, onCreate }: CustomerListProps) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<CustomerStatus | undefined>();
   const [typeFilter, setTypeFilter] = useState<CustomerType | undefined>();
+
+  // Dialog states
+  const [activateDialogOpen, setActivateDialogOpen] = useState(false);
+  const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<{ id: string; name: string } | null>(null);
+  const [reason, setReason] = useState("");
 
   const { data, isLoading, error } = useCustomers(page, 20, {
     search,
@@ -67,18 +83,45 @@ export function CustomerList({ onEdit, onView, onCreate }: CustomerListProps) {
     );
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete customer "${name}"?`)) {
-      await deleteCustomer.mutateAsync(id);
+  const openActivateDialog = (id: string, name: string) => {
+    setSelectedCustomer({ id, name });
+    setActivateDialogOpen(true);
+  };
+
+  const openSuspendDialog = (id: string, name: string) => {
+    setSelectedCustomer({ id, name });
+    setSuspendDialogOpen(true);
+  };
+
+  const openDeleteDialog = (id: string, name: string) => {
+    setSelectedCustomer({ id, name });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleActivate = async () => {
+    if (selectedCustomer && reason.trim()) {
+      await activateCustomer.mutateAsync({ id: selectedCustomer.id, reason: reason.trim() });
+      setActivateDialogOpen(false);
+      setSelectedCustomer(null);
+      setReason("");
     }
   };
 
-  const handleActivate = async (id: string) => {
-    await activateCustomer.mutateAsync(id);
+  const handleSuspend = async () => {
+    if (selectedCustomer && reason.trim()) {
+      await suspendCustomer.mutateAsync({ id: selectedCustomer.id, reason: reason.trim() });
+      setSuspendDialogOpen(false);
+      setSelectedCustomer(null);
+      setReason("");
+    }
   };
 
-  const handleSuspend = async (id: string) => {
-    await suspendCustomer.mutateAsync(id);
+  const handleDelete = async () => {
+    if (selectedCustomer) {
+      await deleteCustomer.mutateAsync(selectedCustomer.id);
+      setDeleteDialogOpen(false);
+      setSelectedCustomer(null);
+    }
   };
 
   if (error) {
@@ -232,23 +275,21 @@ export function CustomerList({ onEdit, onView, onCreate }: CustomerListProps) {
                             <DropdownMenuSeparator />
                             {customer.status !== CustomerStatus.ACTIVE && (
                               <DropdownMenuItem
-                                onClick={() => handleActivate(customer.id)}
+                                onClick={() => openActivateDialog(customer.id, customer.name)}
                               >
                                 Activate
                               </DropdownMenuItem>
                             )}
                             {customer.status === CustomerStatus.ACTIVE && (
                               <DropdownMenuItem
-                                onClick={() => handleSuspend(customer.id)}
+                                onClick={() => openSuspendDialog(customer.id, customer.name)}
                               >
                                 Suspend
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              onClick={() =>
-                                handleDelete(customer.id, customer.name)
-                              }
+                              onClick={() => openDeleteDialog(customer.id, customer.name)}
                               className="text-destructive"
                             >
                               Delete
@@ -292,6 +333,91 @@ export function CustomerList({ onEdit, onView, onCreate }: CustomerListProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Activate Dialog */}
+      <Dialog open={activateDialogOpen} onOpenChange={(open) => { setActivateDialogOpen(open); if (!open) { setReason(""); setSelectedCustomer(null); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Activate Customer</DialogTitle>
+            <DialogDescription>
+              Enter a reason for activating {selectedCustomer?.name}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="activate-reason">Reason</Label>
+              <Input
+                id="activate-reason"
+                placeholder="Enter reason for activation"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setActivateDialogOpen(false); setReason(""); setSelectedCustomer(null); }}>
+              Cancel
+            </Button>
+            <Button onClick={handleActivate} disabled={!reason.trim() || activateCustomer.isPending}>
+              {activateCustomer.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Activate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Suspend Dialog */}
+      <Dialog open={suspendDialogOpen} onOpenChange={(open) => { setSuspendDialogOpen(open); if (!open) { setReason(""); setSelectedCustomer(null); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Suspend Customer</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to suspend {selectedCustomer?.name}? Enter a reason below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="suspend-reason">Reason</Label>
+              <Input
+                id="suspend-reason"
+                placeholder="Enter reason for suspension"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setSuspendDialogOpen(false); setReason(""); setSelectedCustomer(null); }}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleSuspend} disabled={!reason.trim() || suspendCustomer.isPending}>
+              {suspendCustomer.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Suspend
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={(open) => { setDeleteDialogOpen(open); if (!open) setSelectedCustomer(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Customer</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete customer "{selectedCustomer?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setSelectedCustomer(null); }}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteCustomer.isPending}>
+              {deleteCustomer.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

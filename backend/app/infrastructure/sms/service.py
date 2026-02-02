@@ -1,216 +1,165 @@
 """
 SMS service for sending notifications.
 
-Provides high-level API for sending SMS messages.
+Provider switch (Twilio vs Custom) from DB; Twilio API keys from UI.
+Custom forces sms/ (queue -> Flutter /sms/app/*).
 """
 
-from app.infrastructure.sms.providers import get_sms_provider
+from typing import Optional
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.infrastructure.sms.providers import get_sms_provider, get_sms_provider_for_config
+from app.modules.settings.utils import get_sms_config, get_notification_sms_enabled, get_app_name
 from app.core.logging import logger
 
 
 class SMSService:
     """
-    SMS service for sending notifications.
-
-    Handles SMS sending with support for multiple providers
-    and message formatting.
+    SMS service. When db provided, uses get_sms_config(db) and DB-driven provider.
+    Otherwise uses env-based get_sms_provider().
     """
 
     def __init__(self):
-        self.provider = get_sms_provider()
+        pass
 
-    async def send_sms(self, to: str, message: str) -> bool:
+    async def _get_app_name(self, db: Optional[AsyncSession] = None) -> str:
+        """Get app name from DB if available, else fallback to default."""
+        if db:
+            try:
+                return await get_app_name(db)
+            except Exception as e:
+                logger.warning("Failed to get app name from DB: %s", e)
+        return "CloudManager"
+
+    async def send_sms(
+        self, to: str, message: str, db: Optional[AsyncSession] = None
+    ) -> bool:
         """
-        Send SMS with custom content.
-
-        Args:
-            to: Recipient phone number (E.164 format recommended)
-            message: SMS message content
-
-        Returns:
-            True if SMS sent successfully, False otherwise
+        Send SMS. When db provided, provider from DB (Twilio vs Custom); else env.
         """
-        ok = await self.provider.send_sms(to, message)
+        if db is not None:
+            try:
+                if not await get_notification_sms_enabled(db):
+                    logger.debug("SMS disabled by notification.sms_enabled")
+                    return True
+            except Exception as e:
+                logger.warning("Failed to check SMS notification gate: %s", e)
+            try:
+                config = await get_sms_config(db)
+                provider = get_sms_provider_for_config(config)
+            except Exception as e:
+                logger.warning(
+                    "SMS config from DB failed, using env fallback: %s", e)
+                provider = get_sms_provider()
+        else:
+            provider = get_sms_provider()
+        ok = await provider.send_sms(to, message)
         if not ok:
             logger.warning("SMS delivery failed: to=%s", to)
         return ok
 
-    async def send_2fa_code(self, to: str, code: str) -> bool:
-        """
-        Send 2FA verification code via SMS.
+    async def send_2fa_code(
+        self, to: str, code: str, db: Optional[AsyncSession] = None
+    ) -> bool:
+        app_name = await self._get_app_name(db)
+        message = f"{app_name}: Your verification code is {code}. Valid for 5 minutes."
+        return await self.send_sms(to, message, db=db)
 
-        Args:
-            to: Recipient phone number
-            code: 2FA verification code
+    async def send_password_reset_code(
+        self, to: str, code: str, db: Optional[AsyncSession] = None
+    ) -> bool:
+        app_name = await self._get_app_name(db)
+        message = f"{app_name}: Your password reset code is {code}. Valid for 1 hour."
+        return await self.send_sms(to, message, db=db)
 
-        Returns:
-            True if SMS sent successfully
-        """
-        message = f"CloudManager: Your verification code is {code}. Valid for 5 minutes."
-        return await self.send_sms(to, message)
+    async def send_order_notification(
+        self, to: str, order_id: str, status: str, db: Optional[AsyncSession] = None
+    ) -> bool:
+        app_name = await self._get_app_name(db)
+        message = f"{app_name}: Order {order_id} status: {status}"
+        return await self.send_sms(to, message, db=db)
 
-    async def send_password_reset_code(self, to: str, code: str) -> bool:
-        """
-        Send password reset code via SMS.
+    async def send_ticket_update(
+        self, to: str, ticket_id: str, db: Optional[AsyncSession] = None
+    ) -> bool:
+        app_name = await self._get_app_name(db)
+        message = f"{app_name}: Your ticket {ticket_id} has been updated."
+        return await self.send_sms(to, message, db=db)
 
-        Args:
-            to: Recipient phone number
-            code: Password reset code
-
-        Returns:
-            True if SMS sent successfully
-        """
-        message = f"CloudManager: Your password reset code is {code}. Valid for 1 hour."
-        return await self.send_sms(to, message)
-
-    async def send_order_notification(self, to: str, order_id: str, status: str) -> bool:
-        """
-        Send order status notification via SMS.
-
-        Args:
-            to: Recipient phone number
-            order_id: Order ID
-            status: Order status
-
-        Returns:
-            True if SMS sent successfully
-        """
-        message = f"CloudManager: Order {order_id} status: {status}"
-        return await self.send_sms(to, message)
-
-    async def send_ticket_update(self, to: str, ticket_id: str) -> bool:
-        """
-        Send ticket update notification via SMS.
-
-        Args:
-            to: Recipient phone number
-            ticket_id: Ticket ID
-
-        Returns:
-            True if SMS sent successfully
-        """
-        message = f"CloudManager: Your ticket {ticket_id} has been updated."
-        return await self.send_sms(to, message)
-
-    async def send_custom_notification(self, to: str, title: str, body: str) -> bool:
-        """
-        Send custom notification via SMS.
-
-        Args:
-            to: Recipient phone number
-            title: Notification title
-            body: Notification body
-
-        Returns:
-            True if SMS sent successfully
-        """
-        message = f"CloudManager - {title}: {body}"
-        # Truncate if too long (SMS limit ~160 chars)
+    async def send_custom_notification(
+        self, to: str, title: str, body: str, db: Optional[AsyncSession] = None
+    ) -> bool:
+        app_name = await self._get_app_name(db)
+        message = f"{app_name} - {title}: {body}"
         if len(message) > 160:
             message = message[:157] + "..."
-        return await self.send_sms(to, message)
+        return await self.send_sms(to, message, db=db)
 
     async def send_invoice_notification(
-        self, to: str, invoice_number: str, amount: float, due_date: str
+        self,
+        to: str,
+        invoice_number: str,
+        amount: float,
+        due_date: str,
+        db: Optional[AsyncSession] = None,
     ) -> bool:
-        """
-        Send invoice notification via SMS.
-
-        Args:
-            to: Recipient phone number
-            invoice_number: Invoice number
-            amount: Invoice amount
-            due_date: Due date (formatted string)
-
-        Returns:
-            True if SMS sent successfully
-        """
-        message = f"CloudManager: Invoice {invoice_number} for {amount:.2f} DZD. Due: {due_date}"
-        # Truncate if too long
+        app_name = await self._get_app_name(db)
+        message = f"{app_name}: Invoice {invoice_number} for {amount:.2f} DZD. Due: {due_date}"
         if len(message) > 160:
             message = message[:157] + "..."
-        return await self.send_sms(to, message)
+        return await self.send_sms(to, message, db=db)
 
     async def send_quote_notification(
-        self, to: str, quote_id: str, status: str, message: str = None
+        self,
+        to: str,
+        quote_id: str,
+        status: str,
+        message: Optional[str] = None,
+        db: Optional[AsyncSession] = None,
     ) -> bool:
-        """
-        Send quote notification via SMS.
-
-        Args:
-            to: Recipient phone number
-            quote_id: Quote ID
-            status: Quote status (created, approved, quoted, accepted, rejected)
-            message: Optional custom message
-
-        Returns:
-            True if SMS sent successfully
-        """
+        app_name = await self._get_app_name(db)
         if message:
-            sms_message = f"CloudManager: {message}"
+            sms_message = f"{app_name}: {message}"
         else:
             status_display = status.replace("_", " ").title()
-            sms_message = f"CloudManager: Quote {quote_id} status: {status_display}"
-        
-        # Truncate if too long
+            sms_message = f"{app_name}: Quote {quote_id} status: {status_display}"
         if len(sms_message) > 160:
             sms_message = sms_message[:157] + "..."
-        return await self.send_sms(to, sms_message)
+        return await self.send_sms(to, sms_message, db=db)
 
     async def send_payment_confirmation(
-        self, to: str, invoice_number: str, amount: float
+        self,
+        to: str,
+        invoice_number: str,
+        amount: float,
+        db: Optional[AsyncSession] = None,
     ) -> bool:
-        """
-        Send payment confirmation via SMS.
-
-        Args:
-            to: Recipient phone number
-            invoice_number: Invoice number
-            amount: Payment amount
-
-        Returns:
-            True if SMS sent successfully
-        """
-        message = f"CloudManager: Payment of {amount:.2f} DZD received for invoice {invoice_number}. Thank you!"
-        # Truncate if too long
+        app_name = await self._get_app_name(db)
+        message = f"{app_name}: Payment of {amount:.2f} DZD received for invoice {invoice_number}. Thank you!"
         if len(message) > 160:
             message = message[:157] + "..."
-        return await self.send_sms(to, message)
+        return await self.send_sms(to, message, db=db)
 
     async def send_vps_alert(
-        self, to: str, vps_name: str, alert_type: str, message: str
+        self,
+        to: str,
+        vps_name: str,
+        alert_type: str,
+        message: str,
+        db: Optional[AsyncSession] = None,
     ) -> bool:
-        """
-        Send VPS alert notification via SMS.
-
-        Args:
-            to: Recipient phone number
-            vps_name: VPS instance name
-            alert_type: Alert type (CPU, Memory, Disk, etc.)
-            message: Alert message
-
-        Returns:
-            True if SMS sent successfully
-        """
-        sms_message = f"CloudManager VPS Alert [{vps_name}]: {alert_type} - {message}"
-        # Truncate if too long
+        app_name = await self._get_app_name(db)
+        sms_message = f"{app_name} VPS Alert [{vps_name}]: {alert_type} - {message}"
         if len(sms_message) > 160:
             sms_message = sms_message[:157] + "..."
-        return await self.send_sms(to, sms_message)
+        return await self.send_sms(to, sms_message, db=db)
 
-    async def send_billing_notification(self, to: str, message: str) -> bool:
-        """
-        Send billing notification via SMS.
-
-        Args:
-            to: Recipient phone number
-            message: Billing message
-
-        Returns:
-            True if SMS sent successfully
-        """
-        sms_message = f"CloudManager Billing: {message}"
-        # Truncate if too long
+    async def send_billing_notification(
+        self, to: str, message: str, db: Optional[AsyncSession] = None
+    ) -> bool:
+        app_name = await self._get_app_name(db)
+        sms_message = f"{app_name} Billing: {message}"
         if len(sms_message) > 160:
             sms_message = sms_message[:157] + "..."
-        return await self.send_sms(to, sms_message)
+        return await self.send_sms(to, sms_message, db=db)

@@ -151,16 +151,19 @@ class UserManagementService:
             await email_service.send_welcome_email(
                 to=user.email,
                 user_name=user.full_name or user.email,
+                db=self.db,
             )
         except Exception as e:
             logger.warning(
                 "Failed to send welcome email to %s: %s", user.email, e)
         try:
+            from app.modules.settings.utils import get_app_name
+            app_name = await get_app_name(self.db)
             await create_notification(
                 self.db,
                 user_id=user.id,
                 type="welcome",
-                title="Welcome to CloudManager",
+                title=f"Welcome to {app_name}",
                 body="Your account has been created. Complete your profile or explore the dashboard.",
                 link=_welcome_notification_link(user.role),
             )

@@ -1,449 +1,176 @@
-
-1. Run database migration: alembic upgrade head
-2. Install Trivy: sudo apt-get install trivy
-3. Create upload directories: /var/lib/vps-uploads and /var/lib/vps-backups
-4. Configure environment variables (S3, encryption keys)
-5. Start Docker socket proxy: docker-compose -f docker-compose.security.yml up -d
-6. Add custom image permissions to roles
-7. Register the custom images router in main app
-
-
-
-
-
-VPS Hosting Integration Verification & Fixes Plan
-
-Executive Summary
-
-Status: Backend is 90% integrated but has 3 critical issues preventing the custom Docker images feature from working. Frontend has complete VPS infrastructure but needs custom Docker images UI implementation.
-
----
-PART 1: BACKEND INTEGRATION ISSUES (CRITICAL)
-
-Issue 1: Custom Images Router Not Registered 🔴 HIGH PRIORITY
-
-Problem: The custom_images router exists but is not imported or registered in main.py, making all custom image endpoints unreachable.
-
-Impact:
-- All 7 custom image endpoints return 404
-- Feature is completely non-functional
-- API calls from frontend will fail
-
-Files to Fix:
-- backend/app/main.py
-
-Changes Required:
-
-1. Add import after line 44:
-from app.modules.hosting.routes.custom_images import router as custom_images_router
-
-2. Register router after line 233:
-app.include_router(custom_images_router, prefix="/api/v1/hosting")
-
-Location: Lines 43-44 for import, Line 233 for registration
-
----
-Issue 2: Database Dependency Import Error 🔴 HIGH PRIORITY
-
-Problem: custom_images.py imports get_async_db which doesn't exist in database.py. Only get_db() exists.
-
-Impact:
-- Import error when starting the application
-- Custom images routes will fail to load
-- Application may not start properly
-
-Files to Fix:
-- backend/app/modules/hosting/routes/custom_images.py (9 occurrences on lines 48, 118, 185, 224, 272, 320, 354, 382, 421)
-
-Changes Required:
-
-Change all instances of:
-from app.config.database import get_async_db
-# ... and ...
-db: AsyncSession = Depends(get_async_db)
-
-To:
-from app.config.database import get_db
-# ... and ...
-db: AsyncSession = Depends(get_db)
-
-Alternative Solution: Add alias in backend/app/config/database.py:
-get_async_db = get_db  # Alias for backward compatibility
-
----
-Issue 3: Missing Service Exports 🟡 MEDIUM PRIORITY
-
-Problem: New services (image_build_service, backup_service, billing_helpers) are not exported in services/__init__.py and routes/__init__.py.
-
-Impact:
-- Less clean imports (need full path instead of module import)
-- Not following project conventions
-- Minor inconsistency, but doesn't break functionality
-
-Files to Fix:
-- backend/app/modules/hosting/services/__init__.py
-- backend/app/modules/hosting/routes/__init__.py
-
-Changes Required:
-
-1. In services/__init__.py, add after line 8:
-from app.modules.hosting.services.image_build_service import DockerImageBuildService
-from app.modules.hosting.services.backup_service import VPSBackupService
-from app.modules.hosting.services.billing_helpers import BillingCalculator
-
-2. Update __all__ list (line 11):
-__all__ = [
-    "DockerManagementService",
-    "VPSProvisioningService",
-    "SubscriptionBillingService",
-    "ContainerMonitoringService",
-    "DockerImageBuildService",
-    "VPSBackupService",
-    "BillingCalculator",
-]
-
-3. In routes/__init__.py, add after line 7:
-from app.modules.hosting.routes.custom_images import router as custom_images_router
-
-4. Update __all__ list (line 9):
-__all__ = ["client_router", "admin_router", "custom_images_router"]
-
----
-PART 2: BACKEND VERIFICATION (All Working ✅)
-
-What's Already Properly Integrated:
-
-✅ Models & Database:
-- CustomDockerImage model defined (lines 419-537 in models.py)
-- ImageBuildLog model defined (lines 539-574 in models.py)
-- ImageBuildStatus enum defined (lines 83-92 in models.py)
-- All relationships configured correctly
-- Migration file exists: 031_create_custom_docker_images.py
-
-✅ Services:
-- DockerImageBuildService implemented (950 lines)
-- VPSBackupService implemented (500 lines)
-- BillingCalculator implemented (370 lines)
-- All methods functional
-
-✅ API Routes:
-- 7 endpoints defined in custom_images.py
-- Proper permissions (@require_permissions decorators)
-- Proper schemas (CustomImageResponse, etc.)
-
-✅ Celery Tasks:
-- build_docker_image_task implemented in tasks.py
-- backup_all_vps_task implemented in tasks.py
-- Properly integrated with retry logic
-
-✅ Schemas:
-- All Pydantic schemas defined in schemas.py
-- Request/response validation ready
-
----
-PART 3: FRONTEND IMPLEMENTATION NEEDED
-
-What Exists:
-
-✅ Complete VPS Infrastructure:
-- Service layer: vpsService.ts
-- Types: hosting.types.ts
-- Hooks: useVPSSubscriptions.ts, useVPSAdmin.ts, etc.
-- Components: VPSPlanCard, VPSStatusBadge, ResourceGauge, etc.
-- Pages: VPSPlansPage, MyVPSPage, VPSInstancePage, Admin pages
-- Routes: All configured in routes.tsx
-
-What's Missing (Custom Docker Images):
-
-1. Types (frontend/src/modules/hosting/types/hosting.types.ts)
-
-Add new interfaces:
-export enum ImageBuildStatus {
-  PENDING = 'PENDING',
-  VALIDATING = 'VALIDATING',
-  BUILDING = 'BUILDING',
-  SCANNING = 'SCANNING',
-  COMPLETED = 'COMPLETED',
-  FAILED = 'FAILED',
-  REJECTED = 'REJECTED'
-}
-
-export interface CustomDockerImage {
-  id: string;
-  customer_id: string;
-  subscription_id?: string;
-  image_name: string;
-  image_tag: string;
-  docker_image_id?: string;
-  upload_filename: string;
-  upload_size_bytes: number;
-  dockerfile_path: string;
-  status: ImageBuildStatus;
-  build_started_at?: string;
-  build_completed_at?: string;
-  build_duration_seconds?: number;
-  build_error?: string;
-  image_size_mb?: number;
-  security_scan_results?: SecurityScanResults;
-  scan_completed_at?: string;
-  version: number;
-  is_deleted: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ImageBuildLog {
-  id: string;
-  image_id: string;
-  timestamp: string;
-  log_level: string;
-  message: string;
-  step?: string;
-}
-
-export interface SecurityScanResults {
-  status: string;
-  total_vulnerabilities: number;
-  vulnerabilities_by_severity: {
-    CRITICAL: number;
-    HIGH: number;
-    MEDIUM: number;
-    LOW: number;
-  };
-  vulnerabilities: Array<{
-    id: string;
-    package: string;
-    severity: string;
-    title: string;
-    fixed_version?: string;
-  }>;
-}
-
-2. Service Methods (frontend/src/modules/hosting/services/vpsService.ts)
-
-Add to vpsService object:
-// Custom Docker Images
-uploadCustomImage: async (
-  file: File,
-  metadata: {
-    image_name?: string;
-    image_tag?: string;
-    dockerfile_path?: string;
-    build_args?: Record<string, string>;
-    subscription_id?: string;
-  }
-) => {
-  const formData = new FormData();
-  formData.append('file', file);
-  if (metadata.image_name) formData.append('image_name', metadata.image_name);
-  if (metadata.image_tag) formData.append('image_tag', metadata.image_tag);
-  if (metadata.dockerfile_path) formData.append('dockerfile_path', metadata.dockerfile_path);
-  if (metadata.build_args) formData.append('build_args', JSON.stringify(metadata.build_args));
-  if (metadata.subscription_id) formData.append('subscription_id', metadata.subscription_id);
-
-  return apiClient.post('/api/v1/hosting/custom-images/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  });
-},
-
-listCustomImages: async (filters?: {
-  page?: number;
-  page_size?: number;
-  status?: ImageBuildStatus;
-  subscription_id?: string;
-}) => {
-  return apiClient.get('/api/v1/hosting/custom-images', { params: filters });
-},
-
-getCustomImage: async (imageId: string) => {
-  return apiClient.get(`/api/v1/hosting/custom-images/${imageId}`);
-},
-
-getImageBuildLogs: async (imageId: string, step?: string) => {
-  return apiClient.get(`/api/v1/hosting/custom-images/${imageId}/logs`, {
-    params: step ? { step } : undefined
-  });
-},
-
-rebuildCustomImage: async (imageId: string, buildArgs?: Record<string, string>) => {
-  return apiClient.post(`/api/v1/hosting/custom-images/${imageId}/rebuild`, {
-    build_args: buildArgs
-  });
-},
-
-deleteCustomImage: async (imageId: string) => {
-  return apiClient.delete(`/api/v1/hosting/custom-images/${imageId}`);
-},
-
-approveOrRejectImage: async (imageId: string, approved: boolean, reason?: string) => {
-  return apiClient.post(`/api/v1/hosting/custom-images/${imageId}/approve`, {
-    approved,
-    reason
-  });
-}
-
-3. React Query Hooks (NEW FILE: frontend/src/modules/hosting/hooks/useCustomImages.ts)
-
-Create complete hooks file with:
-- useCustomImages() - List with filters
-- useCustomImage() - Get single image
-- useImageBuildLogs() - Get logs
-- useUploadCustomImage() - Upload mutation
-- useRebuildCustomImage() - Rebuild mutation
-- useDeleteCustomImage() - Delete mutation
-- useApproveCustomImage() - Admin approval mutation
-
-4. Components (frontend/src/modules/hosting/components/)
-
-Create 6 new components:
-- ImageUploadForm.tsx - File upload with metadata
-- ImageBuildStatusBadge.tsx - Status indicator
-- ImageBuildLogsViewer.tsx - Build logs display
-- CustomImageCard.tsx - Image summary card
-- CustomImageDetailPanel.tsx - Full details
-- ImageBuildProgressIndicator.tsx - Progress visualization
-
-5. Pages (frontend/src/modules/hosting/pages/)
-
-Create 4 new pages:
-- CustomImagesPage.tsx - Client image list
-- CustomImageDetailPage.tsx - Client image details
-- ImageUploadPage.tsx - Upload form page
-- AdminCustomImagesPage.tsx (in admin/pages/hosting/) - Admin management
-
-6. Routes (frontend/src/app/routes.tsx)
-
-Add new routes:
-// Client routes
-{
-  path: 'vps/custom-images',
-  element: <CustomImagesPage />
-},
-{
-  path: 'vps/custom-images/upload',
-  element: <ImageUploadPage />
-},
-{
-  path: 'vps/custom-images/:imageId',
-  element: <CustomImageDetailPage />
-},
-
-// Admin routes
-{
-  path: 'hosting/custom-images',
-  element: <AdminCustomImagesPage />
-},
-
----
-IMPLEMENTATION PRIORITY
-
-Phase 1: Backend Critical Fixes (30 minutes) 🔴 URGENT
-
-1. Fix router registration in main.py
-2. Fix get_async_db import error
-3. Test that API endpoints are accessible
-
-Phase 2: Backend Optional Improvements (15 minutes) 🟡
-
-1. Add service exports to init.py files
-2. Follow project conventions
-
-Phase 3: Frontend Implementation (8-12 hours) 🔵
-
-1. Add types (30 min)
-2. Add service methods (1 hour)
-3. Create hooks (2 hours)
-4. Build components (3-4 hours)
-5. Create pages (2-3 hours)
-6. Add routes (30 min)
-7. Test integration (1-2 hours)
-
----
-TESTING CHECKLIST
-
-Backend Testing
-
-- Start application without errors
-- Access custom images endpoints:
-  - POST /api/v1/hosting/custom-images/upload
-  - GET /api/v1/hosting/custom-images
-  - GET /api/v1/hosting/custom-images/{id}
-  - GET /api/v1/hosting/custom-images/{id}/logs
-  - POST /api/v1/hosting/custom-images/{id}/rebuild
-  - DELETE /api/v1/hosting/custom-images/{id}
-  - POST /api/v1/hosting/custom-images/{id}/approve
-- Upload test image and verify build process
-- Check Celery task execution
-
-Frontend Testing
-
-- Navigate to custom images page
-- Upload image via form
-- View image list
-- View image details
-- View build logs
-- Rebuild image
-- Delete image
-- Admin: approve/reject image
-- Create VPS with custom image
-
----
-FILES REQUIRING CHANGES
-
-Backend (Critical - Phase 1)
-
-1. backend/app/main.py - Add router registration
-2. backend/app/modules/hosting/routes/custom_images.py - Fix imports
-
-Backend (Optional - Phase 2)
-
-3. backend/app/modules/hosting/services/__init__.py - Add exports
-4. backend/app/modules/hosting/routes/__init__.py - Add exports
-
-Frontend (Phase 3)
-
-5. frontend/src/modules/hosting/types/hosting.types.ts - Add types
-6. frontend/src/modules/hosting/services/vpsService.ts - Add methods
-7. frontend/src/modules/hosting/hooks/useCustomImages.ts - NEW FILE
-8. frontend/src/modules/hosting/components/ImageUploadForm.tsx - NEW FILE
-9. frontend/src/modules/hosting/components/ImageBuildStatusBadge.tsx - NEW FILE
-10. frontend/src/modules/hosting/components/ImageBuildLogsViewer.tsx - NEW FILE
-11. frontend/src/modules/hosting/components/CustomImageCard.tsx - NEW FILE
-12. frontend/src/modules/hosting/components/CustomImageDetailPanel.tsx - NEW FILE
-13. frontend/src/modules/hosting/components/ImageBuildProgressIndicator.tsx - NEW FILE
-14. frontend/src/modules/hosting/pages/CustomImagesPage.tsx - NEW FILE
-15. frontend/src/modules/hosting/pages/CustomImageDetailPage.tsx - NEW FILE
-16. frontend/src/modules/hosting/pages/ImageUploadPage.tsx - NEW FILE
-17. frontend/src/modules/admin/pages/hosting/AdminCustomImagesPage.tsx - NEW FILE
-18. frontend/src/app/routes.tsx - Add routes
-
----
-CONCLUSION
-
-Backend Status: 90% complete - 2 critical issues preventing functionality
-Frontend Status: 0% complete - Full implementation needed (expected)
-
-Recommendation: Fix backend critical issues first (Phase 1), then implement frontend (Phase 3). Phase 2 is optional but recommended for consistency.
-
-Estimated Total Time:
-- Backend fixes: 30-45 minutes
-- Frontend implementation: 8-12 hours
-- Total: 9-13 hours
-
-
-
-
-
-
- ☒ Add CustomDockerImage types to hosting.types.ts
-☐ Add custom image service methods to vpsService.ts
-☐ Create useCustomImages.ts hooks file
-☐ Build ImageUploadForm component
-☐ Build ImageBuildStatusBadge component
-☐ Build ImageBuildLogsViewer component
-☐ Build CustomImageCard component
-☐ Build CustomImageDetailPanel component
-☐ Create CustomImagesPage
-☐ Create CustomImageDetailPage
-☐ Create ImageUploadPage
-☐ Add routes to routes.tsx
+ ---
+  📊 OVERALL STATUS
+  ┌─────────────────────┬───────────────┬───────────────┬────────────┬────────────┬───────────┐
+  │       Module        │     Email     │      SMS      │ Gate Check │ User Prefs │  Status   │
+  ├─────────────────────┼───────────────┼───────────────┼────────────┼────────────┼───────────┤
+  │ Tickets             │ ✅ All events │ ✅ All events │ ✅ Correct │ ✅ Used    │ PERFECT   │
+  ├─────────────────────┼───────────────┼───────────────┼────────────┼────────────┼───────────┤
+  │ Invoices            │ ✅ sent, paid │ ✅ sent, paid │ ✅ Correct │ ✅ Used    │ PERFECT   │
+  ├─────────────────────┼───────────────┼───────────────┼────────────┼────────────┼───────────┤
+  │ Quotes (workflow)   │ ✅ sent       │ ❌ Missing    │ ✅ Correct │ ✅ Used    │ GOOD      │
+  ├─────────────────────┼───────────────┼───────────────┼────────────┼────────────┼───────────┤
+  │ Orders              │ ⚠️ Partial    │ ⚠️ Partial    │ ✅ Correct │ ❌ Missing │ PARTIAL   │
+  ├─────────────────────┼───────────────┼───────────────┼────────────┼────────────┼───────────┤
+  │ Quote Notifications │ ⚠️ Partial    │ ⚠️ Partial    │ ❌ MISSING │ ⚠️ Manual  │ NEEDS FIX │
+  ├─────────────────────┼───────────────┼───────────────┼────────────┼────────────┼───────────┤
+  │ VPS/Hosting         │ ❌ Admin only │ ❌ Missing    │ ❌ MISSING │ ❌ N/A     │ CRITICAL  │
+  ├─────────────────────┼───────────────┼───────────────┼────────────┼────────────┼───────────┤
+  │ Customer Approval   │ ❌ Missing    │ ❌ Missing    │ ❌ N/A     │ ❌ N/A     │ CRITICAL  │
+  ├─────────────────────┼───────────────┼───────────────┼────────────┼────────────┼───────────┤
+  │ Password Changes    │ ❌ Missing    │ ❌ N/A        │ ❌ N/A     │ ❌ N/A     │ MISSING   │
+  ├─────────────────────┼───────────────┼───────────────┼────────────┼────────────┼───────────┤
+  │ Registration        │ ⚠️ Partial    │ ❌ Missing    │ ❌ MISSING │ ❌ N/A     │ PARTIAL   │
+  └─────────────────────┴───────────────┴───────────────┴────────────┴────────────┴───────────┘
+  ---
+  ✅ PERFECT - Tickets Module
+
+  Location: backend/app/modules/tickets/service.py
+  ┌───────────────────────┬─────────────┬─────────────┬────────────────────────────────────────────────────────────┬────────────┐
+  │         Event         │    Email    │     SMS     │                         Gate Check                         │ User Prefs │
+  ├───────────────────────┼─────────────┼─────────────┼────────────────────────────────────────────────────────────┼────────────┤
+  │ ticket.created        │ ✅ Line 85  │ ✅          │ ✅ notification_gate_allows(db, "email", "ticket.created") │ ✅         │
+  ├───────────────────────┼─────────────┼─────────────┼────────────────────────────────────────────────────────────┼────────────┤
+  │ ticket.replied        │ ✅ Line 254 │ ✅ Line 543 │ ✅ Correct                                                 │ ✅         │
+  ├───────────────────────┼─────────────┼─────────────┼────────────────────────────────────────────────────────────┼────────────┤
+  │ ticket.assigned       │ ✅ Line 348 │ ✅ Line 377 │ ✅ Correct                                                 │ ✅         │
+  ├───────────────────────┼─────────────┼─────────────┼────────────────────────────────────────────────────────────┼────────────┤
+  │ ticket.status_changed │ ✅ Line 254 │ ✅ Line 313 │ ✅ Correct                                                 │ ✅         │
+  ├───────────────────────┼─────────────┼─────────────┼────────────────────────────────────────────────────────────┼────────────┤
+  │ ticket.closed         │ ✅ Line 257 │ ✅          │ ✅ Correct                                                 │ ✅         │
+  └───────────────────────┴─────────────┴─────────────┴────────────────────────────────────────────────────────────┴────────────┘
+  ---
+  ✅ PERFECT - Invoices Module
+
+  Location: backend/app/modules/invoices/service_workflow.py
+  ┌──────────────────────────┬─────────────┬─────────────┬────────────────────────────────────────────────────────┐
+  │          Event           │    Email    │     SMS     │                       Gate Check                       │
+  ├──────────────────────────┼─────────────┼─────────────┼────────────────────────────────────────────────────────┤
+  │ invoice.sent             │ ✅ Line 148 │ ✅ Line 177 │ ✅ notification_gate_allows(db, "sms", "invoice.sent") │
+  ├──────────────────────────┼─────────────┼─────────────┼────────────────────────────────────────────────────────┤
+  │ invoice.payment_received │ ❌          │ ✅ Line 269 │ ✅ Correct                                             │
+  └──────────────────────────┴─────────────┴─────────────┴────────────────────────────────────────────────────────┘
+  Missing: skip_quiet_hours=True for payment confirmations
+
+  ---
+  ⚠️ PARTIAL - Orders Module
+
+  Location: backend/app/modules/orders/routes.py
+  ┌────────────────────┬────────────┬─────────────┬────────────┬───────────────────────────┐
+  │       Event        │   Email    │     SMS     │ Gate Check │           Issue           │
+  ├────────────────────┼────────────┼─────────────┼────────────┼───────────────────────────┤
+  │ order.approved     │ ✅ Line 52 │ ✅ Line 105 │ ✅ Correct │ ❌ Missing user_id param  │
+  ├────────────────────┼────────────┼─────────────┼────────────┼───────────────────────────┤
+  │ order.created      │ ❌ MISSING │ ❌ MISSING  │ -          │ No notification sent      │
+  ├────────────────────┼────────────┼─────────────┼────────────┼───────────────────────────┤
+  │ order.delivered    │ ❌ MISSING │ ❌ MISSING  │ -          │ No notification sent      │
+  ├────────────────────┼────────────┼─────────────┼────────────┼───────────────────────────┤
+  │ order.validation_* │ ❌ MISSING │ ❌ MISSING  │ -          │ No workflow notifications │
+  └────────────────────┴────────────┴─────────────┴────────────┴───────────────────────────┘
+  ---
+  ❌ NEEDS FIX - Quote Notifications
+
+  Location: backend/app/modules/products/quote_notifications.py
+
+  Critical Issues:
+  1. Does NOT use notification_gate_allows() - uses manual preference checks
+  2. Missing db parameter in SMS calls (5 locations)
+  ┌────────────────┬─────────────┬─────────────┬────────────┬──────────────────────┐
+  │     Event      │    Email    │     SMS     │ Gate Check │        Issue         │
+  ├────────────────┼─────────────┼─────────────┼────────────┼──────────────────────┤
+  │ quote.created  │ ⚠️ Line 92  │ ⚠️ Line 69  │ ❌ MISSING │ No gate, no db param │
+  ├────────────────┼─────────────┼─────────────┼────────────┼──────────────────────┤
+  │ quote.approved │ ⚠️ Line 162 │ ⚠️ Line 139 │ ❌ MISSING │ No gate, no db param │
+  ├────────────────┼─────────────┼─────────────┼────────────┼──────────────────────┤
+  │ quote.quoted   │ ⚠️ Line 235 │ ⚠️ Line 210 │ ❌ MISSING │ No gate, no db param │
+  ├────────────────┼─────────────┼─────────────┼────────────┼──────────────────────┤
+  │ quote.accepted │ ⚠️ Line 306 │ ⚠️ Line 282 │ ❌ MISSING │ No gate, no db param │
+  ├────────────────┼─────────────┼─────────────┼────────────┼──────────────────────┤
+  │ quote.rejected │ ⚠️ Line 400 │ ⚠️ Line 375 │ ❌ MISSING │ No gate, no db param │
+  └────────────────┴─────────────┴─────────────┴────────────┴──────────────────────┘
+  ---
+  ❌ CRITICAL - VPS/Hosting Module
+
+  Location: backend/app/modules/hosting/tasks.py, services/
+  ┌────────────────────────────┬──────────────────────────┬────────────┬──────────────────────────────────────────────┐
+  │           Event            │          Email           │    SMS     │                    Issue                     │
+  ├────────────────────────────┼──────────────────────────┼────────────┼──────────────────────────────────────────────┤
+  │ vps.subscription_requested │ ❌ MISSING               │ ❌ MISSING │ Customer never notified                      │
+  ├────────────────────────────┼──────────────────────────┼────────────┼──────────────────────────────────────────────┤
+  │ vps.provisioning_started   │ ❌ MISSING               │ ❌ MISSING │ No notification                              │
+  ├────────────────────────────┼──────────────────────────┼────────────┼──────────────────────────────────────────────┤
+  │ vps.provisioning_completed │ ❌ MISSING               │ ❌ MISSING │ CRITICAL: Customer never knows VPS is ready! │
+  ├────────────────────────────┼──────────────────────────┼────────────┼──────────────────────────────────────────────┤
+  │ vps.provisioning_failed    │ ⚠️ Admin only (Line 978) │ ❌ MISSING │ Customer not notified                        │
+  ├────────────────────────────┼──────────────────────────┼────────────┼──────────────────────────────────────────────┤
+  │ vps.activated              │ ❌ MISSING               │ ❌ MISSING │ No notification                              │
+  ├────────────────────────────┼──────────────────────────┼────────────┼──────────────────────────────────────────────┤
+  │ vps.cancelled              │ ❌ MISSING               │ ❌ MISSING │ No notification                              │
+  └────────────────────────────┴──────────────────────────┴────────────┴──────────────────────────────────────────────┘
+  Also in billing_service.py (4 locations without gate checks):
+  - Line 158: Initial invoice - no gate
+  - Line 273: Recurring invoice - no gate
+  - Line 460: Payment confirmation - no gate
+  - Line 529: Overdue alert - no gate
+
+  ---
+  ❌ CRITICAL - Customer Approval Workflow
+
+  Location: backend/app/modules/customers/workflow.py
+  ┌─────────────────────────────────┬────────────┬────────────┬──────────────────────────┐
+  │              Event              │   Email    │    SMS     │          Status          │
+  ├─────────────────────────────────┼────────────┼────────────┼──────────────────────────┤
+  │ customer.submitted_for_approval │ ❌ MISSING │ ❌ MISSING │ No notification          │
+  ├─────────────────────────────────┼────────────┼────────────┼──────────────────────────┤
+  │ customer.approved               │ ❌ MISSING │ ❌ MISSING │ Customer never notified! │
+  ├─────────────────────────────────┼────────────┼────────────┼──────────────────────────┤
+  │ customer.rejected               │ ❌ MISSING │ ❌ MISSING │ Customer never notified! │
+  └─────────────────────────────────┴────────────┴────────────┴──────────────────────────┘
+  ---
+  ❌ MISSING - Password Changes
+
+  Location: backend/app/modules/auth/service.py Line 913
+  ┌───────────────────────┬────────────┬─────┬─────────────────────────────────┐
+  │         Event         │   Email    │ SMS │             Status              │
+  ├───────────────────────┼────────────┼─────┼─────────────────────────────────┤
+  │ user.password_changed │ ❌ MISSING │ N/A │ Security risk - no notification │
+  └───────────────────────┴────────────┴─────┴─────────────────────────────────┘
+  ---
+  ⚠️ PARTIAL - Registration
+
+  Location: backend/app/modules/auth/registration_routes.py
+  ┌────────────────────┬─────────────┬─────┬────────────┬──────────────────────┐
+  │       Event        │    Email    │ SMS │ Gate Check │        Issue         │
+  ├────────────────────┼─────────────┼─────┼────────────┼──────────────────────┤
+  │ Email verification │ ✅ Line 78  │ ❌  │ ❌ MISSING │ No gate check        │
+  ├────────────────────┼─────────────┼─────┼────────────┼──────────────────────┤
+  │ Welcome email      │ ✅ Line 216 │ ❌  │ ❌ MISSING │ No gate, no db param │
+  └────────────────────┴─────────────┴─────┴────────────┴──────────────────────┘
+  ---
+  📋 Missing Notifications Summary
+
+  HIGH PRIORITY (Critical for UX)
+
+  1. VPS provisioning completed - Customer never knows their VPS is ready
+  2. Customer approved/rejected - Customer never gets notified
+  3. Order created - No confirmation to customer
+  4. Password changed - Security notification missing
+
+  MEDIUM PRIORITY
+
+  5. Order delivered notification
+  6. Order validation workflow notifications
+  7. Invoice created notification
+  8. Quote approval workflow notifications
+
+  Code Issues Found
+
+  - 13 locations missing db parameter (can't use DB-based settings)
+  - 33 locations missing notification gate checks
+  - 5 locations in quote_notifications.py bypass gate entirely
+  - 0 locations use skip_quiet_hours=True for urgent notifications
+
+  ---
+  Do you want me to fix these issues? I can prioritize:
+  1. Critical fixes - VPS provisioning, customer approval, password change notifications
+  2. Gate compliance - Add notification_gate_allows() to all locations
+  3. Complete coverage - Add all missing notifications

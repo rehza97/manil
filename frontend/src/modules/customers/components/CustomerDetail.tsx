@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   useCustomer,
   useActivateCustomer,
@@ -16,6 +17,16 @@ import {
 } from "@/shared/components/ui/card";
 import { Separator } from "@/shared/components/ui/separator";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/components/ui/dialog";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
+import {
   Loader2,
   Mail,
   Phone,
@@ -27,6 +38,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface CustomerDetailProps {
   customerId: string;
@@ -43,6 +55,14 @@ export function CustomerDetail({
   const activateCustomer = useActivateCustomer();
   const suspendCustomer = useSuspendCustomer();
   const deleteCustomer = useDeleteCustomer();
+
+  // Dialog states
+  const [activateDialogOpen, setActivateDialogOpen] = useState(false);
+  const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [activateError, setActivateError] = useState<string | null>(null);
+  const [suspendError, setSuspendError] = useState<string | null>(null);
 
   const getStatusBadge = (status: CustomerStatus) => {
     const variants = {
@@ -76,28 +96,59 @@ export function CustomerDetail({
   };
 
   const handleActivate = async () => {
-    const reason = prompt("Enter reason for activation:");
-    if (reason) {
-      await activateCustomer.mutateAsync({ id: customerId, reason });
+    console.log("[CustomerDetail.handleActivate] Before validation:", {
+      reason,
+      reasonLength: reason?.length,
+      reasonTrimmed: reason?.trim(),
+      reasonTrimmedLength: reason?.trim()?.length
+    });
+    
+    if (reason.trim()) {
+      console.log("[CustomerDetail.handleActivate] Calling mutation with:", {
+        id: customerId,
+        reason: reason.trim()
+      });
+      
+      try {
+        await activateCustomer.mutateAsync({ id: customerId, reason: reason.trim() });
+        setActivateDialogOpen(false);
+        setReason("");
+        setActivateError(null);
+        toast.success("Customer activated successfully");
+      } catch (error: any) {
+        console.error("[CustomerDetail.handleActivate] Error:", error);
+        console.error("[CustomerDetail.handleActivate] Error response:", error?.response?.data);
+        console.error("[CustomerDetail.handleActivate] Error status:", error?.response?.status);
+        
+        const errorMessage = error?.response?.data?.detail || "Failed to activate customer";
+        setActivateError(errorMessage);
+        toast.error(errorMessage);
+      }
+    } else {
+      console.warn("[CustomerDetail.handleActivate] Reason is empty, not submitting");
     }
   };
 
   const handleSuspend = async () => {
-    const reason = prompt("Enter reason for suspension:");
-    if (reason && window.confirm("Are you sure you want to suspend this customer?")) {
-      await suspendCustomer.mutateAsync({ id: customerId, reason });
+    if (reason.trim()) {
+      try {
+        await suspendCustomer.mutateAsync({ id: customerId, reason: reason.trim() });
+        setSuspendDialogOpen(false);
+        setReason("");
+        setSuspendError(null);
+        toast.success("Customer suspended successfully");
+      } catch (error: any) {
+        const errorMessage = error?.response?.data?.detail || "Failed to suspend customer";
+        setSuspendError(errorMessage);
+        toast.error(errorMessage);
+      }
     }
   };
 
   const handleDelete = async () => {
-    if (
-      window.confirm(
-        `Are you sure you want to delete customer "${customer?.name}"? This action cannot be undone.`
-      )
-    ) {
-      await deleteCustomer.mutateAsync(customerId);
-      onDelete?.();
-    }
+    await deleteCustomer.mutateAsync(customerId);
+    setDeleteDialogOpen(false);
+    onDelete?.();
   };
 
   if (isLoading) {
@@ -140,12 +191,12 @@ export function CustomerDetail({
             </div>
             <div className="flex gap-2">
               {customer.status !== CustomerStatus.ACTIVE && (
-                <Button onClick={handleActivate} variant="outline">
+                <Button onClick={() => setActivateDialogOpen(true)} variant="outline">
                   Activate
                 </Button>
               )}
               {customer.status === CustomerStatus.ACTIVE && (
-                <Button onClick={handleSuspend} variant="outline">
+                <Button onClick={() => setSuspendDialogOpen(true)} variant="outline">
                   Suspend
                 </Button>
               )}
@@ -155,7 +206,7 @@ export function CustomerDetail({
                   Edit
                 </Button>
               )}
-              <Button onClick={handleDelete} variant="destructive">
+              <Button onClick={() => setDeleteDialogOpen(true)} variant="destructive">
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
               </Button>
@@ -300,6 +351,123 @@ export function CustomerDetail({
           </CardContent>
         </Card>
       </div>
+
+      {/* Activate Dialog */}
+      <Dialog open={activateDialogOpen} onOpenChange={(open) => { 
+        setActivateDialogOpen(open); 
+        if (!open) {
+          setReason("");
+          setActivateError(null);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Activate Customer</DialogTitle>
+            <DialogDescription>
+              Enter a reason for activating this customer account.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="activate-reason">Reason</Label>
+              <Input
+                id="activate-reason"
+                placeholder="Enter reason for activation"
+                value={reason}
+                onChange={(e) => {
+                  setReason(e.target.value);
+                  setActivateError(null);
+                }}
+              />
+              {activateError && (
+                <p className="text-sm text-destructive mt-1">{activateError}</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { 
+              setActivateDialogOpen(false); 
+              setReason("");
+              setActivateError(null);
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleActivate} disabled={!reason.trim() || activateCustomer.isPending}>
+              {activateCustomer.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Activate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Suspend Dialog */}
+      <Dialog open={suspendDialogOpen} onOpenChange={(open) => { 
+        setSuspendDialogOpen(open); 
+        if (!open) {
+          setReason("");
+          setSuspendError(null);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Suspend Customer</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to suspend this customer? Enter a reason below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="suspend-reason">Reason</Label>
+              <Input
+                id="suspend-reason"
+                placeholder="Enter reason for suspension"
+                value={reason}
+                onChange={(e) => {
+                  setReason(e.target.value);
+                  setSuspendError(null);
+                }}
+              />
+              {suspendError && (
+                <p className="text-sm text-destructive mt-1">{suspendError}</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { 
+              setSuspendDialogOpen(false); 
+              setReason("");
+              setSuspendError(null);
+            }}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleSuspend} disabled={!reason.trim() || suspendCustomer.isPending}>
+              {suspendCustomer.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Suspend
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Customer</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete customer "{customer.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteCustomer.isPending}>
+              {deleteCustomer.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -61,7 +61,7 @@ settings = get_settings()
 def _get_unique_subnet_octet(subscription_id: str) -> int:
     """
     Generate a unique third octet (1-254) for network subnet based on subscription ID.
-    
+
     Uses hash of subscription ID to ensure consistent subnet per subscription
     while avoiding overlaps between different subscriptions.
     """
@@ -105,7 +105,8 @@ def _cleanup_provisioning_artifacts(customer_id: str, plan_slug: str, subscripti
     if not docker:
         return
 
-    ids = _make_vps_identifiers(customer_id=customer_id, plan_slug=plan_slug, subscription_id=subscription_id)
+    ids = _make_vps_identifiers(
+        customer_id=customer_id, plan_slug=plan_slug, subscription_id=subscription_id)
     container_name = ids["container_name"]
     network_name = ids["network_name"]
     volume_path = ids["volume_path"]
@@ -128,7 +129,8 @@ def _cleanup_provisioning_artifacts(customer_id: str, plan_slug: str, subscripti
         except NotFound:
             pass
         except Exception as e:
-            logger.warning(f"Could not cleanup container {container_name}: {e}")
+            logger.warning(
+                f"Could not cleanup container {container_name}: {e}")
 
         # Remove network (if exists)
         try:
@@ -155,7 +157,7 @@ def _cleanup_provisioning_artifacts(customer_id: str, plan_slug: str, subscripti
 def _install_docker_in_container(container) -> None:
     """
     Install Docker Engine and docker-compose inside a running container.
-    
+
     This function:
     1. Updates apt packages
     2. Installs prerequisites
@@ -163,14 +165,15 @@ def _install_docker_in_container(container) -> None:
     4. Installs Docker Engine and docker-compose plugin
     5. Installs standalone docker-compose
     6. Verifies installation
-    
+
     Args:
         container: Docker container object (must be running)
-    
+
     Raises:
         Exception: If installation fails
     """
-    logger.info(f"Starting Docker installation in container {container.name}...")
+    logger.info(
+        f"Starting Docker installation in container {container.name}...")
 
     # All commands must run as root to have proper permissions
     exec_kwargs = {"user": "root", "demux": False}
@@ -189,12 +192,15 @@ def _install_docker_in_container(container) -> None:
             **exec_kwargs
         )
         if check_result.exit_code == 0:
-            output = check_result.output.decode('utf-8', errors='replace').strip()
+            output = check_result.output.decode(
+                'utf-8', errors='replace').strip()
             if output == "none":
-                logger.info("No existing apt-get processes or locks found, proceeding...")
+                logger.info(
+                    "No existing apt-get processes or locks found, proceeding...")
                 break
             elif "locked" in output or "running" in output:
-                logger.info(f"apt-get/dpkg is busy, waiting... (waited {waited}s)")
+                logger.info(
+                    f"apt-get/dpkg is busy, waiting... (waited {waited}s)")
                 time.sleep(wait_interval)
                 waited += wait_interval
             else:
@@ -202,7 +208,8 @@ def _install_docker_in_container(container) -> None:
         else:
             # If check fails, wait a bit and try again
             if waited < 10:  # Wait at least 10 seconds initially
-                logger.info(f"Waiting for container to fully initialize... (waited {waited}s)")
+                logger.info(
+                    f"Waiting for container to fully initialize... (waited {waited}s)")
                 time.sleep(wait_interval)
                 waited += wait_interval
             else:
@@ -210,11 +217,13 @@ def _install_docker_in_container(container) -> None:
                 break
 
     if waited >= max_wait:
-        logger.warning(f"Timeout waiting for apt-get (waited {waited}s), attempting to clear locks...")
+        logger.warning(
+            f"Timeout waiting for apt-get (waited {waited}s), attempting to clear locks...")
         # Force clear stuck apt-get processes and locks
         container.exec_run("pkill -9 apt-get", **exec_kwargs)
         container.exec_run("pkill -9 dpkg", **exec_kwargs)
-        container.exec_run("rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/lib/apt/lists/lock /var/cache/apt/archives/lock", **exec_kwargs)
+        container.exec_run(
+            "rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/lib/apt/lists/lock /var/cache/apt/archives/lock", **exec_kwargs)
         container.exec_run("dpkg --configure -a", **exec_kwargs)
         time.sleep(2)
         logger.info("Cleared apt-get locks, proceeding with installation...")
@@ -235,11 +244,13 @@ def _install_docker_in_container(container) -> None:
             logger.info("Package index updated successfully")
             break
         else:
-            error_output = result.output.decode('utf-8', errors='replace') if result.output else "Unknown error"
+            error_output = result.output.decode(
+                'utf-8', errors='replace') if result.output else "Unknown error"
 
             # Check if it's a lock error - wait and retry
             if "lock" in error_output.lower() or "held by process" in error_output.lower():
-                logger.warning(f"Package manager is locked on attempt {attempt + 1}, waiting...")
+                logger.warning(
+                    f"Package manager is locked on attempt {attempt + 1}, waiting...")
                 time.sleep(5)
                 continue
 
@@ -251,16 +262,19 @@ def _install_docker_in_container(container) -> None:
                     **exec_kwargs
                 )
                 if verify_result.exit_code == 0 and verify_result.output:
-                    logger.warning("apt-get update had permission warnings but packages are available")
+                    logger.warning(
+                        "apt-get update had permission warnings but packages are available")
                     update_succeeded = True
                     break
 
             if attempt < max_update_retries - 1:
-                logger.warning(f"apt-get update attempt {attempt + 1} failed, retrying...")
+                logger.warning(
+                    f"apt-get update attempt {attempt + 1} failed, retrying...")
                 time.sleep(2)
             else:
-                raise Exception(f"Failed to update package index after {max_update_retries} attempts: {error_output}")
-    
+                raise Exception(
+                    f"Failed to update package index after {max_update_retries} attempts: {error_output}")
+
     # Step 3: Install prerequisites
     logger.info("Installing prerequisites...")
     # Use DEBIAN_FRONTEND=noninteractive to prevent any interactive prompts
@@ -269,33 +283,41 @@ def _install_docker_in_container(container) -> None:
         **exec_kwargs
     )
     if result.exit_code != 0:
-        error_output = result.output.decode('utf-8', errors='replace') if result.output else "Unknown error"
+        error_output = result.output.decode(
+            'utf-8', errors='replace') if result.output else "Unknown error"
         # Check if it's a lock error
         if "lock" in error_output.lower() or "held by process" in error_output.lower():
-            raise Exception(f"Package manager is locked. Another process is using apt-get. Please wait and try again. Error: {error_output}")
+            raise Exception(
+                f"Package manager is locked. Another process is using apt-get. Please wait and try again. Error: {error_output}")
         # Provide more helpful error message
-        logger.error(f"Failed to install prerequisites. Output: {error_output}")
-        raise Exception(f"Failed to install prerequisites. This may indicate the Ubuntu container's package repositories are not properly configured. Error: {error_output}")
-    
+        logger.error(
+            f"Failed to install prerequisites. Output: {error_output}")
+        raise Exception(
+            f"Failed to install prerequisites. This may indicate the Ubuntu container's package repositories are not properly configured. Error: {error_output}")
+
     # Step 3: Add Docker's official GPG key
     logger.info("Adding Docker GPG key...")
     result = container.exec_run("mkdir -p /etc/apt/keyrings", **exec_kwargs)
     if result.exit_code != 0:
-        raise Exception(f"Failed to create keyrings directory: {result.output.decode('utf-8', errors='replace')}")
-    
+        raise Exception(
+            f"Failed to create keyrings directory: {result.output.decode('utf-8', errors='replace')}")
+
     result = container.exec_run(
         "sh -c 'curl -fsSL https://download.docker.com/linux/ubuntu/gpg 2>/dev/null | gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg 2>&1'",
         **exec_kwargs
     )
     if result.exit_code != 0:
-        error_output = result.output.decode('utf-8', errors='replace') if result.output else "Unknown error"
+        error_output = result.output.decode(
+            'utf-8', errors='replace') if result.output else "Unknown error"
         # Check if the key file was actually created despite the error
-        check_result = container.exec_run("test -f /etc/apt/keyrings/docker.gpg", **exec_kwargs)
+        check_result = container.exec_run(
+            "test -f /etc/apt/keyrings/docker.gpg", **exec_kwargs)
         if check_result.exit_code != 0:
             raise Exception(f"Failed to add Docker GPG key: {error_output}")
         else:
-            logger.warning(f"GPG key creation had warnings but file exists: {error_output}")
-    
+            logger.warning(
+                f"GPG key creation had warnings but file exists: {error_output}")
+
     # Step 4: Set up the Docker repository
     logger.info("Setting up Docker repository...")
     result = container.exec_run(
@@ -303,19 +325,21 @@ def _install_docker_in_container(container) -> None:
         **exec_kwargs
     )
     if result.exit_code != 0:
-        error_output = result.output.decode('utf-8', errors='replace') if result.output else "Unknown error"
+        error_output = result.output.decode(
+            'utf-8', errors='replace') if result.output else "Unknown error"
         raise Exception(f"Failed to set up Docker repository: {error_output}")
-    
+
     # Step 5: Update package index again
     logger.info("Updating package index with Docker repository...")
     result = container.exec_run("apt-get update", **exec_kwargs)
     if result.exit_code != 0:
-        error_output = result.output.decode('utf-8', errors='replace') if result.output else "Unknown error"
+        error_output = result.output.decode(
+            'utf-8', errors='replace') if result.output else "Unknown error"
         # Ignore permission warnings if packages are still accessible
         if "Operation not permitted" not in error_output:
             raise Exception(f"Failed to update package index: {error_output}")
         logger.warning("apt-get update had permission warnings, continuing...")
-    
+
     # Step 6: Install Docker Engine and docker-compose plugin
     logger.info("Installing Docker Engine and docker-compose...")
     result = container.exec_run(
@@ -323,47 +347,57 @@ def _install_docker_in_container(container) -> None:
         **exec_kwargs
     )
     if result.exit_code != 0:
-        error_output = result.output.decode('utf-8', errors='replace') if result.output else "Unknown error"
+        error_output = result.output.decode(
+            'utf-8', errors='replace') if result.output else "Unknown error"
         raise Exception(f"Failed to install Docker: {error_output}")
-    
+
     # Step 7: Install standalone docker-compose (for compatibility)
     logger.info("Installing standalone docker-compose...")
     # Detect architecture
     arch_result = container.exec_run("uname -m", **exec_kwargs)
-    arch = arch_result.output.decode('utf-8').strip() if arch_result.exit_code == 0 else "x86_64"
+    arch = arch_result.output.decode(
+        'utf-8').strip() if arch_result.exit_code == 0 else "x86_64"
     compose_arch = "aarch64" if arch in ["aarch64", "arm64"] else "x86_64"
-    
+
     result = container.exec_run(
         f"sh -c 'curl -SL https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-linux-{compose_arch} -o /usr/local/bin/docker-compose'",
         **exec_kwargs
     )
     if result.exit_code != 0:
-        logger.warning(f"Failed to download standalone docker-compose: {result.output.decode('utf-8', errors='replace')}")
+        logger.warning(
+            f"Failed to download standalone docker-compose: {result.output.decode('utf-8', errors='replace')}")
     else:
-        result = container.exec_run("chmod +x /usr/local/bin/docker-compose", **exec_kwargs)
+        result = container.exec_run(
+            "chmod +x /usr/local/bin/docker-compose", **exec_kwargs)
         if result.exit_code != 0:
-            logger.warning(f"Failed to make docker-compose executable: {result.output.decode('utf-8', errors='replace')}")
-    
+            logger.warning(
+                f"Failed to make docker-compose executable: {result.output.decode('utf-8', errors='replace')}")
+
     # Step 8: Verify installation
     logger.info("Verifying Docker installation...")
     result = container.exec_run("docker --version", **exec_kwargs)
     if result.exit_code != 0:
-        raise Exception(f"Docker verification failed: {result.output.decode('utf-8', errors='replace')}")
-    
+        raise Exception(
+            f"Docker verification failed: {result.output.decode('utf-8', errors='replace')}")
+
     docker_version = result.output.decode('utf-8').strip()
     logger.info(f"Docker installed successfully: {docker_version}")
-    
+
     result = container.exec_run("docker-compose --version", **exec_kwargs)
     if result.exit_code == 0:
         compose_version = result.output.decode('utf-8').strip()
-        logger.info(f"docker-compose installed successfully: {compose_version}")
+        logger.info(
+            f"docker-compose installed successfully: {compose_version}")
     else:
-        logger.warning("docker-compose verification failed, but Docker is installed")
-    
+        logger.warning(
+            "docker-compose verification failed, but Docker is installed")
+
     # Step 9: Configure Docker daemon for VFS storage driver (BEFORE first start)
-    logger.info("Configuring Docker daemon with VFS storage driver for DinD compatibility...")
+    logger.info(
+        "Configuring Docker daemon with VFS storage driver for DinD compatibility...")
     # Create necessary directories
-    container.exec_run("mkdir -p /var/run /var/lib/docker /etc/docker", **exec_kwargs)
+    container.exec_run(
+        "mkdir -p /var/run /var/lib/docker /etc/docker", **exec_kwargs)
 
     # CRITICAL: Configure VFS storage driver BEFORE starting Docker for the first time
     # This prevents overlayfs-on-overlayfs issues in Docker-in-Docker scenarios
@@ -394,7 +428,8 @@ fi
 
     # Step 10: Start Docker daemon with VFS storage driver
     logger.info("Starting Docker daemon with VFS storage driver...")
-    check_daemon = container.exec_run("sh -c 'pgrep -x dockerd || echo not_running'", **exec_kwargs)
+    check_daemon = container.exec_run(
+        "sh -c 'pgrep -x dockerd || echo not_running'", **exec_kwargs)
     if check_daemon.exit_code == 0:
         output = check_daemon.output.decode('utf-8', errors='replace').strip()
         if output == "not_running":
@@ -404,30 +439,37 @@ fi
                 **exec_kwargs
             )
             if start_result.exit_code != 0:
-                logger.warning(f"Failed to start dockerd: {start_result.output.decode('utf-8', errors='replace')}")
+                logger.warning(
+                    f"Failed to start dockerd: {start_result.output.decode('utf-8', errors='replace')}")
             else:
                 # Wait for dockerd to start
                 time.sleep(3)
                 # Verify dockerd is running
-                verify_result = container.exec_run("sh -c 'pgrep -x dockerd || echo not_running'", **exec_kwargs)
+                verify_result = container.exec_run(
+                    "sh -c 'pgrep -x dockerd || echo not_running'", **exec_kwargs)
                 if verify_result.exit_code == 0:
-                    verify_output = verify_result.output.decode('utf-8', errors='replace').strip()
+                    verify_output = verify_result.output.decode(
+                        'utf-8', errors='replace').strip()
                     if verify_output != "not_running":
-                        logger.info("Docker daemon started successfully with VFS storage driver")
+                        logger.info(
+                            "Docker daemon started successfully with VFS storage driver")
                         # Verify storage driver
-                        storage_check = container.exec_run("docker info 2>/dev/null | grep -i 'storage driver'", **exec_kwargs)
+                        storage_check = container.exec_run(
+                            "docker info 2>/dev/null | grep -i 'storage driver'", **exec_kwargs)
                         if storage_check.exit_code == 0:
-                            storage_info = storage_check.output.decode('utf-8', errors='replace').strip()
+                            storage_info = storage_check.output.decode(
+                                'utf-8', errors='replace').strip()
                             logger.info(f"Verified: {storage_info}")
                     else:
-                        logger.warning("Docker daemon may not have started properly")
+                        logger.warning(
+                            "Docker daemon may not have started properly")
                 else:
                     logger.warning("Could not verify Docker daemon status")
         else:
             logger.info("Docker daemon is already running")
     else:
         logger.warning("Could not check Docker daemon status")
-    
+
     logger.info(f"Docker installation complete in container {container.name}")
 
 
@@ -458,7 +500,8 @@ def _create_docker_container(
 
         # Generate identifiers
         ids = _make_vps_identifiers(
-            customer_id=subscription.customer_id, plan_slug=plan.slug, subscription_id=str(subscription.id)
+            customer_id=subscription.customer_id, plan_slug=plan.slug, subscription_id=str(
+                subscription.id)
         )
         container_name = ids["container_name"]
         network_name = ids["network_name"]
@@ -473,7 +516,8 @@ def _create_docker_container(
         encryption_key = os.getenv("VPS_PASSWORD_ENCRYPTION_KEY")
         if not encryption_key:
             encryption_key = Fernet.generate_key().decode()
-            logger.warning("Using generated encryption key - set VPS_PASSWORD_ENCRYPTION_KEY in production!")
+            logger.warning(
+                "Using generated encryption key - set VPS_PASSWORD_ENCRYPTION_KEY in production!")
         cipher = Fernet(encryption_key.encode())
         encrypted_password = cipher.encrypt(root_password.encode()).decode()
 
@@ -485,7 +529,8 @@ def _create_docker_container(
             try:
                 for net in client.networks.list():
                     try:
-                        ipam_cfgs = (net.attrs or {}).get("IPAM", {}).get("Config") or []
+                        ipam_cfgs = (net.attrs or {}).get(
+                            "IPAM", {}).get("Config") or []
                         for cfg in ipam_cfgs:
                             subnet = cfg.get("Subnet")
                             if not subnet:
@@ -528,18 +573,21 @@ def _create_docker_container(
                     ),
                     internal=False,  # Allow internet access
                 )
-                logger.info(f"Created network: {network_name} (subnet 172.20.{subnet_octet}.0/24)")
+                logger.info(
+                    f"Created network: {network_name} (subnet 172.20.{subnet_octet}.0/24)")
                 break
             except APIError as e:
                 err = str(e).lower()
                 # Check if network already exists (reuse by name)
                 if "already exists" in err or "already in use" in err:
-                    logger.info(f"Network {network_name} already exists, reusing it")
+                    logger.info(
+                        f"Network {network_name} already exists, reusing it")
                     try:
                         network = client.networks.get(network_name)
                         break
                     except NotFound:
-                        logger.error(f"Network {network_name} reported existing but not found: {e}")
+                        logger.error(
+                            f"Network {network_name} reported existing but not found: {e}")
                         raise
 
                 # Handle overlapping subnet pools by trying the next octet
@@ -562,14 +610,16 @@ def _create_docker_container(
                     raise
 
         if network is None:
-            raise Exception("Failed to allocate a non-overlapping network subnet for VPS container")
+            raise Exception(
+                "Failed to allocate a non-overlapping network subnet for VPS container")
 
         # Create persistent volume path
         volume_path = ids["volume_path"]
         os.makedirs(volume_path, exist_ok=True)
 
         # Pull Docker image (subscription override > plan default)
-        docker_image = getattr(subscription, "os_docker_image", None) or plan.docker_image
+        docker_image = getattr(
+            subscription, "os_docker_image", None) or plan.docker_image
         logger.info(f"Pulling image: {docker_image}")
         client.images.pull(docker_image)
 
@@ -609,15 +659,17 @@ def _create_docker_container(
                 "exec tail -f /dev/null"
             )
         ]
-        
+
         # NOTE: When VPS_DOCKER_ENGINE_MODE=dind, Docker-in-Docker requires writable cgroups.
         # This typically requires privileged mode + host cgroup namespace.
-        dind_mode = (os.getenv("VPS_DOCKER_ENGINE_MODE", "auto") or "auto").strip().lower() == "dind"
+        dind_mode = (os.getenv("VPS_DOCKER_ENGINE_MODE", "auto")
+                     or "auto").strip().lower() == "dind"
 
         # For DinD: bind-mount cgroup fs as writable so nested containers can create cgroups.
         volumes_cfg = {volume_path: {"bind": "/data", "mode": "rw"}}
         if dind_mode:
-            volumes_cfg["/sys/fs/cgroup"] = {"bind": "/sys/fs/cgroup", "mode": "rw"}
+            volumes_cfg["/sys/fs/cgroup"] = {
+                "bind": "/sys/fs/cgroup", "mode": "rw"}
 
         create_kwargs = dict(
             image=docker_image,
@@ -695,9 +747,11 @@ def _create_docker_container(
         logger.info(f"Installing Docker in container {container_name}...")
         try:
             _install_docker_in_container(container)
-            logger.info(f"Docker installed successfully in container {container_name}")
+            logger.info(
+                f"Docker installed successfully in container {container_name}")
         except Exception as e:
-            logger.warning(f"Failed to install Docker in container {container_name}: {e}")
+            logger.warning(
+                f"Failed to install Docker in container {container_name}: {e}")
             # Don't fail provisioning if Docker installation fails - user can install manually later
             # But log it for visibility
 
@@ -786,7 +840,8 @@ def _encrypt_vps_password(plain_password: str) -> str:
     encryption_key = os.getenv("VPS_PASSWORD_ENCRYPTION_KEY")
     if not encryption_key:
         encryption_key = Fernet.generate_key().decode()
-        logger.warning("Using generated encryption key - set VPS_PASSWORD_ENCRYPTION_KEY in production!")
+        logger.warning(
+            "Using generated encryption key - set VPS_PASSWORD_ENCRYPTION_KEY in production!")
     cipher = Fernet(encryption_key.encode())
     return cipher.encrypt(plain_password.encode()).decode()
 
@@ -838,15 +893,19 @@ def provision_vps_async(self, subscription_id: str) -> Dict[str, Any]:
         Retries on failure with exponential backoff
     """
     task_id = self.request.id
-    logger.info(f"[Task {task_id}] Starting VPS provisioning for subscription {subscription_id}")
+    logger.info(
+        f"[Task {task_id}] Starting VPS provisioning for subscription {subscription_id}")
 
     customer_id: Optional[str] = None
     plan_slug: Optional[str] = None
+    customer_email: Optional[str] = None
+    customer_phone: Optional[str] = None
 
     try:
         with SyncSessionLocal() as db:
             # Load subscription with plan details
-            stmt = select(VPSSubscription).where(VPSSubscription.id == subscription_id)
+            stmt = select(VPSSubscription).where(
+                VPSSubscription.id == subscription_id)
             subscription = db.execute(stmt).scalar_one_or_none()
 
             if not subscription:
@@ -858,6 +917,74 @@ def provision_vps_async(self, subscription_id: str) -> Dict[str, Any]:
                 )
 
             customer_id = subscription.customer_id
+
+            # Get customer email and phone for notifications
+            if subscription.customer:
+                customer_email = subscription.customer.email
+                customer_phone = subscription.customer.phone if subscription.customer.phone and subscription.customer.phone.strip() else None
+
+            # Send vps.provisioning_started notification
+            try:
+                from app.config.database import AsyncSessionLocal
+                from app.modules.settings.utils import notification_gate_allows
+                from app.modules.notifications.service import user_id_by_email, create_notification
+                from app.modules.settings.service import UserNotificationPreferencesService
+
+                async def send_provisioning_started_notification():
+                    async with AsyncSessionLocal() as async_db:
+                        if customer_email:
+                            gate_allows_email = await notification_gate_allows(async_db, "email", "vps.provisioning_started")
+                            gate_allows_sms = await notification_gate_allows(async_db, "sms", "vps.provisioning_started")
+
+                            uid = await user_id_by_email(async_db, customer_email)
+                            should_send_email = True
+                            should_send_sms = False
+
+                            if uid:
+                                prefs_svc = UserNotificationPreferencesService(
+                                    async_db)
+                                prefs = await prefs_svc.get(uid)
+                                should_send_email = bool(
+                                    prefs.get("email", {}).get("hostingUpdates", True))
+                                should_send_sms = bool(
+                                    prefs.get("sms", {}).get("hostingUpdates", False))
+
+                            if should_send_email and gate_allows_email:
+                                email_service = EmailService()
+                                await email_service.send_email(
+                                    to=[customer_email],
+                                    subject=f"VPS Provisioning Started - {subscription.subscription_number}",
+                                    html_body=f"<p>Hello,</p><p>Your VPS provisioning has started for subscription <strong>{subscription.subscription_number}</strong>.</p><p>We'll notify you once provisioning is complete and your VPS is ready to use.</p>",
+                                    text_body=f"Hello,\n\nYour VPS provisioning has started for subscription {subscription.subscription_number}.\n\nWe'll notify you once provisioning is complete and your VPS is ready to use.",
+                                    db=async_db
+                                )
+
+                            if customer_phone and should_send_sms and gate_allows_sms:
+                                sms_service = SMSService()
+                                await sms_service.send_sms(
+                                    customer_phone,
+                                    f"VPS provisioning started for subscription {subscription.subscription_number}. You'll be notified when ready.",
+                                    db=async_db
+                                )
+
+                            if uid:
+                                try:
+                                    await create_notification(
+                                        async_db,
+                                        uid,
+                                        "vps_provisioning_started",
+                                        "VPS Provisioning Started",
+                                        body=f"VPS provisioning has started for subscription {subscription.subscription_number}. We'll notify you when it's ready.",
+                                        link="/dashboard/vps/subscriptions"
+                                    )
+                                except Exception as e:
+                                    logger.warning(
+                                        f"Failed to create in-app notification for provisioning started: {e}")
+
+                asyncio.run(send_provisioning_started_notification())
+            except Exception as e:
+                logger.warning(
+                    f"Failed to send provisioning started notification: {e}")
 
             # Load the plan details
             stmt = select(VPSPlan).where(VPSPlan.id == subscription.plan_id)
@@ -928,6 +1055,72 @@ def provision_vps_async(self, subscription_id: str) -> Dict[str, Any]:
                 f"{container_instance.container_name} (ID: {container_instance.container_id})"
             )
 
+            # Send vps.provisioning_completed notification (CRITICAL - customer must be notified)
+            try:
+                from app.config.database import AsyncSessionLocal
+                from app.modules.settings.utils import notification_gate_allows
+                from app.modules.notifications.service import user_id_by_email, create_notification
+                from app.modules.settings.service import UserNotificationPreferencesService
+
+                async def send_provisioning_completed_notification():
+                    async with AsyncSessionLocal() as async_db:
+                        if customer_email:
+                            gate_allows_email = await notification_gate_allows(async_db, "email", "vps.provisioning_completed")
+                            gate_allows_sms = await notification_gate_allows(async_db, "sms", "vps.provisioning_completed")
+
+                            uid = await user_id_by_email(async_db, customer_email)
+                            should_send_email = True
+                            should_send_sms = False
+
+                            if uid:
+                                prefs_svc = UserNotificationPreferencesService(
+                                    async_db)
+                                prefs = await prefs_svc.get(uid)
+                                should_send_email = bool(
+                                    prefs.get("email", {}).get("hostingUpdates", True))
+                                should_send_sms = bool(
+                                    prefs.get("sms", {}).get("hostingUpdates", False))
+
+                            # Send email with VPS connection details
+                            if should_send_email and gate_allows_email:
+                                email_service = EmailService()
+                                await email_service.send_email(
+                                    to=[customer_email],
+                                    subject=f"VPS Ready - {subscription.subscription_number}",
+                                    html_body=f"<p>Hello,</p><p>Great news! Your VPS is now ready and active.</p><p><strong>Subscription:</strong> {subscription.subscription_number}</p><p><strong>IP Address:</strong> {container_instance.ip_address}</p><p><strong>SSH Port:</strong> {container_instance.ssh_port}</p><p><strong>Container Name:</strong> {container_instance.container_name}</p><p>You can now access your VPS and start using it.</p>",
+                                    text_body=f"Hello,\n\nGreat news! Your VPS is now ready and active.\n\nSubscription: {subscription.subscription_number}\nIP Address: {container_instance.ip_address}\nSSH Port: {container_instance.ssh_port}\nContainer Name: {container_instance.container_name}\n\nYou can now access your VPS and start using it.",
+                                    db=async_db
+                                )
+
+                            # Send SMS with basic info
+                            if customer_phone and should_send_sms and gate_allows_sms:
+                                sms_service = SMSService()
+                                await sms_service.send_sms(
+                                    customer_phone,
+                                    f"VPS {subscription.subscription_number} is ready! IP: {container_instance.ip_address}, SSH Port: {container_instance.ssh_port}",
+                                    db=async_db
+                                )
+
+                            # Create in-app notification
+                            if uid:
+                                try:
+                                    await create_notification(
+                                        async_db,
+                                        uid,
+                                        "vps_provisioning_completed",
+                                        "VPS Ready",
+                                        body=f"Your VPS {subscription.subscription_number} is ready! IP: {container_instance.ip_address}",
+                                        link="/dashboard/vps/subscriptions"
+                                    )
+                                except Exception as e:
+                                    logger.warning(
+                                        f"Failed to create in-app notification for provisioning completed: {e}")
+
+                asyncio.run(send_provisioning_completed_notification())
+            except Exception as e:
+                logger.warning(
+                    f"Failed to send provisioning completed notification: {e}")
+
             return {
                 "status": "success",
                 "subscription_id": subscription_id,
@@ -962,9 +1155,10 @@ def provision_vps_async(self, subscription_id: str) -> Dict[str, Any]:
                 f"[Task {task_id}] VPS provisioning failed after {self.max_retries} retries "
                 f"for subscription {subscription_id}: {exc}"
             )
-            logger.error(f"[Task {task_id}] Traceback: {traceback.format_exc()}")
+            logger.error(
+                f"[Task {task_id}] Traceback: {traceback.format_exc()}")
 
-            # Send email notification (use asyncio.run for this specific async operation)
+            # Send email notification to admin (use asyncio.run for this specific async operation)
             try:
                 from app.infrastructure.email import templates
                 admin_email = settings.ADMIN_EMAIL
@@ -982,7 +1176,81 @@ def provision_vps_async(self, subscription_id: str) -> Dict[str, Any]:
                     text_body=template.get("text")
                 ))
             except Exception as email_error:
-                logger.error(f"[Task {task_id}] Failed to send admin notification email: {email_error}")
+                logger.error(
+                    f"[Task {task_id}] Failed to send admin notification email: {email_error}")
+
+            # Send customer notification for provisioning failure
+            try:
+                from app.config.database import AsyncSessionLocal
+                from app.modules.settings.utils import notification_gate_allows
+                from app.modules.notifications.service import user_id_by_email, create_notification
+                from app.modules.settings.service import UserNotificationPreferencesService
+
+                async def send_customer_provisioning_failed_notification():
+                    async with AsyncSessionLocal() as async_db:
+                        # Reload subscription to get customer info
+                        stmt = select(VPSSubscription).where(
+                            VPSSubscription.id == subscription_id)
+                        with SyncSessionLocal() as sync_db:
+                            sub_result = sync_db.execute(stmt)
+                            failed_subscription = sub_result.scalar_one_or_none()
+
+                        if failed_subscription and failed_subscription.customer and failed_subscription.customer.email:
+                            customer_email = failed_subscription.customer.email
+                            customer_phone = failed_subscription.customer.phone if failed_subscription.customer.phone and failed_subscription.customer.phone.strip() else None
+
+                            gate_allows_email = await notification_gate_allows(async_db, "email", "vps.provisioning_failed")
+                            gate_allows_sms = await notification_gate_allows(async_db, "sms", "vps.provisioning_failed")
+
+                            uid = await user_id_by_email(async_db, customer_email)
+                            should_send_email = True
+                            should_send_sms = False
+
+                            if uid:
+                                prefs_svc = UserNotificationPreferencesService(
+                                    async_db)
+                                prefs = await prefs_svc.get(uid)
+                                should_send_email = bool(
+                                    prefs.get("email", {}).get("hostingUpdates", True))
+                                should_send_sms = bool(
+                                    prefs.get("sms", {}).get("hostingUpdates", False))
+
+                            if should_send_email and gate_allows_email:
+                                email_service = EmailService()
+                                await email_service.send_email(
+                                    to=[customer_email],
+                                    subject=f"VPS Provisioning Issue - {failed_subscription.subscription_number}",
+                                    html_body=f"<p>Hello,</p><p>We encountered an issue while provisioning your VPS subscription <strong>{failed_subscription.subscription_number}</strong>.</p><p>Our team has been notified and will investigate the issue. We'll update you once the issue is resolved.</p><p>If you have any questions, please contact our support team.</p>",
+                                    text_body=f"Hello,\n\nWe encountered an issue while provisioning your VPS subscription {failed_subscription.subscription_number}.\n\nOur team has been notified and will investigate the issue. We'll update you once the issue is resolved.\n\nIf you have any questions, please contact our support team.",
+                                    db=async_db
+                                )
+
+                            if customer_phone and should_send_sms and gate_allows_sms:
+                                sms_service = SMSService()
+                                await sms_service.send_sms(
+                                    customer_phone,
+                                    f"VPS provisioning issue for {failed_subscription.subscription_number}. Support team notified.",
+                                    db=async_db
+                                )
+
+                            if uid:
+                                try:
+                                    await create_notification(
+                                        async_db,
+                                        uid,
+                                        "vps_provisioning_failed",
+                                        "VPS Provisioning Issue",
+                                        body=f"VPS provisioning encountered an issue for subscription {failed_subscription.subscription_number}. Support team has been notified.",
+                                        link="/dashboard/vps/subscriptions"
+                                    )
+                                except Exception as e:
+                                    logger.warning(
+                                        f"Failed to create in-app notification for provisioning failure: {e}")
+
+                asyncio.run(send_customer_provisioning_failed_notification())
+            except Exception as e:
+                logger.warning(
+                    f"Failed to send customer provisioning failure notification: {e}")
 
             raise
 
@@ -994,7 +1262,8 @@ def download_vps_image_async(self, subscription_id: str) -> Dict[str, Any]:
     Updates download progress fields on the subscription and then triggers provisioning.
     """
     task_id = self.request.id
-    logger.info(f"[Task {task_id}] Starting image download for subscription {subscription_id}")
+    logger.info(
+        f"[Task {task_id}] Starting image download for subscription {subscription_id}")
 
     if not docker:
         raise Exception("Docker SDK not installed")
@@ -1003,17 +1272,20 @@ def download_vps_image_async(self, subscription_id: str) -> Dict[str, Any]:
 
     try:
         with SyncSessionLocal() as db:
-            sub_stmt = select(VPSSubscription).where(VPSSubscription.id == subscription_id)
+            sub_stmt = select(VPSSubscription).where(
+                VPSSubscription.id == subscription_id)
             subscription = db.execute(sub_stmt).scalar_one_or_none()
             if not subscription:
                 raise Exception(f"Subscription {subscription_id} not found")
 
-            plan_stmt = select(VPSPlan).where(VPSPlan.id == subscription.plan_id)
+            plan_stmt = select(VPSPlan).where(
+                VPSPlan.id == subscription.plan_id)
             plan = db.execute(plan_stmt).scalar_one_or_none()
             if not plan:
                 raise Exception(f"VPS plan {subscription.plan_id} not found")
 
-            docker_image = getattr(subscription, "os_docker_image", None) or plan.docker_image
+            docker_image = getattr(
+                subscription, "os_docker_image", None) or plan.docker_image
 
             # Initialize tracking fields
             subscription.image_download_status = "DOWNLOADING"
@@ -1034,7 +1306,8 @@ def download_vps_image_async(self, subscription_id: str) -> Dict[str, Any]:
 
             def compute_percent() -> int:
                 total = sum(layer_totals.values())
-                current = sum(min(layer_currents.get(k, 0), v) for k, v in layer_totals.items())
+                current = sum(min(layer_currents.get(k, 0), v)
+                              for k, v in layer_totals.items())
                 if total <= 0:
                     return 0
                 return int((current / total) * 100)
@@ -1084,14 +1357,16 @@ def download_vps_image_async(self, subscription_id: str) -> Dict[str, Any]:
             from app.modules.hosting.tasks import provision_vps_async as _provision
             _provision.delay(str(subscription.id))
 
-            logger.info(f"[Task {task_id}] Image download completed for {subscription_id}, provisioning triggered")
+            logger.info(
+                f"[Task {task_id}] Image download completed for {subscription_id}, provisioning triggered")
             return {"status": "success", "subscription_id": subscription_id, "docker_image": docker_image}
 
     except Exception as e:
         # Best-effort persist failure state
         try:
             with SyncSessionLocal() as db:
-                sub_stmt = select(VPSSubscription).where(VPSSubscription.id == subscription_id)
+                sub_stmt = select(VPSSubscription).where(
+                    VPSSubscription.id == subscription_id)
                 subscription = db.execute(sub_stmt).scalar_one_or_none()
                 if subscription:
                     subscription.image_download_status = "ERROR"
@@ -1136,7 +1411,8 @@ def reconcile_missing_vps_containers(self, limit: int = 100) -> Dict[str, Any]:
             .where(ContainerInstance.status == ContainerStatus.RUNNING)
             .limit(limit)
         )
-        rows: List[Tuple[ContainerInstance, VPSSubscription, VPSPlan]] = db.execute(stmt).all()
+        rows: List[Tuple[ContainerInstance, VPSSubscription,
+                         VPSPlan]] = db.execute(stmt).all()
 
         for instance, subscription, plan in rows:
             try:
@@ -1162,7 +1438,8 @@ def reconcile_missing_vps_containers(self, limit: int = 100) -> Dict[str, Any]:
                 )
 
                 # Preserve existing volume if present; otherwise use new expected path
-                volume_path = instance.data_volume_path if instance.data_volume_path and os.path.isdir(instance.data_volume_path) else ids["volume_path"]
+                volume_path = instance.data_volume_path if instance.data_volume_path and os.path.isdir(
+                    instance.data_volume_path) else ids["volume_path"]
                 os.makedirs(volume_path, exist_ok=True)
 
                 # Ensure network exists (best effort) with unique subnet per subscription
@@ -1181,37 +1458,45 @@ def reconcile_missing_vps_containers(self, limit: int = 100) -> Dict[str, Any]:
                         ),
                         internal=False,
                     )
-                    logger.info(f"Created network for reconciliation: {ids['network_name']}")
+                    logger.info(
+                        f"Created network for reconciliation: {ids['network_name']}")
                 except APIError as e:
                     # Check if network already exists
                     if "already exists" in str(e).lower() or "already in use" in str(e).lower():
-                        logger.info(f"Network {ids['network_name']} already exists during reconciliation")
+                        logger.info(
+                            f"Network {ids['network_name']} already exists during reconciliation")
                         try:
                             client.networks.get(ids["network_name"])
                         except NotFound:
-                            logger.warning(f"Network {ids['network_name']} reported as existing but not found, will continue anyway")
+                            logger.warning(
+                                f"Network {ids['network_name']} reported as existing but not found, will continue anyway")
                     else:
-                        logger.warning(f"Failed to create network {ids['network_name']} during reconciliation: {e}, will continue anyway")
+                        logger.warning(
+                            f"Failed to create network {ids['network_name']} during reconciliation: {e}, will continue anyway")
                 except Exception as e:
                     # Unexpected error, try to get existing network as fallback
-                    logger.warning(f"Unexpected error creating network {ids['network_name']} during reconciliation: {e}")
+                    logger.warning(
+                        f"Unexpected error creating network {ids['network_name']} during reconciliation: {e}")
                     try:
                         client.networks.get(ids["network_name"])
                     except NotFound:
-                        logger.warning(f"Network {ids['network_name']} does not exist and creation failed, will continue anyway")
+                        logger.warning(
+                            f"Network {ids['network_name']} does not exist and creation failed, will continue anyway")
 
                 # Keep IP/port if already assigned in DB; else allocate new
                 ip_address = instance.ip_address or _get_next_available_ip(db)
-                ssh_port = instance.ssh_port or _get_next_available_ssh_port(db)
+                ssh_port = instance.ssh_port or _get_next_available_ssh_port(
+                    db)
 
                 # Reset password (do not log it)
                 new_root_password = secrets.token_urlsafe(16)
                 encrypted_password = _encrypt_vps_password(new_root_password)
 
                 # Pull image and create container
-                docker_image = getattr(subscription, "os_docker_image", None) or plan.docker_image
+                docker_image = getattr(
+                    subscription, "os_docker_image", None) or plan.docker_image
                 client.images.pull(docker_image)
-                
+
                 # Command to keep container running and set up SSH
                 container_command = [
                     "/bin/bash", "-c",
@@ -1228,11 +1513,13 @@ def reconcile_missing_vps_containers(self, limit: int = 100) -> Dict[str, Any]:
                         "exec tail -f /dev/null"
                     )
                 ]
-                
-                dind_mode = (os.getenv("VPS_DOCKER_ENGINE_MODE", "auto") or "auto").strip().lower() == "dind"
+
+                dind_mode = (os.getenv("VPS_DOCKER_ENGINE_MODE",
+                             "auto") or "auto").strip().lower() == "dind"
                 volumes_cfg = {volume_path: {"bind": "/data", "mode": "rw"}}
                 if dind_mode:
-                    volumes_cfg["/sys/fs/cgroup"] = {"bind": "/sys/fs/cgroup", "mode": "rw"}
+                    volumes_cfg["/sys/fs/cgroup"] = {
+                        "bind": "/sys/fs/cgroup", "mode": "rw"}
 
                 create_kwargs = dict(
                     image=docker_image,
@@ -1256,7 +1543,8 @@ def reconcile_missing_vps_containers(self, limit: int = 100) -> Dict[str, Any]:
                         "SYS_ADMIN", "NET_ADMIN", "MKNOD"  # Required for Docker installation and operation
                     ],
                     # In DinD mode we need elevated privileges; otherwise keep it locked down.
-                    security_opt=(["no-new-privileges:true"] if not dind_mode else ["apparmor:unconfined", "seccomp:unconfined"]),
+                    security_opt=(["no-new-privileges:true"] if not dind_mode else [
+                                  "apparmor:unconfined", "seccomp:unconfined"]),
                     user="root",  # Run as root to allow Docker installation
                     # Cgroup namespace arg name differs by docker SDK version; set below.
                     privileged=(True if dind_mode else False),
@@ -1282,17 +1570,20 @@ def reconcile_missing_vps_containers(self, limit: int = 100) -> Dict[str, Any]:
                     else:
                         raise
                 container.start()
-                
+
                 # Wait a moment for container to fully start
                 time.sleep(5)
-                
+
                 # Install Docker and docker-compose in the container
-                logger.info(f"Installing Docker in container {ids['container_name']}...")
+                logger.info(
+                    f"Installing Docker in container {ids['container_name']}...")
                 try:
                     _install_docker_in_container(container)
-                    logger.info(f"Docker installed successfully in container {ids['container_name']}")
+                    logger.info(
+                        f"Docker installed successfully in container {ids['container_name']}")
                 except Exception as e:
-                    logger.warning(f"Failed to install Docker in container {ids['container_name']}: {e}")
+                    logger.warning(
+                        f"Failed to install Docker in container {ids['container_name']}: {e}")
                     # Don't fail reconciliation if Docker installation fails
 
                 now = datetime.utcnow()
@@ -1318,7 +1609,8 @@ def reconcile_missing_vps_containers(self, limit: int = 100) -> Dict[str, Any]:
 
             except Exception as e:
                 db.rollback()
-                failed.append({"subscription_id": instance.subscription_id, "error": str(e)})
+                failed.append(
+                    {"subscription_id": instance.subscription_id, "error": str(e)})
 
     return {
         "status": "success",
@@ -1339,7 +1631,8 @@ def collect_all_metrics_task(self) -> Dict[str, Any]:
         Dict with status and count of containers processed
     """
     task_id = self.request.id
-    logger.info(f"[Task {task_id}] Starting metrics collection for all containers")
+    logger.info(
+        f"[Task {task_id}] Starting metrics collection for all containers")
 
     try:
         with SyncSessionLocal() as db:
@@ -1425,7 +1718,8 @@ def generate_recurring_invoices_task(self) -> Dict[str, Any]:
             }
 
     except Exception as e:
-        logger.error(f"[Task {task_id}] Recurring invoice generation failed: {e}")
+        logger.error(
+            f"[Task {task_id}] Recurring invoice generation failed: {e}")
         logger.error(f"[Task {task_id}] Traceback: {traceback.format_exc()}")
         return {
             "status": "error",
@@ -1451,7 +1745,8 @@ def check_overdue_invoices_task(self) -> Dict[str, Any]:
         with SyncSessionLocal() as db:
             # TODO: Implement overdue invoice check logic
             # This would require querying invoices and checking due dates
-            logger.info(f"[Task {task_id}] Overdue check completed (placeholder)")
+            logger.info(
+                f"[Task {task_id}] Overdue check completed (placeholder)")
 
             return {
                 "status": "success",
@@ -1538,7 +1833,8 @@ def build_docker_image_task(self, image_id: str) -> Dict[str, Any]:
         Retries once on transient failures
     """
     task_id = self.request.id
-    logger.info(f"[Task {task_id}] Starting Docker image build for image {image_id}")
+    logger.info(
+        f"[Task {task_id}] Starting Docker image build for image {image_id}")
 
     try:
         with SyncSessionLocal() as db:
@@ -1550,7 +1846,8 @@ def build_docker_image_task(self, image_id: str) -> Dict[str, Any]:
             # 4. Run security scan
             # 5. Update image status in DB
 
-            logger.info(f"[Task {task_id}] Docker image build completed (placeholder)")
+            logger.info(
+                f"[Task {task_id}] Docker image build completed (placeholder)")
 
             return {
                 "status": "success",
@@ -1575,7 +1872,8 @@ def build_docker_image_task(self, image_id: str) -> Dict[str, Any]:
                 f"[Task {task_id}] Docker image build failed after {self.max_retries} retries "
                 f"for image {image_id}: {exc}"
             )
-            logger.error(f"[Task {task_id}] Traceback: {traceback.format_exc()}")
+            logger.error(
+                f"[Task {task_id}] Traceback: {traceback.format_exc()}")
 
             # Send email notification
             try:
@@ -1595,7 +1893,8 @@ def build_docker_image_task(self, image_id: str) -> Dict[str, Any]:
                     """
                 ))
             except Exception as email_error:
-                logger.error(f"[Task {task_id}] Failed to send admin notification email: {email_error}")
+                logger.error(
+                    f"[Task {task_id}] Failed to send admin notification email: {email_error}")
 
             raise
 
@@ -1648,4 +1947,3 @@ def backup_all_vps_task(self) -> Dict[str, Any]:
             "error": str(e),
             "timestamp": datetime.utcnow().isoformat(),
         }
-

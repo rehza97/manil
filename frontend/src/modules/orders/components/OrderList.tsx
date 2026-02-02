@@ -38,6 +38,12 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
   request: "bg-blue-100 text-blue-800",
+  pending_commercial: "bg-orange-100 text-orange-800",
+  commercial_approved: "bg-emerald-100 text-emerald-800",
+  commercial_rejected: "bg-red-100 text-red-800",
+  pending_technical: "bg-purple-100 text-purple-800",
+  technical_approved: "bg-teal-100 text-teal-800",
+  technical_rejected: "bg-rose-100 text-rose-800",
   validated: "bg-purple-100 text-purple-800",
   in_progress: "bg-yellow-100 text-yellow-800",
   delivered: "bg-green-100 text-green-800",
@@ -46,6 +52,12 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   request: "Demande",
+  pending_commercial: "En attente validation commerciale",
+  commercial_approved: "Validation commerciale approuvée",
+  commercial_rejected: "Validation commerciale rejetée",
+  pending_technical: "En attente validation technique",
+  technical_approved: "Validation technique approuvée",
+  technical_rejected: "Validation technique rejetée",
   validated: "Validée",
   in_progress: "En cours",
   delivered: "Livrée",
@@ -54,10 +66,19 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
 
 export function OrderList() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [customerIdFilter, setCustomerIdFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "">("");
+
+  const getBasePath = () => {
+    if (location.pathname.startsWith("/dashboard")) return "/dashboard/orders";
+    if (location.pathname.startsWith("/corporate")) return "/corporate/orders";
+    if (location.pathname.startsWith("/admin")) return "/admin/orders";
+    return "/dashboard/orders";
+  };
+  const basePath = getBasePath();
 
   const { data, isLoading, isError, error } = useOrders(
     page,
@@ -69,11 +90,11 @@ export function OrderList() {
   );
 
   const handleViewOrder = (orderId: string) => {
-    navigate(`/orders/${orderId}`);
+    navigate(`${basePath}/${orderId}`);
   };
 
   const handleCreateOrder = () => {
-    navigate("/orders/create");
+    navigate(`${basePath}/create`);
   };
 
   const formatCurrency = (amount: number) => {
@@ -143,6 +164,12 @@ export function OrderList() {
                 <SelectContent>
                   <SelectItem value="all">Tous les statuts</SelectItem>
                   <SelectItem value="request">Demande</SelectItem>
+                  <SelectItem value="pending_commercial">En attente validation commerciale</SelectItem>
+                  <SelectItem value="commercial_approved">Validation commerciale approuvée</SelectItem>
+                  <SelectItem value="commercial_rejected">Validation commerciale rejetée</SelectItem>
+                  <SelectItem value="pending_technical">En attente validation technique</SelectItem>
+                  <SelectItem value="technical_approved">Validation technique approuvée</SelectItem>
+                  <SelectItem value="technical_rejected">Validation technique rejetée</SelectItem>
                   <SelectItem value="validated">Validée</SelectItem>
                   <SelectItem value="in_progress">En cours</SelectItem>
                   <SelectItem value="delivered">Livrée</SelectItem>

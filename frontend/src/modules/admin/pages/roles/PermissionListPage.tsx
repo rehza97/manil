@@ -199,28 +199,28 @@ export const PermissionListPage: React.FC = () => {
     },
   ];
 
-  // Table actions
-  const tableActions: DataTableAction<Permission>[] = [
-    {
-      label: "Edit",
-      icon: Edit,
-      onClick: (permission) => {
-        toast({
-          title: "Not Implemented",
-          description: "Permission editing will be available soon",
-        });
-      },
-    },
-    {
-      label: "Delete",
-      icon: Trash2,
-      variant: "destructive",
-      onClick: (permission) => {
-        setSelectedPermission(permission);
-        setShowDeleteDialog(true);
-      },
-    },
-  ];
+  // Table actions - commented out per request
+  // const tableActions: DataTableAction<Permission>[] = [
+  //   {
+  //     label: "Edit",
+  //     icon: Edit,
+  //     onClick: (permission) => {
+  //       toast({
+  //         title: "Not Implemented",
+  //         description: "Permission editing will be available soon",
+  //       });
+  //     },
+  //   },
+  //   {
+  //     label: "Delete",
+  //     icon: Trash2,
+  //     variant: "destructive",
+  //     onClick: (permission) => {
+  //       setSelectedPermission(permission);
+  //       setShowDeleteDialog(true);
+  //     },
+  //   },
+  // ];
 
   return (
     <div className="space-y-6">
@@ -233,17 +233,17 @@ export const PermissionListPage: React.FC = () => {
           { label: "Roles", href: "/admin/roles" },
           { label: "Permissions" },
         ]}
-        actions={
-          <Button onClick={() => {
-            toast({
-              title: "Not Implemented",
-              description: "Permission creation will be available soon",
-            });
-          }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Permission
-          </Button>
-        }
+        // actions={
+        //   <Button onClick={() => {
+        //     toast({
+        //       title: "Not Implemented",
+        //       description: "Permission creation will be available soon",
+        //     });
+        //   }}>
+        //     <Plus className="h-4 w-4 mr-2" />
+        //     Create Permission
+        //   </Button>
+        // }
       />
 
       {/* Info Banner */}
@@ -333,7 +333,7 @@ export const PermissionListPage: React.FC = () => {
         <DataTable
           columns={columns}
           data={filteredPermissions}
-          actions={tableActions}
+          // actions={tableActions}
           loading={isLoading}
           emptyMessage="No permissions found"
         />

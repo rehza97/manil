@@ -143,7 +143,8 @@ class VPSProvisioningService:
         resolved_distro_id = os_distro_id or "ubuntu-22.04"
         distro = get_distro_by_id(resolved_distro_id)
         if not distro:
-            raise BadRequestException(f"Unsupported distro: {resolved_distro_id}")
+            raise BadRequestException(
+                f"Unsupported distro: {resolved_distro_id}")
 
         subscription = VPSSubscription(
             subscription_number=subscription_number,
@@ -170,7 +171,69 @@ class VPSProvisioningService:
 
         await self.db.commit()
 
-        logger.info(f"VPS request created: {subscription.subscription_number} for user {user_id}")
+        logger.info(
+            f"VPS request created: {subscription.subscription_number} for user {user_id}")
+
+        # Send vps.subscription_requested notification
+        try:
+            from app.modules.settings.utils import notification_gate_allows
+            from app.modules.notifications.service import user_id_by_email, create_notification
+            from app.modules.settings.service import UserNotificationPreferencesService
+
+            if customer.email:
+                # Check notification gates
+                gate_allows_email = await notification_gate_allows(self.db, "email", "vps.subscription_requested")
+                gate_allows_sms = await notification_gate_allows(self.db, "sms", "vps.subscription_requested")
+
+                # Check user preferences
+                uid = await user_id_by_email(self.db, customer.email)
+                should_send_email = True
+                should_send_sms = False
+
+                if uid:
+                    prefs_svc = UserNotificationPreferencesService(self.db)
+                    prefs = await prefs_svc.get(uid)
+                    should_send_email = bool(
+                        prefs.get("email", {}).get("hostingUpdates", True))
+                    should_send_sms = bool(
+                        prefs.get("sms", {}).get("hostingUpdates", False))
+
+                # Send email notification
+                if should_send_email and gate_allows_email:
+                    await self.email_service.send_email(
+                        to=[customer.email],
+                        subject=f"VPS Subscription Request Received - {subscription.subscription_number}",
+                        html_body=f"<p>Hello {customer.name or customer.email},</p><p>Your VPS subscription request for <strong>{plan.name}</strong> has been received and is pending approval.</p><p>Subscription Number: <strong>{subscription.subscription_number}</strong></p><p>We will review your request and notify you once it's approved.</p>",
+                        text_body=f"Hello {customer.name or customer.email},\n\nYour VPS subscription request for {plan.name} has been received and is pending approval.\n\nSubscription Number: {subscription.subscription_number}\n\nWe will review your request and notify you once it's approved.",
+                        db=self.db
+                    )
+
+                # Send SMS notification
+                if customer.phone and customer.phone.strip() and should_send_sms and gate_allows_sms:
+                    sms_service = SMSService()
+                    await sms_service.send_sms(
+                        customer.phone,
+                        f"VPS subscription request {subscription.subscription_number} received. Pending approval.",
+                        db=self.db
+                    )
+
+                # Create in-app notification
+                if uid:
+                    try:
+                        await create_notification(
+                            self.db,
+                            uid,
+                            "vps_subscription_requested",
+                            "VPS Subscription Request Received",
+                            body=f"Your VPS subscription request for {plan.name} (Subscription: {subscription.subscription_number}) has been received and is pending approval.",
+                            link="/dashboard/vps/subscriptions"
+                        )
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to create in-app notification for VPS subscription request: {e}")
+        except Exception as e:
+            logger.warning(
+                f"Failed to send VPS subscription request notification: {e}")
 
         return quote
 
@@ -191,10 +254,12 @@ class VPSProvisioningService:
         """
         subscription = await self.subscription_repo.get_by_id(subscription_id)
         if not subscription:
-            raise NotFoundException(f"Subscription {subscription_id} not found")
+            raise NotFoundException(
+                f"Subscription {subscription_id} not found")
 
         if subscription.status != SubscriptionStatus.PENDING:
-            raise BadRequestException(f"Subscription is not pending (current status: {subscription.status})")
+            raise BadRequestException(
+                f"Subscription is not pending (current status: {subscription.status})")
 
         # Ensure OS selection exists (default if missing)
         if not getattr(subscription, "os_distro_id", None) or not getattr(subscription, "os_docker_image", None):
@@ -227,7 +292,8 @@ class VPSProvisioningService:
 
         await self.db.commit()
 
-        logger.info(f"VPS request approved: {subscription.subscription_number} by {approved_by_id}")
+        logger.info(
+            f"VPS request approved: {subscription.subscription_number} by {approved_by_id}")
 
         # Trigger async Celery task for image download (then provisioning)
         from app.modules.hosting.tasks import download_vps_image_async
@@ -251,10 +317,12 @@ class VPSProvisioningService:
         """
         subscription = await self.subscription_repo.get_by_id(subscription_id)
         if not subscription:
-            raise NotFoundException(f"Subscription {subscription_id} not found")
+            raise NotFoundException(
+                f"Subscription {subscription_id} not found")
 
         if subscription.status != SubscriptionStatus.PROVISIONING:
-            raise BadRequestException(f"Subscription is not provisioning (current status: {subscription.status})")
+            raise BadRequestException(
+                f"Subscription is not provisioning (current status: {subscription.status})")
 
         try:
             # Create container via Docker service
@@ -266,7 +334,8 @@ class VPSProvisioningService:
             # Update subscription status
             subscription.status = SubscriptionStatus.ACTIVE
             subscription.start_date = date.today()
-            subscription.next_billing_date = (date.today() + timedelta(days=30))
+            subscription.next_billing_date = (
+                date.today() + timedelta(days=30))
             subscription = await self.subscription_repo.update(subscription)
 
             # Create timeline event
@@ -292,7 +361,8 @@ class VPSProvisioningService:
 
             # Send welcome email with credentials
             # Note: In production, decrypt password for email
-            customer_email = subscription.customer.email if hasattr(subscription.customer, 'email') else None
+            customer_email = subscription.customer.email if hasattr(
+                subscription.customer, 'email') else None
             if customer_email:
                 await self._send_welcome_email(
                     customer_email=customer_email,
@@ -302,7 +372,60 @@ class VPSProvisioningService:
                     container_name=container_instance.container_name
                 )
 
-            logger.info(f"VPS provisioned successfully: {subscription.subscription_number}")
+            logger.info(
+                f"VPS provisioned successfully: {subscription.subscription_number}")
+
+            # Send vps.activated notification
+            try:
+                if subscription.customer and subscription.customer.email:
+                    gate_allows_email = await notification_gate_allows(self.db, "email", "vps.activated")
+                    gate_allows_sms = await notification_gate_allows(self.db, "sms", "vps.activated")
+
+                    uid = await user_id_by_email(self.db, subscription.customer.email)
+                    should_send_email = True
+                    should_send_sms = False
+
+                    if uid:
+                        prefs_svc = UserNotificationPreferencesService(self.db)
+                        prefs = await prefs_svc.get(uid)
+                        should_send_email = bool(
+                            prefs.get("email", {}).get("hostingUpdates", True))
+                        should_send_sms = bool(
+                            prefs.get("sms", {}).get("hostingUpdates", False))
+
+                    if should_send_email and gate_allows_email:
+                        await self.email_service.send_email(
+                            to=[subscription.customer.email],
+                            subject=f"VPS Activated - {subscription.subscription_number}",
+                            html_body=f"<p>Hello,</p><p>Your VPS subscription <strong>{subscription.subscription_number}</strong> has been activated and is now active.</p><p>You can now access your VPS and start using it.</p>",
+                            text_body=f"Hello,\n\nYour VPS subscription {subscription.subscription_number} has been activated and is now active.\n\nYou can now access your VPS and start using it.",
+                            db=self.db
+                        )
+
+                    if subscription.customer.phone and subscription.customer.phone.strip() and should_send_sms and gate_allows_sms:
+                        sms_service = SMSService()
+                        await sms_service.send_sms(
+                            subscription.customer.phone,
+                            f"VPS {subscription.subscription_number} has been activated and is now active.",
+                            db=self.db
+                        )
+
+                    if uid:
+                        try:
+                            await create_notification(
+                                self.db,
+                                uid,
+                                "vps_activated",
+                                "VPS Activated",
+                                body=f"Your VPS subscription {subscription.subscription_number} has been activated.",
+                                link="/dashboard/vps/subscriptions"
+                            )
+                        except Exception as e:
+                            logger.warning(
+                                f"Failed to create in-app notification for VPS activation: {e}")
+            except Exception as e:
+                logger.warning(
+                    f"Failed to send VPS activation notification: {e}")
 
             return container_instance
 
@@ -335,10 +458,12 @@ class VPSProvisioningService:
         """
         subscription = await self.subscription_repo.get_by_id(subscription_id)
         if not subscription:
-            raise NotFoundException(f"Subscription {subscription_id} not found")
+            raise NotFoundException(
+                f"Subscription {subscription_id} not found")
 
         if subscription.status != SubscriptionStatus.ACTIVE:
-            raise BadRequestException(f"Cannot upgrade subscription with status {subscription.status}")
+            raise BadRequestException(
+                f"Cannot upgrade subscription with status {subscription.status}")
 
         # Get new plan
         plan_query = select(VPSPlan).where(VPSPlan.id == new_plan_id)
@@ -351,7 +476,8 @@ class VPSProvisioningService:
 
         # Validate upgrade path (no downgrades mid-cycle)
         if new_plan.monthly_price <= old_plan.monthly_price:
-            raise BadRequestException("Cannot downgrade mid-cycle. Cancel and create new subscription.")
+            raise BadRequestException(
+                "Cannot downgrade mid-cycle. Cancel and create new subscription.")
 
         # Calculate pro-rated amount (import here to avoid circular dependency)
         from app.modules.hosting.services.billing_service import SubscriptionBillingService
@@ -398,7 +524,8 @@ class VPSProvisioningService:
             new_plan
         )
 
-        logger.info(f"Subscription upgraded: {subscription.subscription_number} from {old_plan.name} to {new_plan.name}")
+        logger.info(
+            f"Subscription upgraded: {subscription.subscription_number} from {old_plan.name} to {new_plan.name}")
 
         return subscription
 
@@ -415,7 +542,8 @@ class VPSProvisioningService:
         """
         subscription = await self.subscription_repo.get_by_id(subscription_id)
         if not subscription:
-            raise NotFoundException(f"Subscription {subscription_id} not found")
+            raise NotFoundException(
+                f"Subscription {subscription_id} not found")
 
         # Stop container (data retained)
         container = await self.container_repo.get_by_subscription_id(subscription_id)
@@ -442,7 +570,8 @@ class VPSProvisioningService:
 
         await self.db.commit()
 
-        logger.info(f"Subscription suspended: {subscription.subscription_number} - {reason}")
+        logger.info(
+            f"Subscription suspended: {subscription.subscription_number} - {reason}")
 
         return subscription
 
@@ -458,10 +587,12 @@ class VPSProvisioningService:
         """
         subscription = await self.subscription_repo.get_by_id(subscription_id)
         if not subscription:
-            raise NotFoundException(f"Subscription {subscription_id} not found")
+            raise NotFoundException(
+                f"Subscription {subscription_id} not found")
 
         if subscription.status != SubscriptionStatus.SUSPENDED:
-            raise BadRequestException(f"Subscription is not suspended (current status: {subscription.status})")
+            raise BadRequestException(
+                f"Subscription is not suspended (current status: {subscription.status})")
 
         # Start container
         container = await self.container_repo.get_by_subscription_id(subscription_id)
@@ -487,7 +618,8 @@ class VPSProvisioningService:
 
         await self.db.commit()
 
-        logger.info(f"Subscription reactivated: {subscription.subscription_number}")
+        logger.info(
+            f"Subscription reactivated: {subscription.subscription_number}")
 
         return subscription
 
@@ -508,7 +640,8 @@ class VPSProvisioningService:
 
         subscription = await self.subscription_repo.get_by_id(subscription_id)
         if not subscription:
-            raise NotFoundException(f"Subscription {subscription_id} not found")
+            raise NotFoundException(
+                f"Subscription {subscription_id} not found")
 
         subscription.auto_renew = False
         subscription.status = SubscriptionStatus.CANCELLED
@@ -528,7 +661,60 @@ class VPSProvisioningService:
 
         await self.db.commit()
 
-        logger.info(f"Subscription cancelled: {subscription.subscription_number} - {reason}")
+        logger.info(
+            f"Subscription cancelled: {subscription.subscription_number} - {reason}")
+
+        # Send vps.cancelled notification
+        try:
+            if subscription.customer and subscription.customer.email:
+                gate_allows_email = await notification_gate_allows(self.db, "email", "vps.cancelled")
+                gate_allows_sms = await notification_gate_allows(self.db, "sms", "vps.cancelled")
+
+                uid = await user_id_by_email(self.db, subscription.customer.email)
+                should_send_email = True
+                should_send_sms = False
+
+                if uid:
+                    prefs_svc = UserNotificationPreferencesService(self.db)
+                    prefs = await prefs_svc.get(uid)
+                    should_send_email = bool(
+                        prefs.get("email", {}).get("hostingUpdates", True))
+                    should_send_sms = bool(
+                        prefs.get("sms", {}).get("hostingUpdates", False))
+
+                if should_send_email and gate_allows_email:
+                    await self.email_service.send_email(
+                        to=[subscription.customer.email],
+                        subject=f"VPS Subscription Cancelled - {subscription.subscription_number}",
+                        html_body=f"<p>Hello,</p><p>Your VPS subscription <strong>{subscription.subscription_number}</strong> has been cancelled.</p><p><strong>Reason:</strong> {reason}</p><p>If you have any questions, please contact our support team.</p>",
+                        text_body=f"Hello,\n\nYour VPS subscription {subscription.subscription_number} has been cancelled.\n\nReason: {reason}\n\nIf you have any questions, please contact our support team.",
+                        db=self.db
+                    )
+
+                if subscription.customer.phone and subscription.customer.phone.strip() and should_send_sms and gate_allows_sms:
+                    sms_service = SMSService()
+                    await sms_service.send_sms(
+                        subscription.customer.phone,
+                        f"VPS subscription {subscription.subscription_number} has been cancelled. Reason: {reason[:100]}",
+                        db=self.db
+                    )
+
+                if uid:
+                    try:
+                        await create_notification(
+                            self.db,
+                            uid,
+                            "vps_cancelled",
+                            "VPS Subscription Cancelled",
+                            body=f"Your VPS subscription {subscription.subscription_number} has been cancelled. Reason: {reason}",
+                            link="/dashboard/vps/subscriptions"
+                        )
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to create in-app notification for VPS cancellation: {e}")
+        except Exception as e:
+            logger.warning(
+                f"Failed to send VPS cancellation notification: {e}")
 
         return subscription
 
@@ -544,7 +730,8 @@ class VPSProvisioningService:
         """
         subscription = await self.subscription_repo.get_by_id(subscription_id)
         if not subscription:
-            raise NotFoundException(f"Subscription {subscription_id} not found")
+            raise NotFoundException(
+                f"Subscription {subscription_id} not found")
 
         # Delete container and all volumes
         container = await self.container_repo.get_by_subscription_id(subscription_id)
@@ -569,7 +756,8 @@ class VPSProvisioningService:
 
         await self.db.commit()
 
-        logger.info(f"Subscription terminated: {subscription.subscription_number}")
+        logger.info(
+            f"Subscription terminated: {subscription.subscription_number}")
 
         return subscription
 
@@ -577,11 +765,13 @@ class VPSProvisioningService:
         """Start container for subscription."""
         subscription = await self.subscription_repo.get_by_id(subscription_id)
         if not subscription:
-            raise NotFoundException(f"Subscription {subscription_id} not found")
+            raise NotFoundException(
+                f"Subscription {subscription_id} not found")
 
         container = await self.container_repo.get_by_subscription_id(subscription_id)
         if not container:
-            raise NotFoundException(f"Container not found for subscription {subscription_id}")
+            raise NotFoundException(
+                f"Container not found for subscription {subscription_id}")
 
         success = await self.docker_service.start_container(container.container_id)
         if not success:
@@ -606,11 +796,13 @@ class VPSProvisioningService:
         """Stop container for subscription."""
         subscription = await self.subscription_repo.get_by_id(subscription_id)
         if not subscription:
-            raise NotFoundException(f"Subscription {subscription_id} not found")
+            raise NotFoundException(
+                f"Subscription {subscription_id} not found")
 
         container = await self.container_repo.get_by_subscription_id(subscription_id)
         if not container:
-            raise NotFoundException(f"Container not found for subscription {subscription_id}")
+            raise NotFoundException(
+                f"Container not found for subscription {subscription_id}")
 
         success = await self.docker_service.stop_container(container.container_id)
         if not success:
@@ -635,11 +827,13 @@ class VPSProvisioningService:
         """Reboot container for subscription."""
         subscription = await self.subscription_repo.get_by_id(subscription_id)
         if not subscription:
-            raise NotFoundException(f"Subscription {subscription_id} not found")
+            raise NotFoundException(
+                f"Subscription {subscription_id} not found")
 
         container = await self.container_repo.get_by_subscription_id(subscription_id)
         if not container:
-            raise NotFoundException(f"Container not found for subscription {subscription_id}")
+            raise NotFoundException(
+                f"Container not found for subscription {subscription_id}")
 
         success = await self.docker_service.reboot_container(container.container_id)
         if not success:
@@ -670,7 +864,7 @@ class VPSProvisioningService:
     ) -> None:
         """Send welcome email with VPS credentials."""
         from app.infrastructure.email import templates
-        
+
         template = templates.vps_welcome_template(
             subscription_number=subscription_number,
             ip_address=ip_address,
@@ -687,5 +881,5 @@ class VPSProvisioningService:
     async def _notify_provisioning_failure(self, subscription: VPSSubscription, error: str) -> None:
         """Notify admins of provisioning failure."""
         # In production, send email to admins
-        logger.error(f"Provisioning failure notification for {subscription.subscription_number}: {error}")
-
+        logger.error(
+            f"Provisioning failure notification for {subscription.subscription_number}: {error}")

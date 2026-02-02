@@ -55,6 +55,13 @@ export const notificationsApi = {
     return data;
   },
 
+  markAllRead: async (): Promise<{ ok: boolean; marked_count: number }> => {
+    const { data } = await apiClient.patch<{ ok: boolean; marked_count: number }>(
+      "/notifications/read-all"
+    );
+    return data;
+  },
+
   /** Base URL for SSE stream (use with fetch + Authorization header). */
   getStreamUrl: (): string => {
     const base = (apiClient.defaults.baseURL || "").replace(/\/$/, "");

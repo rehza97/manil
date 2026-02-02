@@ -150,8 +150,16 @@ async def activate_customer(
     current_user: User = Depends(require_permission(Permission.CUSTOMERS_ACTIVATE)),
 ):
     """Activate a customer account with validation."""
-    service = CustomerService(db)
-    return await service.activate(customer_id, updated_by=current_user.id, reason=request.reason)
+    logger.info(f"[activate_customer] Received request: customer_id={customer_id}, reason={request.reason}, reason_length={len(request.reason)}")
+    
+    try:
+        service = CustomerService(db)
+        result = await service.activate(customer_id, updated_by=current_user.id, reason=request.reason)
+        logger.info(f"[activate_customer] Successfully activated customer {customer_id}")
+        return result
+    except Exception as e:
+        logger.error(f"[activate_customer] Error activating customer {customer_id}: {e}", exc_info=True)
+        raise
 
 
 @router.post("/{customer_id}/suspend", response_model=CustomerResponse)

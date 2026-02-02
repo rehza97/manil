@@ -21,6 +21,7 @@ from app.modules.orders.schemas import (
     OrderItemCreate,
     OrderConvertFromQuoteRequest,
 )
+from app.modules.orders.repository import OrderRepository
 from app.modules.products.models import Product
 from app.modules.quotes.models import Quote, QuoteStatus
 from fastapi import HTTPException, status
@@ -90,7 +91,8 @@ class OrderService:
         # AsyncSession has a .sync_session attribute
         sync_session = getattr(db, "sync_session", None)
         if sync_session is None:
-            raise RuntimeError("Database session is neither sync Session nor AsyncSession with sync_session.")
+            raise RuntimeError(
+                "Database session is neither sync Session nor AsyncSession with sync_session.")
         return sync_session
 
     @staticmethod
@@ -124,11 +126,13 @@ class OrderService:
                 ).first()
 
                 if not product:
-                    raise NotFoundException(f"Product not found: {item_data.product_id}")
+                    raise NotFoundException(
+                        f"Product not found: {item_data.product_id}")
 
                 # Calculate item totals
                 item_subtotal = item_data.unit_price * item_data.quantity
-                item_discount = item_subtotal * (item_data.discount_percentage / 100)
+                item_discount = item_subtotal * \
+                    (item_data.discount_percentage / 100)
                 item_total = item_subtotal - item_discount
 
                 item = OrderItem(
@@ -146,7 +150,8 @@ class OrderService:
                 order.items.append(item)
 
             # Calculate order totals
-            subtotal, tax, discount, total = OrderService._calculate_order_total(order.items)
+            subtotal, tax, discount, total = OrderService._calculate_order_total(
+                order.items)
 
             order.subtotal = subtotal
             order.tax_amount = tax
@@ -185,38 +190,38 @@ class OrderService:
     ) -> Order:
         """Convert an accepted quote to an order."""
         db = OrderService._ensure_sync_session(db)
-        
+
         # Get quote
         quote = db.query(Quote).filter(
             Quote.id == conversion_data.quote_id,
             Quote.deleted_at.is_(None)
         ).first()
-        
+
         if not quote:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Quote {conversion_data.quote_id} not found"
             )
-        
+
         # Verify quote is accepted
         if quote.status != QuoteStatus.ACCEPTED:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Cannot convert quote with status {quote.status.value}. Quote must be accepted."
             )
-        
+
         # Check if quote already converted to order
         existing_order = db.query(Order).filter(
             Order.quote_id == quote.id,
             Order.deleted_at.is_(None)
         ).first()
-        
+
         if existing_order:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Quote {quote.quote_number} has already been converted to order {existing_order.order_number}"
             )
-        
+
         try:
             # Create order from quote
             order = Order(
@@ -231,14 +236,15 @@ class OrderService:
                 delivery_contact=conversion_data.delivery_contact,
                 created_by=created_by_user_id,
             )
-            
+
             # Convert quote items to order items
             for quote_item in quote.items:
                 # Calculate item totals
                 item_subtotal = quote_item.unit_price * quote_item.quantity
-                item_discount = item_subtotal * (quote_item.discount_percentage / 100)
+                item_discount = item_subtotal * \
+                    (quote_item.discount_percentage / 100)
                 item_total = item_subtotal - item_discount
-                
+
                 order_item = OrderItem(
                     id=str(uuid.uuid4()),
                     product_id=quote_item.product_id,
@@ -250,17 +256,18 @@ class OrderService:
                     variant_sku=None,
                     notes=quote_item.description,
                 )
-                
+
                 order.items.append(order_item)
-            
+
             # Calculate order totals
-            subtotal, tax, discount, total = OrderService._calculate_order_total(order.items)
-            
+            subtotal, tax, discount, total = OrderService._calculate_order_total(
+                order.items)
+
             order.subtotal = subtotal
             order.tax_amount = tax
             order.discount_amount = discount
             order.total_amount = total
-            
+
             # Add timeline entry
             timeline_entry = OrderTimeline(
                 id=str(uuid.uuid4()),
@@ -272,17 +279,18 @@ class OrderService:
                 performed_by=created_by_user_id,
             )
             order.timeline.append(timeline_entry)
-            
+
             # Update quote status to CONVERTED
             quote.status = QuoteStatus.CONVERTED
-            
+
             db.add(order)
             db.commit()
-            
-            logger.info(f"Order {order.order_number} created from quote {quote.quote_number}")
-            
+
+            logger.info(
+                f"Order {order.order_number} created from quote {quote.quote_number}")
+
             return order
-            
+
         except HTTPException:
             raise
         except Exception as e:
@@ -296,10 +304,8 @@ class OrderService:
     @staticmethod
     def get_order(db: Session | AsyncSession, order_id: str) -> Order:
         """Get order by ID."""
-        db = OrderService._ensure_sync_session(db)
-        order = db.query(Order).filter(
-            and_(Order.id == order_id, Order.deleted_at.is_(None))
-        ).first()
+        repo = OrderRepository(db)
+        order = repo.get_by_id(order_id)
 
         if not order:
             raise NotFoundException(f"Order not found: {order_id}")
@@ -315,19 +321,8 @@ class OrderService:
         status: Optional[OrderStatus] = None,
     ) -> Tuple[list[Order], int]:
         """List orders with filtering."""
-        db = OrderService._ensure_sync_session(db)
-        query = db.query(Order).filter(Order.deleted_at.is_(None))
-
-        if customer_id:
-            query = query.filter(Order.customer_id == customer_id)
-
-        if status:
-            query = query.filter(Order.status == status)
-
-        total = query.count()
-        orders = query.order_by(desc(Order.created_at)).offset(skip).limit(limit).all()
-
-        return orders, total
+        repo = OrderRepository(db)
+        return repo.list_orders(skip, limit, customer_id, status)
 
     @staticmethod
     def update_order(
@@ -337,32 +332,18 @@ class OrderService:
         updated_by_user_id: str,
     ) -> Order:
         """Update order details."""
-        db = OrderService._ensure_sync_session(db)
+        repo = OrderRepository(db)
         order = OrderService.get_order(db, order_id)
 
         try:
-            if data.customer_notes is not None:
-                order.customer_notes = data.customer_notes
-
-            if data.internal_notes is not None:
-                order.internal_notes = data.internal_notes
-
-            if data.delivery_address is not None:
-                order.delivery_address = data.delivery_address
-
-            if data.delivery_contact is not None:
-                order.delivery_contact = data.delivery_contact
-
-            order.updated_by = updated_by_user_id
-
-            db.commit()
+            updated_order = repo.update(order_id, data, updated_by_user_id)
+            if not updated_order:
+                raise NotFoundException(f"Order not found: {order_id}")
 
             logger.info(f"Order updated: {order_id}")
-
-            return order
+            return updated_order
 
         except Exception as e:
-            db.rollback()
             logger.error(f"Error updating order: {str(e)}")
             raise
 
@@ -375,51 +356,41 @@ class OrderService:
         performed_by_user_id: Optional[str] = None,
     ) -> Order:
         """Update order status with validation."""
-        db = OrderService._ensure_sync_session(db)
+        repo = OrderRepository(db)
         order = OrderService.get_order(db, order_id)
 
-        # Validate status transition
-        allowed_transitions = OrderService.STATUS_TRANSITIONS.get(order.status, [])
-        if new_status not in allowed_transitions:
-            raise BadRequestException(
-                f"Cannot transition from {order.status} to {new_status}. "
-                f"Allowed: {allowed_transitions}"
-            )
+        # If order requires validation workflow, use OrderWorkflowService
+        if order.validation_required:
+            from app.modules.orders.service_workflow import OrderWorkflowService
+            # Check if this is a workflow transition
+            workflow_transitions = OrderWorkflowService.WORKFLOW_TRANSITIONS.get(
+                order.status, [])
+            if new_status not in workflow_transitions:
+                raise BadRequestException(
+                    f"Cannot transition from {order.status} to {new_status}. "
+                    f"This order requires validation workflow. Use workflow endpoints for validation steps."
+                )
+        else:
+            # Use simple transitions for orders without validation
+            allowed_transitions = OrderService.STATUS_TRANSITIONS.get(
+                order.status, [])
+            if new_status not in allowed_transitions:
+                raise BadRequestException(
+                    f"Cannot transition from {order.status} to {new_status}. "
+                    f"Allowed: {allowed_transitions}"
+                )
 
         try:
-            previous_status = order.status
-            order.status = new_status
+            updated_order = repo.update_status(
+                order_id, new_status, notes, performed_by_user_id)
+            if not updated_order:
+                raise NotFoundException(f"Order not found: {order_id}")
 
-            # Update status timestamps
-            if new_status == OrderStatus.VALIDATED:
-                order.validated_at = datetime.now(timezone.utc)
-            elif new_status == OrderStatus.IN_PROGRESS:
-                order.in_progress_at = datetime.now(timezone.utc)
-            elif new_status == OrderStatus.DELIVERED:
-                order.delivered_at = datetime.now(timezone.utc)
-            elif new_status == OrderStatus.CANCELLED:
-                order.cancelled_at = datetime.now(timezone.utc)
-
-            # Add timeline entry
-            timeline_entry = OrderTimeline(
-                id=str(uuid.uuid4()),
-                order_id=order_id,
-                previous_status=previous_status,
-                new_status=new_status,
-                action_type="status_changed",
-                description=notes,
-                performed_by=performed_by_user_id or "system",
-            )
-            order.timeline.append(timeline_entry)
-
-            db.commit()
-
-            logger.info(f"Order status updated: {order_id} ({previous_status} → {new_status})")
-
-            return order
+            logger.info(
+                f"Order status updated: {order_id} ({order.status} → {new_status})")
+            return updated_order
 
         except Exception as e:
-            db.rollback()
             logger.error(f"Error updating order status: {str(e)}")
             raise
 

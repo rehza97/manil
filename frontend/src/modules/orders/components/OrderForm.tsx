@@ -3,7 +3,7 @@
  * Handles order creation and editing
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -74,6 +74,7 @@ export function OrderForm({ orderId, onSuccess, onCancel }: OrderFormProps) {
   const createOrder = useCreateOrder();
   const updateOrder = useUpdateOrder();
   const [calculatedTotal, setCalculatedTotal] = useState(0);
+  const hasPrefilledFromProduct = useRef(false);
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderFormSchema),
@@ -122,6 +123,32 @@ export function OrderForm({ orderId, onSuccess, onCancel }: OrderFormProps) {
       });
     }
   }, [existingOrder, isEdit, form]);
+
+  // Prefill first line item when navigating from product page (location.state.product)
+  useEffect(() => {
+    if (isEdit || hasPrefilledFromProduct.current) return;
+    const state = location.state as { product?: { id: string }; selectedVariant?: { sku?: string }; quantity?: number; unit_price?: number } | null;
+    const product = state?.product;
+    if (!product?.id || state?.unit_price == null) return;
+    hasPrefilledFromProduct.current = true;
+    form.reset({
+      customer_id: form.getValues("customer_id"),
+      quote_id: form.getValues("quote_id"),
+      customer_notes: form.getValues("customer_notes"),
+      delivery_address: form.getValues("delivery_address"),
+      delivery_contact: form.getValues("delivery_contact"),
+      items: [
+        {
+          product_id: product.id,
+          quantity: Math.max(1, state.quantity ?? 1),
+          unit_price: state.unit_price,
+          discount_percentage: 0,
+          variant_sku: state.selectedVariant?.sku ?? "",
+          notes: "",
+        },
+      ],
+    });
+  }, [isEdit, location.state, form]);
 
   // Watch items to calculate total
   const items = form.watch("items");

@@ -18,6 +18,7 @@ import {
   HostingPage,
   VPSPage
 } from "@/modules/landing";
+import { FaqPage } from "@/modules/faq";
 import {
   LoginPage,
   RegisterPage,
@@ -26,6 +27,7 @@ import {
   TwoFactorSetupPage,
   ProtectedRoute,
   RoleBasedRedirect,
+  GuestOnlyRoute,
 } from "@/modules/auth";
 import {
   UserDashboardLayout,
@@ -63,6 +65,7 @@ import {
   SMSConfigPage,
   StorageConfigPage,
   BackupSettingsPage,
+  NotificationSettingsPage as AdminNotificationSettingsPage,
 } from "@/modules/admin";
 import {
   SystemHealthPage,
@@ -179,7 +182,6 @@ import {
 import {
   AllDNSZonesPage,
   DNSMonitoringPage,
-  DNSTemplatesPage,
   DNSZoneDetailPage as AdminDNSZoneDetailPage,
 } from "@/modules/dns/pages/admin";
 import {
@@ -251,7 +253,11 @@ export const routes = [
   // Public Routes
   {
     path: "/",
-    element: <LandingPage />,
+    element: (
+      <GuestOnlyRoute>
+        <LandingPage />
+      </GuestOnlyRoute>
+    ),
   },
   {
     path: "/pricing",
@@ -270,6 +276,10 @@ export const routes = [
     element: <ContactPage />,
   },
   {
+    path: "/faq",
+    element: <FaqPage />,
+  },
+  {
     path: "/hosting",
     element: <HostingPage />,
   },
@@ -279,23 +289,43 @@ export const routes = [
   },
   {
     path: "/login",
-    element: <LoginPage />,
+    element: (
+      <GuestOnlyRoute>
+        <LoginPage />
+      </GuestOnlyRoute>
+    ),
   },
   {
     path: "/register",
-    element: <RegisterPage />,
+    element: (
+      <GuestOnlyRoute>
+        <RegisterPage />
+      </GuestOnlyRoute>
+    ),
   },
   {
     path: "/forgot-password",
-    element: <ForgotPasswordPage />,
+    element: (
+      <GuestOnlyRoute>
+        <ForgotPasswordPage />
+      </GuestOnlyRoute>
+    ),
   },
   {
     path: "/reset-password",
-    element: <ResetPasswordPage />,
+    element: (
+      <GuestOnlyRoute>
+        <ResetPasswordPage />
+      </GuestOnlyRoute>
+    ),
   },
   {
     path: "/setup-2fa",
-    element: <TwoFactorSetupPage />,
+    element: (
+      <GuestOnlyRoute>
+        <TwoFactorSetupPage />
+      </GuestOnlyRoute>
+    ),
   },
   {
     path: "/redirect",
@@ -324,6 +354,14 @@ export const routes = [
     path: "/catalog/:id",
     element: <ProductPage />,
   },
+
+  /*
+   * Dashboard and log routes (client, corporate, admin):
+   * Unauthenticated users must NOT access any of these. ProtectedRoute on each
+   * dashboard parent enforces this; dashboard layouts also use RoleGuard for
+   * defense-in-depth. All children (logs, reports, overview, etc.) are
+   * protected by the same parent.
+   */
 
   // Client Dashboard Routes (/dashboard)
   {
@@ -929,6 +967,10 @@ export const routes = [
         element: <SMSConfigPage />,
       },
       {
+        path: "settings/notifications",
+        element: <AdminNotificationSettingsPage />,
+      },
+      {
         path: "settings/storage",
         element: <StorageConfigPage />,
       },
@@ -1134,10 +1176,6 @@ export const routes = [
       {
         path: "dns/monitoring",
         element: <DNSMonitoringPage />,
-      },
-      {
-        path: "dns/templates",
-        element: <DNSTemplatesPage />,
       },
       // Invoice Management (Admin)
       {

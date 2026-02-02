@@ -112,7 +112,7 @@ class SyncResponse(BaseModel):
 
 
 # Create router
-router = APIRouter(prefix="/api/v1/email-accounts", tags=["email"])
+router = APIRouter(prefix="/email-accounts", tags=["email"])
 
 
 # ============================================================================
@@ -194,7 +194,7 @@ async def list_email_accounts(
 async def get_email_account(
     account_id: str,
     db: Session = Depends(get_sync_db),
-    current_user = Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
     """Get email account details.
 
@@ -208,7 +208,8 @@ async def get_email_account(
     """
     require_admin(current_user)
 
-    account = db.query(EmailAccount).filter(EmailAccount.id == account_id).first()
+    account = db.query(EmailAccount).filter(
+        EmailAccount.id == account_id).first()
 
     if not account:
         raise HTTPException(
@@ -238,7 +239,8 @@ async def update_email_account(
         EmailAccountResponse: Updated account
     """
 
-    account = db.query(EmailAccount).filter(EmailAccount.id == account_id).first()
+    account = db.query(EmailAccount).filter(
+        EmailAccount.id == account_id).first()
 
     if not account:
         raise HTTPException(
@@ -254,7 +256,8 @@ async def update_email_account(
     if request.imap_username:
         account.imap_username = request.imap_username
     if request.imap_password:
-        account.imap_password_encrypted = IMAPService.encrypt_password(request.imap_password)
+        account.imap_password_encrypted = IMAPService.encrypt_password(
+            request.imap_password)
     if request.use_tls is not None:
         account.use_tls = request.use_tls
     if request.polling_interval_minutes:
@@ -274,7 +277,7 @@ async def update_email_account(
 async def delete_email_account(
     account_id: str,
     db: Session = Depends(get_sync_db),
-    current_user = Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
     """Delete email account.
 
@@ -285,7 +288,8 @@ async def delete_email_account(
     """
     require_admin(current_user)
 
-    account = db.query(EmailAccount).filter(EmailAccount.id == account_id).first()
+    account = db.query(EmailAccount).filter(
+        EmailAccount.id == account_id).first()
 
     if not account:
         raise HTTPException(
@@ -319,7 +323,8 @@ async def test_connection(
         TestConnectionResponse: Test result
     """
 
-    account = db.query(EmailAccount).filter(EmailAccount.id == account_id).first()
+    account = db.query(EmailAccount).filter(
+        EmailAccount.id == account_id).first()
 
     if not account:
         raise HTTPException(
@@ -341,7 +346,7 @@ async def test_connection(
 async def sync_emails(
     account_id: str,
     db: Session = Depends(get_sync_db),
-    current_user = Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
     """Sync emails from account now.
 
@@ -355,7 +360,8 @@ async def sync_emails(
     """
     require_admin(current_user)
 
-    account = db.query(EmailAccount).filter(EmailAccount.id == account_id).first()
+    account = db.query(EmailAccount).filter(
+        EmailAccount.id == account_id).first()
 
     if not account:
         raise HTTPException(
@@ -375,13 +381,15 @@ async def sync_emails(
         for imap_email in imap_emails:
             try:
                 # Parse email
-                parsed_email = EmailParserService.parse_email(imap_email.raw_email)
+                parsed_email = EmailParserService.parse_email(
+                    imap_email.raw_email)
 
                 # Analyze for spam
                 spam_analysis = SpamFilterService.analyze_email(parsed_email)
 
                 # Convert to ticket
-                result = EmailToTicketService.process_email(db, parsed_email, account)
+                result = EmailToTicketService.process_email(
+                    db, parsed_email, account)
 
                 if result.success:
                     emails_processed += 1
@@ -396,18 +404,29 @@ async def sync_emails(
                                     uid = await user_id_by_email(adb, result.customer_email)
                                     skip = False
                                     if uid:
-                                        prefs_svc = UserNotificationPreferencesService(adb)
+                                        prefs_svc = UserNotificationPreferencesService(
+                                            adb)
                                         prefs = await prefs_svc.get(uid)
                                         skip = not prefs.get("email", {}).get(
                                             "ticketUpdates", True
                                         )
-                                if not skip:
-                                    svc = TicketNotificationService()
-                                    await svc.notify_ticket_created(
-                                        result.customer_email,
-                                        result.ticket_id,
-                                        result.subject,
+                                    from app.modules.settings.utils import (
+                                        notification_gate_allows,
                                     )
+
+                                    if (
+                                        not skip
+                                        and await notification_gate_allows(
+                                            adb, "email", "ticket.created"
+                                        )
+                                    ):
+                                        svc = TicketNotificationService()
+                                        await svc.notify_ticket_created(
+                                            result.customer_email,
+                                            result.ticket_id,
+                                            result.subject,
+                                            db=adb,
+                                        )
                             except Exception as ack_err:
                                 errors.append(
                                     f"Created ticket {result.ticket_id} but ack email failed: {ack_err}"
@@ -416,7 +435,8 @@ async def sync_emails(
                     # Mark as seen
                     IMAPService.mark_as_seen(account, imap_email.uid)
                 else:
-                    errors.append(f"Failed to process {imap_email.message_id}: {result.error_message}")
+                    errors.append(
+                        f"Failed to process {imap_email.message_id}: {result.error_message}")
 
             except Exception as e:
                 errors.append(f"Error processing email: {str(e)}")
@@ -478,7 +498,8 @@ async def list_email_messages(
     if ticket_id:
         query = query.filter(EmailMessage.ticket_id == ticket_id)
 
-    messages = query.order_by(EmailMessage.received_at.desc()).limit(limit).all()
+    messages = query.order_by(
+        EmailMessage.received_at.desc()).limit(limit).all()
 
     return messages
 
@@ -500,7 +521,8 @@ async def get_email_message(
         EmailMessageResponse: Message details
     """
 
-    message = db.query(EmailMessage).filter(EmailMessage.id == message_id).first()
+    message = db.query(EmailMessage).filter(
+        EmailMessage.id == message_id).first()
 
     if not message:
         raise HTTPException(
@@ -515,7 +537,7 @@ async def get_email_message(
 async def mark_message_spam(
     message_id: str,
     db: Session = Depends(get_sync_db),
-    current_user = Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
     """Mark email message as spam.
 
@@ -526,7 +548,8 @@ async def mark_message_spam(
     """
     require_admin(current_user)
 
-    message = db.query(EmailMessage).filter(EmailMessage.id == message_id).first()
+    message = db.query(EmailMessage).filter(
+        EmailMessage.id == message_id).first()
 
     if not message:
         raise HTTPException(
@@ -555,7 +578,8 @@ async def delete_email_message(
         current_user: Current authenticated user
     """
 
-    message = db.query(EmailMessage).filter(EmailMessage.id == message_id).first()
+    message = db.query(EmailMessage).filter(
+        EmailMessage.id == message_id).first()
 
     if not message:
         raise HTTPException(
@@ -594,16 +618,18 @@ async def handle_sendgrid_webhook(
     from app.modules.notifications.services.bounce_service import BounceService
     from app.modules.tickets.models import EmailAccount
     from datetime import datetime
-    
+
     try:
         # Get webhook payload (SendGrid sends JSON array)
         body = await request.body()
         payload = await request.json()
-        
+
         # Verify signature if configured
-        signature = request.headers.get("X-Twilio-Email-Event-Webhook-Signature")
-        timestamp = request.headers.get("X-Twilio-Email-Event-Webhook-Timestamp")
-        
+        signature = request.headers.get(
+            "X-Twilio-Email-Event-Webhook-Signature")
+        timestamp = request.headers.get(
+            "X-Twilio-Email-Event-Webhook-Timestamp")
+
         if signature and timestamp:
             if not WebhookService.verify_sendgrid_signature(
                 body.decode() if isinstance(body, bytes) else str(body),
@@ -612,21 +638,23 @@ async def handle_sendgrid_webhook(
             ):
                 logger.warning("Invalid SendGrid webhook signature")
                 return {"status": "error", "message": "Invalid signature"}
-        
+
         # Parse events
-        events = WebhookService.parse_sendgrid_webhook(payload if isinstance(payload, list) else [payload])
-        
+        events = WebhookService.parse_sendgrid_webhook(
+            payload if isinstance(payload, list) else [payload])
+
         processed = 0
         tickets_created = 0
         bounces_processed = 0
-        
+
         # Get default email account for inbound processing
-        default_account = db.query(EmailAccount).filter(EmailAccount.is_active.is_(True)).first()
-        
+        default_account = db.query(EmailAccount).filter(
+            EmailAccount.is_active.is_(True)).first()
+
         for event in events:
             event_type = event.get("event_type")
             email_address = event.get("email")
-            
+
             if event_type == "inbound":
                 # Process inbound email
                 if default_account:
@@ -634,36 +662,39 @@ async def handle_sendgrid_webhook(
                         # SendGrid inbound emails come as base64 encoded
                         # For now, we'll need to fetch the full email from SendGrid API
                         # This is a simplified implementation
-                        logger.info(f"Received inbound email from {email_address}")
+                        logger.info(
+                            f"Received inbound email from {email_address}")
                         # TODO: Fetch full email content from SendGrid API using message_id
                         processed += 1
                     except Exception as e:
                         logger.error(f"Failed to process inbound email: {e}")
-            
+
             elif event_type in ("bounce", "dropped", "spamreport"):
                 # Process bounce event
                 try:
-                    bounce_reason = event.get("reason", "Unknown bounce reason")
+                    bounce_reason = event.get(
+                        "reason", "Unknown bounce reason")
                     bounce_code = event.get("status", None)
-                    
+
                     BounceService.process_bounce(
                         db=db,
                         email_address=email_address,
                         bounce_reason=bounce_reason,
                         bounce_code=bounce_code,
-                        bounce_timestamp=datetime.fromtimestamp(event.get("timestamp", datetime.now().timestamp()), tz=timezone.utc) if event.get("timestamp") else datetime.now(timezone.utc),
+                        bounce_timestamp=datetime.fromtimestamp(event.get("timestamp", datetime.now().timestamp(
+                        )), tz=timezone.utc) if event.get("timestamp") else datetime.now(timezone.utc),
                     )
                     bounces_processed += 1
                 except Exception as e:
                     logger.error(f"Failed to process bounce: {e}")
-        
+
         return {
             "status": "processed",
             "events_processed": processed,
             "tickets_created": tickets_created,
             "bounces_processed": bounces_processed,
         }
-    
+
     except Exception as e:
         logger.error(f"SendGrid webhook error: {e}", exc_info=True)
         return {"status": "error", "message": str(e)}
@@ -688,34 +719,35 @@ async def handle_mailgun_webhook(
     from app.modules.tickets.services.email_to_ticket_service import EmailToTicketService
     from app.modules.tickets.models import EmailAccount
     from datetime import datetime
-    
+
     try:
         # Mailgun sends form-encoded data
         form_data = await request.form()
         payload = dict(form_data)
-        
+
         # Verify signature
         token = payload.get("token")
         signature = payload.get("signature")
         timestamp = payload.get("timestamp")
-        
+
         if token and signature and timestamp:
             if not WebhookService.verify_mailgun_signature(token, signature, timestamp):
                 logger.warning("Invalid Mailgun webhook signature")
                 return {"status": "error", "message": "Invalid signature"}
-        
+
         # Parse event
         event = WebhookService.parse_mailgun_webhook(payload)
         event_type = event.get("event_type")
         email_address = event.get("email")
-        
+
         processed = 0
         tickets_created = 0
         bounces_processed = 0
-        
+
         # Get default email account for inbound processing
-        default_account = db.query(EmailAccount).filter(EmailAccount.is_active.is_(True)).first()
-        
+        default_account = db.query(EmailAccount).filter(
+            EmailAccount.is_active.is_(True)).first()
+
         if event_type == "inbound":
             # Process inbound email
             if default_account:
@@ -723,46 +755,50 @@ async def handle_mailgun_webhook(
                     # Mailgun provides message-url or body-mime
                     message_url = payload.get("message-url")
                     body_mime = payload.get("body-mime")
-                    
+
                     if body_mime:
                         # Parse email from MIME content
-                        parsed_email = EmailParserService.parse_email(body_mime)
-                        result = EmailToTicketService.process_email(db, parsed_email, default_account)
-                        
+                        parsed_email = EmailParserService.parse_email(
+                            body_mime)
+                        result = EmailToTicketService.process_email(
+                            db, parsed_email, default_account)
+
                         if result.success:
                             tickets_created += 1
                             processed += 1
                     elif message_url:
                         # TODO: Fetch email from message-url
-                        logger.info(f"Received inbound email URL: {message_url}")
+                        logger.info(
+                            f"Received inbound email URL: {message_url}")
                         processed += 1
                 except Exception as e:
                     logger.error(f"Failed to process inbound email: {e}")
-        
+
         elif event_type == "failed":
             # Process bounce event
             try:
                 bounce_reason = event.get("reason", "Unknown bounce reason")
                 bounce_code = event.get("status", None)
-                
+
                 BounceService.process_bounce(
                     db=db,
                     email_address=email_address,
                     bounce_reason=bounce_reason,
                     bounce_code=bounce_code,
-                    bounce_timestamp=datetime.fromtimestamp(float(timestamp), tz=timezone.utc) if timestamp else datetime.now(timezone.utc),
+                    bounce_timestamp=datetime.fromtimestamp(
+                        float(timestamp), tz=timezone.utc) if timestamp else datetime.now(timezone.utc),
                 )
                 bounces_processed += 1
             except Exception as e:
                 logger.error(f"Failed to process bounce: {e}")
-        
+
         return {
             "status": "processed",
             "events_processed": processed,
             "tickets_created": tickets_created,
             "bounces_processed": bounces_processed,
         }
-    
+
     except Exception as e:
         logger.error(f"Mailgun webhook error: {e}", exc_info=True)
         return {"status": "error", "message": str(e)}

@@ -314,12 +314,16 @@ class RevenueService:
     def validate_revenue_metrics(self, metrics: RevenueMetrics) -> List[str]:
         """
         Validate revenue metrics for anomalies and inconsistencies.
-        
+
+        total_revenue is recognized revenue (paid invoices in period). booked,
+        recurring, and deferred are distinct metrics and are not components
+        that sum to total; we do not validate that equality.
+
         Returns:
             List of validation warnings/errors (empty if all valid)
         """
         warnings = []
-        
+
         # Check for negative values
         if metrics.total_revenue < 0:
             warnings.append("Total revenue is negative")
@@ -333,26 +337,13 @@ class RevenueService:
             warnings.append("Monthly revenue is negative")
         if metrics.previous_month_revenue < 0:
             warnings.append("Previous month revenue is negative")
-        
+
         # Check for unrealistic growth (more than 1000% or less than -100%)
         if metrics.revenue_growth > 1000:
             warnings.append(f"Unusually high revenue growth: {metrics.revenue_growth:.2f}%")
         elif metrics.revenue_growth < -100:
             warnings.append(f"Revenue growth below -100%: {metrics.revenue_growth:.2f}%")
-        
-        # Check if total revenue matches sum of components (with tolerance for rounding)
-        component_sum = (
-            metrics.booked_revenue + 
-            metrics.recurring_revenue + 
-            metrics.deferred_revenue
-        )
-        difference = abs(float(metrics.total_revenue) - float(component_sum))
-        if difference > 0.01:  # Allow small rounding differences
-            warnings.append(
-                f"Total revenue ({metrics.total_revenue}) doesn't match sum of components "
-                f"({component_sum}), difference: {difference}"
-            )
-        
+
         return warnings
 
     def detect_revenue_anomalies(

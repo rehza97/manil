@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { Save, Loader2, RefreshCw, MessageSquare, Info } from "lucide-react";
+import { Save, Loader2, RefreshCw, MessageSquare, Info, TestTube } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -21,6 +21,8 @@ import {
   useResetSetting,
 } from "../../hooks/useSettings";
 import { SettingField } from "../../components/SettingField";
+import { settingsService } from "../../services/settingsService";
+import { toast } from "sonner";
 
 export const SMSConfigPage: React.FC = () => {
   // Note: SMS settings might be in notification category or separate
@@ -31,6 +33,7 @@ export const SMSConfigPage: React.FC = () => {
   const resetMutation = useResetSetting();
 
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [testing, setTesting] = useState(false);
 
   // Filter SMS-related settings from notification if SMS category doesn't exist
   const smsSettings =
@@ -73,6 +76,24 @@ export const SMSConfigPage: React.FC = () => {
 
   const handleReset = async (key: string) => {
     await resetMutation.mutateAsync(key);
+  };
+
+  const handleTest = async () => {
+    setTesting(true);
+    try {
+      const result = await settingsService.testSMSConfig();
+      if (result.success) {
+        toast.success("SMS configuration test successful!");
+      } else {
+        toast.error(result.message || "SMS test failed");
+      }
+    } catch (error: any) {
+      toast.error(
+        error?.response?.data?.message || "Failed to test SMS configuration"
+      );
+    } finally {
+      setTesting(false);
+    }
   };
 
   if (isLoading) {
@@ -160,6 +181,19 @@ export const SMSConfigPage: React.FC = () => {
       </Card>
 
       <div className="flex justify-end gap-4">
+        <Button variant="outline" onClick={handleTest} disabled={testing}>
+          {testing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Testing...
+            </>
+          ) : (
+            <>
+              <TestTube className="mr-2 h-4 w-4" />
+              Test Configuration
+            </>
+          )}
+        </Button>
         <Button
           onClick={handleSave}
           disabled={updateMutation.isPending}

@@ -35,28 +35,69 @@ export const SettingField: React.FC<SettingFieldProps> = ({
     onChange(setting.key, newValue);
   };
 
-  // Handle object types (like currency, address, etc.)
+  // Handle object types (like currency, address, smtp_config, etc.)
   if (settingType === "object" && typeof value === "object" && value !== null) {
+    const renderObjectField = (key: string, val: any) => {
+      // Detect field type and render appropriate input
+      if (typeof val === "boolean") {
+        return (
+          <div key={key} className="flex items-center justify-between space-x-2">
+            <Label className="text-sm capitalize">
+              {key.replace(/_/g, " ")}
+            </Label>
+            <Switch
+              checked={val ?? false}
+              onCheckedChange={(checked) => {
+                const updated = { ...value, [key]: checked };
+                handleChange(updated);
+              }}
+            />
+          </div>
+        );
+      } else if (typeof val === "number" || Number.isInteger(val)) {
+        return (
+          <div key={key} className="space-y-2">
+            <Label className="text-sm capitalize">
+              {key.replace(/_/g, " ")}
+            </Label>
+            <Input
+              type="number"
+              value={val ?? ""}
+              onChange={(e) => {
+                const numValue = e.target.value === "" ? 0 : parseInt(e.target.value, 10);
+                const updated = { ...value, [key]: isNaN(numValue) ? 0 : numValue };
+                handleChange(updated);
+              }}
+              placeholder={`Enter ${key}`}
+            />
+          </div>
+        );
+      } else {
+        // Default to string input
+        return (
+          <div key={key} className="space-y-2">
+            <Label className="text-sm capitalize">
+              {key.replace(/_/g, " ")}
+            </Label>
+            <Input
+              value={val || ""}
+              onChange={(e) => {
+                const updated = { ...value, [key]: e.target.value };
+                handleChange(updated);
+              }}
+              placeholder={`Enter ${key}`}
+            />
+          </div>
+        );
+      }
+    };
+
     return (
       <div className="space-y-4">
         <Label>{setting.description}</Label>
         {Object.entries(value).map(([key, val]: [string, any]) => {
           if (key === "type") return null;
-          return (
-            <div key={key} className="space-y-2">
-              <Label className="text-sm capitalize">
-                {key.replace(/_/g, " ")}
-              </Label>
-              <Input
-                value={val || ""}
-                onChange={(e) => {
-                  const updated = { ...value, [key]: e.target.value };
-                  handleChange(updated);
-                }}
-                placeholder={`Enter ${key}`}
-              />
-            </div>
-          );
+          return renderObjectField(key, val);
         })}
       </div>
     );

@@ -45,15 +45,22 @@ logger = logging.getLogger(__name__)
 async def _send_order_status_email(to: str, order_id: str, status: str) -> None:
     """Send order status update email (async, for use in background tasks)."""
     try:
+        from app.modules.settings.utils import notification_gate_allows
+
         async with AsyncSessionLocal() as db:
+            ev = f"order.{status}"
+            if not await notification_gate_allows(db, "email", ev):
+                return
             uid = await user_id_by_email(db, to)
             if uid:
                 prefs_svc = UserNotificationPreferencesService(db)
                 prefs = await prefs_svc.get(uid)
                 if not prefs.get("email", {}).get("orderUpdates", True):
                     return
-        email_service = EmailService()
-        await email_service.send_order_status_update(to=to, order_id=order_id, status=status)
+            email_service = EmailService()
+            await email_service.send_order_status_update(
+                to=to, order_id=order_id, status=status, db=db
+            )
     except Exception as e:
         logger.warning("Order status notification email failed: %s", e)
 
@@ -91,7 +98,12 @@ async def _send_order_status_sms(
     if not customer_phone or not customer_phone.strip():
         return
     try:
+        from app.modules.settings.utils import notification_gate_allows
+
         async with AsyncSessionLocal() as db:
+            ev = f"order.{status}"
+            if not await notification_gate_allows(db, "sms", ev):
+                return
             uid = await user_id_by_email(db, customer_email)
             if not uid:
                 return
@@ -99,8 +111,10 @@ async def _send_order_status_sms(
             prefs = await prefs_svc.get(uid)
             if not prefs.get("sms", {}).get("orderUpdates", False):
                 return
-        sms = SMSService()
-        await sms.send_order_notification(customer_phone, order_id, status)
+            sms = SMSService()
+            await sms.send_order_notification(
+                customer_phone, order_id, status, db=db
+            )
     except Exception as e:
         logger.warning("Order status SMS notification failed: %s", e)
 
@@ -116,6 +130,7 @@ router = APIRouter(prefix="/orders", tags=["orders"])
 @router.post("", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 def create_order(
     order_data: OrderCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_sync_db),
     current_user: User = Depends(require_permission(Permission.ORDERS_CREATE)),
 ):
@@ -143,9 +158,38 @@ def create_order(
         if current_user.role.value == "client":
             # Verify customer_id matches user's customer account
             if not hasattr(current_user, 'customer_id') or order_data.customer_id != str(current_user.customer_id):
-                raise ForbiddenException("You can only create orders for your own account")
+                raise ForbiddenException(
+                    "You can only create orders for your own account")
 
         order = OrderService.create_order(db, order_data, str(current_user.id))
+
+        # Send order.created notifications
+        customer = db.execute(
+            select(Customer).where(Customer.id == order.customer_id)
+        ).scalar_one_or_none()
+
+        if customer and customer.email:
+            background_tasks.add_task(
+                _send_order_status_email,
+                customer.email,
+                order.id,
+                "created",
+            )
+            background_tasks.add_task(
+                _create_order_status_notification,
+                customer.email,
+                order.id,
+                "created",
+            )
+            if getattr(customer, "phone", None):
+                background_tasks.add_task(
+                    _send_order_status_sms,
+                    customer.email,
+                    customer.phone,
+                    order.id,
+                    "created",
+                )
+
         return OrderResponse.model_validate(order)
 
     except NotFoundException as e:
@@ -310,7 +354,8 @@ def update_order(
             if not hasattr(current_user, 'customer_id') or str(order.customer_id) != str(current_user.customer_id):
                 raise ForbiddenException("You can only update your own orders")
 
-        order = OrderService.update_order(db, order_id, order_data, str(current_user.id))
+        order = OrderService.update_order(
+            db, order_id, order_data, str(current_user.id))
         return OrderResponse.model_validate(order)
 
     except NotFoundException as e:
@@ -332,7 +377,8 @@ def update_order_status(
     status_data: OrderStatusUpdate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_sync_db),
-    current_user: User = Depends(require_any_permission([Permission.ORDERS_APPROVE, Permission.ORDERS_DELIVER])),
+    current_user: User = Depends(require_any_permission(
+        [Permission.ORDERS_APPROVE, Permission.ORDERS_DELIVER])),
 ):
     """
     Update order status with validation. Requires admin or corporate role.
@@ -365,7 +411,8 @@ def update_order_status(
             select(Customer).where(Customer.id == order.customer_id)
         ).scalar_one_or_none()
         if customer and customer.email:
-            st = status_data.status.value
+            # Convert status enum value to lowercase for event name (e.g., "DELIVERED" -> "delivered")
+            st = status_data.status.value.lower()
             background_tasks.add_task(
                 _send_order_status_email,
                 customer.email,
@@ -522,7 +569,8 @@ def perform_commercial_validation(
     validation_data: CommercialValidationRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_sync_db),
-    current_user: User = Depends(require_permission(Permission.ORDERS_APPROVE)),
+    current_user: User = Depends(
+        require_permission(Permission.ORDERS_APPROVE)),
 ):
     """
     Perform commercial validation on an order (approve or reject).
@@ -554,19 +602,27 @@ def perform_commercial_validation(
             select(Customer).where(Customer.id == order.customer_id)
         ).scalar_one_or_none()
         if customer and customer.email:
-            status_msg = "approved" if validation_data.approved else "rejected"
+            event_name = "commercial_approved" if validation_data.approved else "commercial_rejected"
             background_tasks.add_task(
                 _send_order_status_email,
                 customer.email,
                 order_id,
-                f"commercial_validation_{status_msg}",
+                event_name,
             )
             background_tasks.add_task(
                 _create_order_status_notification,
                 customer.email,
                 order_id,
-                f"Commercial validation {status_msg}",
+                event_name,
             )
+            if getattr(customer, "phone", None):
+                background_tasks.add_task(
+                    _send_order_status_sms,
+                    customer.email,
+                    customer.phone,
+                    order_id,
+                    event_name,
+                )
 
         return OrderResponse.model_validate(order)
     except NotFoundException as e:
@@ -611,7 +667,8 @@ def perform_technical_validation(
     validation_data: TechnicalValidationRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_sync_db),
-    current_user: User = Depends(require_permission(Permission.ORDERS_APPROVE)),
+    current_user: User = Depends(
+        require_permission(Permission.ORDERS_APPROVE)),
 ):
     """
     Perform technical validation on an order (approve or reject).
@@ -643,19 +700,27 @@ def perform_technical_validation(
             select(Customer).where(Customer.id == order.customer_id)
         ).scalar_one_or_none()
         if customer and customer.email:
-            status_msg = "approved" if validation_data.approved else "rejected"
+            event_name = "technical_approved" if validation_data.approved else "technical_rejected"
             background_tasks.add_task(
                 _send_order_status_email,
                 customer.email,
                 order_id,
-                f"technical_validation_{status_msg}",
+                event_name,
             )
             background_tasks.add_task(
                 _create_order_status_notification,
                 customer.email,
                 order_id,
-                f"Technical validation {status_msg}",
+                event_name,
             )
+            if getattr(customer, "phone", None):
+                background_tasks.add_task(
+                    _send_order_status_sms,
+                    customer.email,
+                    customer.phone,
+                    order_id,
+                    event_name,
+                )
 
         return OrderResponse.model_validate(order)
     except NotFoundException as e:
@@ -670,7 +735,8 @@ def finalize_validation(
     request_data: SubmitForValidationRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_sync_db),
-    current_user: User = Depends(require_permission(Permission.ORDERS_APPROVE)),
+    current_user: User = Depends(
+        require_permission(Permission.ORDERS_APPROVE)),
 ):
     """
     Finalize order validation after both commercial and technical approval.
@@ -703,7 +769,7 @@ def finalize_validation(
                 _create_order_status_notification,
                 customer.email,
                 order_id,
-                "Order fully validated",
+                "validated",
             )
 
         return OrderResponse.model_validate(order)
@@ -748,7 +814,8 @@ def skip_validation(
     request_data: SkipValidationRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_sync_db),
-    current_user: User = Depends(require_permission(Permission.ORDERS_APPROVE)),
+    current_user: User = Depends(
+        require_permission(Permission.ORDERS_APPROVE)),
 ):
     """
     Skip validation workflow and validate order directly.
@@ -822,7 +889,8 @@ def get_order_timeline(
         # Security: Clients can only view timeline of their own orders
         if current_user.role.value == "client":
             if not hasattr(current_user, 'customer_id') or str(order.customer_id) != str(current_user.customer_id):
-                raise ForbiddenException("You can only view timeline of your own orders")
+                raise ForbiddenException(
+                    "You can only view timeline of your own orders")
 
         timeline, total = OrderService.get_order_timeline(db, order_id)
 

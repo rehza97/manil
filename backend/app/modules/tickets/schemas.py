@@ -65,7 +65,8 @@ class TicketCreate(TicketBase):
     """Schema for creating ticket."""
 
     customer_id: str = Field(..., alias="customerId")
-    
+    category_id: Optional[str] = Field(None, alias="categoryId")
+
     model_config = ConfigDict(populate_by_name=True)
 
 

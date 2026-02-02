@@ -5,7 +5,7 @@ Professional PDF templates for quotes with company info, customer details,
 line items, financial calculations, terms & conditions, and signature area.
 """
 
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 from pathlib import Path
 from decimal import Decimal
@@ -79,7 +79,7 @@ class QuotePDFService:
             textColor=colors.HexColor('#6b7280'),
         ))
 
-    def generate_quote_pdf(self, quote: Quote, customer_data: dict) -> str:
+    def generate_quote_pdf(self, quote: Quote, customer_data: dict, company_info: Optional[dict] = None) -> str:
         """
         Generate complete quote PDF.
 
@@ -107,7 +107,7 @@ class QuotePDFService:
         elements = []
 
         # Build PDF sections
-        elements.extend(self._create_header())
+        elements.extend(self._create_header(company_info))
         elements.extend(self._create_quote_info(quote))
         elements.extend(self._create_customer_info(customer_data))
         elements.append(Spacer(1, 10))
@@ -124,25 +124,33 @@ class QuotePDFService:
 
         return str(filepath)
 
-    def _create_header(self) -> List:
+    def _create_header(self, company_info: Optional[dict] = None) -> List:
         """Create company information header."""
         elements = []
 
+        # Use provided company info or fallback to defaults
+        if company_info:
+            app_name = company_info.get("name", "CloudManager")
+            legal_name = company_info.get("legal_name", "CloudManager SARL")
+        else:
+            app_name = "CloudManager"
+            legal_name = "CloudManager SARL"
+
         # Company name
-        company_name = Paragraph("CloudManager", self.styles['CompanyName'])
+        company_name = Paragraph(app_name, self.styles['CompanyName'])
         elements.append(company_name)
 
         # Company details
-        company_info = """
+        company_info_html = f"""
         <para align="center">
-        <b>CloudManager SARL</b><br/>
+        <b>{legal_name}</b><br/>
         123 Rue Didouche Mourad, Algiers 16000, Algeria<br/>
         Tel: +213 (0) 21 123 456 | Fax: +213 (0) 21 123 457<br/>
         Email: contact@cloudmanager.dz | Web: www.cloudmanager.dz<br/>
         NIF: 001234567890123 | RC: 16/00-1234567 | AI: 16123456789012
         </para>
         """
-        elements.append(Paragraph(company_info, self.styles['SmallText']))
+        elements.append(Paragraph(company_info_html, self.styles['SmallText']))
         elements.append(Spacer(1, 15))
 
         # Horizontal line
@@ -173,7 +181,8 @@ class QuotePDFService:
 
         data = [
             ['Quote Date:', quote_date, 'Valid From:', valid_from],
-            ['Status:', quote.status.value.replace('_', ' ').title(), 'Valid Until:', valid_until],
+            ['Status:', quote.status.value.replace(
+                '_', ' ').title(), 'Valid Until:', valid_until],
         ]
 
         quote_table = Table(data, colWidths=[35*mm, 45*mm, 35*mm, 45*mm])
@@ -195,7 +204,8 @@ class QuotePDFService:
         elements = []
 
         # Section heading
-        elements.append(Paragraph('<b>Customer Information</b>', self.styles['SectionHeading']))
+        elements.append(Paragraph('<b>Customer Information</b>',
+                        self.styles['SectionHeading']))
 
         # Customer details
         customer_name = customer_data.get('name', 'N/A')
@@ -221,7 +231,8 @@ class QuotePDFService:
         elements = []
 
         # Section heading
-        elements.append(Paragraph('<b>Quote Items</b>', self.styles['SectionHeading']))
+        elements.append(Paragraph('<b>Quote Items</b>',
+                        self.styles['SectionHeading']))
         elements.append(Spacer(1, 8))
 
         # Table header
@@ -320,7 +331,8 @@ class QuotePDFService:
         elements = []
 
         # Section heading
-        elements.append(Paragraph('<b>Terms and Conditions</b>', self.styles['SectionHeading']))
+        elements.append(Paragraph('<b>Terms and Conditions</b>',
+                        self.styles['SectionHeading']))
         elements.append(Spacer(1, 6))
 
         # Terms text

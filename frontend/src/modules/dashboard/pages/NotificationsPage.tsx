@@ -16,6 +16,7 @@ import {
   useNotifications,
   useUnreadNotificationCount,
   useMarkNotificationRead,
+  useMarkAllNotificationsRead,
   useNotificationStream,
 } from "@/shared/hooks/useNotifications";
 import { useAuth } from "@/modules/auth";
@@ -43,6 +44,7 @@ export const NotificationsPage: React.FC = () => {
   });
   const { data: unreadCount = 0 } = useUnreadNotificationCount();
   const markReadMutation = useMarkNotificationRead();
+  const markAllReadMutation = useMarkAllNotificationsRead();
 
   const notifications = notificationsData?.data || [];
   const totalPages = notificationsData?.total_pages || 0;
@@ -56,15 +58,11 @@ export const NotificationsPage: React.FC = () => {
   };
 
   const handleMarkAllAsRead = async () => {
-    const unreadNotifications = notifications.filter((n) => !n.read_at);
-    const promises = unreadNotifications.map((n) =>
-      markReadMutation.mutateAsync(n.id)
-    );
     try {
-      await Promise.all(promises);
+      const result = await markAllReadMutation.mutateAsync();
       toast({
         title: "Success",
-        description: "All notifications marked as read",
+        description: `${result.marked_count} notification${result.marked_count !== 1 ? "s" : ""} marked as read`,
       });
       refetch();
     } catch (error) {
@@ -125,9 +123,9 @@ export const NotificationsPage: React.FC = () => {
             variant="outline"
             size="sm"
             onClick={handleMarkAllAsRead}
-            disabled={markReadMutation.isPending}
+            disabled={markAllReadMutation.isPending}
           >
-            {markReadMutation.isPending ? (
+            {markAllReadMutation.isPending ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <CheckCheck className="h-4 w-4 mr-2" />
