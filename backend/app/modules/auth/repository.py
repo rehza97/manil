@@ -4,11 +4,11 @@ Handles all database operations for users.
 """
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.models import User
-from app.modules.auth.schemas import UserCreate, UserUpdate
+from app.modules.auth.schemas import UserUpdate
 
 
 class UserRepository:
@@ -45,22 +45,30 @@ class UserRepository:
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
-    async def create(self, user_data: UserCreate, password_hash: str) -> User:
+    async def create(
+        self,
+        email: str,
+        full_name: str,
+        password_hash: str,
+        role_id: str,
+    ) -> User:
         """
         Create a new user.
 
         Args:
-            user_data: User creation data
+            email: User email
+            full_name: User full name
             password_hash: Hashed password
+            role_id: UUID of settings.Role
 
         Returns:
             Created user object
         """
         user = User(
-            email=user_data.email,
-            full_name=user_data.full_name,
-            role=user_data.role,
+            email=email,
+            full_name=full_name,
             password_hash=password_hash,
+            role_id=role_id,
         )
         self.db.add(user)
         await self.db.commit()
@@ -153,6 +161,7 @@ class UserRepository:
         limit: int = 20,
         role: Optional[str] = None,
         is_active: Optional[bool] = None,
+        status: Optional[str] = None,
         search: Optional[str] = None,
     ) -> tuple[list[User], int]:
         """
@@ -163,6 +172,7 @@ class UserRepository:
             limit: Number of items per page
             role: Filter by role
             is_active: Filter by active status
+            status: all|active|inactive|deleted
             search: Search in name and email
 
         Returns:
@@ -170,13 +180,25 @@ class UserRepository:
         """
         from sqlalchemy import func, or_
 
-        # Base query - exclude soft deleted
-        query = select(User).where(User.deleted_at == None)
+        query = select(User)
+
+        # Apply status filter: all, active, inactive, deleted
+        if status == "active":
+            query = query.where(User.deleted_at.is_(None), User.is_active == True)
+        elif status == "inactive":
+            query = query.where(User.deleted_at.is_(None), User.is_active == False)
+        elif status == "deleted":
+            query = query.where(User.deleted_at.isnot(None))
+        else:
+            # all or default: exclude soft-deleted (keep current default behavior)
+            if status != "all":
+                query = query.where(User.deleted_at.is_(None))
 
         # Apply filters
         if role:
-            query = query.where(User.role == role)
-        if is_active is not None:
+            from app.modules.settings.models import Role
+            query = query.join(Role, User.role_id == Role.id).where(Role.slug == role)
+        if is_active is not None and status not in ("active", "inactive", "deleted"):
             query = query.where(User.is_active == is_active)
         if search:
             search_pattern = f"%{search}%"
@@ -221,6 +243,88 @@ class UserRepository:
         await self.db.commit()
         await self.db.refresh(user)
         return user
+
+    async def count_user_references(self, user_id: str) -> dict[str, int]:
+        """
+        Count records in tables that reference users with RESTRICT FKs.
+        Returns dict of table_name -> count, excluding zero counts.
+        """
+        counts: dict[str, int] = {}
+
+        # customers.created_by (RESTRICT)
+        from app.modules.customers.models import Customer
+        r = await self.db.execute(select(func.count()).select_from(Customer).where(Customer.created_by == user_id))
+        n = r.scalar() or 0
+        if n > 0:
+            counts["customers"] = n
+
+        # orders.created_by (RESTRICT)
+        from app.modules.orders.models import Order
+        r = await self.db.execute(select(func.count()).select_from(Order).where(Order.created_by == user_id))
+        n = r.scalar() or 0
+        if n > 0:
+            counts["orders"] = n
+
+        # quotes.created_by_id (default RESTRICT)
+        from app.modules.quotes.models import Quote
+        r = await self.db.execute(select(func.count()).select_from(Quote).where(Quote.created_by_id == user_id))
+        n = r.scalar() or 0
+        if n > 0:
+            counts["quotes"] = n
+
+        # quote_timeline.created_by_id
+        from app.modules.quotes.models import QuoteTimeline
+        r = await self.db.execute(select(func.count()).select_from(QuoteTimeline).where(QuoteTimeline.created_by_id == user_id))
+        n = r.scalar() or 0
+        if n > 0:
+            counts["quote_timeline"] = n
+
+        # invoices.created_by_id (default RESTRICT)
+        from app.modules.invoices.models import Invoice
+        r = await self.db.execute(select(func.count()).select_from(Invoice).where(Invoice.created_by_id == user_id))
+        n = r.scalar() or 0
+        if n > 0:
+            counts["invoices"] = n
+
+        # customer_notes.created_by (RESTRICT)
+        from app.modules.customers.notes_models import CustomerNote
+        r = await self.db.execute(select(func.count()).select_from(CustomerNote).where(CustomerNote.created_by == user_id))
+        n = r.scalar() or 0
+        if n > 0:
+            counts["customer_notes"] = n
+
+        # customer_documents.created_by (RESTRICT)
+        from app.modules.customers.notes_models import CustomerDocument
+        r = await self.db.execute(select(func.count()).select_from(CustomerDocument).where(CustomerDocument.created_by == user_id))
+        n = r.scalar() or 0
+        if n > 0:
+            counts["customer_documents"] = n
+
+        # kyc_documents.created_by (RESTRICT)
+        from app.modules.customers.kyc_models import KYCDocument
+        r = await self.db.execute(select(func.count()).select_from(KYCDocument).where(KYCDocument.created_by == user_id))
+        n = r.scalar() or 0
+        if n > 0:
+            counts["kyc_documents"] = n
+
+        # exports.requested_by_id (default RESTRICT)
+        from app.modules.reports.models import Export
+        r = await self.db.execute(select(func.count()).select_from(Export).where(Export.requested_by_id == user_id))
+        n = r.scalar() or 0
+        if n > 0:
+            counts["exports"] = n
+
+        return counts
+
+    async def hard_delete(self, user: User) -> None:
+        """
+        Permanently delete a user from the database.
+
+        Args:
+            user: User object to delete
+        """
+        await self.db.delete(user)
+        await self.db.commit()
 
     async def activate_user(self, user: User) -> User:
         """
@@ -269,18 +373,18 @@ class UserRepository:
         await self.db.refresh(user)
         return user
 
-    async def assign_role(self, user: User, role: str) -> User:
+    async def assign_role(self, user: User, role_id: str) -> User:
         """
         Assign role to user.
 
         Args:
             user: User object
-            role: New role
+            role_id: UUID of settings.Role
 
         Returns:
             Updated user object
         """
-        user.role = role
+        user.role_id = role_id
         await self.db.commit()
         await self.db.refresh(user)
         return user

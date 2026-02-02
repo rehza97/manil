@@ -601,7 +601,15 @@ async def seed_system_settings(db: AsyncSession) -> bool:
 DEFAULT_NOTIFICATION_PREFERENCES = {
     "email": {"orderUpdates": True, "ticketUpdates": True, "invoiceUpdates": True, "marketing": False},
     "push": {"orderUpdates": True, "ticketUpdates": True, "invoiceUpdates": False},
-    "sms": {"orderUpdates": False, "ticketUpdates": False, "invoiceUpdates": False},
+    # SMS defaults are opt-out (enabled) for operational notifications.
+    # Marketing remains opt-in via separate channels.
+    "sms": {
+        "orderUpdates": True,
+        "ticketUpdates": True,
+        "invoiceUpdates": True,
+        "accountUpdates": True,
+        "hostingUpdates": True,
+    },
 }
 
 

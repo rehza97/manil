@@ -6,6 +6,7 @@ from typing import Optional, List
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.logging import logger
 from app.infrastructure.sms.models import SMSMessage, SMSStatus
 
 
@@ -37,6 +38,11 @@ class SMSRepository:
         self.db.add(sms)
         await self.db.commit()
         await self.db.refresh(sms)
+        logger.info(
+            "SMS queue create_message: inserted id=%s, to=%s, status=pending (table: sms_messages)",
+            sms.id,
+            phone_number,
+        )
         return sms
 
     async def get_pending_messages(
@@ -65,8 +71,15 @@ class SMSRepository:
 
         query = query.order_by(SMSMessage.created_at.asc()).limit(limit)
 
+        logger.info(
+            "SMS get_pending_messages: device_id=%s, limit=%s (query: status=pending, device_id IS NULL OR = device_id)",
+            device_id,
+            limit,
+        )
         result = await self.db.execute(query)
-        return list(result.scalars().all())
+        rows = list(result.scalars().all())
+        logger.info("SMS get_pending_messages result: %s row(s) from sms_messages", len(rows))
+        return rows
 
     async def update_message_status(
         self,
@@ -120,3 +133,35 @@ class SMSRepository:
         query = select(SMSMessage).where(SMSMessage.id == message_id)
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
+
+    async def list_messages(
+        self,
+        skip: int = 0,
+        limit: int = 50,
+        status: Optional[SMSStatus] = None,
+    ) -> List[SMSMessage]:
+        """
+        List SMS messages for admin queue view.
+
+        Args:
+            skip: Number of records to skip
+            limit: Maximum number of records to return
+            status: Optional status filter (pending, sent, failed)
+
+        Returns:
+            List of SMSMessage objects ordered by created_at desc
+        """
+        query = select(SMSMessage).order_by(SMSMessage.created_at.desc())
+        if status is not None:
+            query = query.where(SMSMessage.status == status)
+        query = query.offset(skip).limit(limit)
+        logger.info(
+            "SMS queue list_messages: skip=%s, limit=%s, status=%s (query: sms_messages ORDER BY created_at DESC)",
+            skip,
+            limit,
+            status.value if status is not None else "all",
+        )
+        result = await self.db.execute(query)
+        rows = list(result.scalars().all())
+        logger.info("SMS queue list_messages result: %s row(s) returned", len(rows))
+        return rows

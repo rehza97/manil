@@ -11,6 +11,7 @@ export { EmailBouncesPage } from "./EmailBouncesPage";
 export { TicketSettingsPage } from "./TicketSettingsPage";
 export { NotificationGroupsPage } from "./NotificationGroupsPage";
 export { SMSConfigPage } from "./SMSConfigPage";
+export { SMSQueuePage } from "./SMSQueuePage";
 export { NotificationSettingsPage } from "./NotificationSettingsPage";
 export { StorageConfigPage } from "./StorageConfigPage";
 export { BackupSettingsPage } from "./BackupSettingsPage";

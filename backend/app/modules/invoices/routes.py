@@ -49,7 +49,7 @@ async def get_customer_id_for_user(
 
     Returns None for non-client users or if customer not found and auto_create=False.
     """
-    if current_user.role.value != "client":
+    if current_user.role_slug != "client":
         return None
 
     from app.modules.customers.models import Customer
@@ -99,6 +99,8 @@ async def get_customer_id_for_user(
 async def get_invoices(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
+    page: Optional[int] = Query(None, ge=1),
+    page_size: Optional[int] = Query(None, ge=1, le=100),
     customer_id: Optional[str] = None,
     status: Optional[InvoiceStatus] = None,
     quote_id: Optional[str] = None,
@@ -113,10 +115,14 @@ async def get_invoices(
     - Clients can only view their own invoices
     - Admin/corporate can view all invoices
     """
+    if page is not None and page_size is not None:
+        skip = (page - 1) * page_size
+        limit = page_size
+
     service = InvoiceService(db)
 
     # SECURITY: Role-based filtering
-    if current_user.role.value == "client":
+    if current_user.role_slug == "client":
         # Clients can only see their own invoices
         customer_id = await get_customer_id_for_user(db, current_user)
         if not customer_id:
@@ -159,7 +165,7 @@ async def get_invoice(
     invoice = await service.get_by_id(invoice_id)
 
     # SECURITY: Check ownership for client role
-    if current_user.role.value == "client":
+    if current_user.role_slug == "client":
         user_customer_id = await get_customer_id_for_user(db, current_user)
         if not user_customer_id:
             raise ForbiddenException(
@@ -278,17 +284,26 @@ async def record_payment(
     invoice_id: str,
     payment_data: InvoicePaymentRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.INVOICES_PAY))
+    current_user: User = Depends(require_any_permission(
+        [Permission.INVOICES_PAY, Permission.INVOICES_VIEW])),
 ):
     """Record a payment for an invoice.
 
     Security:
-    - Requires admin role ONLY (most sensitive financial operation)
-    - Payment verification will be performed
+    - Admin/corporate with INVOICES_PAY can record any invoice payment
+    - Clients with INVOICES_VIEW can record payment only on their own invoices
     - Payment is recorded with idempotency to prevent duplicates
     """
-    service = InvoiceWorkflowService(db)
-    return await service.record_payment(invoice_id, payment_data, recorded_by_id=current_user.id)
+    invoice_service = InvoiceService(db)
+    invoice = await invoice_service.get_by_id(invoice_id)
+
+    if current_user.role_slug == "client":
+        user_customer_id = await get_customer_id_for_user(db, current_user)
+        if not user_customer_id or str(invoice.customer_id) != str(user_customer_id):
+            raise ForbiddenException("You can only record payments on your own invoices.")
+
+    workflow = InvoiceWorkflowService(db)
+    return await workflow.record_payment(invoice_id, payment_data, recorded_by_id=current_user.id)
 
 
 @router.post("/{invoice_id}/cancel", response_model=InvoiceResponse)
@@ -347,7 +362,7 @@ async def get_invoice_timeline(
     invoice = await service.get_by_id(invoice_id)
 
     # SECURITY: Check ownership for client role
-    if current_user.role.value == "client":
+    if current_user.role_slug == "client":
         user_customer_id = await get_customer_id_for_user(db, current_user)
         if not user_customer_id:
             raise ForbiddenException(
@@ -383,7 +398,7 @@ async def generate_invoice_pdf(
     invoice = await service.get_by_id(invoice_id)
 
     # SECURITY: Check ownership for client role
-    if current_user.role.value == "client":
+    if current_user.role_slug == "client":
         user_customer_id = await get_customer_id_for_user(db, current_user)
         if not user_customer_id:
             raise ForbiddenException(
@@ -445,7 +460,7 @@ async def get_invoice_statistics(
     from decimal import Decimal
 
     # SECURITY: Role-based filtering
-    if current_user.role.value == "client":
+    if current_user.role_slug == "client":
         # Clients can only see their own statistics
         customer_id = await get_customer_id_for_user(db, current_user)
         if not customer_id:

@@ -161,13 +161,24 @@ async def get_pending_messages(
     Flutter app polls this endpoint to get messages to send.
     """
     try:
+        logger.info(
+            "SMS app GET /pending: device_id=%s, limit=%s (table: sms_messages, status=pending)",
+            device_id,
+            limit,
+        )
         # Verify device token (optional for now, but recommended)
         verified_device_id = _verify_device_token(x_device_token)
         if verified_device_id and verified_device_id != device_id:
+            logger.warning("SMS app /pending: device ID mismatch (token=%s, query=%s)", verified_device_id, device_id)
             raise HTTPException(status_code=403, detail="Device ID mismatch")
 
         repo = SMSRepository(db)
         messages = await repo.get_pending_messages(device_id=device_id, limit=limit)
+        logger.info(
+            "SMS app GET /pending: repo returned %s message(s) for device_id=%s",
+            len(messages),
+            device_id,
+        )
 
         # Format response as expected by Flutter app
         result = []
@@ -184,7 +195,26 @@ async def get_pending_messages(
                 "message": msg.message,
             })
 
-        logger.debug(f"Returning {len(result)} pending messages for device {device_id}")
+        if result:
+            logger.info(
+                "SMS app GET /pending: returning %s message(s), first id=%s to=%s",
+                len(result),
+                result[0].get("id"),
+                result[0].get("phone_number"),
+            )
+            for i, item in enumerate(result):
+                msg_preview = (item.get("message") or "")[:50]
+                if len(item.get("message") or "") > 50:
+                    msg_preview += "..."
+                logger.info(
+                    "SMS queue[%s]: id=%s phone=%s message=%s",
+                    i,
+                    item.get("id"),
+                    item.get("phone_number"),
+                    msg_preview,
+                )
+        else:
+            logger.info("SMS app GET /pending: no pending messages (queue empty or all assigned)")
         return result
 
     except HTTPException:

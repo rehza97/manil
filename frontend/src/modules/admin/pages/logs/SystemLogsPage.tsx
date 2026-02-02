@@ -32,7 +32,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
+import { useToast } from "@/shared/components/ui/use-toast";
+import { adminLogsApi } from "@/shared/api/dashboard/admin/logs";
+import { useDownloadExport } from "@/modules/reports/hooks/useReports";
 import { useSystemLogs } from "../../hooks/useSystem";
 import { format } from "date-fns";
 
@@ -41,6 +50,25 @@ export const SystemLogsPage: React.FC = () => {
   const [levelFilter, setLevelFilter] = useState<string>("all");
   const [componentFilter, setComponentFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
+  const downloadMutation = useDownloadExport();
+
+  const handleExport = async (format: "csv" | "excel") => {
+    try {
+      const res = await adminLogsApi.exportSystemLogs(format);
+      await downloadMutation.mutateAsync(res.file_name);
+      toast({
+        title: "Export successful",
+        description: `System logs exported (${format.toUpperCase()}).`,
+      });
+    } catch (err) {
+      toast({
+        title: "Export failed",
+        description: err instanceof Error ? err.message : "Failed to export system logs",
+        variant: "destructive",
+      });
+    }
+  };
 
   const filters = {
     level: levelFilter !== "all" ? levelFilter : undefined,
@@ -118,10 +146,18 @@ export const SystemLogsPage: React.FC = () => {
             View system-level application logs and error logs.
           </p>
         </div>
-        <Button variant="outline">
-          <Download className="h-4 w-4 mr-2" />
-          Export Logs
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" disabled={downloadMutation.isPending}>
+              <Download className="h-4 w-4 mr-2" />
+              {downloadMutation.isPending ? "Exporting..." : "Export Logs"}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleExport("csv")}>Export CSV</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExport("excel")}>Export Excel</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Error Alert */}

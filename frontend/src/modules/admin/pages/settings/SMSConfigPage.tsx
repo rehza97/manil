@@ -5,7 +5,8 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { Save, Loader2, RefreshCw, MessageSquare, Info, TestTube } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Save, Loader2, RefreshCw, MessageSquare, Info, TestTube, Inbox } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -145,7 +146,14 @@ export const SMSConfigPage: React.FC = () => {
           <strong>Custom Gateway:</strong> When using the "custom" provider, SMS messages are queued 
           in the database and sent via the Flutter SMS Gateway app running on a mobile device. 
           The app polls for pending messages and sends them using the device's native SMS capabilities. 
-          No external SMS service credentials are required.
+          No external SMS service credentials are required.{" "}
+          <Link
+            to="/admin/settings/sms-queue"
+            className="font-medium underline inline-flex items-center gap-1 mt-2"
+          >
+            <Inbox className="h-4 w-4" />
+            View SMS Queue
+          </Link>
         </AlertDescription>
       </Alert>
 

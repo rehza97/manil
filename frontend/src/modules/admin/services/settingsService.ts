@@ -14,6 +14,18 @@ export interface Setting {
   is_public: boolean;
 }
 
+export interface SMSQueueItem {
+  id: string;
+  phone_number: string;
+  message: string;
+  status: string;
+  error_message?: string | null;
+  device_id?: string | null;
+  created_at: string;
+  updated_at: string;
+  sent_at?: string | null;
+}
+
 export interface GeneralSettings {
   application_name: string;
   support_email: string;
@@ -172,6 +184,31 @@ export const settingsService = {
    */
   async testSMSConfig(): Promise<{ success: boolean; message: string }> {
     const response = await apiClient.post("/admin/settings/sms/test");
+    return response.data;
+  },
+
+  /**
+   * Send SMS manually (admin dashboard)
+   */
+  async sendSMS(phone: string, message: string): Promise<{ success: boolean; message: string }> {
+    const response = await apiClient.post("/admin/settings/sms/send", {
+      phone: phone.trim(),
+      message: message.trim(),
+    });
+    return response.data;
+  },
+
+  /**
+   * Get SMS queue list (admin visibility)
+   */
+  async getSMSQueue(params?: {
+    skip?: number;
+    limit?: number;
+    status?: "pending" | "sent" | "failed";
+  }): Promise<{ items: SMSQueueItem[]; total: number }> {
+    const response = await apiClient.get("/admin/settings/sms/queue", {
+      params: params ?? {},
+    });
     return response.data;
   },
 

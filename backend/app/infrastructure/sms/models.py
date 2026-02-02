@@ -27,13 +27,18 @@ class SMSMessage(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    phone_number: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    phone_number: Mapped[str] = mapped_column(
+        String(20), nullable=False, index=True)
     message: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[SMSStatus] = mapped_column(
-        SQLEnum(SMSStatus), nullable=False, default=SMSStatus.PENDING, index=True
+        SQLEnum(SMSStatus, native_enum=False),
+        nullable=False,
+        default=SMSStatus.PENDING,
+        index=True,
     )
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    device_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    device_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

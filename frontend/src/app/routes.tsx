@@ -63,6 +63,7 @@ import {
   SecuritySettingsPage,
   EmailConfigPage,
   SMSConfigPage,
+  SMSQueuePage,
   StorageConfigPage,
   BackupSettingsPage,
   NotificationSettingsPage as AdminNotificationSettingsPage,
@@ -967,6 +968,10 @@ export const routes = [
         element: <SMSConfigPage />,
       },
       {
+        path: "settings/sms-queue",
+        element: <SMSQueuePage />,
+      },
+      {
         path: "settings/notifications",
         element: <AdminNotificationSettingsPage />,
       },
@@ -1207,6 +1212,14 @@ export const routes = [
         path: "quotes/:id",
         element: <CorporateQuoteDetailPage />,
       },
+      {
+        path: "quotes/:id/approve",
+        element: <CorporateQuoteApprovePage />,
+      },
+      {
+        path: "quotes/:id/convert",
+        element: <CorporateQuoteConvertPage />,
+      },
     ],
   },
 
@@ -1290,6 +1303,12 @@ export const routePermissions = {
   "/admin/tickets/templates/:id/edit": ["admin"],
   "/admin/tickets/email-accounts": ["admin"],
   "/admin/maintenance": ["admin"],
+  "/admin/orders": ["admin"],
+  "/admin/orders/create": ["admin"],
+  "/admin/orders/:orderId": ["admin"],
+  "/admin/orders/:orderId/edit": ["admin"],
+  "/admin/orders/:orderId/status": ["admin"],
+  "/admin/orders/:orderId/validation": ["admin"],
 } as const;
 
 /**
@@ -1410,6 +1429,7 @@ export const moduleRoutes = {
     "/admin/settings/security",
     "/admin/settings/email",
     "/admin/settings/sms",
+    "/admin/settings/sms-queue",
     "/admin/settings/storage",
     "/admin/settings/backup",
   ],

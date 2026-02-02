@@ -7,6 +7,8 @@
 
 import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   Download,
   FileText,
@@ -38,6 +40,15 @@ const REPORT_TYPE_TO_BACKEND: Record<string, string> = {
   "security-audit": "security",
   "system-performance": "performance",
   "customer-analytics": "customers",
+  activity: "activity",
+};
+
+const REPORT_TYPE_TO_QUERY_KEY: Record<string, string> = {
+  "user-activity": "users",
+  "security-audit": "security",
+  "system-performance": "performance",
+  "customer-analytics": "users",
+  activity: "activity",
 };
 
 const SUB_PAGE_LINKS: Record<string, string> = {
@@ -45,6 +56,7 @@ const SUB_PAGE_LINKS: Record<string, string> = {
   "security-audit": "/admin/reports/security",
   "system-performance": "/admin/reports/performance",
   "customer-analytics": "/admin/reports/users",
+  activity: "/admin/reports/activity",
 };
 
 export const ReportsPage: React.FC = () => {
@@ -70,6 +82,7 @@ export const ReportsPage: React.FC = () => {
     usePerformanceReport(filters);
 
   const exportMutation = useExportReport();
+  const queryClient = useQueryClient();
 
   const reportTypes = [
     {
@@ -87,10 +100,17 @@ export const ReportsPage: React.FC = () => {
       color: "bg-red-100 text-red-800",
     },
     {
+      id: "activity",
+      name: "Activity Report",
+      description: "Audit log activity, resources, and trends",
+      icon: <Activity className="w-5 h-5" />,
+      color: "bg-amber-100 text-amber-800",
+    },
+    {
       id: "system-performance",
       name: "System Performance Report",
       description: "System metrics, uptime, and performance indicators",
-      icon: <Activity className="w-5 h-5" />,
+      icon: <TrendingUp className="w-5 h-5" />,
       color: "bg-green-100 text-green-800",
     },
     {
@@ -108,8 +128,18 @@ export const ReportsPage: React.FC = () => {
     (selectedReport === "system-performance" && performanceLoading) ||
     (selectedReport === "activity" && activityLoading);
 
-  const handleGenerateReport = () => {
+  const handleGenerateReport = async () => {
     if (!selectedReport) return;
+    const queryKey = REPORT_TYPE_TO_QUERY_KEY[selectedReport];
+    if (!queryKey) return;
+    try {
+      await queryClient.refetchQueries({
+        queryKey: ["admin", "reports", queryKey, filters],
+      });
+      toast.success("Report generated");
+    } catch {
+      toast.error("Failed to generate report");
+    }
   };
 
   const handleExportReport = async (format: "pdf" | "csv" | "excel") => {
@@ -144,6 +174,18 @@ export const ReportsPage: React.FC = () => {
         ["Security Score", "-"],
       ];
     }
+    if (selectedReport === "activity" && activityReport) {
+      const activityTypesCount =
+        activityReport.activities_by_type?.length ?? 0;
+      return [
+        ["Total Activities", String(activityReport.total_activities)],
+        ["Activity Types", String(activityTypesCount)],
+        [
+          "Top Resources",
+          String(activityReport.top_resources?.length ?? 0),
+        ],
+      ];
+    }
     if (selectedReport === "system-performance" && performanceReport) {
       return [
         ["Uptime", `${performanceReport.system_uptime ?? 0}%`],
@@ -162,7 +204,13 @@ export const ReportsPage: React.FC = () => {
       ];
     }
     return [];
-  }, [selectedReport, userReport, securityReport, performanceReport]);
+  }, [
+    selectedReport,
+    userReport,
+    activityReport,
+    securityReport,
+    performanceReport,
+  ]);
 
   const subPageLink = selectedReport ? SUB_PAGE_LINKS[selectedReport] : null;
 

@@ -4,7 +4,7 @@
  * Admin page for creating new users
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/shared";
 import { Button } from "@/shared/components/ui/button";
@@ -20,23 +20,33 @@ import {
 import { Card } from "@/shared/components/ui/card";
 import { Switch } from "@/shared/components/ui/switch";
 import { useCreateUser } from "../../hooks/useUsers";
+import { useRoles } from "../../hooks/useRoles";
 import { useToast } from "@/shared/components/ui/use-toast";
 import { ArrowLeft, Save, Loader2, User, Mail, Lock, Shield } from "lucide-react";
 import type { UserCreate } from "../../types";
-import type { UserRole } from "@/modules/auth/types";
 
 export const UserCreatePage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const createUser = useCreateUser();
+  const { data: rolesData } = useRoles(1, 100, { is_active: true });
+
+  const roles = rolesData?.roles ?? [];
 
   const [formData, setFormData] = useState<UserCreate>({
     email: "",
     full_name: "",
     password: "",
-    role: "client",
+    role_id: "",
     is_active: true,
   });
+
+  useEffect(() => {
+    if (roles.length > 0 && !formData.role_id) {
+      const defaultRoleId = roles.find((r) => r.slug === "client")?.id ?? roles[0]?.id ?? "";
+      setFormData((prev) => ({ ...prev, role_id: defaultRoleId }));
+    }
+  }, [roles, formData.role_id]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -59,8 +69,8 @@ export const UserCreatePage: React.FC = () => {
       newErrors.password = "Password must be at least 8 characters";
     }
 
-    if (!formData.role) {
-      newErrors.role = "Role is required";
+    if (!formData.role_id) {
+      newErrors.role_id = "Role is required";
     }
 
     setErrors(newErrors);
@@ -201,27 +211,29 @@ export const UserCreatePage: React.FC = () => {
 
                 {/* Role */}
                 <div className="space-y-2">
-                  <Label htmlFor="role">
+                  <Label htmlFor="role_id">
                     Role <span className="text-red-500">*</span>
                   </Label>
                   <div className="relative">
                     <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
                     <Select
-                      value={formData.role}
-                      onValueChange={(value) => handleChange("role", value as UserRole)}
+                      value={formData.role_id}
+                      onValueChange={(value) => handleChange("role_id", value)}
                     >
-                      <SelectTrigger className={`pl-10 ${errors.role ? "border-red-500" : ""}`}>
+                      <SelectTrigger className={`pl-10 ${errors.role_id ? "border-red-500" : ""}`}>
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="admin">Administrator</SelectItem>
-                        <SelectItem value="corporate">Corporate</SelectItem>
-                        <SelectItem value="client">Client</SelectItem>
+                        {roles.map((role) => (
+                          <SelectItem key={role.id} value={role.id}>
+                            {role.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  {errors.role && (
-                    <p className="text-sm text-red-500">{errors.role}</p>
+                  {errors.role_id && (
+                    <p className="text-sm text-red-500">{errors.role_id}</p>
                   )}
                 </div>
               </div>

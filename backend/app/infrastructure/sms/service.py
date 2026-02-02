@@ -38,23 +38,33 @@ class SMSService:
         """
         Send SMS. When db provided, provider from DB (Twilio vs Custom); else env.
         """
+        logger.info("SMS send: to=%s, db=%s", to, "provided" if db is not None else "none")
         if db is not None:
             try:
-                if not await get_notification_sms_enabled(db):
-                    logger.debug("SMS disabled by notification.sms_enabled")
+                sms_enabled = await get_notification_sms_enabled(db)
+                logger.info("SMS notification gate (notification.sms_enabled): enabled=%s", sms_enabled)
+                if not sms_enabled:
+                    logger.info(
+                        "SMS gate disabled: skipping send (no queue row created); returning success=True. "
+                        "Enable notification.sms_enabled to queue messages."
+                    )
                     return True
             except Exception as e:
                 logger.warning("Failed to check SMS notification gate: %s", e)
             try:
                 config = await get_sms_config(db)
                 provider = get_sms_provider_for_config(config)
+                logger.info("SMS provider: Custom (queue -> Flutter app sends from device)")
             except Exception as e:
                 logger.warning(
                     "SMS config from DB failed, using env fallback: %s", e)
                 provider = get_sms_provider()
+                logger.info("SMS provider: from env fallback")
         else:
             provider = get_sms_provider()
+            logger.info("SMS provider: from env (no db)")
         ok = await provider.send_sms(to, message)
+        logger.info("SMS provider.send_sms result: ok=%s, to=%s", ok, to)
         if not ok:
             logger.warning("SMS delivery failed: to=%s", to)
         return ok

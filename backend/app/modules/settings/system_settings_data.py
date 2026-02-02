@@ -226,7 +226,7 @@ SYSTEM_SETTINGS: List[Dict[str, Any]] = [
     },
     {
         "key": "notification.sms_enabled",
-        "value": {"value": False, "type": "boolean"},
+        "value": {"value": True, "type": "boolean"},
         "category": SettingCategory.NOTIFICATION,
         "description": "Enable SMS notifications",
         "is_public": False,

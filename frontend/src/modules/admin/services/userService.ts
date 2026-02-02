@@ -39,6 +39,9 @@ export const userService = {
     if (filters?.is_active !== undefined) {
       params.append("is_active", filters.is_active.toString());
     }
+    if (filters?.status) {
+      params.append("status", filters.status);
+    }
     if (filters?.search) {
       params.append("search", filters.search);
     }
@@ -99,10 +102,17 @@ export const userService = {
   },
 
   /**
-   * Delete user
+   * Delete user (soft delete)
    */
   async deleteUser(userId: string): Promise<void> {
     await apiClient.delete(`/users/${userId}`);
+  },
+
+  /**
+   * Permanently delete user (hard delete). User must be soft-deleted first.
+   */
+  async hardDeleteUser(userId: string): Promise<void> {
+    await apiClient.delete(`/users/${userId}/permanent`);
   },
 
   /**
@@ -126,11 +136,15 @@ export const userService = {
   },
 
   /**
-   * Assign roles to user
+   * Assign role to user
    */
   async assignRoles(userId: string, roleIds: string[]): Promise<User> {
+    const roleId = roleIds[0];
+    if (!roleId) {
+      throw new Error("At least one role_id is required");
+    }
     const response = await apiClient.put<User>(`/users/${userId}/roles`, {
-      role_ids: roleIds,
+      role_id: roleId,
     });
     return response.data;
   },

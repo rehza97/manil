@@ -717,8 +717,11 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _serverUrlController = TextEditingController();
   bool _isLoading = false;
+  bool _isDiscovering = false;
   bool _showAdvanced = false;
   List<String> _suggestedIPs = [];
+  bool? _lastTestSuccess;
+  String? _lastTestMessage;
   final AuthService _authService = AuthService();
 
   @override
@@ -746,6 +749,22 @@ class _LoginPageState extends State<LoginPage> {
         debugPrint(
           '⚠️ Backend health check failed: ${healthResult['message']}',
         );
+        // On physical device, 10.0.2.2 does not reach the PC (emulator-only)
+        final url = _authService.serverUrl;
+        if (mounted &&
+            (url.contains('10.0.2.2') || url.startsWith('http://10.0.2.2'))) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'On a physical device, set Server URL to your PC\'s IP (e.g. http://192.168.1.5:8000) or tap "Find backend" if on same Wi‑Fi.',
+                ),
+                duration: Duration(seconds: 8),
+              ),
+            );
+          });
+        }
         // Continue anyway, will retry
       }
 
@@ -800,18 +819,26 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() {
       _isLoading = true;
+      _lastTestSuccess = null;
+      _lastTestMessage = null;
     });
 
     try {
       final result = await _authService.testConnection(
-        _serverUrlController.text,
+        _serverUrlController.text.trim(),
       );
 
       if (mounted) {
+        setState(() {
+          _lastTestSuccess = result['success'] as bool? ?? false;
+          _lastTestMessage = result['message'] as String?;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message']),
-            backgroundColor: result['success'] ? Colors.green : Colors.red,
+            content: Text(result['message'] as String),
+            backgroundColor: result['success'] == true
+                ? Colors.green
+                : Colors.red,
           ),
         );
       }
@@ -824,12 +851,96 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _findBackend() async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() {
+      _isDiscovering = true;
+    });
+
+    try {
+      final found = await _authService.discoverBackends(
+        timeout: const Duration(seconds: 3),
+      );
+
+      if (!mounted) return;
+
+      if (found.isEmpty) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No backend found. Enter IP manually and tap Test connection.',
+            ),
+          ),
+        );
+      } else {
+        await showModalBottomSheet<void>(
+          context: context,
+          builder: (context) {
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      'Found ${found.length} server(s). Tap to use.',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  ...found.map((e) {
+                    final url = e['url'] as String? ?? '';
+                    return ListTile(
+                      leading: const Icon(
+                        Icons.check_circle,
+                        color: Colors.green,
+                      ),
+                      title: Text(url),
+                      onTap: () async {
+                        _serverUrlController.text = url;
+                        setState(() {});
+                        Navigator.of(context).pop();
+                        // Save and use this server so heartbeats/API use it
+                        await _authService.updateServerUrl(url);
+                        if (mounted) {
+                          setState(() {});
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text('Using server: $url'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          // If on login page and now authenticated, go to home
+                          if (_authService.isAuthenticated) {
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(
+                                builder: (context) => const HomePage(),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    );
+                  }),
+                ],
+              ),
+            );
+          },
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDiscovering = false;
+        });
+      }
+    }
+  }
+
   Widget _buildConnectOverLanCard(BuildContext context) {
     return Card(
-      color: Theme.of(context)
-          .colorScheme
-          .primaryContainer
-          .withValues(alpha: 0.3),
+      color: Theme.of(
+        context,
+      ).colorScheme.primaryContainer.withValues(alpha: 0.3),
       child: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Column(
@@ -1048,10 +1159,9 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 16),
                   Card(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primaryContainer
-                        .withOpacity(0.3),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primaryContainer.withOpacity(0.3),
                     child: Padding(
                       padding: const EdgeInsets.all(12.0),
                       child: Column(
@@ -1062,14 +1172,12 @@ class _LoginPageState extends State<LoginPage> {
                               Icon(
                                 Icons.info_outline,
                                 size: 20,
-                                color:
-                                    Theme.of(context).colorScheme.primary,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                               const SizedBox(width: 8),
                               Text(
                                 'Connect over same Wi‑Fi (LAN)',
-                                style:
-                                    Theme.of(context).textTheme.titleSmall,
+                                style: Theme.of(context).textTheme.titleSmall,
                               ),
                             ],
                           ),
@@ -1080,8 +1188,7 @@ class _LoginPageState extends State<LoginPage> {
                             'ipconfig on Windows).\n3) Enter '
                             'http://YOUR_IP:8000 below.\n4) Tap '
                             '"Test Connection".',
-                            style:
-                                Theme.of(context).textTheme.bodySmall,
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ],
                       ),
@@ -1096,7 +1203,7 @@ class _LoginPageState extends State<LoginPage> {
                       prefixIcon: const Icon(Icons.link),
                       suffixIcon: IconButton(
                         icon: const Icon(Icons.wifi_find),
-                        onPressed: _testConnection,
+                        onPressed: _isLoading ? null : _testConnection,
                         tooltip: 'Test Connection',
                       ),
                     ),
@@ -1110,6 +1217,48 @@ class _LoginPageState extends State<LoginPage> {
                       }
                       return null;
                     },
+                  ),
+                  if (_lastTestSuccess != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      _lastTestSuccess!
+                          ? 'Last test: Connected'
+                          : 'Last test: Failed – ${_lastTestMessage ?? "unknown"}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _lastTestSuccess! ? Colors.green : Colors.red,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _isLoading || _isDiscovering
+                            ? null
+                            : _testConnection,
+                        icon: const Icon(Icons.wifi_find, size: 18),
+                        label: const Text('Test connection'),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: _isLoading || _isDiscovering
+                            ? null
+                            : _findBackend,
+                        icon: _isDiscovering
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.search, size: 18),
+                        label: Text(
+                          _isDiscovering ? 'Scanning...' : 'Find backend',
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   if (_suggestedIPs.isNotEmpty) ...[
@@ -1203,6 +1352,9 @@ class _SettingsPageState extends State<SettingsPage> {
   final AuthService _authService = AuthService();
   List<String> _suggestedIPs = [];
   bool _isLoading = false;
+  bool _isDiscovering = false;
+  bool? _lastTestSuccess;
+  String? _lastTestMessage;
 
   @override
   void initState() {
@@ -1229,18 +1381,26 @@ class _SettingsPageState extends State<SettingsPage> {
 
     setState(() {
       _isLoading = true;
+      _lastTestSuccess = null;
+      _lastTestMessage = null;
     });
 
     try {
       final result = await _authService.testConnection(
-        _serverUrlController.text,
+        _serverUrlController.text.trim(),
       );
 
       if (mounted) {
+        setState(() {
+          _lastTestSuccess = result['success'] as bool? ?? false;
+          _lastTestMessage = result['message'] as String?;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message']),
-            backgroundColor: result['success'] ? Colors.green : Colors.red,
+            content: Text(result['message'] as String),
+            backgroundColor: result['success'] == true
+                ? Colors.green
+                : Colors.red,
           ),
         );
       }
@@ -1248,6 +1408,83 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _findBackend() async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() {
+      _isDiscovering = true;
+    });
+
+    try {
+      final found = await _authService.discoverBackends(
+        timeout: const Duration(seconds: 3),
+      );
+
+      if (!mounted) return;
+
+      if (found.isEmpty) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No backend found. Enter IP manually and tap Test connection.',
+            ),
+          ),
+        );
+      } else {
+        await showModalBottomSheet<void>(
+          context: context,
+          builder: (context) {
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      'Found ${found.length} server(s). Tap to use.',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  ...found.map((e) {
+                    final url = e['url'] as String? ?? '';
+                    return ListTile(
+                      leading: const Icon(
+                        Icons.check_circle,
+                        color: Colors.green,
+                      ),
+                      title: Text(url),
+                      onTap: () async {
+                        _serverUrlController.text = url;
+                        setState(() {});
+                        Navigator.of(context).pop();
+                        // Save and use this server so heartbeats/API use it
+                        await _authService.updateServerUrl(url);
+                        if (mounted) {
+                          setState(() {});
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text('Using server: $url'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      },
+                    );
+                  }),
+                ],
+              ),
+            );
+          },
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDiscovering = false;
         });
       }
     }
@@ -1281,124 +1518,162 @@ class _SettingsPageState extends State<SettingsPage> {
         title: const Text('Settings'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Server Configuration',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 16),
-              Card(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primaryContainer
-                    .withOpacity(0.3),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            size: 20,
-                            color:
-                                Theme.of(context).colorScheme.primary,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Connect over same Wi‑Fi (LAN)',
-                            style:
-                                Theme.of(context).textTheme.titleSmall,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '1) Connect phone and computer to the same '
-                        'Wi‑Fi.\n2) Find your computer\'s IP (e.g. '
-                        'ipconfig on Windows).\n3) Enter '
-                        'http://YOUR_IP:8000 below.\n4) Tap '
-                        '"Test Connection".',
-                        style:
-                            Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _serverUrlController,
-                decoration: InputDecoration(
-                  labelText: 'Server URL (Machine IP)',
-                  hintText: 'http://192.168.1.4:8000',
-                  prefixIcon: const Icon(Icons.link),
-                  suffixIcon: IconButton(
-                    icon: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.wifi_find),
-                    onPressed: _isLoading ? null : _testConnection,
-                    tooltip: 'Test Connection',
-                  ),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter server URL';
-                  }
-                  if (!value.startsWith('http://') &&
-                      !value.startsWith('https://')) {
-                    return 'URL must start with http:// or https://';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Suggested IPs
-              if (_suggestedIPs.isNotEmpty) ...[
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
                 Text(
-                  'Use your computer\'s IP (ipconfig / ifconfig) when '
-                  'connecting over LAN. Common patterns:',
-                  style: Theme.of(context).textTheme.bodySmall,
+                  'Server Configuration',
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
-                const SizedBox(height: 8),
-                ...(_suggestedIPs.map(
-                  (ip) => Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.network_wifi),
-                      title: Text(ip),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.copy),
-                        onPressed: () {
+                const SizedBox(height: 16),
+                Card(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer.withOpacity(0.3),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 20,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Connect over same Wi‑Fi (LAN)',
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '1) Connect phone and computer to the same '
+                          'Wi‑Fi.\n2) Find your computer\'s IP (e.g. '
+                          'ipconfig on Windows).\n3) Enter '
+                          'http://YOUR_IP:8000 below.\n4) Tap '
+                          '"Test Connection".',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _serverUrlController,
+                  decoration: InputDecoration(
+                    labelText: 'Server URL (Machine IP)',
+                    hintText: 'http://192.168.1.4:8000',
+                    prefixIcon: const Icon(Icons.link),
+                    suffixIcon: IconButton(
+                      icon: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.wifi_find),
+                      onPressed: _isLoading ? null : _testConnection,
+                      tooltip: 'Test Connection',
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter server URL';
+                    }
+                    if (!value.startsWith('http://') &&
+                        !value.startsWith('https://')) {
+                      return 'URL must start with http:// or https://';
+                    }
+                    return null;
+                  },
+                ),
+                if (_lastTestSuccess != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    _lastTestSuccess!
+                        ? 'Last test: Connected'
+                        : 'Last test: Failed – ${_lastTestMessage ?? "unknown"}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _lastTestSuccess! ? Colors.green : Colors.red,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _isLoading || _isDiscovering
+                          ? null
+                          : _testConnection,
+                      icon: const Icon(Icons.wifi_find, size: 18),
+                      label: const Text('Test connection'),
+                    ),
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
+                      onPressed: _isLoading || _isDiscovering
+                          ? null
+                          : _findBackend,
+                      icon: _isDiscovering
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.search, size: 18),
+                      label: Text(
+                        _isDiscovering ? 'Scanning...' : 'Find backend',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Suggested IPs
+                if (_suggestedIPs.isNotEmpty) ...[
+                  Text(
+                    'Use your computer\'s IP (ipconfig / ifconfig) when '
+                    'connecting over LAN. Common patterns:',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 8),
+                  ...(_suggestedIPs.map(
+                    (ip) => Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.network_wifi),
+                        title: Text(ip),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.copy),
+                          onPressed: () {
+                            _serverUrlController.text = ip;
+                          },
+                        ),
+                        onTap: () {
                           _serverUrlController.text = ip;
                         },
                       ),
-                      onTap: () {
-                        _serverUrlController.text = ip;
-                      },
                     ),
-                  ),
-                )),
-                const SizedBox(height: 16),
-              ],
+                  )),
+                  const SizedBox(height: 16),
+                ],
 
-              const Spacer(),
-              ElevatedButton(
-                onPressed: _saveSettings,
-                child: const Text('Save Settings'),
-              ),
-            ],
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: _saveSettings,
+                  child: const Text('Save Settings'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

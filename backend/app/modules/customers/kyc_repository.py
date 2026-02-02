@@ -127,7 +127,7 @@ class KYCRepository:
         status: Optional[KYCStatus] = None,
     ) -> int:
         """Count documents by status for a customer."""
-        query = select(func.count()).where(
+        query = select(func.count(KYCDocument.id)).where(
             and_(
                 KYCDocument.customer_id == customer_id,
                 KYCDocument.deleted_at.is_(None)
@@ -135,8 +135,10 @@ class KYCRepository:
         )
 
         if status:
-            # Cast enum to string and compare with enum value to bypass SQLAlchemy's enum binding issue
-            query = query.where(cast(KYCDocument.status, String) == status.value)
+            # Case-insensitive comparison: DB may store "approved" or "Approved"
+            query = query.where(
+                func.lower(cast(KYCDocument.status, String)) == status.value.lower()
+            )
 
         result = await self.db.execute(query)
         return result.scalar() or 0

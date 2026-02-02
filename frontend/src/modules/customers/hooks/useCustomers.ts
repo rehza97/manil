@@ -176,13 +176,24 @@ export const useStatusHistory = (customerId: string) => {
 };
 
 /**
- * Hook to get profile completeness
+ * Hook to get profile completeness (by customer ID; requires CUSTOMERS_VIEW)
  */
 export const useProfileCompleteness = (customerId: string) => {
   return useQuery({
     queryKey: ["customers", customerId, "profile", "completeness"],
     queryFn: () => customerService.getProfileCompleteness(customerId),
     enabled: !!customerId,
+  });
+};
+
+/**
+ * Hook to get current user's own profile completeness (for clients on profile page)
+ */
+export const useMyProfileCompleteness = (enabled = true) => {
+  return useQuery({
+    queryKey: ["customers", "me", "profile", "completeness"],
+    queryFn: () => customerService.getMyProfileCompleteness(),
+    enabled,
   });
 };
 

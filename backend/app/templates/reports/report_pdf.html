@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ title }}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 12px;
+      color: #333;
+      margin: 40px;
+      line-height: 1.4;
+    }
+    h1 {
+      font-size: 24px;
+      color: #1F4788;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .meta {
+      text-align: center;
+      color: #666;
+      margin-bottom: 24px;
+    }
+    h2 {
+      font-size: 14px;
+      color: #1F4788;
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
+    .summary {
+      margin-bottom: 24px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    th, td {
+      border: 1px solid #333;
+      padding: 10px 12px;
+      text-align: center;
+    }
+    th {
+      background-color: #4F81BD;
+      color: #fff;
+      font-weight: bold;
+    }
+    tr:nth-child(even) {
+      background-color: #f0f0f0;
+    }
+    tr:nth-child(odd) {
+      background-color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <h1>{{ title }}</h1>
+  <p class="meta">Generated on: {{ generated_at }}</p>
+
+  <div class="summary">
+    <h2>Summary</h2>
+    <p>Total Records: {{ total_records }}</p>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        {% for h in headers %}
+        <th>{{ h }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        {% for cell in row %}
+        <td>{{ cell }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

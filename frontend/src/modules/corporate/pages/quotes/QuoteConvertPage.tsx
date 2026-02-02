@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { quotesApi } from "@/shared/api";
 import { invoicesApi, ordersApi } from "@/shared/api";
@@ -20,6 +20,8 @@ import { Label } from "@/shared/components/ui/label";
 export const QuoteConvertPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/corporate";
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [conversionType, setConversionType] = useState<"invoice" | "order">("invoice");
@@ -48,9 +50,9 @@ export const QuoteConvertPage: React.FC = () => {
         });
         const invId = data?.id ?? data?.invoice_id;
         if (invId) {
-          navigate(`/corporate/invoices/${invId}`);
+          navigate(`${basePath}/invoices/${invId}`);
         } else {
-          navigate("/corporate/invoices");
+          navigate(`${basePath}/invoices`);
         }
       } else {
         toast({
@@ -59,9 +61,9 @@ export const QuoteConvertPage: React.FC = () => {
         });
         const orderId = data?.id ?? data?.order_id;
         if (orderId) {
-          navigate(`/corporate/orders/${orderId}`);
+          navigate(`${basePath}/orders/${orderId}`);
         } else {
-          navigate("/corporate/orders");
+          navigate(`${basePath}/orders`);
         }
       }
     },
@@ -83,7 +85,7 @@ export const QuoteConvertPage: React.FC = () => {
   if (!id) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" onClick={() => navigate("/corporate/quotes")}>
+        <Button variant="ghost" onClick={() => navigate(`${basePath}/quotes`)}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Quotes
         </Button>
@@ -107,7 +109,7 @@ export const QuoteConvertPage: React.FC = () => {
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => navigate(`/corporate/quotes/${id}`)}
+        onClick={() => navigate(`${basePath}/quotes/${id}`)}
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Quote
@@ -182,7 +184,7 @@ export const QuoteConvertPage: React.FC = () => {
             </Button>
             <Button
               variant="outline"
-              onClick={() => navigate(`/corporate/quotes/${id}`)}
+              onClick={() => navigate(`${basePath}/quotes/${id}`)}
               disabled={isConverting}
             >
               Cancel

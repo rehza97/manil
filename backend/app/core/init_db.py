@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import engine, Base, AsyncSessionLocal
 from app.config.settings import get_settings
-from app.modules.auth.models import User, UserRole
+from app.modules.auth.models import User
 from app.core.security import get_password_hash
 
 settings = get_settings()
@@ -106,8 +106,17 @@ async def check_admin_exists(db: AsyncSession) -> bool:
         True if admin exists, False otherwise
     """
     try:
+        from sqlalchemy import select
+        from app.modules.settings.models import Role
+        admin_role = await db.execute(
+            select(Role.id).where(Role.slug == "admin")
+        )
+        admin_role_id = admin_role.scalar_one_or_none()
+        if not admin_role_id:
+            return False
         result = await db.execute(
-            text("SELECT 1 FROM users WHERE role = 'admin' LIMIT 1")
+            text("SELECT 1 FROM users WHERE role_id = :role_id LIMIT 1"),
+            {"role_id": str(admin_role_id)}
         )
         return result.scalar() is not None
     except Exception:
@@ -137,11 +146,20 @@ async def create_admin_user(db: AsyncSession) -> Optional[User]:
             print(f"✅ Admin user already exists: {admin_email}")
             return None
 
+        from sqlalchemy import select
+        from app.modules.settings.models import Role
+        admin_role_result = await db.execute(
+            select(Role).where(Role.slug == "admin", Role.is_active == True)
+        )
+        admin_role = admin_role_result.scalar_one_or_none()
+        if not admin_role:
+            print("⚠️  Admin role not found. Run seed_permissions_and_roles first.")
+            return None
         admin = User(
             email=admin_email,
             password_hash=get_password_hash(admin_password),
             full_name="System Administrator",
-            role=UserRole.ADMIN,
+            role_id=admin_role.id,
             is_active=True,
             created_by=None,  # No creator for system admin
             updated_by=None,
@@ -194,6 +212,15 @@ async def initialize_database() -> bool:
     if not await create_tables():
         return False
 
+    # Seed permissions and roles first (admin user needs admin role)
+    print("🔐 Seeding default permissions and roles...")
+    async with AsyncSessionLocal() as db:
+        from app.modules.settings.service import seed_permissions_and_roles
+        if await seed_permissions_and_roles(db):
+            print("✅ Permissions and roles seeded successfully")
+        else:
+            print("⚠️  Warning: Failed to seed permissions and roles")
+
     # Seed admin user
     print("👤 Checking for admin user...")
     async with AsyncSessionLocal() as db:
@@ -203,15 +230,6 @@ async def initialize_database() -> bool:
             await create_admin_user(db)
         else:
             print("✅ Admin user already exists")
-    
-    # Seed permissions and roles
-    print("🔐 Seeding default permissions and roles...")
-    async with AsyncSessionLocal() as db:
-        from app.modules.settings.service import seed_permissions_and_roles
-        if await seed_permissions_and_roles(db):
-            print("✅ Permissions and roles seeded successfully")
-        else:
-            print("⚠️  Warning: Failed to seed permissions and roles")
 
     # Seed system settings
     print("⚙️  Seeding default system settings...")

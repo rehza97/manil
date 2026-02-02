@@ -14,6 +14,7 @@ from app.config.database import get_db
 from app.core.dependencies import get_current_user, require_permission
 from app.core.permissions import Permission, has_permission
 from app.modules.auth.models import User
+from app.modules.settings.models import Role
 
 from .dashboard_service import DashboardService
 from .ticket_report_service import TicketReportService
@@ -109,8 +110,7 @@ async def get_customer_dashboard(
     customer = result.scalar_one_or_none()
     
     # If no customer exists for CLIENT users, auto-create one
-    from app.modules.auth.schemas import UserRole
-    if not customer and current_user.role == UserRole.CLIENT:
+    if not customer and current_user.role_slug == "client":
         customer_service = CustomerService(db)
         # Create minimal customer record from user data
         # Note: Customer requires phone, so we use a placeholder
@@ -399,7 +399,7 @@ async def export_report(
     Supported report types: tickets, customers, orders
     """
     if export_request.report_type == "vps" and not has_permission(
-        current_user.role.value, Permission.HOSTING_MONITOR
+        current_user.role_slug, Permission.HOSTING_MONITOR
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -484,15 +484,25 @@ async def export_report(
                     continue
                 if end_dt and s.created_at and s.created_at > end_dt:
                     continue
-                plan_name = s.plan.name if s.plan else ""
-                plan_slug = s.plan.slug if s.plan else ""
-                monthly = float(s.plan.monthly_price) if s.plan and s.plan.monthly_price is not None else 0.0
+                plan = s.plan
+                customer = getattr(s, "customer", None)
+                plan_name = plan.name if plan else ""
+                plan_slug = plan.slug if plan else ""
+                monthly = float(plan.monthly_price) if plan and plan.monthly_price is not None else 0.0
+                cpu_cores = int(plan.cpu_cores) if plan and getattr(plan, "cpu_cores", None) is not None else 0
+                ram_gb = int(plan.ram_gb) if plan and getattr(plan, "ram_gb", None) is not None else 0
+                storage_gb = int(plan.storage_gb) if plan and getattr(plan, "storage_gb", None) is not None else 0
                 vps_rows.append({
                     "id": s.id,
                     "subscription_number": s.subscription_number or "",
                     "customer_id": s.customer_id or "",
+                    "customer_name": getattr(customer, "name", "") if customer else "",
+                    "customer_email": getattr(customer, "email", "") if customer else "",
                     "plan_name": plan_name,
                     "plan_slug": plan_slug,
+                    "plan_cpu_cores": cpu_cores,
+                    "plan_ram_gb": ram_gb,
+                    "plan_storage_gb": storage_gb,
                     "status": s.status.value if hasattr(s.status, "value") else str(s.status),
                     "monthly_price": monthly,
                     "created_at": s.created_at.isoformat() if s.created_at else "",
@@ -538,8 +548,10 @@ async def export_report(
                 result = export_service.export_to_csv(data, "activity_report", ["type", "count"])
             elif export_request.format == "excel":
                 result = export_service.export_to_excel(data, "activity_report", "Activity", ["type", "count"])
-            else:  # pdf
-                result = export_service.export_to_pdf(data, "activity_report", "Activity Report", ["type", "count"])
+            else:  # pdf (HTML template then convert to PDF)
+                result = export_service.export_to_pdf_html(
+                    data, "activity_report", "Activity Report", ["type", "count"]
+                )
         elif export_request.report_type == "security":
             # Get security report data directly
             report_data = await get_security_report(
@@ -554,8 +566,10 @@ async def export_report(
                 result = export_service.export_to_csv(data, "security_report", ["type", "count"])
             elif export_request.format == "excel":
                 result = export_service.export_to_excel(data, "security_report", "Security", ["type", "count"])
-            else:  # pdf
-                result = export_service.export_to_pdf(data, "security_report", "Security Report", ["type", "count"])
+            else:  # pdf (HTML template then convert to PDF)
+                result = export_service.export_to_pdf_html(
+                    data, "security_report", "Security Report", ["type", "count"]
+                )
         elif export_request.report_type == "performance":
             # Get performance report data directly
             report_data = await get_performance_report(
@@ -574,9 +588,12 @@ async def export_report(
                 result = export_service.export_to_excel(
                     data, "performance_report", "Performance", ["date", "response_time", "cpu_usage", "memory_usage"]
                 )
-            else:  # pdf
-                result = export_service.export_to_pdf(
-                    data, "performance_report", "Performance Report", ["date", "response_time", "cpu_usage", "memory_usage"]
+            else:  # pdf (HTML template then convert to PDF)
+                result = export_service.export_to_pdf_html(
+                    data,
+                    "performance_report",
+                    "Performance Report",
+                    ["date", "response_time", "cpu_usage", "memory_usage"],
                 )
         else:
             raise HTTPException(
@@ -671,12 +688,14 @@ async def get_user_report(
 
     # Get users by role
     role_result = await db.execute(
-        select(User.role, func.count(User.id))
-        .group_by(User.role)
+        select(Role.slug, func.count(User.id))
+        .select_from(User)
+        .join(Role, User.role_id == Role.id)
+        .group_by(Role.slug)
     )
     users_by_role = [
-        {"role": role, "count": count}
-        for role, count in role_result.all()
+        {"role": slug, "count": count}
+        for slug, count in role_result.all()
     ]
 
     # Get users by status

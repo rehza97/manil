@@ -225,7 +225,7 @@ export const InvoiceStatisticsPage: React.FC = () => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="method" />
                 <YAxis />
-                <Tooltip formatter={(value: any) => `$${Number(value).toFixed(2)}`} />
+                <Tooltip formatter={(value: any) => new Intl.NumberFormat("fr-DZ", { style: "currency", currency: "DZD" }).format(Number(value))} />
                 <Legend />
                 <Bar dataKey="amount" fill="#8884d8" />
               </BarChart>

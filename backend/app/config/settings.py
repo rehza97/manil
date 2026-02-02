@@ -121,6 +121,7 @@ class Settings(BaseSettings):
     # Rate Limiting
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_PER_MINUTE: int = 60
+    REGISTRATION_RATE_LIMIT_REQUESTS: int | None = None  # None = use default 3 per hour
 
     # VPS / Docker Deployment Engine
     # - auto: prefer host Docker via docker-socket-proxy, fallback to DinD if proxy unreachable

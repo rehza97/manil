@@ -7,6 +7,7 @@
  */
 
 import React from "react";
+import { formatDZD } from "@/shared/utils/formatters";
 
 export const DashboardPage: React.FC = () => {
   return (
@@ -27,7 +28,7 @@ export const DashboardPage: React.FC = () => {
         </div>
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-gray-500 text-sm font-medium">Revenue (MTD)</h3>
-          <p className="text-3xl font-bold mt-2">$0</p>
+          <p className="text-3xl font-bold mt-2">{formatDZD(0)}</p>
         </div>
       </div>
     </div>

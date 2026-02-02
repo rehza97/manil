@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { useTicket, useUpdateTicket } from "../hooks";
+import { useQuery } from "@tanstack/react-query";
+import { useTicket, useUpdateTicketStatus } from "../hooks";
 import { TicketStatus } from "../types/ticket.types";
 import {
   Card,
@@ -16,9 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import { Textarea } from "@/shared/components/ui/textarea";
 import { useToast } from "@/shared/components/ui/use-toast";
 import { format } from "date-fns";
+import { FileText, Download } from "lucide-react";
 import { ticketService } from "../services";
 import { useUsers } from "@/modules/admin/hooks";
 import { useAuth } from "@/modules/auth";
@@ -61,10 +62,9 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
   const { user } = useAuth();
   const isClient = user?.role === "client";
   const { data: ticket, isLoading } = useTicket(ticketId);
-  const updateTicket = useUpdateTicket();
+  const updateTicketStatus = useUpdateTicketStatus();
   const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [selectedAssignee, setSelectedAssignee] = useState<string>("");
-  const [replyMessage, setReplyMessage] = useState("");
 
   // Fetch staff users for assignment (corporate and admin roles) - only for non-clients
   const { data: usersData } = useUsers(1, 100, { enabled: !isClient });
@@ -72,9 +72,11 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
   const staffUsers = useMemo(() => {
     if (isClient) return [];
     const users = usersData?.data || [];
-    return users.filter((user) => 
-      user.role === "corporate" || user.role === "admin"
-    );
+    const assignableSlugs = ["admin", "corporate", "support_agent", "support_supervisor"];
+    return users.filter((u) => {
+      const slug = typeof u.role === "string" ? u.role : u.role?.slug;
+      return slug && assignableSlugs.includes(slug);
+    });
   }, [usersData, isClient]);
 
   // Set selected status when ticket loads or changes
@@ -114,6 +116,33 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
     }
   }, [ticket?.assignedTo, staffUsers]);
 
+  const { data: attachments = [], isLoading: attachmentsLoading } = useQuery({
+    queryKey: ["ticket-attachments", ticketId],
+    queryFn: () => ticketService.getAttachments(ticketId),
+    enabled: !!ticketId,
+    retry: (failureCount, error: unknown) => {
+      const err = error as { response?: { status?: number } };
+      if (err?.response?.status === 404) return false;
+      return failureCount < 3;
+    },
+  });
+
+  const handleDownloadAttachment = async (attachmentId: string) => {
+    const att = (attachments as { id: string; original_filename?: string; filename?: string }[]).find(
+      (a) => a.id === attachmentId
+    );
+    const filename = att?.original_filename || att?.filename || "attachment";
+    try {
+      await ticketService.downloadAttachment(ticketId, attachmentId, filename);
+    } catch (e) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger le fichier",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) {
     return <div className="text-center py-8">Loading ticket details...</div>;
   }
@@ -133,16 +162,14 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
     }
 
     try {
-      await updateTicket.mutateAsync({
-        id: ticketId,
-        data: { status: selectedStatus as TicketStatus },
+      await updateTicketStatus.mutateAsync({
+        ticketId,
+        status: selectedStatus as TicketStatus,
       });
       toast({
         title: "Success",
         description: "Ticket status updated",
       });
-      // Don't clear selectedStatus - keep it selected so user can see current status
-      // The useEffect will update it when ticket refetches
       onStatusChange?.();
     } catch (error: any) {
       toast({
@@ -316,6 +343,45 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
             </div>
           </div>
 
+          <div className="border-t pt-6">
+            <h3 className="font-medium mb-3">Pièces jointes</h3>
+            {attachmentsLoading ? (
+              <p className="text-sm text-gray-500">Chargement des fichiers…</p>
+            ) : Array.isArray(attachments) && attachments.length > 0 ? (
+              <ul className="space-y-2">
+                {(attachments as { id: string; original_filename?: string; filename?: string; file_size?: number }[]).map(
+                  (att) => (
+                    <li
+                      key={att.id}
+                      className="flex items-center justify-between gap-2 rounded-lg border bg-gray-50 px-3 py-2 text-sm"
+                    >
+                      <span className="flex items-center gap-2 truncate">
+                        <FileText className="h-4 w-4 shrink-0 text-gray-500" />
+                        {att.original_filename || att.filename || "Fichier"}
+                        {att.file_size != null && (
+                          <span className="text-gray-500">
+                            ({(att.file_size / 1024).toFixed(1)} Ko)
+                          </span>
+                        )}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() => handleDownloadAttachment(att.id)}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </li>
+                  )
+                )}
+              </ul>
+            ) : (
+              <p className="text-sm text-gray-500">Aucune pièce jointe</p>
+            )}
+          </div>
+
           {!isClient && (
             <div className="border-t pt-6">
               <h3 className="font-medium mb-3">Mettre à jour le statut</h3>
@@ -338,21 +404,6 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
               </div>
             </div>
           )}
-
-          <div className="border-t pt-6">
-            <h3 className="font-medium mb-3">Ajouter une réponse</h3>
-            <div className="space-y-2">
-              <Textarea
-                placeholder="Saisir votre réponse…"
-                value={replyMessage}
-                onChange={(e) => setReplyMessage(e.target.value)}
-                rows={4}
-              />
-              <div className="flex justify-end">
-                <Button onClick={handleAddReply}>Publier</Button>
-              </div>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

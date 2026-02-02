@@ -12,7 +12,7 @@ from app.infrastructure.email import templates
 from app.infrastructure.sms.service import SMSService
 from app.modules.products.quote_models import QuoteRequest, ServiceRequest
 from app.modules.customers.models import Customer
-from app.modules.notifications.service import user_id_by_email
+from app.modules.notifications.service import user_id_by_email, create_notification
 from app.modules.settings.service import UserNotificationPreferencesService
 from app.modules.settings.utils import notification_gate_allows
 from app.config.settings import get_settings
@@ -533,3 +533,76 @@ class QuoteNotificationService:
                 f"Service request email sent to {service.customer_email}")
         except Exception as e:
             logger.warning(f"Failed to send service request email: {str(e)}")
+
+    @staticmethod
+    async def send_service_request_notification_async(
+        db: AsyncSession,
+        service: ServiceRequest,
+        frontend_url: str = "http://localhost:3000"
+    ) -> None:
+        """
+        Send service request notification (email + SMS + in-app) with preference checks.
+        SMS only sent to customers.
+        """
+        customer_email = service.customer_email
+        if not customer_email:
+            return
+
+        # Check notification gates
+        gate_allows_email = await notification_gate_allows(db, "email", "service_request.created")
+        gate_allows_sms = await notification_gate_allows(db, "sms", "service_request.created")
+
+        # Get user ID and preferences
+        uid = await user_id_by_email(db, customer_email)
+        should_send_email = True
+        should_send_sms = False
+
+        if uid:
+            prefs_svc = UserNotificationPreferencesService(db)
+            prefs = await prefs_svc.get(uid)
+            should_send_email = bool(prefs.get("email", {}).get("orderUpdates", True))
+            should_send_sms = bool(prefs.get("sms", {}).get("orderUpdates", False))
+
+        # Get customer phone for SMS
+        customer_phone = getattr(service, 'customer_phone', None)
+        if not customer_phone:
+            try:
+                result = await db.execute(
+                    select(Customer).where(Customer.email == customer_email)
+                )
+                customer = result.scalar_one_or_none()
+                if customer and customer.phone:
+                    customer_phone = customer.phone
+            except Exception:
+                pass
+
+        # Send email (use existing sync method)
+        if should_send_email and gate_allows_email:
+            QuoteNotificationService.send_service_request_email(service, frontend_url)
+
+        # Send SMS (customer only)
+        if should_send_sms and gate_allows_sms and customer_phone and customer_phone.strip():
+            try:
+                sms_service = SMSService()
+                await sms_service.send_custom_notification(
+                    to=customer_phone,
+                    title="Service Request",
+                    body=f"Request #{service.id} received. We'll contact you soon.",
+                    db=db
+                )
+            except Exception as e:
+                logger.warning(f"Service request SMS notification failed: {e}")
+
+        # Send in-app notification
+        if uid:
+            try:
+                await create_notification(
+                    db=db,
+                    user_id=uid,
+                    type="service_request_created",
+                    title="Service Request Submitted",
+                    body=f"Your {service.service_type or 'service'} request has been submitted successfully.",
+                    link=f"/service-requests/{service.id}"
+                )
+            except Exception as e:
+                logger.warning(f"Service request in-app notification failed: {e}")

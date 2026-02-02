@@ -3,7 +3,7 @@ import uuid
 from typing import Optional, Tuple
 from datetime import datetime, timezone
 from sqlalchemy import select, and_, desc, func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.orders.models import Order, OrderItem, OrderTimeline, OrderStatus
@@ -68,11 +68,16 @@ class OrderRepository:
             raise
 
     def get_by_id(self, order_id: str) -> Optional[Order]:
-        """Get order by ID."""
+        """Get order by ID with items and product names."""
         db = self._ensure_sync_session()
-        order = db.query(Order).filter(
-            and_(Order.id == order_id, Order.deleted_at.is_(None))
-        ).first()
+        order = (
+            db.query(Order)
+            .options(
+                joinedload(Order.items).joinedload(OrderItem.product),
+            )
+            .filter(and_(Order.id == order_id, Order.deleted_at.is_(None)))
+            .first()
+        )
         return order
 
     def get_by_order_number(self, order_number: str) -> Optional[Order]:
@@ -101,8 +106,13 @@ class OrderRepository:
             query = query.filter(Order.status == status)
 
         total = query.count()
-        orders = query.order_by(desc(Order.created_at)).offset(
-            skip).limit(limit).all()
+        orders = (
+            query.options(joinedload(Order.items).joinedload(OrderItem.product))
+            .order_by(desc(Order.created_at))
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
         return orders, total
 

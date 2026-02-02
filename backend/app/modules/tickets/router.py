@@ -66,7 +66,7 @@ async def create_ticket(
     
     # For client users, automatically find or create customer by email
     customer_id = ticket_data.customer_id
-    if current_user.role == "client":
+    if current_user.role_slug == "client":
         customer_repo = CustomerRepository(db)
         
         # Try to find customer by email
@@ -128,7 +128,7 @@ async def list_my_tickets(
     current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ):
     """List current user's tickets (for clients)."""
-    if current_user.role != "client":
+    if current_user.role_slug != "client":
         raise ForbiddenException("Only customers can use this endpoint")
 
     # Get customer by user's email (tickets are linked to customers, not users)
@@ -182,7 +182,7 @@ async def list_tickets(
     service = TicketService(db)
 
     # Filter by customer if provided
-    if customer_id and current_user.role == "client":
+    if customer_id and current_user.role_slug == "client":
         customer_id = current_user.id
 
     skip = (page - 1) * page_size

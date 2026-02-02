@@ -17,6 +17,7 @@ export {
   SecuritySettingsPage,
   EmailConfigPage,
   SMSConfigPage,
+  SMSQueuePage,
   StorageConfigPage,
   BackupSettingsPage,
   NotificationSettingsPage,

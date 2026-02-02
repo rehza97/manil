@@ -20,6 +20,7 @@ import {
   useNotificationStream,
 } from "@/shared/hooks/useNotifications";
 import { useAuth } from "@/modules/auth";
+import { normalizeNotificationLink } from "@/shared/utils/notificationLink";
 
 export const NotificationsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -244,7 +245,7 @@ export const NotificationsPage: React.FC = () => {
                                 )}
                                 {notification.link && (
                                   <Button variant="outline" size="sm" asChild>
-                                    <Link to={notification.link}>View</Link>
+                                    <Link to={normalizeNotificationLink(notification.link, basePath)}>View</Link>
                                   </Button>
                                 )}
                               </div>

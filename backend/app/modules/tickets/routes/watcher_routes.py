@@ -150,7 +150,7 @@ async def update_watcher_preferences(
 
     Note: Users can only update their own preferences, admins can update any
     """
-    role = getattr(current_user.role, "value", current_user.role)
+    role = current_user.role_slug
     if current_user.id != user_id and role != "admin":
         raise HTTPException(status_code=403, detail="Forbidden")
 
@@ -185,7 +185,7 @@ async def is_user_watching(
 
     Note: Users can only check themselves, admins can check any user
     """
-    role = getattr(current_user.role, "value", current_user.role)
+    role = current_user.role_slug
     if current_user.id != user_id and role != "admin":
         raise HTTPException(status_code=403, detail="Forbidden")
 

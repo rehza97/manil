@@ -220,7 +220,7 @@ const ProfilePage: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ProfileCompleteness customerId={customerId} />
+            <ProfileCompleteness useMeApi />
           </CardContent>
         </Card>
       )}

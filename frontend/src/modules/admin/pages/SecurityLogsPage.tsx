@@ -32,6 +32,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
+import { useToast } from "@/shared/components/ui/use-toast";
+import { adminLogsApi } from "@/shared/api/dashboard/admin/logs";
+import { useDownloadExport } from "@/modules/reports/hooks/useReports";
 import { useAuditLogs } from "../hooks/useAudit";
 import { format } from "date-fns";
 
@@ -40,6 +49,25 @@ export const SecurityLogsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [actionFilter, setActionFilter] = useState<string>("all");
+  const { toast } = useToast();
+  const downloadMutation = useDownloadExport();
+
+  const handleExport = async (format: "csv" | "excel") => {
+    try {
+      const res = await adminLogsApi.exportSecurityLogs(format);
+      await downloadMutation.mutateAsync(res.file_name);
+      toast({
+        title: "Export successful",
+        description: `Security logs exported (${format.toUpperCase()}).`,
+      });
+    } catch (err) {
+      toast({
+        title: "Export failed",
+        description: err instanceof Error ? err.message : "Failed to export security logs",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Filter for security-related actions
   const securityActions = [
@@ -196,10 +224,18 @@ export const SecurityLogsPage: React.FC = () => {
               </SelectContent>
             </Select>
 
-            <Button variant="outline" className="w-full">
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full" disabled={downloadMutation.isPending}>
+                  <Download className="h-4 w-4 mr-2" />
+                  {downloadMutation.isPending ? "Exporting..." : "Export"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport("csv")}>Export CSV</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("excel")}>Export Excel</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardContent>
       </Card>

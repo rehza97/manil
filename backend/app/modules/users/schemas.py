@@ -4,17 +4,27 @@ Separate from authentication schemas to handle admin-specific user management.
 """
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
 
-from app.modules.auth.schemas import UserRole
+
+class RoleSummary(BaseModel):
+    """Minimal role info for embedding in user response."""
+
+    id: UUID
+    name: str
+    slug: str
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserListFilter(BaseModel):
     """Filters for user listing."""
 
-    role: Optional[str] = None
+    role: Optional[str] = Field(None, description="Filter by role slug (admin, corporate, client)")
     is_active: Optional[bool] = None
+    status: Optional[str] = Field(None, description="Filter: all, active, inactive, deleted")
     search: Optional[str] = Field(None, description="Search in name and email")
 
 
@@ -24,8 +34,17 @@ class UserDetailResponse(BaseModel):
     id: str
     email: EmailStr
     full_name: str
-    role: UserRole
+    role_id: str
+    role: RoleSummary
     is_active: bool
+
+    @field_validator("role_id", mode="before")
+    @classmethod
+    def coerce_role_id(cls, v):
+        if v is not None and hasattr(v, "hex"):
+            return str(v)
+        return v
+
     is_2fa_enabled: bool
     failed_login_attempts: int
     locked_until: Optional[datetime] = None
@@ -57,7 +76,7 @@ class AdminUserCreate(BaseModel):
     email: EmailStr
     full_name: str = Field(..., min_length=2, max_length=255)
     password: str = Field(..., min_length=8, max_length=100)
-    role: UserRole = Field(default=UserRole.CLIENT)
+    role_id: str = Field(..., description="UUID of settings.Role")
     is_active: bool = Field(default=True)
 
 
@@ -65,7 +84,7 @@ class AdminUserUpdate(BaseModel):
     """Schema for admin updating a user."""
 
     full_name: Optional[str] = Field(None, min_length=2, max_length=255)
-    role: Optional[UserRole] = None
+    role_id: Optional[str] = None
     is_active: Optional[bool] = None
 
 
@@ -78,7 +97,7 @@ class UserStatusUpdate(BaseModel):
 class RoleAssignment(BaseModel):
     """Schema for assigning roles to user."""
 
-    role: UserRole
+    role_id: str = Field(..., description="UUID of settings.Role")
 
 
 class UserStats(BaseModel):

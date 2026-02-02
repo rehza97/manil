@@ -6,6 +6,7 @@ Provides professional invoice, quote, and report PDF generation.
 """
 
 import base64
+import re
 from io import BytesIO
 from datetime import datetime, timezone
 from pathlib import Path
@@ -83,6 +84,21 @@ class HTMLPDFService:
         "declined": "Refuse",
         "expired": "Expire",
         "converted": "Converti"
+    }
+
+    # Order status display mapping
+    ORDER_STATUS_DISPLAY = {
+        "request": "Demande",
+        "pending_commercial": "En attente validation commerciale",
+        "commercial_approved": "Validation commerciale approuvee",
+        "commercial_rejected": "Validation commerciale rejetee",
+        "pending_technical": "En attente validation technique",
+        "technical_approved": "Validation technique approuvee",
+        "technical_rejected": "Validation technique rejetee",
+        "validated": "Validee",
+        "in_progress": "En cours",
+        "delivered": "Livree",
+        "cancelled": "Annulee",
     }
 
     def __init__(
@@ -406,6 +422,80 @@ class HTMLPDFService:
         # Generate PDF
         filename = f"quote_{quote.quote_number}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
         output_path = self.output_dir / "quotes"
+        output_path.mkdir(parents=True, exist_ok=True)
+        filepath = output_path / filename
+
+        self._html_to_pdf(html_content, str(filepath))
+
+        return str(filepath)
+
+    def generate_order_pdf(
+        self,
+        order: Any,
+        customer_data: Dict[str, Any],
+        company_info: Optional[Dict[str, Any]] = None,
+        custom_template: Optional[str] = None,
+    ) -> str:
+        """
+        Generate order PDF from HTML template.
+
+        Args:
+            order: Order model instance with items loaded
+            customer_data: Customer information dictionary
+            company_info: Optional company dict from general settings
+            custom_template: Optional custom template path
+
+        Returns:
+            Path to generated PDF file
+        """
+        template_name = custom_template or "orders/order.html"
+        template = self.env.get_template(template_name)
+        company = {**self.company, **(company_info or {})}
+
+        subtotal = float(order.subtotal)
+        discount = float(order.discount_amount)
+        tax_amount = float(order.tax_amount)
+        total = float(order.total_amount)
+        status_val = order.status.value if hasattr(order.status, "value") else str(order.status)
+
+        order_data = {
+            "order_number": order.order_number,
+            "status": status_val,
+            "status_display": self.ORDER_STATUS_DISPLAY.get(status_val, status_val),
+            "created_date": order.created_at.strftime("%d/%m/%Y") if order.created_at else "N/A",
+            "subtotal": subtotal,
+            "discount": discount,
+            "tax_amount": tax_amount,
+            "total": total,
+            "customer_notes": order.customer_notes or "",
+            "delivery_address": order.delivery_address or "",
+            "delivery_contact": order.delivery_contact or "",
+        }
+
+        items_data = []
+        for item in order.items:
+            items_data.append({
+                "product_id": getattr(item, "product_id", "N/A"),
+                "quantity": int(item.quantity),
+                "unit_price": float(item.unit_price),
+                "discount_percentage": float(getattr(item, "discount_percentage", 0)),
+                "total_price": float(item.total_price),
+            })
+
+        html_content = template.render(
+            order=order_data,
+            customer=customer_data,
+            items=items_data,
+            company=company,
+            bank=self.bank,
+            currency="DZD",
+            currency_name="Dinars Algeriens",
+            generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+        )
+
+        safe_number = re.sub(r"[^a-zA-Z0-9_-]", "", order.order_number)
+        filename = f"order_{safe_number}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+        output_path = self.output_dir / "orders"
         output_path.mkdir(parents=True, exist_ok=True)
         filepath = output_path / filename
 

@@ -359,8 +359,8 @@ async def check_2fa_requirement(
     if not user:
         return {"is_required": False, "role": None}
 
-    is_required = await is_2fa_required(db, user.role.value)
-    return {"is_required": is_required, "role": user.role.value}
+    is_required = await is_2fa_required(db, user.role_slug)
+    return {"is_required": is_required, "role": user.role_slug}
 
 
 @router.post("/password-reset/confirm", response_model=UserResponse)

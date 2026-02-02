@@ -306,7 +306,7 @@ class DashboardService:
         ).order_by(Ticket.created_at.desc()).limit(limit)
 
         if user_id:
-            ticket_query = ticket_query.where(Ticket.assigned_to_id == user_id)
+            ticket_query = ticket_query.where(Ticket.assigned_to == user_id)
 
         result = await self.db.execute(ticket_query)
         tickets = result.scalars().all()
@@ -316,7 +316,7 @@ class DashboardService:
                 RecentActivity(
                     id=str(ticket.id),
                     type="ticket",
-                    title=ticket.subject,
+                    title=ticket.title,
                     description=ticket.description[:100] if ticket.description else None,
                     timestamp=ticket.created_at,
                     status=ticket.status,
@@ -370,7 +370,7 @@ class DashboardService:
                 RecentActivity(
                     id=str(ticket.id),
                     type="ticket",
-                    title=ticket.subject,
+                    title=ticket.title,
                     description=ticket.description[:100] if ticket.description else None,
                     timestamp=ticket.created_at,
                     status=ticket.status,

@@ -39,6 +39,18 @@
   │ ticket.closed         │ ✅ Line 257 │ ✅          │ ✅ Correct                                                 │ ✅         │
   └───────────────────────┴─────────────┴─────────────┴────────────────────────────────────────────────────────────┴────────────┘
   ---
+  📄 Response Templates Page (Admin > Tickets > Templates)
+
+  What this page does:
+  This page is the admin hub for response templates (canned replies) used in support tickets.
+  Admins can create, edit, search, and filter pre-written messages so agents can insert them
+  quickly when replying to tickets. Templates support variables (e.g. {{customer_name}},
+  {{ticket_id}}) that are replaced with real data when the template is used. The table shows
+  each template's title, category, usage count, creation date, and actions (view, edit, delete).
+  Use "Create Template" to add a new canned reply; use search and "All Categories" to find
+  existing ones.
+
+  ---
   ✅ PERFECT - Invoices Module
 
   Location: backend/app/modules/invoices/service_workflow.py

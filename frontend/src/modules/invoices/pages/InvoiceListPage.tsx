@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -27,6 +27,12 @@ import { useToast } from "@/shared/components/ui/use-toast";
 
 export const InvoiceListPage: React.FC = () => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const basePath = pathname.startsWith("/admin")
+    ? "/admin/invoices"
+    : pathname.startsWith("/corporate")
+      ? "/corporate/invoices"
+      : "/dashboard/invoices";
   const { toast } = useToast();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -48,10 +54,14 @@ export const InvoiceListPage: React.FC = () => {
   });
 
   const handleSelectInvoice = (invoiceId: string) => {
-    navigate(`/dashboard/invoices/${invoiceId}`);
+    navigate(`${basePath}/${invoiceId}`);
   };
 
-  const handleAction = async (action: string, invoiceId: string) => {
+  const handleAction = async (
+    action: string,
+    invoiceId: string,
+    invoice?: { invoice_number?: string }
+  ) => {
     try {
       switch (action) {
         case "send":
@@ -62,16 +72,17 @@ export const InvoiceListPage: React.FC = () => {
           });
           refetch();
           break;
-        case "download":
-          await invoiceService.triggerPDFDownload(
-            invoiceId,
-            `invoice-${invoiceId}.pdf`
-          );
+        case "download": {
+          const fileName = invoice?.invoice_number
+            ? `invoice-${invoice.invoice_number}.pdf`
+            : `invoice-${invoiceId}.pdf`;
+          await invoiceService.triggerPDFDownload(invoiceId, fileName);
           toast({
             title: "Succès",
             description: "PDF téléchargé",
           });
           break;
+        }
         case "cancel":
           if (window.confirm("Confirmer l'annulation de cette facture ?")) {
             await invoiceService.cancel(invoiceId);
@@ -116,7 +127,7 @@ export const InvoiceListPage: React.FC = () => {
           <h1 className="text-3xl font-bold text-slate-900">Factures</h1>
           <p className="text-slate-600 mt-1">Consulter et gérer vos factures</p>
         </div>
-        <Button onClick={() => navigate("/dashboard/invoices/create")}>
+        <Button onClick={() => navigate(`${basePath}/create`)}>
           <Plus className="h-4 w-4 mr-2" />
           Créer une facture
         </Button>
@@ -305,6 +316,7 @@ export const InvoiceListPage: React.FC = () => {
       ) : (
         <InvoiceList
           invoices={invoices}
+          basePath={basePath}
           onSelectInvoice={handleSelectInvoice}
           onAction={handleAction}
         />

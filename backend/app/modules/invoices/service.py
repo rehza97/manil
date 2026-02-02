@@ -62,7 +62,12 @@ class InvoiceService:
             )
         return invoice
 
-    async def create(self, invoice_data: InvoiceCreate, created_by_id: str) -> Invoice:
+    async def create(
+        self,
+        invoice_data: InvoiceCreate,
+        created_by_id: str,
+        allow_custom_items: bool = False,
+    ) -> Invoice:
         """Create a new invoice with price validation.
 
         Security:
@@ -77,7 +82,8 @@ class InvoiceService:
                 self.db,
                 items_dict,
                 discount_amount=invoice_data.discount_amount,
-                tax_rate=invoice_data.tax_rate
+                tax_rate=invoice_data.tax_rate,
+                allow_custom_items=allow_custom_items,
             )
             logger.info(
                 f"Price validation passed for invoice with {len(validated_items)} items")
@@ -150,7 +156,10 @@ class InvoiceService:
         )
 
         await self.db.commit()
-        return invoice
+
+        # Ensure relationships are eagerly loaded for response serialization
+        loaded = await self.repository.get_by_id(invoice.id)
+        return loaded or invoice
 
     async def update(self, invoice_id: str, invoice_data: InvoiceUpdate) -> Invoice:
         """Update an existing invoice."""

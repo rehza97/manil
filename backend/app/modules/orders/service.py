@@ -72,8 +72,8 @@ class OrderService:
         for item in items:
             item_subtotal = item.unit_price * item.quantity
             item_discount = item_subtotal * (item.discount_percentage / 100)
-            subtotal += item_subtotal - item_discount
-            total_discount += item_discount
+            subtotal += float(item_subtotal - item_discount)
+            total_discount += float(item_discount)
 
         tax = subtotal * tax_rate
         total = subtotal + tax
@@ -121,6 +121,10 @@ class OrderService:
 
             # Add items and calculate totals
             for item_data in data.items:
+                if not item_data.product_id:
+                    raise NotFoundException(
+                        "product_id is required for order items when creating an order manually"
+                    )
                 product = db.query(Product).filter(
                     Product.id == item_data.product_id
                 ).first()
@@ -203,11 +207,11 @@ class OrderService:
                 detail=f"Quote {conversion_data.quote_id} not found"
             )
 
-        # Verify quote is accepted
-        if quote.status != QuoteStatus.ACCEPTED:
+        # Verify quote is accepted/approved; allow CONVERTED so invoice+order can both be created
+        if quote.status not in (QuoteStatus.ACCEPTED, QuoteStatus.APPROVED, QuoteStatus.CONVERTED):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot convert quote with status {quote.status.value}. Quote must be accepted."
+                detail="Quote must be accepted or approved.",
             )
 
         # Check if quote already converted to order
@@ -354,31 +358,31 @@ class OrderService:
         new_status: OrderStatus,
         notes: Optional[str] = None,
         performed_by_user_id: Optional[str] = None,
+        allow_any_transition: bool = False,
     ) -> Order:
-        """Update order status with validation."""
+        """Update order status with validation (skipped when allow_any_transition=True for admin)."""
         repo = OrderRepository(db)
         order = OrderService.get_order(db, order_id)
 
-        # If order requires validation workflow, use OrderWorkflowService
-        if order.validation_required:
-            from app.modules.orders.service_workflow import OrderWorkflowService
-            # Check if this is a workflow transition
-            workflow_transitions = OrderWorkflowService.WORKFLOW_TRANSITIONS.get(
-                order.status, [])
-            if new_status not in workflow_transitions:
-                raise BadRequestException(
-                    f"Cannot transition from {order.status} to {new_status}. "
-                    f"This order requires validation workflow. Use workflow endpoints for validation steps."
-                )
-        else:
-            # Use simple transitions for orders without validation
-            allowed_transitions = OrderService.STATUS_TRANSITIONS.get(
-                order.status, [])
-            if new_status not in allowed_transitions:
-                raise BadRequestException(
-                    f"Cannot transition from {order.status} to {new_status}. "
-                    f"Allowed: {allowed_transitions}"
-                )
+        if not allow_any_transition:
+            # If order requires validation workflow, use OrderWorkflowService
+            if order.validation_required:
+                from app.modules.orders.service_workflow import OrderWorkflowService
+                workflow_transitions = OrderWorkflowService.WORKFLOW_TRANSITIONS.get(
+                    order.status, [])
+                if new_status not in workflow_transitions:
+                    raise BadRequestException(
+                        f"Cannot transition from {order.status} to {new_status}. "
+                        f"This order requires validation workflow. Use workflow endpoints for validation steps."
+                    )
+            else:
+                allowed_transitions = OrderService.STATUS_TRANSITIONS.get(
+                    order.status, [])
+                if new_status not in allowed_transitions:
+                    raise BadRequestException(
+                        f"Cannot transition from {order.status} to {new_status}. "
+                        f"Allowed: {allowed_transitions}"
+                    )
 
         try:
             updated_order = repo.update_status(

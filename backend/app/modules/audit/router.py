@@ -51,7 +51,7 @@ async def get_audit_logs(
 
     # Non-admin users can only see their own logs
     from app.core.permissions import has_permission
-    if not has_permission(current_user.role.value, Permission.AUDIT_ADMIN):
+    if not has_permission(current_user.role_slug, Permission.AUDIT_ADMIN):
         filters.user_id = current_user.id
 
     return await service.get_logs(page=page, page_size=page_size, filters=filters)
@@ -71,7 +71,7 @@ async def get_user_audit_logs(
     """
     # Check permissions
     from app.core.permissions import has_permission
-    if not has_permission(current_user.role.value, Permission.AUDIT_ADMIN) and current_user.id != user_id:
+    if not has_permission(current_user.role_slug, Permission.AUDIT_ADMIN) and current_user.id != user_id:
         from app.core.exceptions import ForbiddenException
 
         raise ForbiddenException("You can only view your own audit logs")

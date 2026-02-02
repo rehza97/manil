@@ -6,9 +6,12 @@ import 'package:flutter/foundation.dart';
 enum Environment { development, staging, production, lan }
 
 class EnvironmentConfig {
-  /// Current environment - defaults to production for direct deployment
+  /// Current environment - defaults to development in debug (local server), production in release
   static Environment get current {
-    const envString = String.fromEnvironment('ENV', defaultValue: 'production');
+    const envString = String.fromEnvironment(
+      'ENV',
+      defaultValue: kDebugMode ? 'development' : 'production',
+    );
 
     switch (envString.toLowerCase()) {
       case 'production':
@@ -138,9 +141,9 @@ class EnvironmentConfig {
 ///    flutter run
 ///    → Auto uses: http://10.0.2.2:8000
 ///
-/// 2. Real Device:
-///    flutter run --dart-define=API_URL=http://192.168.1.5:8000
-///    → Replace with your computer's local IP
+/// 2. Real Device (same Wi‑Fi as PC running Docker):
+///    Set Server URL in app Settings to http://YOUR_PC_IP:8000 (e.g. http://192.168.1.5:8000).
+///    Or: flutter run --dart-define=API_URL=http://192.168.1.5:8000
 ///
 /// 📡 CONNECT OVER LAN (same Wi‑Fi):
 ///

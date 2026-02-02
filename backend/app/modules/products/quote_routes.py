@@ -236,9 +236,17 @@ def create_service_request(
     try:
         service = ServiceRequestService.create_service_request(db, service_data)
 
-        # Send confirmation email to customer
+        # Send confirmation notification (email + SMS + in-app) to customer
         if service.customer_email:
-            QuoteNotificationService.send_service_request_email(service)
+            import asyncio
+            from app.config.database import AsyncSessionLocal
+            async def send_notification():
+                async with AsyncSessionLocal() as async_db:
+                    await QuoteNotificationService.send_service_request_notification_async(async_db, service)
+            try:
+                asyncio.run(send_notification())
+            except Exception as e:
+                logger.warning(f"Service request notification failed: {e}")
 
         return ServiceRequestResponse.model_validate(service)
     except Exception as e:

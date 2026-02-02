@@ -18,6 +18,18 @@ import type {
   CustomerType,
 } from "../types";
 
+/** API-shaped customer for getMyCustomer/updateMyCustomer (snake_case) */
+export type MyCustomerUpdate = {
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  company_name?: string;
+  tax_id?: string;
+};
+
 /**
  * Transform snake_case API response to camelCase Customer
  */
@@ -109,6 +121,27 @@ export const customerService = {
       }
       throw error;
     }
+  },
+
+  /**
+   * Update current user's own customer profile (phone, address, etc.)
+   */
+  async updateMyCustomer(data: MyCustomerUpdate): Promise<Customer> {
+    return await customersApi.updateMyCustomer(data);
+  },
+
+  /**
+   * Get current user's own profile completeness
+   */
+  async getMyProfileCompleteness() {
+    return await customersApi.getMyProfileCompleteness();
+  },
+
+  /**
+   * Get current user's own profile missing fields
+   */
+  async getMyMissingFields() {
+    return await customersApi.getMyMissingFields();
   },
 
   /**

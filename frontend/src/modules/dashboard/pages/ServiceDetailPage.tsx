@@ -13,12 +13,13 @@ import {
   ArrowLeft,
   Package,
   Calendar,
-  DollarSign,
+  Banknote,
   Loader2,
   AlertCircle,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { orderService } from "@/modules/orders/services";
+import { formatDZD } from "@/shared/utils/formatters";
 import { OrderStatus } from "@/modules/orders/types";
 
 export const ServiceDetailPage: React.FC = () => {
@@ -103,11 +104,11 @@ export const ServiceDetailPage: React.FC = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Montant total</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <Banknote className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${service.total_amount.toFixed(2)}
+              {formatDZD(service.total_amount)}
             </div>
           </CardContent>
         </Card>
@@ -144,14 +145,23 @@ export const ServiceDetailPage: React.FC = () => {
                   className="flex items-center justify-between p-4 border rounded-lg"
                 >
                   <div>
-                    <p className="font-medium">{item.product_name || "Produit"}</p>
+                    <p className="font-medium">
+                      {item.product_name || item.product_id || "Produit"}
+                    </p>
+                    {(item.product_sku || item.product_short_description) && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {[item.product_sku, item.product_short_description]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    )}
                     <p className="text-sm text-muted-foreground">
-                      Quantité : {item.quantity} × ${item.unit_price.toFixed(2)}
+                      Quantité : {item.quantity} × {item.unit_price.toFixed(2)} DA
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="font-semibold">
-                      ${(item.quantity * item.unit_price).toFixed(2)}
+                      {formatDZD(item.quantity * item.unit_price)}
                     </p>
                   </div>
                 </div>

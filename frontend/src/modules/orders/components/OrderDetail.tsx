@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useOrder, useDeleteOrder, useOrderTimeline } from "../hooks/useOrders";
+import { orderService } from "../services";
 import type { OrderStatus } from "../types/order.types";
 import {
   Table,
@@ -35,6 +36,7 @@ import {
 } from "@/shared/components/ui/card";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Separator } from "@/shared/components/ui/separator";
+import { Download, Loader2 } from "lucide-react";
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
   request: "bg-blue-100 text-blue-800",
@@ -69,7 +71,8 @@ export function OrderDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  
+  const [pdfLoading, setPdfLoading] = useState(false);
+
   // Determine base path based on current location
   const getBasePath = () => {
     if (location.pathname.startsWith("/dashboard")) {
@@ -83,6 +86,7 @@ export function OrderDetail() {
   };
   
   const basePath = getBasePath();
+  const isClientView = !location.pathname.startsWith("/admin");
 
   if (!orderId) {
     return (
@@ -97,6 +101,11 @@ export function OrderDetail() {
   const { data: order, isLoading: orderLoading, isError: orderError } = useOrder(orderId);
   const { data: timeline, isLoading: timelineLoading } = useOrderTimeline(orderId);
   const deleteOrderMutation = useDeleteOrder();
+
+  const isOrderValid = (s: string) =>
+    s === "validated" || s === "in_progress" || s === "delivered";
+  const hideCancelForClient =
+    isClientView && !!order && isOrderValid(order.status);
 
   const handleEdit = () => {
     navigate(`${basePath}/${orderId}/edit`);
@@ -116,6 +125,24 @@ export function OrderDetail() {
       navigate(basePath);
     } catch (error) {
       console.error("Failed to delete order:", error);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!orderId) return;
+    setPdfLoading(true);
+    try {
+      const blob = await orderService.getOrderPDF(orderId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `order-${order?.order_number ?? orderId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Failed to download order PDF:", error);
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -184,24 +211,45 @@ export function OrderDetail() {
 
         {!orderLoading && order && (
           <div className="flex gap-2">
+            <Button
+              onClick={handleDownloadPdf}
+              variant="outline"
+              size="sm"
+              disabled={pdfLoading}
+            >
+              {pdfLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Télécharger PDF
+            </Button>
             {order.validation_required && (
               <Button onClick={handleValidation} variant="default">
                 Workflow validation
               </Button>
             )}
-            <Button onClick={handleChangeStatus} variant="outline">
-              Changer le statut
-            </Button>
-            <Button onClick={handleEdit} variant="outline">
+            {!hideCancelForClient && (
+              <Button onClick={handleChangeStatus} variant="outline">
+                Changer le statut
+              </Button>
+            )}
+            <Button
+              onClick={handleEdit}
+              variant="outline"
+              disabled={hideCancelForClient}
+            >
               Modifier
             </Button>
-            <Button
-              onClick={() => setShowDeleteConfirm(true)}
-              variant="destructive"
-              disabled={deleteOrderMutation.isPending}
-            >
-              Supprimer
-            </Button>
+            {!hideCancelForClient && (
+              <Button
+                onClick={() => setShowDeleteConfirm(true)}
+                variant="destructive"
+                disabled={deleteOrderMutation.isPending}
+              >
+                Supprimer
+              </Button>
+            )}
           </div>
         )}
       </div>

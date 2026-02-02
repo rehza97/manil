@@ -8,9 +8,11 @@ from math import ceil
 
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import FileResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
+from app.modules.customers.models import Customer
 from app.core.dependencies import get_current_user, require_permission, require_any_permission
 from app.core.permissions import Permission
 from app.core.exceptions import ForbiddenException
@@ -33,6 +35,14 @@ from app.modules.quotes.schemas import (
 )
 
 router = APIRouter(prefix="/api/v1/quotes", tags=["quotes"])
+
+
+async def _resolve_client_customer(db: AsyncSession, user: User):
+    """For client role, return Customer by user email. Returns None if non-client or not found."""
+    if user.role_slug != "client":
+        return None
+    result = await db.execute(select(Customer).where(Customer.email == user.email))
+    return result.scalar_one_or_none()
 
 
 # ============================================================================
@@ -58,7 +68,7 @@ async def get_quotes(
     service = QuoteService(db)
 
     # SECURITY: Role-based filtering
-    if current_user.role.value == "client":
+    if current_user.role_slug == "client":
         # Clients can only see their own quotes
         if not hasattr(current_user, 'customer_id'):
             raise ForbiddenException("Client account not properly configured")
@@ -101,7 +111,7 @@ async def get_quote(
     quote = await service.get_by_id(quote_id)
 
     # SECURITY: Check ownership for client role
-    if current_user.role.value == "client":
+    if current_user.role_slug == "client":
         if not hasattr(current_user, 'customer_id'):
             raise ForbiddenException("Client account not properly configured")
         if str(quote.customer_id) != str(current_user.customer_id):
@@ -249,7 +259,7 @@ async def accept_quote(
     quote = await QuoteService(db).get_by_id(quote_id)
 
     # SECURITY: Check ownership for client role
-    if current_user.role.value == "client":
+    if current_user.role_slug == "client":
         if not hasattr(current_user, 'customer_id'):
             raise ForbiddenException("Client account not properly configured")
         if str(quote.customer_id) != str(current_user.customer_id):
@@ -275,7 +285,7 @@ async def decline_quote(
     quote = await QuoteService(db).get_by_id(quote_id)
 
     # SECURITY: Check ownership for client role
-    if current_user.role.value == "client":
+    if current_user.role_slug == "client":
         if not hasattr(current_user, 'customer_id'):
             raise ForbiddenException("Client account not properly configured")
         if str(quote.customer_id) != str(current_user.customer_id):
@@ -323,7 +333,7 @@ async def get_quote_versions(
     quote = await QuoteService(db).get_by_id(quote_id)
 
     # SECURITY: Check ownership for client role
-    if current_user.role.value == "client":
+    if current_user.role_slug == "client":
         if not hasattr(current_user, 'customer_id'):
             raise ForbiddenException("Client account not properly configured")
         if str(quote.customer_id) != str(current_user.customer_id):
@@ -353,7 +363,7 @@ async def get_quote_timeline(
     quote = await service.get_by_id(quote_id)
 
     # SECURITY: Check ownership for client role
-    if current_user.role.value == "client":
+    if current_user.role_slug == "client":
         if not hasattr(current_user, 'customer_id'):
             raise ForbiddenException("Client account not properly configured")
         if str(quote.customer_id) != str(current_user.customer_id):
@@ -386,10 +396,11 @@ async def generate_quote_pdf(
     quote = await service.get_by_id(quote_id)
 
     # SECURITY: Check ownership for client role
-    if current_user.role.value == "client":
-        if not hasattr(current_user, 'customer_id'):
-            raise ForbiddenException("Client account not properly configured")
-        if str(quote.customer_id) != str(current_user.customer_id):
+    if current_user.role_slug == "client":
+        client_customer = await _resolve_client_customer(db, current_user)
+        if not client_customer:
+            raise ForbiddenException("Customer profile not found for your account")
+        if str(quote.customer_id) != str(client_customer.id):
             raise ForbiddenException("You can only download your own quotes")
 
     # Get customer data

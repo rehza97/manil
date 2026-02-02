@@ -1,6 +1,6 @@
 """Ticket service - business logic layer."""
 from typing import Optional
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundException, ForbiddenException
@@ -51,10 +51,11 @@ class TicketService:
         if not uid and email:
             uid = await user_id_by_email(self.db, email)
         if not uid:
-            return False  # Don't send SMS if no user found
+            # Default allow when we cannot resolve user prefs (e.g. customer exists without portal user).
+            return True
         prefs_svc = UserNotificationPreferencesService(self.db)
         prefs = await prefs_svc.get(uid)
-        return bool(prefs.get("sms", {}).get("ticketUpdates", False))
+        return bool(prefs.get("sms", {}).get("ticketUpdates", True))
 
     async def _should_send_ticket_push(
         self, *, email: Optional[str] = None, user_id: Optional[str] = None
@@ -94,7 +95,7 @@ class TicketService:
                 category_query = select(TicketCategory).where(
                     and_(
                         TicketCategory.id == ticket_data.category_id,
-                        TicketCategory.is_active == True
+                        TicketCategory.is_active.is_(True)
                     )
                 )
                 category_result = await self.db.execute(category_query)
@@ -616,7 +617,7 @@ class TicketService:
         replies = await self.repository.get_replies(ticket_id)
 
         # ✅ FIXED: Filter internal notes based on user role
-        if current_user and current_user.role == "client":
+        if current_user and current_user.role_slug == "client":
             # Customers only see non-internal replies
             replies = [r for r in replies if not r.is_internal]
 

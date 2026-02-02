@@ -4,13 +4,18 @@
  * Type definitions for user management in admin panel
  */
 
-import type { UserRole } from "@/modules/auth/types";
+export interface RoleSummary {
+  id: string;
+  name: string;
+  slug: string;
+}
 
 export interface User {
   id: string;
   email: string;
   full_name: string;
-  role: UserRole;
+  role_id: string;
+  role: RoleSummary;
   is_active: boolean;
   is_2fa_enabled: boolean;
   failed_login_attempts: number;
@@ -29,13 +34,13 @@ export interface UserCreate {
   email: string;
   full_name: string;
   password: string;
-  role: UserRole;
+  role_id: string;
   is_active?: boolean;
 }
 
 export interface UserUpdate {
   full_name?: string;
-  role?: UserRole;
+  role_id?: string;
   is_active?: boolean;
 }
 
@@ -47,8 +52,9 @@ export interface UserListResponse {
 }
 
 export interface UserFilters {
-  role?: UserRole;
+  role?: string;
   is_active?: boolean;
+  status?: "all" | "active" | "inactive" | "deleted";
   search?: string;
 }
 

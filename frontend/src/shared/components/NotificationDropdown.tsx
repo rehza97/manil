@@ -15,6 +15,7 @@ import {
   useNotificationStream,
 } from "@/shared/hooks/useNotifications";
 import { useAuth } from "@/modules/auth";
+import { normalizeNotificationLink } from "@/shared/utils/notificationLink";
 
 interface NotificationDropdownProps {
   className?: string;
@@ -29,11 +30,8 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   // Determine base path based on current route
   const isCorporate = location.pathname.startsWith("/corporate");
   const isAdmin = location.pathname.startsWith("/admin");
-  const notificationsPath = isAdmin 
-    ? "/admin/notifications" 
-    : isCorporate 
-    ? "/corporate/notifications" 
-    : "/dashboard/notifications";
+  const basePath = isAdmin ? "/admin" : isCorporate ? "/corporate" : "/dashboard";
+  const notificationsPath = `${basePath}/notifications`;
   const { data: notificationsData, isLoading } = useNotifications({
     page: 1,
     pageSize: 10,
@@ -123,7 +121,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                     }`}
                   >
                     <Link
-                      to={notification.link || "#"}
+                      to={normalizeNotificationLink(notification.link, basePath)}
                       className="block"
                       onClick={() => {
                         if (isUnread) {
@@ -170,9 +168,8 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
               })}
             </div>
           ) : (
-            <div className="p-8 text-center text-sm text-gray-500 bg-white">
-              <Bell className="h-8 w-8 mx-auto text-gray-300 mb-2" />
-              <p>No notifications</p>
+            <div className="p-4 text-center text-sm text-gray-500 bg-white">
+              You're all caught up.
             </div>
           )}
         </ScrollArea>

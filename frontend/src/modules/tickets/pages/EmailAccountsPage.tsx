@@ -4,6 +4,9 @@
  */
 
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/shared/api/client";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -12,7 +15,7 @@ import {
   BreadcrumbSeparator,
 } from "@/shared/components/ui/breadcrumb";
 import { Button } from "@/shared/components/ui/button";
-import { Card } from "@/shared/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import {
   Table,
   TableBody,
@@ -42,7 +45,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import { Plus, Loader2, RefreshCw, Wrench, Trash2, Pencil } from "lucide-react";
+import { Plus, Loader2, RefreshCw, Wrench, Trash2, Pencil, Mail, ExternalLink } from "lucide-react";
 import { useEmailAccounts, useCreateEmailAccount, useUpdateEmailAccount, useDeleteEmailAccount, useTestEmailConnection, useSyncEmailAccount, type EmailAccount, type CreateEmailAccountInput, type UpdateEmailAccountInput } from "../hooks/useEmailAccounts";
 import { format } from "date-fns";
 
@@ -68,6 +71,25 @@ export const EmailAccountsPage: React.FC = () => {
   const [editAccount, setEditAccount] = useState<EmailAccount | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<CreateEmailAccountInput & { password?: string }>(defaultForm);
+
+  const { data: emailSettings = [] } = useQuery({
+    queryKey: ["settings", "email"],
+    queryFn: async () => {
+      const r = await apiClient.get<{ settings: Array<{ key: string; value: unknown }> }>("/settings/system", {
+        params: { category: "email" },
+      });
+      return r.data.settings ?? [];
+    },
+  });
+
+  const smtpConfig = emailSettings.find((s) => s.key === "email.smtp_config")?.value as Record<string, unknown> | undefined;
+  const fromAddress = emailSettings.find((s) => s.key === "email.from_address")?.value;
+  const fromName = emailSettings.find((s) => s.key === "email.from_name")?.value;
+  const fromVal = typeof fromAddress === "object" && fromAddress !== null && "value" in fromAddress ? (fromAddress as { value: string }).value : fromAddress;
+  const fromNameVal = typeof fromName === "object" && fromName !== null && "value" in fromName ? (fromName as { value: string }).value : fromName;
+  const host = smtpConfig && typeof smtpConfig.host === "string" ? smtpConfig.host : null;
+  const port = smtpConfig && (typeof smtpConfig.port === "number" || typeof smtpConfig.port === "string") ? String(smtpConfig.port) : null;
+  const useTls = smtpConfig && typeof smtpConfig.use_tls === "boolean" ? smtpConfig.use_tls : null;
 
   const resetForm = () => {
     setForm({ ...defaultForm, password: "" });
@@ -149,6 +171,65 @@ export const EmailAccountsPage: React.FC = () => {
           Add account
         </Button>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Outbound email (SMTP)
+          </CardTitle>
+          <CardDescription>
+            Used for sending ticket replies and notifications. Configure host, port, credentials, and sender in System Settings.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+            {host != null && (
+              <>
+                <dt className="text-muted-foreground">Host</dt>
+                <dd className="font-mono">{host}</dd>
+              </>
+            )}
+            {port != null && (
+              <>
+                <dt className="text-muted-foreground">Port</dt>
+                <dd className="font-mono">{port}</dd>
+              </>
+            )}
+            {useTls != null && (
+              <>
+                <dt className="text-muted-foreground">TLS</dt>
+                <dd>{useTls ? "Yes" : "No"}</dd>
+              </>
+            )}
+            {(fromVal != null && fromVal !== "") && (
+              <>
+                <dt className="text-muted-foreground">From</dt>
+                <dd className="font-mono">
+                  {fromNameVal ? `${String(fromNameVal)} <${String(fromVal)}>` : String(fromVal)}
+                </dd>
+              </>
+            )}
+          </dl>
+          {!host && !fromVal && (
+            <p className="text-sm text-muted-foreground">SMTP not configured or not loaded. Configure in System Settings.</p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/admin/settings/email">
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Open SMTP settings
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/admin/settings/email/history?template_prefix=ticket_">
+                <Mail className="h-4 w-4 mr-2" />
+                List ticket emails sent
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <div className="overflow-x-auto">

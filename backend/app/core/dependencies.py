@@ -117,7 +117,7 @@ def require_role(allowed_roles: list[str]):
         current_user: Annotated["User", Depends(get_current_active_user)],
     ):
         """Check if user has required role."""
-        if current_user.role.value not in allowed_roles:
+        if current_user.role_slug not in allowed_roles:
             raise ForbiddenException("Insufficient permissions")
 
         return current_user
@@ -136,13 +136,17 @@ def require_permission(permission: Permission):
         current_user: Annotated["User", Depends(get_current_active_user)],
         db: Annotated[AsyncSession, Depends(get_db)],
     ):
-        from app.modules.settings.utils import get_role_permission_slugs_cached
+        from app.modules.settings.utils import get_role_permission_slugs_by_id_cached, get_role_permission_slugs_cached
 
-        slugs = await get_role_permission_slugs_cached(db, current_user.role.value)
+        slugs = await get_role_permission_slugs_by_id_cached(db, str(current_user.role_id))
+        if slugs is None:
+            slugs = await get_role_permission_slugs_cached(db, current_user.role_slug)
+        if slugs is not None and len(slugs) == 0:
+            slugs = None
         if slugs is not None:
             allowed = permission.value in slugs
         else:
-            allowed = has_permission(current_user.role.value, permission)
+            allowed = has_permission(current_user.role_slug, permission)
         if not allowed:
             raise ForbiddenException("Insufficient permissions")
         return current_user
@@ -161,13 +165,17 @@ def require_any_permission(permissions: list[Permission]):
         current_user: Annotated["User", Depends(get_current_active_user)],
         db: Annotated[AsyncSession, Depends(get_db)],
     ):
-        from app.modules.settings.utils import get_role_permission_slugs_cached
+        from app.modules.settings.utils import get_role_permission_slugs_by_id_cached, get_role_permission_slugs_cached
 
-        slugs = await get_role_permission_slugs_cached(db, current_user.role.value)
+        slugs = await get_role_permission_slugs_by_id_cached(db, str(current_user.role_id))
+        if slugs is None:
+            slugs = await get_role_permission_slugs_cached(db, current_user.role_slug)
+        if slugs is not None and len(slugs) == 0:
+            slugs = None
         if slugs is not None:
             allowed = any(p.value in slugs for p in permissions)
         else:
-            allowed = has_any_permission(current_user.role.value, permissions)
+            allowed = has_any_permission(current_user.role_slug, permissions)
         if not allowed:
             raise ForbiddenException("Insufficient permissions")
         return current_user
@@ -185,5 +193,5 @@ def require_admin(user):
     Raises:
         ForbiddenException: If user is not an admin
     """
-    if user.role.value != "admin":
+    if user.role_slug != "admin":
         raise ForbiddenException("Admin access required")

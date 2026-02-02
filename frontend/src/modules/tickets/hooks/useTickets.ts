@@ -99,6 +99,21 @@ export const useUpdateTicket = () => {
   });
 };
 
+export const useUpdateTicketStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ ticketId, status }: { ticketId: string; status: string }) =>
+      ticketService.updateStatus(ticketId, status),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      queryClient.invalidateQueries({
+        queryKey: ["tickets", variables.ticketId],
+      });
+    },
+  });
+};
+
 export const useDeleteTicket = () => {
   const queryClient = useQueryClient();
 

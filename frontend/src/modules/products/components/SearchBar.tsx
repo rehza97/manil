@@ -141,7 +141,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                       <p className="text-xs text-gray-500">SKU: {product.sku}</p>
                     </div>
                     <p className="text-sm font-semibold text-gray-900 ml-4">
-                      ${product.regular_price.toFixed(2)}
+                      {formatDZD(product.regular_price)}
                     </p>
                   </button>
                 </li>

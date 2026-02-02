@@ -92,8 +92,8 @@ export const useAllVPSSubscriptions = (params?: {
   return useQuery({
     queryKey: ["vps", "admin", "subscriptions", params],
     queryFn: () => vpsService.getAllSubscriptions(params),
-    refetchInterval: 10000, // Refresh every 10 seconds
-    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchInterval: 5000, // Refresh every 5 seconds (real-time)
+    refetchOnWindowFocus: true,
     retry: (failureCount, error: any) => {
       // Don't retry on 403 Forbidden errors
       if (error?.response?.status === 403) return false;
@@ -195,7 +195,7 @@ export const useMonitoringOverview = () => {
   return useQuery({
     queryKey: ["vps", "admin", "monitoring", "overview"],
     queryFn: () => vpsService.getMonitoringOverview(),
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 5000, // Refresh every 5 seconds (real-time CPU/Memory)
     retry: (failureCount, error: any) => {
       // Don't retry on 403 Forbidden errors
       if (error?.response?.status === 403) return false;

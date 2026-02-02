@@ -193,7 +193,7 @@ class CustomerService:
                 description=f"Customer status changed from {old_status.value} to {new_status.value}. Reason: {reason}",
                 user_id=updated_by,
                 user_email=user.email if user else None,
-                user_role=str(user.role) if user else None,
+                user_role=user.role_slug if user else None,
                 old_values={"status": old_status.value},
                 new_values={"status": new_status.value},
             )

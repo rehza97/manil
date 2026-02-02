@@ -5,6 +5,7 @@
  */
 
 import axios from 'axios';
+import { apiClient } from '@/shared/api/client';
 import type {
   DashboardResponse,
   TicketStatusReport,
@@ -257,24 +258,14 @@ export const reportService = {
   // ============================================================================
 
   async exportReport(exportRequest: ExportRequest): Promise<ExportResponse> {
-    const response = await axios.post(
-      `${API_BASE_URL}/api/v1/reports/export`,
-      exportRequest,
-      {
-        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
-      }
-    );
+    const response = await apiClient.post('/reports/export', exportRequest);
     return response.data;
   },
 
   async downloadExport(fileName: string): Promise<Blob> {
-    const response = await axios.get(
-      `${API_BASE_URL}/api/v1/reports/export/download/${fileName}`,
-      {
-        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
-        responseType: 'blob',
-      }
-    );
+    const response = await apiClient.get(`/reports/export/download/${fileName}`, {
+      responseType: 'blob',
+    });
     return response.data;
   },
 };

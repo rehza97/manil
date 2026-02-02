@@ -50,7 +50,29 @@ export const invoiceService = {
     }
 
     const response = await invoicesApi.getInvoices(params);
-    return response as InvoiceListResponse;
+    // Normalize API shape { invoices, total, page, page_size, total_pages } to list shape
+    const raw = response as {
+      invoices?: Invoice[];
+      total?: number;
+      page?: number;
+      page_size?: number;
+      total_pages?: number;
+    };
+    return {
+      data: raw.invoices ?? [],
+      total: raw.total ?? 0,
+      page: raw.page ?? 1,
+      pageSize: raw.page_size ?? pageSize,
+      totalPages: raw.total_pages ?? 0,
+      pagination: {
+        total: raw.total ?? 0,
+        total_pages: raw.total_pages ?? 0,
+        page: raw.page ?? 1,
+        page_size: raw.page_size ?? pageSize,
+      },
+    } as InvoiceListResponse & {
+      pagination: { total: number; total_pages: number; page: number; page_size: number };
+    };
   },
 
   /**
@@ -158,6 +180,17 @@ export const invoiceService = {
     includeQr: boolean = true
   ): Promise<void> {
     const blob = await this.downloadPDF(id, includeQr);
+    if (blob.type?.includes("application/json") || blob.size < 100) {
+      const text = await blob.text();
+      let message = "Échec du téléchargement du PDF";
+      try {
+        const err = JSON.parse(text);
+        if (err.detail) message = typeof err.detail === "string" ? err.detail : err.detail[0]?.msg ?? message;
+      } catch {
+        if (text) message = text.slice(0, 200);
+      }
+      throw new Error(message);
+    }
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;

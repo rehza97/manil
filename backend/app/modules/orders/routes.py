@@ -2,17 +2,22 @@
 Order management API routes.
 Endpoints for order CRUD and status management.
 """
+import asyncio
 import logging
+import re
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_sync_db, get_db
 from app.core.dependencies import get_current_active_user, require_permission, require_any_permission
 from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException
 from app.core.permissions import Permission
 from app.modules.auth.models import User
+from app.modules.invoices.order_to_invoice import create_invoice_from_order
 from app.modules.orders.schemas import (
     OrderCreate,
     OrderUpdate,
@@ -109,7 +114,7 @@ async def _send_order_status_sms(
                 return
             prefs_svc = UserNotificationPreferencesService(db)
             prefs = await prefs_svc.get(uid)
-            if not prefs.get("sms", {}).get("orderUpdates", False):
+            if not prefs.get("sms", {}).get("orderUpdates", True):
                 return
             sms = SMSService()
             await sms.send_order_notification(
@@ -120,6 +125,39 @@ async def _send_order_status_sms(
 
 
 router = APIRouter(prefix="/orders", tags=["orders"])
+
+
+def _resolve_client_customer(db: Session, user: User) -> Customer | None:
+    """For client role, return Customer by user email. Returns None if non-client or not found."""
+    if user.role_slug != "client":
+        return None
+    return db.execute(select(Customer).where(Customer.email == user.email)).scalar_one_or_none()
+
+
+def _load_order_customer_id_sync(order_id: str) -> str:
+    """Load order and return customer_id for ownership check. Raises NotFoundException if not found."""
+    db = next(get_sync_db())
+    order = OrderService.get_order(db, order_id)
+    return str(order.customer_id)
+
+
+def _generate_order_pdf_sync(order_id: str, company_info: dict | None) -> tuple[str, str]:
+    """Load order with items and customer, generate PDF; returns (pdf_path, order_number)."""
+    db = next(get_sync_db())
+    order = OrderService.get_order(db, order_id)
+    _ = order.items  # ensure items loaded
+    customer = db.execute(select(Customer).where(Customer.id == order.customer_id)).scalar_one_or_none()
+    customer_data = {
+        "name": customer.name if customer else "N/A",
+        "email": customer.email if customer else "N/A",
+        "phone": getattr(customer, "phone", None) or "N/A",
+        "address": customer.address if customer else "N/A",
+        "city": customer.city if customer else "N/A",
+    }
+    from app.modules.invoices.html_pdf_service import get_html_pdf_service
+    pdf_service = get_html_pdf_service()
+    pdf_path = pdf_service.generate_order_pdf(order, customer_data, company_info=company_info)
+    return (pdf_path, order.order_number)
 
 
 # ============================================================================
@@ -155,9 +193,14 @@ def create_order(
     """
     try:
         # Security: Clients can only create orders for their own customer account
-        if current_user.role.value == "client":
-            # Verify customer_id matches user's customer account
-            if not hasattr(current_user, 'customer_id') or order_data.customer_id != str(current_user.customer_id):
+        if current_user.role_slug == "client":
+            customer = db.execute(
+                select(Customer).where(Customer.email == current_user.email)
+            ).scalar_one_or_none()
+            if not customer:
+                raise ForbiddenException(
+                    "Customer profile not found for your account")
+            if order_data.customer_id != str(customer.id):
                 raise ForbiddenException(
                     "You can only create orders for your own account")
 
@@ -267,11 +310,9 @@ def list_orders(
     skip = (page - 1) * page_size
 
     # Security: Clients can only view their own orders
-    if current_user.role.value == "client":
-        if hasattr(current_user, 'customer_id'):
-            customer_id = str(current_user.customer_id)
-        else:
-            # Client has no customer_id, return empty list
+    if current_user.role_slug == "client":
+        client_customer = _resolve_client_customer(db, current_user)
+        if not client_customer:
             return OrderListResponse(
                 data=[],
                 total=0,
@@ -279,6 +320,7 @@ def list_orders(
                 page_size=page_size,
                 total_pages=0,
             )
+        customer_id = str(client_customer.id)
 
     orders, total = OrderService.list_orders(
         db,
@@ -316,8 +358,11 @@ def get_order(
         order = OrderService.get_order(db, order_id)
 
         # Security: Clients can only view their own orders
-        if current_user.role.value == "client":
-            if not hasattr(current_user, 'customer_id') or str(order.customer_id) != str(current_user.customer_id):
+        if current_user.role_slug == "client":
+            client_customer = _resolve_client_customer(db, current_user)
+            if not client_customer:
+                raise ForbiddenException("Customer profile not found for your account")
+            if str(order.customer_id) != str(client_customer.id):
                 raise ForbiddenException("You can only view your own orders")
 
         return OrderResponse.model_validate(order)
@@ -325,6 +370,45 @@ def get_order(
         raise HTTPException(status_code=404, detail=str(e))
     except ForbiddenException as e:
         raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.get("/{order_id}/pdf", response_class=FileResponse)
+async def generate_order_pdf(
+    order_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.ORDERS_VIEW)),
+):
+    """Generate and download order PDF. Requires ORDERS_VIEW. Clients only their own."""
+    try:
+        order_customer_id = await asyncio.to_thread(_load_order_customer_id_sync, order_id)
+    except NotFoundException:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    if current_user.role_slug == "client":
+        result = await db.execute(select(Customer).where(Customer.email == current_user.email))
+        client_customer = result.scalar_one_or_none()
+        if not client_customer:
+            raise ForbiddenException("Customer profile not found for your account")
+        if order_customer_id != str(client_customer.id):
+            raise ForbiddenException("You can only download your own orders")
+
+    from app.modules.settings.utils import get_company_info_for_pdf
+    company_info = await get_company_info_for_pdf(db)
+
+    pdf_path, order_number = await asyncio.to_thread(
+        _generate_order_pdf_sync, order_id, company_info
+    )
+
+    safe_number = re.sub(r"[^a-zA-Z0-9_-]", "", order_number)
+    return FileResponse(
+        path=pdf_path,
+        filename=f"order_{safe_number}.pdf",
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=order_{safe_number}.pdf",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.put("/{order_id}", response_model=OrderResponse)
@@ -350,8 +434,11 @@ def update_order(
         order = OrderService.get_order(db, order_id)
 
         # Security: Clients can only update their own orders
-        if current_user.role.value == "client":
-            if not hasattr(current_user, 'customer_id') or str(order.customer_id) != str(current_user.customer_id):
+        if current_user.role_slug == "client":
+            client_customer = _resolve_client_customer(db, current_user)
+            if not client_customer:
+                raise ForbiddenException("Customer profile not found for your account")
+            if str(order.customer_id) != str(client_customer.id):
                 raise ForbiddenException("You can only update your own orders")
 
         order = OrderService.update_order(
@@ -400,12 +487,14 @@ def update_order_status(
     - notes: Optional notes for the status change
     """
     try:
+        allow_any_transition = getattr(current_user, "role_slug", None) == "admin"
         order = OrderService.update_order_status(
             db,
             order_id,
             status_data.status,
             status_data.notes,
             str(current_user.id),
+            allow_any_transition=allow_any_transition,
         )
         customer = db.execute(
             select(Customer).where(Customer.id == order.customer_id)
@@ -433,6 +522,8 @@ def update_order_status(
                     order_id,
                     st,
                 )
+        if status_data.status == OrderStatus.VALIDATED:
+            create_invoice_from_order(db, order_id, str(current_user.id))
         return OrderResponse.model_validate(order)
 
     except NotFoundException as e:
@@ -463,8 +554,11 @@ def delete_order(
         order = OrderService.get_order(db, order_id)
 
         # Security: Clients can only delete their own orders
-        if current_user.role.value == "client":
-            if not hasattr(current_user, 'customer_id') or str(order.customer_id) != str(current_user.customer_id):
+        if current_user.role_slug == "client":
+            client_customer = _resolve_client_customer(db, current_user)
+            if not client_customer:
+                raise ForbiddenException("Customer profile not found for your account")
+            if str(order.customer_id) != str(client_customer.id):
                 raise ForbiddenException("You can only delete your own orders")
 
         OrderService.delete_order(db, order_id, str(current_user.id))
@@ -771,7 +865,16 @@ def finalize_validation(
                 order_id,
                 "validated",
             )
+            if getattr(customer, "phone", None):
+                background_tasks.add_task(
+                    _send_order_status_sms,
+                    customer.email,
+                    customer.phone,
+                    order_id,
+                    "validated",
+                )
 
+        create_invoice_from_order(db, order_id, str(current_user.id))
         return OrderResponse.model_validate(order)
     except NotFoundException as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -851,7 +954,16 @@ def skip_validation(
                 order_id,
                 "Order validated",
             )
+            if getattr(customer, "phone", None):
+                background_tasks.add_task(
+                    _send_order_status_sms,
+                    customer.email,
+                    customer.phone,
+                    order_id,
+                    "validated",
+                )
 
+        create_invoice_from_order(db, order_id, str(current_user.id))
         return OrderResponse.model_validate(order)
     except NotFoundException as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -887,8 +999,11 @@ def get_order_timeline(
         order = OrderService.get_order(db, order_id)
 
         # Security: Clients can only view timeline of their own orders
-        if current_user.role.value == "client":
-            if not hasattr(current_user, 'customer_id') or str(order.customer_id) != str(current_user.customer_id):
+        if current_user.role_slug == "client":
+            client_customer = _resolve_client_customer(db, current_user)
+            if not client_customer:
+                raise ForbiddenException("Customer profile not found for your account")
+            if str(order.customer_id) != str(client_customer.id):
                 raise ForbiddenException(
                     "You can only view timeline of your own orders")
 
@@ -930,8 +1045,9 @@ def get_customer_orders(
     - Corporate/Admin can view any customer's orders
     """
     # Security: Clients can only view their own customer orders
-    if current_user.role.value == "client":
-        if not hasattr(current_user, 'customer_id') or str(customer_id) != str(current_user.customer_id):
+    if current_user.role_slug == "client":
+        client_customer = _resolve_client_customer(db, current_user)
+        if not client_customer or str(customer_id) != str(client_customer.id):
             raise ForbiddenException("You can only view your own orders")
 
     skip = (page - 1) * page_size

@@ -279,6 +279,23 @@ export const ticketsApi = {
     return response.data;
   },
 
+  uploadAttachment: async (
+    ticketId: string,
+    file: File,
+    replyId?: string
+  ): Promise<any> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const url =
+      replyId != null
+        ? `/tickets/${ticketId}/attachments?reply_id=${encodeURIComponent(replyId)}`
+        : `/tickets/${ticketId}/attachments`;
+    const response = await apiClient.post(url, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  },
+
   downloadAttachment: async (ticketId: string, attachmentId: string) => {
     const response = await apiClient.get(
       `/tickets/${ticketId}/attachments/${attachmentId}/download`,

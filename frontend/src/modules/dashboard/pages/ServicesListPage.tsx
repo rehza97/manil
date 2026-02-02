@@ -26,6 +26,18 @@ import {
 } from "lucide-react";
 import { useOrders } from "@/modules/orders/hooks";
 import { OrderStatus } from "@/modules/orders/types";
+import type { Order } from "@/modules/orders/types";
+import { formatDZD } from "@/shared/utils/formatters";
+
+function productNamesSummary(service: Order): string {
+  const names = (service.items ?? [])
+    .map((i) => i.product_name)
+    .filter((n): n is string => Boolean(n));
+  if (names.length === 0) return "";
+  const max = 3;
+  const shown = names.slice(0, max).join(", ");
+  return names.length > max ? `${shown}, …` : shown;
+}
 
 export const ServicesListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -34,17 +46,25 @@ export const ServicesListPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Fetch orders (services are orders with status IN_PROGRESS or DELIVERED)
+  // Fetch orders (services = orders with status VALIDATED, IN_PROGRESS, or DELIVERED — products in order became owned services)
   const { data, isLoading, error } = useOrders(page, pageSize, {
     status: statusFilter !== "all" ? statusFilter : undefined,
   });
 
-  // Filter to show only active services (in_progress or delivered orders)
-  const services = (data?.data || []).filter(
+  // Filter to show only active services (validated, in_progress, or delivered orders)
+  const allServices = (data?.data || []).filter(
     (order) =>
+      order.status === OrderStatus.VALIDATED ||
       order.status === OrderStatus.IN_PROGRESS ||
       order.status === OrderStatus.DELIVERED
   );
+
+  // Client-side search by order number
+  const services = searchQuery.trim()
+    ? allServices.filter((s) =>
+        s.order_number.toLowerCase().includes(searchQuery.trim().toLowerCase())
+      )
+    : allServices;
 
   const handleSelectService = (serviceId: string) => {
     navigate(`/dashboard/services/${serviceId}`);
@@ -107,8 +127,9 @@ export const ServicesListPage: React.FC = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value={OrderStatus.IN_PROGRESS}>In Progress</SelectItem>
-            <SelectItem value={OrderStatus.DELIVERED}>Delivered</SelectItem>
+            <SelectItem value={OrderStatus.VALIDATED}>Validée</SelectItem>
+            <SelectItem value={OrderStatus.IN_PROGRESS}>En cours</SelectItem>
+            <SelectItem value={OrderStatus.DELIVERED}>Livrée</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -161,13 +182,13 @@ export const ServicesListPage: React.FC = () => {
                   <div>
                     <p className="text-sm text-muted-foreground">Total Amount</p>
                     <p className="text-lg font-semibold">
-                      ${service.total_amount.toFixed(2)}
+                      {formatDZD(service.total_amount)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Items</p>
-                    <p className="text-lg font-semibold">
-                      {service.items?.length || 0} items
+                    <p className="text-sm text-muted-foreground">Produits</p>
+                    <p className="text-sm font-semibold line-clamp-2" title={productNamesSummary(service)}>
+                      {productNamesSummary(service) || `${service.items?.length || 0} article(s)`}
                     </p>
                   </div>
                   <div>
@@ -191,6 +212,7 @@ export const ServicesListPage: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             <select
+              aria-label="Nombre de services par page"
               value={pageSize}
               onChange={(e) => {
                 setPageSize(Number(e.target.value));

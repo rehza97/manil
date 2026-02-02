@@ -7,6 +7,7 @@ from typing import Callable
 from fastapi import Request, HTTPException, status
 
 from app.config.redis import get_redis
+from app.config.settings import get_settings
 from app.core.logging import logger
 
 
@@ -134,9 +135,11 @@ password_reset_rate_limit = rate_limit(
 # 2FA verification: 5 attempts per 5 minutes (300 seconds)
 two_fa_rate_limit = rate_limit(requests=5, window=300, key_prefix="auth_2fa_verify")
 
-# Registration: 3 attempts per hour (3600 seconds)
+# Registration: configurable via REGISTRATION_RATE_LIMIT_REQUESTS (default 3 per hour)
+_reg_limit = get_settings().REGISTRATION_RATE_LIMIT_REQUESTS
+_reg_requests = _reg_limit if _reg_limit is not None else 3
 registration_rate_limit = rate_limit(
-    requests=3, window=3600, key_prefix="auth_register"
+    requests=_reg_requests, window=3600, key_prefix="auth_register"
 )
 
 # Token refresh: 10 attempts per minute (60 seconds)

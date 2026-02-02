@@ -15,8 +15,10 @@ from app.modules.quotes.models import Quote, QuoteItem, QuoteStatus
 from app.modules.quotes.schemas import QuoteApprovalRequest, QuoteVersionRequest, QuoteSendRequest
 from app.modules.quotes.service import QuoteService
 from app.modules.quotes.pdf_service import QuotePDFService
+from app.core.logging import logger
 from app.modules.customers.models import Customer
 from app.infrastructure.email.service import EmailService
+from app.infrastructure.sms.service import SMSService
 from app.modules.settings.utils import notification_gate_allows
 from app.modules.notifications.service import user_id_by_email
 from app.modules.settings.service import UserNotificationPreferencesService
@@ -207,6 +209,34 @@ class QuoteWorkflowService:
                 event_description=f"Quote emailed to {customer.email}",
                 created_by_id="system"
             )
+            # Send SMS in parallel when quote email was sent
+            if customer.phone and customer.phone.strip():
+                try:
+                    if await notification_gate_allows(self.db, "sms", "quote.sent"):
+                        uid = await user_id_by_email(self.db, customer.email)
+                        if uid:
+                            prefs_svc = UserNotificationPreferencesService(self.db)
+                            prefs = await prefs_svc.get(uid)
+                            if prefs.get("sms", {}).get("orderUpdates", True):
+                                sms_service = SMSService()
+                                await sms_service.send_quote_notification(
+                                    customer.phone,
+                                    quote.quote_number,
+                                    "sent",
+                                    message="Quote sent to your email.",
+                                    db=self.db,
+                                )
+                        else:
+                            sms_service = SMSService()
+                            await sms_service.send_quote_notification(
+                                customer.phone,
+                                quote.quote_number,
+                                "sent",
+                                message="Quote sent to your email.",
+                                db=self.db,
+                            )
+                except Exception as e:
+                    logger.warning("Quote sent SMS notification failed: %s", e)
 
         return success
 

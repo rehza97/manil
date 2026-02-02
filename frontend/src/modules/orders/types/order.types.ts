@@ -24,6 +24,9 @@ export interface OrderItem {
   id: string;
   order_id: string;
   product_id: string;
+  product_name?: string;
+  product_sku?: string;
+  product_short_description?: string;
   quantity: number;
   unit_price: number;
   discount_percentage: number;

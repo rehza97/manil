@@ -22,7 +22,7 @@ from app.modules.auth.registration_schemas import (
     ActivateAccountRequest,
 )
 from app.modules.auth.models import User
-from app.modules.auth.schemas import UserRole
+from app.modules.settings.models import Role
 from app.core.security import get_password_hash
 from app.modules.customers.models import Customer
 from app.modules.customers.schemas import CustomerStatus, CustomerType
@@ -232,12 +232,16 @@ class RegistrationService:
             raise BadRequestException("Account has already been activated")
 
         try:
+            # Look up client role
+            client_role = db.query(Role).filter(Role.slug == "client", Role.is_active == True).first()
+            if not client_role:
+                raise BadRequestException("System role 'client' not found. Run seed_settings.py.")
             # Create User account with the password provided during registration
             user = User(
                 email=registration.email,
                 full_name=registration.full_name,
                 password_hash=registration.password_hash,
-                role=UserRole.CLIENT,
+                role_id=client_role.id,
                 is_active=True,
             )
 

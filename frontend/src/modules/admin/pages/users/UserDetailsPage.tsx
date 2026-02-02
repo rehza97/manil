@@ -108,7 +108,7 @@ export const UserDetailsPage: React.FC = () => {
 
       {/* Status Badges */}
       <div className="flex items-center gap-2">
-        <UserRoleBadge role={user.role} />
+        <UserRoleBadge role={user.role?.slug ?? user.role_id} />
         <UserStatusBadge isActive={user.is_active} />
         <TwoFactorBadge enabled={user.is_2fa_enabled} />
         {isLocked && <AccountLockBadge lockedUntil={user.locked_until} />}
@@ -152,7 +152,7 @@ export const UserDetailsPage: React.FC = () => {
                 <Shield className="h-5 w-5 text-gray-400 mt-0.5" />
                 <div className="flex-1">
                   <p className="text-sm text-gray-500">Role</p>
-                  <p className="font-medium capitalize">{user.role}</p>
+                  <p className="font-medium capitalize">{user.role?.name ?? user.role?.slug ?? "-"}</p>
                 </div>
               </div>
               <Separator />

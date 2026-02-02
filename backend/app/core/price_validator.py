@@ -252,7 +252,8 @@ async def validate_invoice_prices(
     db: AsyncSession,
     items: List[dict],
     discount_amount: Optional[Decimal] = None,
-    tax_rate: Optional[Decimal] = None
+    tax_rate: Optional[Decimal] = None,
+    allow_custom_items: bool = False,
 ) -> List[dict]:
     """
     Convenience function to validate invoice prices.
@@ -262,6 +263,7 @@ async def validate_invoice_prices(
         items: List of invoice items
         discount_amount: Optional discount to validate
         tax_rate: Optional tax rate to validate
+        allow_custom_items: Whether to allow items without product_id
 
     Returns:
         List of validated items with corrected prices
@@ -272,7 +274,9 @@ async def validate_invoice_prices(
     validator = PriceValidator(db)
 
     # Validate items
-    validated_items = await validator.validate_invoice_items(items)
+    validated_items = await validator.validate_invoice_items(
+        items, allow_custom_items=allow_custom_items
+    )
 
     # Calculate subtotal
     subtotal = sum(

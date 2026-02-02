@@ -7,6 +7,7 @@ from typing import Optional
 from math import ceil
 
 from fastapi import HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_password_hash
@@ -14,7 +15,6 @@ from app.core.logging import logger
 from app.infrastructure.email.service import EmailService
 from app.modules.auth.repository import UserRepository
 from app.modules.auth.models import User
-from app.modules.auth.schemas import UserRole
 from app.modules.notifications.service import create_notification
 from app.modules.users.schemas import (
     AdminUserCreate,
@@ -25,10 +25,10 @@ from app.modules.users.schemas import (
 )
 
 
-def _welcome_notification_link(role: UserRole) -> str:
-    """Default dashboard link for welcome notification by role."""
+def _welcome_notification_link(role_slug: str) -> str:
+    """Default dashboard link for welcome notification by role slug."""
     return {"client": "/dashboard", "corporate": "/corporate", "admin": "/admin"}.get(
-        role.value, "/dashboard"
+        role_slug, "/dashboard"
     )
 
 
@@ -45,6 +45,7 @@ class UserManagementService:
         limit: int = 20,
         role: Optional[str] = None,
         is_active: Optional[bool] = None,
+        status: Optional[str] = None,
         search: Optional[str] = None,
     ) -> UserListResponse:
         """
@@ -55,6 +56,7 @@ class UserManagementService:
             limit: Items per page
             role: Filter by role
             is_active: Filter by active status
+            status: Filter: all, active, inactive, deleted
             search: Search term
 
         Returns:
@@ -65,6 +67,7 @@ class UserManagementService:
             limit=limit,
             role=role,
             is_active=is_active,
+            status=status,
             search=search,
         )
 
@@ -127,17 +130,25 @@ class UserManagementService:
         # Hash password
         password_hash = get_password_hash(user_data.password)
 
-        # Create user (we'll need to modify repository.create to accept more fields)
-        from app.modules.auth.schemas import UserCreate
+        # Validate role exists
+        from sqlalchemy import select
+        from app.modules.settings.models import Role
+        role_result = await self.db.execute(
+            select(Role).where(Role.id == user_data.role_id, Role.is_active == True)
+        )
+        role = role_result.scalar_one_or_none()
+        if not role:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid role_id: role not found or inactive",
+            )
 
-        basic_user_data = UserCreate(
+        user = await self.repository.create(
             email=user_data.email,
             full_name=user_data.full_name,
-            password=user_data.password,
-            role=user_data.role,
+            password_hash=password_hash,
+            role_id=user_data.role_id,
         )
-
-        user = await self.repository.create(basic_user_data, password_hash)
 
         # Set additional fields
         user.is_active = user_data.is_active
@@ -165,7 +176,7 @@ class UserManagementService:
                 type="welcome",
                 title=f"Welcome to {app_name}",
                 body="Your account has been created. Complete your profile or explore the dashboard.",
-                link=_welcome_notification_link(user.role),
+                link=_welcome_notification_link(user.role_rel.slug if user.role_rel else "client"),
             )
         except Exception as e:
             logger.warning(
@@ -196,6 +207,19 @@ class UserManagementService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found",
             )
+
+        # Validate role_id if provided
+        if user_data.role_id is not None:
+            from sqlalchemy import select
+            from app.modules.settings.models import Role
+            role_result = await self.db.execute(
+                select(Role).where(Role.id == user_data.role_id, Role.is_active == True)
+            )
+            if not role_result.scalar_one_or_none():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid role_id: role not found or inactive",
+                )
 
         # Update fields
         update_dict = user_data.model_dump(exclude_unset=True)
@@ -233,6 +257,52 @@ class UserManagementService:
             )
 
         await self.repository.soft_delete(user, deleted_by)
+
+    async def hard_delete_user(self, user_id: str, deleted_by: str) -> None:
+        """
+        Permanently delete a user from the database.
+
+        User must be soft-deleted first.
+
+        Args:
+            user_id: User ID
+            deleted_by: ID of admin performing deletion
+
+        Raises:
+            HTTPException: If user not found, not soft-deleted, or trying to delete self
+        """
+        if user_id == deleted_by:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot delete your own account",
+            )
+        user = await self.repository.get_by_id(user_id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+        if user.deleted_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User must be soft-deleted first before permanent deletion",
+            )
+
+        counts = await self.repository.count_user_references(user_id)
+        if counts:
+            parts = [f"{n} {t}" for t, n in counts.items()]
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Cannot permanently delete: user is referenced by {', '.join(parts)}. Reassign or delete those records first.",
+            )
+
+        try:
+            await self.repository.hard_delete(user)
+        except IntegrityError:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Cannot permanently delete: user is referenced by other records.",
+            )
 
     async def activate_user(self, user_id: str) -> UserDetailResponse:
         """
@@ -303,28 +373,37 @@ class UserManagementService:
         user = await self.repository.unlock_account(user)
         return UserDetailResponse.model_validate(user)
 
-    async def assign_role(self, user_id: str, role: str) -> UserDetailResponse:
+    async def assign_role(self, user_id: str, role_id: str) -> UserDetailResponse:
         """
         Assign role to user.
 
         Args:
             user_id: User ID
-            role: New role
+            role_id: UUID of settings.Role
 
         Returns:
             Updated user
 
         Raises:
-            HTTPException: If user not found
+            HTTPException: If user or role not found
         """
+        from sqlalchemy import select
+        from app.modules.settings.models import Role
         user = await self.repository.get_by_id(user_id)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found",
             )
-
-        user = await self.repository.assign_role(user, role)
+        role_result = await self.db.execute(
+            select(Role).where(Role.id == role_id, Role.is_active == True)
+        )
+        if not role_result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid role_id: role not found or inactive",
+            )
+        user = await self.repository.assign_role(user, role_id)
         return UserDetailResponse.model_validate(user)
 
     async def force_password_reset(self, user_id: str) -> None:

@@ -106,7 +106,7 @@ class SendHistoryService:
                 status_check = EmailSendStatus(status)
             except ValueError:
                 status_check = None
-        
+
         history.message_id = message_id
         history.error_message = error_message
 
@@ -125,6 +125,7 @@ class SendHistoryService:
         status: Optional[str] = None,
         from_date: Optional[datetime] = None,
         to_date: Optional[datetime] = None,
+        template_prefix: Optional[str] = None,
         page: int = 1,
         page_size: int = 50,
     ) -> Dict[str, Any]:
@@ -133,7 +134,8 @@ class SendHistoryService:
 
         Args:
             recipient_email: Filter by recipient email
-            template_name: Filter by template name
+            template_name: Filter by exact template name
+            template_prefix: Filter by template name prefix (e.g. "ticket_" for all ticket emails)
             status: Filter by status (pending, sent, failed)
             from_date: Filter by start date
             to_date: Filter by end date
@@ -148,9 +150,13 @@ class SendHistoryService:
         # Apply filters
         conditions = []
         if recipient_email:
-            conditions.append(EmailSendHistory.recipient_email == recipient_email)
+            conditions.append(
+                EmailSendHistory.recipient_email == recipient_email)
         if template_name:
             conditions.append(EmailSendHistory.template_name == template_name)
+        if template_prefix:
+            conditions.append(
+                EmailSendHistory.template_name.startswith(template_prefix))
         if status:
             conditions.append(EmailSendHistory.status == status)
         if from_date:

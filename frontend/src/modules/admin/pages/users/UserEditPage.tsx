@@ -34,6 +34,7 @@ import {
   useUser,
   useUpdateUser,
   useDeleteUser,
+  useHardDeleteUser,
   useActivateUser,
   useDeactivateUser,
   useUnlockAccount,
@@ -54,7 +55,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import type { UserUpdate } from "../../types";
-import type { UserRole } from "@/modules/auth/types";
+import { useRoles } from "../../hooks/useRoles";
 
 export const UserEditPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -64,14 +65,17 @@ export const UserEditPage: React.FC = () => {
   const { data: user, isLoading: userLoading } = useUser(id!);
   const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();
+  const hardDeleteUser = useHardDeleteUser();
   const activateUser = useActivateUser();
   const deactivateUser = useDeactivateUser();
   const unlockAccount = useUnlockAccount();
   const forcePasswordReset = useForcePasswordReset();
+  const { data: rolesData } = useRoles(1, 100, { is_active: true });
+  const roles = rolesData?.roles ?? [];
 
   const [formData, setFormData] = useState<UserUpdate>({
     full_name: "",
-    role: "client",
+    role_id: "",
     is_active: true,
   });
 
@@ -81,7 +85,7 @@ export const UserEditPage: React.FC = () => {
     if (user) {
       setFormData({
         full_name: user.full_name,
-        role: user.role,
+        role_id: user.role_id,
         is_active: user.is_active,
       });
     }
@@ -94,8 +98,8 @@ export const UserEditPage: React.FC = () => {
       newErrors.full_name = "Full name is required";
     }
 
-    if (!formData.role) {
-      newErrors.role = "Role is required";
+    if (formData.role_id !== undefined && !formData.role_id) {
+      newErrors.role_id = "Role is required";
     }
 
     setErrors(newErrors);
@@ -137,6 +141,24 @@ export const UserEditPage: React.FC = () => {
       toast({
         title: "Error",
         description: error.response?.data?.detail || "Failed to delete user",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleHardDelete = async () => {
+    try {
+      await hardDeleteUser.mutateAsync(id!);
+      toast({
+        title: "Success",
+        description: "User permanently removed",
+      });
+      navigate("/admin/users");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description:
+          error.response?.data?.detail || "Failed to permanently delete user",
         variant: "destructive",
       });
     }
@@ -338,27 +360,29 @@ export const UserEditPage: React.FC = () => {
 
                     {/* Role */}
                     <div className="space-y-2">
-                      <Label htmlFor="role">
+                      <Label htmlFor="role_id">
                         Role <span className="text-red-500">*</span>
                       </Label>
                       <div className="relative">
                         <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
                         <Select
-                          value={formData.role}
-                          onValueChange={(value) => handleChange("role", value as UserRole)}
+                          value={formData.role_id}
+                          onValueChange={(value) => handleChange("role_id", value)}
                         >
-                          <SelectTrigger className={`pl-10 ${errors.role ? "border-red-500" : ""}`}>
+                          <SelectTrigger className={`pl-10 ${errors.role_id ? "border-red-500" : ""}`}>
                             <SelectValue placeholder="Select role" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="admin">Administrator</SelectItem>
-                            <SelectItem value="corporate">Corporate</SelectItem>
-                            <SelectItem value="client">Client</SelectItem>
+                            {roles.map((role) => (
+                              <SelectItem key={role.id} value={role.id}>
+                                {role.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
-                      {errors.role && (
-                        <p className="text-sm text-red-500">{errors.role}</p>
+                      {errors.role_id && (
+                        <p className="text-sm text-red-500">{errors.role_id}</p>
                       )}
                     </div>
                   </div>
@@ -546,35 +570,69 @@ export const UserEditPage: React.FC = () => {
                 Irreversible and destructive actions
               </p>
             </div>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="destructive"
-                  className="w-full justify-start font-medium"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete User
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete User</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete this user? This action cannot be
-                    undone. All user data will be permanently removed.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDelete}
-                    className="bg-red-600 hover:bg-red-700"
+            {!user.deleted_at && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    className="w-full justify-start font-medium"
                   >
+                    <Trash2 className="h-4 w-4 mr-2" />
                     Delete User
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete User</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will mark the user as deleted. They will no longer be able
+                      to log in. Their data will remain for audit purposes. You can
+                      permanently delete them later from the user list.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Delete User
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            {user.deleted_at && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    className="w-full justify-start font-medium mt-4"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Permanently Delete User
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Permanently Delete User</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently remove the user from the database. This
+                      action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleHardDelete}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Permanently Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </Card>
         </div>
       </div>

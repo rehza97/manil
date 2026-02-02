@@ -20,6 +20,7 @@ class ErpSmsService {
   Timer? _pollingTimer;
   Timer? _heartbeatTimer;
   Timer? _authCheckTimer;
+  Timer? _queuePollTimer;
   bool _isPolling = false;
   int _consecutiveFailures = 0;
   DateTime? _lastSuccessfulPoll;
@@ -67,6 +68,11 @@ class ErpSmsService {
       _sendHeartbeat();
     });
 
+    // Start queue poll timer (every 10 seconds) - always call GET /pending
+    _queuePollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      _pollForSmsMessages();
+    });
+
     // Start auth check timer (every 30 seconds)
     _authCheckTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       checkAuthAndRestart();
@@ -85,6 +91,8 @@ class ErpSmsService {
     _heartbeatTimer = null;
     _authCheckTimer?.cancel();
     _authCheckTimer = null;
+    _queuePollTimer?.cancel();
+    _queuePollTimer = null;
     debugPrint('⏹️ Stopped ERP SMS polling');
   }
 
@@ -131,6 +139,11 @@ class ErpSmsService {
           }
         } catch (e) {
           debugPrint('⚠️ Could not parse heartbeat response: $e');
+        }
+
+        // Call queue endpoint after each successful heartbeat so we always fetch pending SMS
+        if (_isPolling) {
+          _pollForSmsMessages();
         }
 
         // Reset consecutive failures on successful heartbeat
@@ -180,53 +193,23 @@ class ErpSmsService {
 
   Future<void> _pollForSmsMessages() async {
     try {
-      if (!_authService.isAuthenticated) {
-        debugPrint('❌ Not authenticated, skipping poll');
-        _consecutiveFailures++;
-        return;
-      }
-
-      // Check connection status
-      if (!_authService.isConnected) {
-        debugPrint('❌ Server not connected, checking connection...');
-        final connected = await _authService.checkConnection();
-        if (!connected) {
-          _consecutiveFailures++;
-          return;
-        }
-      }
-
-      // Use device_id from query params as backend expects
+      // Use device_id from query params as backend expects (backend allows GET /pending without token)
       final deviceId = _authService.deviceId ?? 'unknown';
       final url =
           '${_authService.serverUrl}/api/v1/sms/app/pending?limit=10&device_id=$deviceId';
 
-      // Get auth headers with error handling
-      Map<String, String> headers;
+      // Get auth headers if available; otherwise use minimal headers so we always call the queue endpoint
+      Map<String, String> headers = {'Content-Type': 'application/json'};
       try {
-        headers = await _authService.getAuthHeaders();
-        debugPrint('🔐 Auth headers prepared successfully');
+        if (_authService.isAuthenticated) {
+          final authHeaders = await _authService.getAuthHeaders();
+          headers.addAll(authHeaders);
+          debugPrint('🔐 Auth headers prepared for queue poll');
+        } else {
+          debugPrint('📱 Queue poll without token (device_id=$deviceId)');
+        }
       } catch (e) {
-        debugPrint('❌ Failed to get auth headers: $e');
-        debugPrint('🔄 Attempting device registration...');
-
-        final registrationSuccess = await _authService.registerDevice();
-        if (!registrationSuccess || !_authService.isAuthenticated) {
-          debugPrint('❌ Device registration failed, skipping poll');
-          _consecutiveFailures++;
-          return;
-        }
-
-        // Retry getting headers after registration
-        try {
-          headers = await _authService.getAuthHeaders();
-        } catch (e2) {
-          debugPrint(
-            '❌ Still failed to get auth headers after registration: $e2',
-          );
-          _consecutiveFailures++;
-          return;
-        }
+        debugPrint('⚠️ Using queue poll without auth: $e');
       }
 
       debugPrint('📱 Polling for SMS messages: $url');
@@ -334,10 +317,7 @@ class ErpSmsService {
         await _authService.checkConnection();
       }
     }
-    // Always schedule the next poll
-    if (_isPolling) {
-      Future.delayed(const Duration(seconds: 10), _pollForSmsMessages);
-    }
+    // Next poll is driven by _queuePollTimer (every 10s)
   }
 
   Future<void> _processSmsMessage(Map<String, dynamic> message) async {

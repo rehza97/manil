@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -75,20 +75,8 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
 }) => {
   const [customerSearch, setCustomerSearch] = useState("");
   const [quoteSearch, setQuoteSearch] = useState("");
-
-  // Fetch customers for searchable dropdown
-  const { data: customersData } = useQuery({
-    queryKey: ["customers", customerSearch],
-    queryFn: () => customersApi.getCustomers({ search: customerSearch, limit: 20 }),
-    enabled: true,
-  });
-
-  // Fetch accepted quotes for searchable dropdown
-  const { data: quotesData } = useQuery({
-    queryKey: ["quotes", "accepted", quoteSearch],
-    queryFn: () => quotesApi.getQuotes({ status: "accepted", search: quoteSearch }),
-    enabled: true,
-  });
+  const [prefilledFromQuote, setPrefilledFromQuote] = useState(false);
+  const prefilledQuoteIdRef = useRef<string | null>(null);
 
   const form = useForm<InvoiceFormData>({
     resolver: zodResolver(invoiceSchema),
@@ -123,6 +111,61 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
           discount_amount: 0,
           notes: "",
         },
+  });
+
+  const quoteId = form.watch("quote_id");
+  const { data: selectedQuoteData } = useQuery({
+    queryKey: ["quote", quoteId],
+    queryFn: () => quotesApi.getQuote(quoteId!),
+    enabled: !!quoteId && !invoice,
+  });
+
+  // Prefill from quote when a quote is selected (create mode only, once per quote)
+  useEffect(() => {
+    if (invoice || !selectedQuoteData || !quoteId) return;
+    if (prefilledQuoteIdRef.current === quoteId) return;
+    prefilledQuoteIdRef.current = quoteId;
+    setPrefilledFromQuote(true);
+    const customerIdFromQuote = selectedQuoteData.customer_id ?? "";
+    if (customerIdFromQuote) form.setValue("customer_id", customerIdFromQuote);
+    const titleFromQuote =
+      selectedQuoteData.quote_number != null
+        ? `Facture – ${selectedQuoteData.quote_number}`
+        : selectedQuoteData.title ?? "Facture";
+    form.setValue("title", titleFromQuote);
+    const itemsFromQuote = Array.isArray(selectedQuoteData.items)
+      ? selectedQuoteData.items.map(
+          (item: { item_name?: string; description?: string; quantity: number; unit_price: number; product_id?: string }) => ({
+            description: item.item_name || item.description || "",
+            quantity: item.quantity ?? 1,
+            unit_price: Number(item.unit_price ?? 0),
+            product_id: item.product_id,
+          })
+        )
+      : [];
+    if (itemsFromQuote.length > 0) form.setValue("items", itemsFromQuote);
+  }, [invoice, quoteId, selectedQuoteData, form]);
+
+  // Clear prefilled state when quote is cleared
+  useEffect(() => {
+    if (!quoteId) {
+      prefilledQuoteIdRef.current = null;
+      if (prefilledFromQuote) setPrefilledFromQuote(false);
+    }
+  }, [quoteId, prefilledFromQuote]);
+
+  // Fetch customers for searchable dropdown
+  const { data: customersData } = useQuery({
+    queryKey: ["customers", customerSearch],
+    queryFn: () => customersApi.getCustomers({ search: customerSearch, limit: 20 }),
+    enabled: true,
+  });
+
+  // Fetch accepted quotes for searchable dropdown
+  const { data: quotesData } = useQuery({
+    queryKey: ["quotes", "accepted", quoteSearch],
+    queryFn: () => quotesApi.getQuotes({ status: "accepted", search: quoteSearch }),
+    enabled: true,
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -204,7 +247,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                     onValueChange={field.onChange}
                   >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger disabled={prefilledFromQuote}>
                         <SelectValue placeholder="Select customer" />
                       </SelectTrigger>
                     </FormControl>
@@ -275,7 +318,11 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                 <FormItem>
                   <FormLabel>Titre de la facture</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Titre de la facture" />
+                    <Input
+                      {...field}
+                      placeholder="Titre de la facture"
+                      disabled={prefilledFromQuote}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -332,7 +379,11 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                             render={({ field }) => (
                               <FormItem>
                                 <FormControl>
-                                  <Input {...field} placeholder="Item description" />
+                                  <Input
+                                    {...field}
+                                    placeholder="Item description"
+                                    disabled={prefilledFromQuote}
+                                  />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -350,6 +401,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                                     {...field}
                                     type="number"
                                     min="1"
+                                    disabled={prefilledFromQuote}
                                     onChange={(e) => field.onChange(Number(e.target.value))}
                                   />
                                 </FormControl>
@@ -370,6 +422,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                                     type="number"
                                     min="0"
                                     step="0.01"
+                                    disabled={prefilledFromQuote}
                                     onChange={(e) => field.onChange(Number(e.target.value))}
                                   />
                                 </FormControl>

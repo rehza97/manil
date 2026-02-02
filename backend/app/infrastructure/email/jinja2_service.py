@@ -78,7 +78,8 @@ class Jinja2TemplateService:
             TemplateNotFound: If template doesn't exist
             TemplateError: If template rendering fails
         """
-        template_path = f"{format}/{template_name}.{format}"
+        ext = "txt" if format == "text" else format
+        template_path = f"{format}/{template_name}.{ext}"
 
         try:
             template = self.env.get_template(template_path)
@@ -111,12 +112,13 @@ class Jinja2TemplateService:
         """
         html_content = self.render_template(template_name, context, format="html")
 
-        # Try to render text version, fallback to HTML if not found
+        # Text version: use .txt template if it exists, otherwise derive from HTML
+        import re
+        text_path = f"text/{template_name}.txt"
         try:
-            text_content = self.render_template(template_name, context, format="text")
+            text_tpl = self.env.get_template(text_path)
+            text_content = text_tpl.render(**context)
         except TemplateNotFound:
-            # Fallback: strip HTML tags (basic implementation)
-            import re
             text_content = re.sub(r"<[^>]+>", "", html_content)
             text_content = re.sub(r"\s+", " ", text_content).strip()
 
@@ -137,7 +139,8 @@ class Jinja2TemplateService:
             List of variable names used in the template
         """
         try:
-            template_path = f"{format}/{template_name}.{format}"
+            ext = "txt" if format == "text" else format
+            template_path = f"{format}/{template_name}.{ext}"
             template = self.env.get_template(template_path)
             # Get variables from template AST
             from jinja2.meta import find_undeclared_variables

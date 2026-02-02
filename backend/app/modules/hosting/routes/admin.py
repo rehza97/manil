@@ -34,7 +34,8 @@ from app.modules.hosting.repository import (
 from app.modules.hosting.services import (
     VPSProvisioningService,
     ContainerMonitoringService,
-    DockerManagementService
+    DockerManagementService,
+    SubscriptionBillingService,
 )
 from app.modules.hosting.schemas import (
     VPSSubscriptionResponse,
@@ -44,10 +45,14 @@ from app.modules.hosting.schemas import (
     RejectRequestBody,
     SuspendSubscriptionBody,
     VPSReactivateRequest,
+    VPSUpgradeRequest,
+    UpgradeResponseSchema,
     MonitoringOverviewSchema,
-    AlertSchema
+    AlertSchema,
 )
 from pydantic import BaseModel, Field
+import psutil
+
 from app.modules.hosting.routes.client import CreateVPSRequestBody
 from app.modules.hosting.distros import SUPPORTED_DISTROS
 
@@ -1028,6 +1033,60 @@ async def reactivate_subscription_admin(
     return VPSSubscriptionResponse.model_validate(subscription)
 
 
+@router.post(
+    "/subscriptions/{subscription_id}/upgrade",
+    response_model=UpgradeResponseSchema,
+    summary="Upgrade Subscription Plan (Admin)",
+    description="""
+    Change a VPS subscription to a different plan (admin action).
+
+    Upgrades the subscription to a new plan. Pro-rated billing applies.
+    Admin can upgrade any customer's subscription (no ownership check).
+
+    **Permissions Required:** `hosting:admin`
+
+    **Request Body:**
+    - new_plan_id: ID of the target plan (must be higher tier for upgrade)
+    - upgrade_immediately: If true, apply immediately (default: True)
+
+    **Response:** Updated subscription and pro-rated amount.
+
+    **Note:** Downgrades are not allowed mid-cycle. Cancel and create a new subscription instead.
+    """
+)
+async def upgrade_subscription_admin(
+    subscription_id: str,
+    request: VPSUpgradeRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.HOSTING_ADMIN))
+):
+    """
+    Upgrade subscription plan (admin action). No ownership check.
+    """
+    repo = VPSSubscriptionRepository(db)
+    subscription = await repo.get_by_id(subscription_id)
+    if not subscription:
+        raise NotFoundException(f"Subscription {subscription_id} not found")
+
+    provisioning_service = VPSProvisioningService(db)
+    updated_subscription = await provisioning_service.upgrade_subscription(
+        subscription_id,
+        request.new_plan_id
+    )
+
+    billing_service = SubscriptionBillingService(db)
+    prorated_amount = await billing_service.calculate_prorated_amount(
+        updated_subscription,
+        updated_subscription.plan
+    )
+
+    return UpgradeResponseSchema(
+        subscription=VPSSubscriptionResponse.model_validate(updated_subscription),
+        prorated_amount=prorated_amount,
+        message="Upgrade successful. Pro-rated invoice generated."
+    )
+
+
 @router.delete(
     "/subscriptions/{subscription_id}",
     status_code=status.HTTP_200_OK,
@@ -1163,16 +1222,25 @@ async def get_monitoring_overview(
             alert['subscription_number'] = sub.subscription_number
         all_alerts.extend(alerts)
     
-    # Calculate averages from all collected values
-    avg_cpu = sum(all_cpu_values) / len(all_cpu_values) if all_cpu_values else 0.0
-    avg_memory = sum(all_memory_values) / len(all_memory_values) if all_memory_values else 0.0
-    
+    # Calculate averages from container metrics, or fall back to host when none
+    avg_cpu = sum(all_cpu_values) / len(all_cpu_values) if all_cpu_values else None
+    avg_memory = sum(all_memory_values) / len(all_memory_values) if all_memory_values else None
+    if avg_cpu is None or avg_memory is None:
+        try:
+            host_cpu = psutil.cpu_percent(interval=0.1)
+            host_mem = psutil.virtual_memory().percent
+            avg_cpu = avg_cpu if avg_cpu is not None else host_cpu
+            avg_memory = avg_memory if avg_memory is not None else host_mem
+        except Exception:
+            avg_cpu = avg_cpu or 0.0
+            avg_memory = avg_memory or 0.0
+
     return MonitoringOverviewSchema(
         total_subscriptions=total_subscriptions,
         active_containers=active_count,
         total_monthly_revenue=float(total_monthly_revenue),  # Convert Decimal to float for JSON
-        avg_cpu_usage=round(avg_cpu, 2),
-        avg_memory_usage=round(avg_memory, 2),
+        avg_cpu_usage=round(float(avg_cpu), 2),
+        avg_memory_usage=round(float(avg_memory), 2),
         alerts=[AlertSchema.model_validate(a) for a in all_alerts]
     )
 

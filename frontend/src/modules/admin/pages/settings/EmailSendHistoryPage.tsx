@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Mail, Loader2, Download, Filter } from "lucide-react";
 import {
   Card,
@@ -56,15 +57,17 @@ interface SendHistoryResponse {
 }
 
 export const EmailSendHistoryPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [history, setHistory] = useState<SendHistoryResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState(() => ({
     recipient_email: "",
     template_name: "",
+    template_prefix: searchParams.get("template_prefix") ?? "",
     status: "all",
     page: 1,
     page_size: 50,
-  });
+  }));
 
   useEffect(() => {
     loadHistory();
@@ -76,12 +79,13 @@ export const EmailSendHistoryPage: React.FC = () => {
       const params = new URLSearchParams();
       if (filters.recipient_email) params.append("recipient_email", filters.recipient_email);
       if (filters.template_name) params.append("template_name", filters.template_name);
+      if (filters.template_prefix) params.append("template_prefix", filters.template_prefix);
       if (filters.status && filters.status !== "all") params.append("status", filters.status);
       params.append("page", filters.page.toString());
       params.append("page_size", filters.page_size.toString());
 
       const response = await apiClient.get(
-        `/api/v1/notifications/send-history?${params.toString()}`
+        `/notifications/send-history?${params.toString()}`
       );
       setHistory(response.data);
     } catch (error: any) {
@@ -139,11 +143,27 @@ export const EmailSendHistoryPage: React.FC = () => {
               <label className="text-sm font-medium mb-2 block">Template</label>
               <Input
                 placeholder="Filter by template..."
-                value={filters.template_name}
+                value={filters.template_prefix ? "" : filters.template_name}
                 onChange={(e) =>
-                  setFilters({ ...filters, template_name: e.target.value, page: 1 })
+                  setFilters({ ...filters, template_name: e.target.value, template_prefix: "", page: 1 })
                 }
               />
+            </div>
+            <div className="flex items-end">
+              <Button
+                variant={filters.template_prefix ? "default" : "outline"}
+                size="sm"
+                onClick={() =>
+                  setFilters({
+                    ...filters,
+                    template_prefix: filters.template_prefix ? "" : "ticket_",
+                    template_name: "",
+                    page: 1,
+                  })
+                }
+              >
+                Ticket emails only
+              </Button>
             </div>
             <div className="w-[200px]">
               <label className="text-sm font-medium mb-2 block">Status</label>

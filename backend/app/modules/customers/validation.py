@@ -70,12 +70,21 @@ async def check_kyc_requirements(
         
         # Check if KYC is complete and approved
         if kyc_status.kyc_status != "approved":
-            missing_docs = ", ".join([d.value for d in kyc_status.missing_documents])
-            raise ValidationException(
-                f"Cannot activate customer: KYC verification incomplete. "
-                f"Status: {kyc_status.kyc_status}. "
-                f"Missing documents: {missing_docs if missing_docs else 'None'}"
-            )
+            missing = kyc_status.missing_documents or []
+            missing_list = ", ".join([d.value for d in missing])
+            if missing_list:
+                msg = (
+                    f"Cannot activate customer: KYC verification incomplete. "
+                    f"Status: {kyc_status.kyc_status}. "
+                    f"Upload and get approved: {missing_list}."
+                )
+            else:
+                msg = (
+                    f"Cannot activate customer: KYC verification incomplete. "
+                    f"Status: {kyc_status.kyc_status}. "
+                    "At least one required document (National ID for individual, Business registration for corporate) must be uploaded and approved."
+                )
+            raise ValidationException(msg)
         
         # Verify all required documents are approved
         summary = kyc_status.summary

@@ -5,7 +5,7 @@
  */
 
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { quotesApi } from "@/shared/api";
 import { customersApi } from "@/shared/api";
@@ -41,6 +41,8 @@ const defaultItem: QuoteItem = {
 
 export const QuoteCreatePage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/corporate";
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [customerId, setCustomerId] = useState("");
@@ -73,9 +75,9 @@ export const QuoteCreatePage: React.FC = () => {
         description: "The quote has been created successfully.",
       });
       if (created?.id) {
-        navigate(`/corporate/quotes/${created.id}`);
+        navigate(`${basePath}/quotes/${created.id}`);
       } else {
-        navigate("/corporate/quotes");
+        navigate(`${basePath}/quotes`);
       }
     },
     onError: (err: any) => {
@@ -151,7 +153,7 @@ export const QuoteCreatePage: React.FC = () => {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate("/corporate/quotes")}
+          onClick={() => navigate(`${basePath}/quotes`)}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Quotes
@@ -341,7 +343,7 @@ export const QuoteCreatePage: React.FC = () => {
           <Button
             type="button"
             variant="outline"
-            onClick={() => navigate("/corporate/quotes")}
+            onClick={() => navigate(`${basePath}/quotes`)}
           >
             Cancel
           </Button>

@@ -79,6 +79,7 @@ export function OrderList() {
     return "/dashboard/orders";
   };
   const basePath = getBasePath();
+  const isClientView = !location.pathname.startsWith("/admin");
 
   const { data, isLoading, isError, error } = useOrders(
     page,
@@ -140,18 +141,20 @@ export function OrderList() {
           <CardTitle className="text-base">Filtres</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <label className="mb-2 block text-sm font-medium">ID client</label>
-              <Input
-                placeholder="Filtrer par ID client…"
-                value={customerIdFilter}
-                onChange={(e) => {
-                  setCustomerIdFilter(e.target.value);
-                  setPage(1);
-                }}
-              />
-            </div>
+          <div className={`grid gap-4 ${isClientView ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"}`}>
+            {!isClientView && (
+              <div>
+                <label className="mb-2 block text-sm font-medium">ID client</label>
+                <Input
+                  placeholder="Filtrer par ID client…"
+                  value={customerIdFilter}
+                  onChange={(e) => {
+                    setCustomerIdFilter(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </div>
+            )}
             <div>
               <label className="mb-2 block text-sm font-medium">Statut</label>
               <Select value={statusFilter || "all"} onValueChange={(val) => {
@@ -194,7 +197,7 @@ export function OrderList() {
               <TableHeader>
                 <TableRow>
                   <TableHead>N° commande</TableHead>
-                  <TableHead>ID client</TableHead>
+                  {!isClientView && <TableHead>ID client</TableHead>}
                   <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Montant total</TableHead>
                   <TableHead>Articles</TableHead>
@@ -211,9 +214,11 @@ export function OrderList() {
                         <TableCell>
                           <Skeleton className="h-4 w-24" />
                         </TableCell>
-                        <TableCell>
-                          <Skeleton className="h-4 w-24" />
-                        </TableCell>
+                        {!isClientView && (
+                          <TableCell>
+                            <Skeleton className="h-4 w-24" />
+                          </TableCell>
+                        )}
                         <TableCell>
                           <Skeleton className="h-4 w-20" />
                         </TableCell>
@@ -235,7 +240,9 @@ export function OrderList() {
                   data.data.map((order) => (
                     <TableRow key={order.id}>
                       <TableCell className="font-medium">{order.order_number}</TableCell>
-                      <TableCell className="font-mono text-sm">{order.customer_id}</TableCell>
+                      {!isClientView && (
+                        <TableCell className="font-mono text-sm">{order.customer_id}</TableCell>
+                      )}
                       <TableCell>
                         <Badge className={STATUS_COLORS[order.status]}>
                           {STATUS_LABELS[order.status]}
@@ -259,7 +266,10 @@ export function OrderList() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-8 text-center text-gray-500">
+                    <TableCell
+                      colSpan={isClientView ? 6 : 7}
+                      className="py-8 text-center text-gray-500"
+                    >
                       Aucune commande
                     </TableCell>
                   </TableRow>

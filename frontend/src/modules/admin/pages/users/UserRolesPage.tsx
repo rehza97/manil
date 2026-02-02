@@ -28,8 +28,6 @@ import {
   AlertCircle,
   Info,
 } from "lucide-react";
-import type { UserRole } from "@/modules/auth/types";
-
 export const UserRolesPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -39,18 +37,19 @@ export const UserRolesPage: React.FC = () => {
   const { data: rolesData, isLoading: rolesLoading } = useRoles();
   const assignRoles = useAssignRoles();
 
-  const [selectedRole, setSelectedRole] = useState<UserRole>("client");
+  const roles = rolesData?.roles ?? [];
+  const [selectedRoleId, setSelectedRoleId] = useState<string>("");
 
   useEffect(() => {
     if (user) {
-      setSelectedRole(user.role);
+      setSelectedRoleId(user.role_id ?? "");
     }
   }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (selectedRole === user?.role) {
+    if (selectedRoleId === user?.role_id) {
       toast({
         title: "Info",
         description: "No changes to save",
@@ -64,7 +63,7 @@ export const UserRolesPage: React.FC = () => {
       // In the future, this could support multiple role IDs
       await assignRoles.mutateAsync({
         userId: id!,
-        roleIds: [selectedRole],
+        roleIds: [selectedRoleId],
       });
 
       toast({
@@ -168,9 +167,9 @@ export const UserRolesPage: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <Shield className="h-8 w-8 text-gray-600" />
                       <div>
-                        <p className="font-semibold capitalize">{user.role}</p>
+                        <p className="font-semibold capitalize">{user.role?.name ?? user.role?.slug ?? "-"}</p>
                         <p className="text-sm text-gray-600">
-                          {roleDescriptions[user.role as UserRole]}
+                          {user.role?.slug && roleDescriptions[user.role.slug]}
                         </p>
                       </div>
                     </div>
@@ -182,46 +181,51 @@ export const UserRolesPage: React.FC = () => {
                   <h3 className="text-lg font-semibold mb-4">Assign New Role</h3>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="role">
+                      <Label htmlFor="role_id">
                         Select Role <span className="text-red-500">*</span>
                       </Label>
                       <div className="relative">
                         <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
                         <Select
-                          value={selectedRole}
-                          onValueChange={(value) => setSelectedRole(value as UserRole)}
+                          value={selectedRoleId}
+                          onValueChange={setSelectedRoleId}
                         >
                           <SelectTrigger className="pl-10">
                             <SelectValue placeholder="Select role" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="admin">Administrator</SelectItem>
-                            <SelectItem value="corporate">Corporate</SelectItem>
-                            <SelectItem value="client">Client</SelectItem>
+                            {roles.map((role) => (
+                              <SelectItem key={role.id} value={role.id}>
+                                {role.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
 
                     {/* Role Description */}
-                    {selectedRole && (
-                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="flex items-start gap-3">
-                          <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
-                          <div>
-                            <p className="font-semibold text-blue-900 capitalize">
-                              {selectedRole} Role
-                            </p>
-                            <p className="text-sm text-blue-800 mt-1">
-                              {roleDescriptions[selectedRole]}
-                            </p>
-                            <p className="text-xs text-blue-700 mt-2">
-                              {rolePermissionCount[selectedRole]} permissions included
-                            </p>
+                    {selectedRoleId && (() => {
+                      const selRole = roles.find((r) => r.id === selectedRoleId);
+                      return selRole && (
+                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-start gap-3">
+                            <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
+                            <div>
+                              <p className="font-semibold text-blue-900 capitalize">
+                                {selRole.name} Role
+                              </p>
+                              <p className="text-sm text-blue-800 mt-1">
+                                {roleDescriptions[selRole.slug]}
+                              </p>
+                              <p className="text-xs text-blue-700 mt-2">
+                                {rolePermissionCount[selRole.slug]} permissions included
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -237,7 +241,7 @@ export const UserRolesPage: React.FC = () => {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={assignRoles.isPending || selectedRole === user.role}
+                    disabled={assignRoles.isPending || selectedRoleId === user.role_id}
                   >
                     {assignRoles.isPending ? (
                       <>

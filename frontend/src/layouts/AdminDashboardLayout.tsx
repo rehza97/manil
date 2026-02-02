@@ -26,7 +26,7 @@ import {
   CollapsibleTrigger,
 } from "@/shared/components/ui/collapsible";
 import { NotificationDropdown } from "@/shared/components/NotificationDropdown";
-import { AlertCircle, CheckCircle, XCircle, Mail } from "lucide-react";
+import { AlertCircle, CheckCircle, XCircle, Mail, Inbox } from "lucide-react";
 import {
   LayoutDashboard,
   Users,
@@ -484,6 +484,12 @@ const AdminDashboardLayout: React.FC = () => {
           href: "/admin/settings/sms",
           icon: MessageSquare,
           current: location.pathname === "/admin/settings/sms",
+        },
+        {
+          name: "SMS Queue",
+          href: "/admin/settings/sms-queue",
+          icon: Inbox,
+          current: location.pathname === "/admin/settings/sms-queue",
         },
         {
           name: "Notifications",

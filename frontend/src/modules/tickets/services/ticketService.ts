@@ -243,6 +243,14 @@ export const ticketService = {
     return await ticketsApi.getAttachments(ticketId);
   },
 
+  async uploadAttachment(
+    ticketId: string,
+    file: File,
+    replyId?: string
+  ): Promise<any> {
+    return await ticketsApi.uploadAttachment(ticketId, file, replyId);
+  },
+
   async downloadAttachment(
     ticketId: string,
     attachmentId: string,

@@ -4,12 +4,16 @@ Uses SQLAlchemy 2.0 async syntax.
 """
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, String, Enum as SQLEnum, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Boolean, DateTime, String, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.config.database import Base
-from app.modules.auth.schemas import UserRole
+
+if TYPE_CHECKING:
+    from app.modules.settings.models import Role
 
 
 class User(Base):
@@ -25,10 +29,11 @@ class User(Base):
     )
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[UserRole] = mapped_column(
-        SQLEnum(UserRole, name="user_role", native_enum=True, values_callable=lambda x: [e.value for e in x]),
-        default=UserRole.CLIENT,
+    role_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("roles.id", ondelete="RESTRICT"),
         nullable=False,
+        index=True,
     )
 
     # Status flags
@@ -88,5 +93,21 @@ class User(Base):
     last_login_at: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True)
 
+    role_rel: Mapped["Role"] = relationship(
+        "Role",
+        foreign_keys=[role_id],
+        lazy="joined",
+    )
+
+    @property
+    def role(self):
+        """Alias for role_rel for schema serialization (UserDetailResponse.role)."""
+        return self.role_rel
+
+    @property
+    def role_slug(self) -> str:
+        """Role slug for permission checks and audit (e.g. admin, corporate, client)."""
+        return self.role_rel.slug if self.role_rel else "client"
+
     def __repr__(self) -> str:
-        return f"<User {self.email} ({self.role})>"
+        return f"<User {self.email} (role_id={self.role_id})>"

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Commande {{ order.order_number }}</title>
+    <style>
+        @page { size: A4; margin: 15mm 20mm 20mm 20mm; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11px; line-height: 1.5; color: #333; background: white; }
+        .container { max-width: 210mm; margin: 0 auto; padding: 10px; }
+        .header { text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 3px solid #1a56db; }
+        .company-name { font-size: 28px; font-weight: bold; color: #1a56db; margin-bottom: 8px; }
+        .company-details { font-size: 9px; color: #6b7280; line-height: 1.6; }
+        .order-title { text-align: center; margin: 20px 0; }
+        .order-title h1 { font-size: 24px; color: #1a56db; margin-bottom: 10px; }
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+        .info-grid { display: flex; justify-content: space-between; margin-bottom: 25px; }
+        .info-section { width: 48%; }
+        .info-section.right { text-align: right; }
+        .info-section h3 { font-size: 12px; color: #1e40af; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e5e7eb; }
+        .info-row { margin-bottom: 4px; }
+        .info-label { font-weight: bold; color: #374151; }
+        .info-value { color: #4b5563; }
+        .items-section { margin-bottom: 25px; }
+        .items-section h3 { font-size: 12px; color: #1e40af; margin-bottom: 10px; }
+        .items-table { width: 100%; border-collapse: collapse; }
+        .items-table thead th { background: #1a56db; color: white; padding: 10px 8px; text-align: left; font-size: 10px; font-weight: bold; }
+        .items-table thead th:nth-child(1) { width: 5%; text-align: center; }
+        .items-table thead th:nth-child(2) { width: 35%; }
+        .items-table thead th:nth-child(3) { width: 12%; text-align: center; }
+        .items-table thead th:nth-child(4) { width: 18%; text-align: right; }
+        .items-table thead th:nth-child(5) { width: 15%; text-align: right; }
+        .items-table thead th:nth-child(6) { width: 15%; text-align: right; }
+        .items-table tbody td { padding: 10px 8px; border-bottom: 1px solid #e5e7eb; font-size: 10px; }
+        .items-table tbody td:nth-child(1) { text-align: center; }
+        .items-table tbody td:nth-child(3) { text-align: center; }
+        .items-table tbody td:nth-child(4), .items-table tbody td:nth-child(5), .items-table tbody td:nth-child(6) { text-align: right; }
+        .tax-summary-table { width: 350px; margin-left: auto; border-collapse: collapse; }
+        .tax-summary-table tr td { padding: 6px 10px; font-size: 10px; }
+        .tax-summary-table tr td:first-child { text-align: right; color: #374151; }
+        .tax-summary-table tr td:last-child { text-align: right; width: 120px; }
+        .tax-summary-table .grand-total td { background: #dbeafe; border-top: 2px solid #1a56db; font-size: 14px; font-weight: bold; color: #1a56db; padding: 12px 10px; }
+        .footer { text-align: center; padding-top: 15px; border-top: 1px solid #e5e7eb; font-size: 8px; color: #6b7280; }
+        .amount { font-family: 'Courier New', monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="company-name">{{ company.name }}</div>
+            <div class="company-details">
+                <strong>{{ company.legal_name }}</strong><br>
+                {{ company.address }}<br>
+                Tel: {{ company.phone }} | Email: {{ company.email }} | Web: {{ company.website }}<br>
+                NIF: {{ company.nif }} | RC: {{ company.rc }} | AI: {{ company.ai }}
+            </div>
+        </div>
+
+        <div class="order-title">
+            <h1>COMMANDE {{ order.order_number }}</h1>
+            <span class="status-badge">{{ order.status_display }}</span>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-section">
+                <h3>Details de la commande</h3>
+                <div class="info-row"><span class="info-label">Date de creation: </span><span class="info-value">{{ order.created_date }}</span></div>
+                <div class="info-row"><span class="info-label">Statut: </span><span class="info-value">{{ order.status_display }}</span></div>
+                {% if order.delivery_address %}
+                <div class="info-row"><span class="info-label">Adresse livraison: </span><span class="info-value">{{ order.delivery_address }}</span></div>
+                {% endif %}
+                {% if order.delivery_contact %}
+                <div class="info-row"><span class="info-label">Contact: </span><span class="info-value">{{ order.delivery_contact }}</span></div>
+                {% endif %}
+            </div>
+            <div class="info-section right">
+                <h3>Client</h3>
+                <div class="info-row"><span class="info-label">{{ customer.name }}</span></div>
+                <div class="info-row"><span class="info-value">{{ customer.email }}</span></div>
+                {% if customer.phone %}<div class="info-row"><span class="info-value">{{ customer.phone }}</span></div>{% endif %}
+                {% if customer.address %}<div class="info-row"><span class="info-value">{{ customer.address }}</span></div>{% endif %}
+            </div>
+        </div>
+
+        <div class="items-section">
+            <h3>Articles</h3>
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>ID Produit</th>
+                        <th>Quantite</th>
+                        <th>Prix unitaire ({{ currency }})</th>
+                        <th>Remise %</th>
+                        <th>Total ({{ currency }})</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ item.product_id }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td class="amount">{{ "%.2f"|format(item.unit_price) }}</td>
+                        <td>{{ "%.0f"|format(item.discount_percentage) }}%</td>
+                        <td class="amount">{{ "%.2f"|format(item.total_price) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <table class="tax-summary-table">
+            <tr><td>Sous-total ({{ currency }})</td><td class="amount">{{ "%.2f"|format(order.subtotal) }}</td></tr>
+            <tr><td>Remise ({{ currency }})</td><td class="amount">-{{ "%.2f"|format(order.discount) }}</td></tr>
+            <tr><td>TVA ({{ currency }})</td><td class="amount">{{ "%.2f"|format(order.tax_amount) }}</td></tr>
+            <tr class="grand-total"><td>Total ({{ currency }})</td><td>{{ "%.2f"|format(order.total) }}</td></tr>
+        </table>
+
+        {% if order.customer_notes %}
+        <p style="margin-top: 20px; font-size: 10px; color: #6b7280;"><strong>Notes client:</strong> {{ order.customer_notes }}</p>
+        {% endif %}
+
+        <div class="footer" style="margin-top: 30px;">
+            Document genere le {{ generated_at }} - {{ company.name }}
+        </div>
+    </div>
+</body>
+</html>

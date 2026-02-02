@@ -9,7 +9,7 @@ import { Paperclip, Send, Download, X } from "lucide-react";
 import { Input } from "@/shared/components/ui/input";
 import { RichTextEditor } from "@/shared/components/ui/rich-text-editor";
 import { ticketService } from "../services";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/shared/components/ui/badge";
 import { useAuth } from "@/modules/auth";
 
@@ -23,6 +23,7 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({
   onReplyAdded,
 }) => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const isClient = user?.role === "client";
   const [message, setMessage] = useState("");
@@ -86,23 +87,28 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({
     setIsSubmitting(true);
 
     try {
-      await ticketService.createReply(ticketId, {
+      const reply = await ticketService.createReply(ticketId, {
         message: message.trim(),
         is_internal: isInternal,
       });
-      
-      // TODO: Upload attachments if any (separate API call)
-      // if (attachments.length > 0) {
-      //   await Promise.all(
-      //     attachments.map((file) => ticketService.uploadAttachment(ticketId, file))
-      //   );
-      // }
-      
+
+      if (attachments.length > 0 && reply?.id) {
+        await Promise.all(
+          attachments.map((file) =>
+            ticketService.uploadAttachment(ticketId, file, reply.id)
+          )
+        );
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["ticket-attachments", ticketId] });
+      queryClient.invalidateQueries({ queryKey: ["tickets", ticketId] });
+      refetchAttachments();
+
       toast({
         title: "Succès",
         description: "Réponse ajoutée",
       });
-      
+
       setMessage("");
       setIsInternal(false);
       setAttachments([]);

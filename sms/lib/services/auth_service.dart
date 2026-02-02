@@ -27,12 +27,23 @@ class AuthService {
       // Auto-configure server URL from EnvironmentConfig (no manual setup needed)
       // This auto-detects: Android Emulator (10.0.2.2:8000) or Real Device (192.168.1.4:8000)
       final defaultUrl = EnvironmentConfig.apiBaseUrl;
-      _serverUrl = prefs.getString('server_url') ?? defaultUrl;
+      final savedUrl = prefs.getString('server_url');
 
-      // If no saved URL, use the auto-detected default
-      if (prefs.getString('server_url') == null) {
+      // In debug mode, if saved URL is the production server, switch to local default
+      const productionUrl = 'http://194.146.13.22';
+      if (kDebugMode &&
+          (savedUrl == productionUrl ||
+              savedUrl == '$productionUrl/' ||
+              (savedUrl ?? '').startsWith('$productionUrl:'))) {
         await prefs.setString('server_url', defaultUrl);
-        debugPrint('📡 Auto-configured server URL: $defaultUrl');
+        _serverUrl = defaultUrl;
+        debugPrint('📡 Debug: switched server URL to local: $defaultUrl');
+      } else {
+        _serverUrl = savedUrl ?? defaultUrl;
+        if (savedUrl == null) {
+          await prefs.setString('server_url', defaultUrl);
+          debugPrint('📡 Auto-configured server URL: $defaultUrl');
+        }
       }
 
       // Load device token and info
@@ -436,6 +447,69 @@ class AuthService {
       debugPrint('❌ Error getting suggested IPs: $e');
       return [];
     }
+  }
+
+  /// Build candidate URLs for discovery: suggestions + common LAN hosts (bounded).
+  List<String> _getDiscoveryCandidateUrls() {
+    final candidates = <String>{};
+    // Same as getSuggestedIPs (without async)
+    candidates.addAll([
+      'http://192.168.1.5:8000',
+      'http://192.168.1.1:8000',
+      'http://192.168.0.1:8000',
+      'http://192.168.1.100:8000',
+      'http://192.168.1.4:8000',
+      'http://10.0.2.2:8000',
+      'http://localhost:8000',
+      'http://127.0.0.1:8000',
+    ]);
+    if (_serverUrl != null && _serverUrl!.isNotEmpty) {
+      candidates.add(_serverUrl!);
+    }
+    // 192.168.1.2–20, 192.168.0.2–20
+    for (var i = 2; i <= 20; i++) {
+      candidates.add('http://192.168.1.$i:8000');
+      candidates.add('http://192.168.0.$i:8000');
+    }
+    return candidates.toList();
+  }
+
+  /// Discover backends on the LAN by probing candidate URLs in parallel.
+  /// Returns list of {url, success: true, message} for each URL that responds to /health with 200.
+  Future<List<Map<String, dynamic>>> discoverBackends({
+    Duration? timeout,
+  }) async {
+    final duration = timeout ?? const Duration(seconds: 3);
+    final candidates = _getDiscoveryCandidateUrls();
+    debugPrint(
+      '🔍 Discovering backends (${candidates.length} candidates, ${duration.inSeconds}s timeout)',
+    );
+
+    final results = await Future.wait(
+      candidates.map((url) async {
+        try {
+          final base = url.endsWith('/')
+              ? url.substring(0, url.length - 1)
+              : url;
+          final healthUrl = base.contains('/health') ? base : '$base/health';
+          final response = await http
+              .get(Uri.parse(healthUrl))
+              .timeout(duration);
+          if (response.statusCode == 200) {
+            return {
+              'url': url,
+              'success': true,
+              'message': 'Connection successful',
+            };
+          }
+        } catch (_) {}
+        return null;
+      }),
+    );
+
+    final found = results.whereType<Map<String, dynamic>>().toList();
+    debugPrint('🔍 Found ${found.length} backend(s)');
+    return found;
   }
 
   /// Login with email and password (for admin authentication)

@@ -570,6 +570,10 @@ ROLE_PERMISSIONS: dict[str, Set[Permission]] = {
 
         # Notifications - view own
         Permission.NOTIFICATIONS_VIEW,
+
+        # SMS - view and send (test SMS, queue visibility)
+        Permission.SMS_VIEW,
+        Permission.SMS_SEND,
     },
     "support_supervisor": {
         # Ticket management - full ticket operations including assignment
@@ -607,6 +611,10 @@ ROLE_PERMISSIONS: dict[str, Set[Permission]] = {
         Permission.NOTIFICATIONS_VIEW,
         Permission.NOTIFICATIONS_MANAGE,
         Permission.NOTIFICATIONS_SEND,
+
+        # SMS - view and send (test SMS, queue visibility)
+        Permission.SMS_VIEW,
+        Permission.SMS_SEND,
     },
 }
 

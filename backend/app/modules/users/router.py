@@ -35,6 +35,7 @@ async def list_users(
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
     role: Optional[str] = Query(None, description="Filter by role"),
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
+    status: Optional[str] = Query(None, description="Filter: all, active, inactive, deleted"),
     search: Optional[str] = Query(None, description="Search in name and email"),
     current_user = Depends(require_admin),
     db: Annotated[AsyncSession, Depends(get_db)] = None,
@@ -45,6 +46,7 @@ async def list_users(
     Supports pagination and filtering:
     - Filter by role (admin, corporate, client)
     - Filter by active status
+    - Filter by status: all, active, inactive, deleted
     - Search by name or email
 
     Returns:
@@ -56,6 +58,7 @@ async def list_users(
         limit=limit,
         role=role,
         is_active=is_active,
+        status=status,
         search=search,
     )
 
@@ -138,6 +141,21 @@ async def delete_user(
     await service.delete_user(user_id, current_user.id)
 
 
+@router.delete("/{user_id}/permanent", status_code=status.HTTP_204_NO_CONTENT)
+async def hard_delete_user(
+    user_id: str,
+    current_user = Depends(require_admin),
+    db: Annotated[AsyncSession, Depends(get_db)] = None,
+):
+    """
+    Permanently delete a user (admin only).
+
+    User must be soft-deleted first. This removes the user from the database.
+    """
+    service = UserManagementService(db)
+    await service.hard_delete_user(user_id, current_user.id)
+
+
 @router.patch("/{user_id}/status", response_model=UserDetailResponse)
 async def update_user_status(
     user_id: str,
@@ -201,7 +219,7 @@ async def assign_user_role(
         Updated user
     """
     service = UserManagementService(db)
-    return await service.assign_role(user_id, role_data.role.value)
+    return await service.assign_role(user_id, role_data.role_id)
 
 
 @router.post("/{user_id}/password-reset", status_code=status.HTTP_204_NO_CONTENT)

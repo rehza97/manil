@@ -495,10 +495,10 @@ export const ProductManagementPage: React.FC = () => {
                         {product.sku}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
-                        ${product.regular_price}
+                        {formatDZD(product.regular_price)}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
-                        {product.sale_price ? `$${product.sale_price}` : "-"}
+                        {product.sale_price ? formatDZD(product.sale_price) : "-"}
                       </td>
                       <td className="px-6 py-4 text-sm">
                         <div className="space-y-1">

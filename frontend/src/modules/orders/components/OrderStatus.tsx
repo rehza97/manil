@@ -62,6 +62,9 @@ const STATUS_DESCRIPTIONS: Record<OrderStatus, string> = {
   cancelled: "Commande annulée",
 };
 
+// All order statuses (for admin: show full list)
+const ALL_ORDER_STATUSES: OrderStatus[] = Object.keys(STATUS_LABELS) as OrderStatus[];
+
 // Fallback transitions if API fails (for non-validation workflow orders)
 const FALLBACK_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   request: ["validated", "cancelled"],
@@ -129,10 +132,15 @@ export function OrderStatus() {
     }
   };
 
-  // Use API transitions if available, fallback to hardcoded for non-validation workflow orders
-  const availableTransitions = transitionsData?.allowed_transitions || 
-    (order ? FALLBACK_TRANSITIONS[order.status] || [] : []);
-  const isTransitionAvailable = selectedStatus && availableTransitions.includes(selectedStatus);
+  // Admin: show all statuses; otherwise use API transitions or fallback
+  const isAdminContext = location.pathname.startsWith("/admin");
+  const availableTransitions = isAdminContext
+    ? ALL_ORDER_STATUSES
+    : (transitionsData?.allowed_transitions ||
+        (order ? FALLBACK_TRANSITIONS[order.status] || [] : []));
+  const isTransitionAvailable = selectedStatus && (
+    isAdminContext ? true : availableTransitions.includes(selectedStatus)
+  );
 
   if (orderError) {
     return (
@@ -193,7 +201,7 @@ export function OrderStatus() {
 
       {!orderLoading && order && (
         <>
-          {availableTransitions.length === 0 ? (
+          {!isAdminContext && availableTransitions.length === 0 ? (
             <Card className="border-yellow-200 bg-yellow-50">
               <CardHeader>
                 <CardTitle className="text-yellow-800">Aucun changement possible</CardTitle>

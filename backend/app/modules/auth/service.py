@@ -48,16 +48,15 @@ from app.modules.customers.repository import CustomerRepository
 from app.modules.notifications.service import create_notification
 from app.modules.settings.utils import notification_gate_allows
 from app.modules.settings.service import UserNotificationPreferencesService
-from app.modules.auth.schemas import UserRole
 from app.core.logging import logger
 
 settings = get_settings()
 
 
-def _welcome_notification_link(role: UserRole) -> str:
-    """Default dashboard link for welcome notification by role."""
+def _welcome_notification_link(role_slug: str) -> str:
+    """Default dashboard link for welcome notification by role slug."""
     return {"client": "/dashboard", "corporate": "/corporate", "admin": "/admin"}.get(
-        role.value, "/dashboard"
+        role_slug, "/dashboard"
     )
 
 
@@ -100,8 +99,18 @@ class AuthService:
         # Hash password
         password_hash = get_password_hash(user_data.password)
 
+        # Look up client role
+        from app.modules.settings.utils import get_role_id_by_slug
+        role_id = await get_role_id_by_slug(self.db, "client")
+        if not role_id:
+            raise ConflictException("System role 'client' not found. Run seed_settings.py.")
         # Create user
-        user = await self.repository.create(user_data, password_hash)
+        user = await self.repository.create(
+            email=user_data.email,
+            full_name=user_data.full_name,
+            password_hash=password_hash,
+            role_id=str(role_id),
+        )
 
         expires = await _access_token_expires_delta(self.db)
         access_token = create_access_token(
@@ -115,7 +124,7 @@ class AuthService:
             description=f"New user registered: {user.email}",
             user_id=user.id,
             user_email=user.email,
-            user_role=user.role,
+            user_role=user.role_slug,
             request=request,
             success=True,
         )
@@ -139,7 +148,7 @@ class AuthService:
                 type="welcome",
                 title=f"Welcome to {app_name}",
                 body="Your account has been created. Complete your profile or explore the dashboard.",
-                link=_welcome_notification_link(user.role),
+                link=_welcome_notification_link(user.role_slug),
             )
         except Exception as e:
             logger.warning(
@@ -220,7 +229,7 @@ class AuthService:
                         description=f"Login attempt for locked account: {email}",
                         user_id=user.id,
                         user_email=email,
-                        user_role=user.role,
+                        user_role=user.role_slug,
                         request=request,
                         success=False,
                         error_message=f"Account locked for {minutes_remaining} more minutes",
@@ -262,7 +271,7 @@ class AuthService:
                         description=f"Password hash migrated from bcrypt to Argon2",
                         user_id=user.id,
                         user_email=user.email,
-                        user_role=user.role,
+                        user_role=user.role_slug,
                         request=request,
                         success=True,
                     )
@@ -286,7 +295,7 @@ class AuthService:
                         description=f"Account locked due to {user.failed_login_attempts} failed attempts: {email}",
                         user_id=user.id,
                         user_email=email,
-                        user_role=user.role,
+                        user_role=user.role_slug,
                         request=request,
                         success=False,
                         error_message="Account locked - too many failed attempts",
@@ -310,7 +319,7 @@ class AuthService:
                     description=f"Failed login attempt for {email} - invalid password (attempt {user.failed_login_attempts}/{max_attempts})",
                     user_id=user.id,
                     user_email=email,
-                    user_role=user.role,
+                    user_role=user.role_slug,
                     request=request,
                     success=False,
                     error_message="Wrong password",
@@ -330,7 +339,7 @@ class AuthService:
                     description=f"Failed login for {email} - account inactive",
                     user_id=user.id,
                     user_email=email,
-                    user_role=user.role,
+                    user_role=user.role_slug,
                     request=request,
                     success=False,
                     error_message="Account is inactive",
@@ -342,7 +351,7 @@ class AuthService:
 
         # Role-based 2FA requirement: reject login if role requires 2FA but user has not enabled it
         from app.modules.settings.utils import is_2fa_required
-        if await is_2fa_required(self.db, user.role.value) and not user.is_2fa_enabled:
+        if await is_2fa_required(self.db, user.role_slug) and not user.is_2fa_enabled:
             raise ValidationException(
                 "2FA is required for your role. Please enable 2FA in account settings before signing in."
             )
@@ -380,7 +389,7 @@ class AuthService:
             description=f"Successful login for {email}",
             user_id=user.id,
             user_email=email,
-            user_role=user.role,
+            user_role=user.role_slug,
             request=request,
             success=True,
         )
@@ -468,7 +477,7 @@ class AuthService:
                 description=f"Successful login for {user.email} (2FA verified)",
                 user_id=user.id,
                 user_email=user.email,
-                user_role=user.role,
+                user_role=user.role_slug,
                 request=request,
                 success=True,
             )
@@ -650,7 +659,7 @@ class AuthService:
         # Check if 2FA is required for this role
         from app.modules.settings.utils import is_2fa_required
 
-        if not await is_2fa_required(self.db, user.role.value):
+        if not await is_2fa_required(self.db, user.role_slug):
             raise ValidationException("2FA is not required for your role")
 
         # Check if 2FA is already enabled
@@ -665,7 +674,7 @@ class AuthService:
                 description=f"2FA setup initiated for {email} (required)",
                 user_id=user.id,
                 user_email=email,
-                user_role=user.role,
+                user_role=user.role_slug,
                 request=request,
                 success=True,
             )
@@ -716,7 +725,7 @@ class AuthService:
                     description=f"Failed 2FA verification during setup for {email}",
                     user_id=user.id,
                     user_email=email,
-                    user_role=user.role,
+                    user_role=user.role_slug,
                     request=request,
                     success=False,
                     error_message="Invalid 2FA code",
@@ -735,7 +744,7 @@ class AuthService:
                 description=f"2FA setup verified and completed for {email}",
                 user_id=user.id,
                 user_email=email,
-                user_role=user.role,
+                user_role=user.role_slug,
                 request=request,
                 success=True,
             )
@@ -834,6 +843,26 @@ class AuthService:
             reset_url=reset_url,
             db=self.db,
         )
+
+        # Optional SMS in parallel: notify that reset link was sent to email
+        try:
+            customer_repo = CustomerRepository(self.db)
+            customer = await customer_repo.get_by_email(email)
+            if (
+                customer
+                and customer.phone
+                and customer.phone.strip()
+                and await notification_gate_allows(self.db, "sms", "auth.password_reset")
+            ):
+                sms_service = SMSService()
+                await sms_service.send_custom_notification(
+                    customer.phone,
+                    "Password reset",
+                    "A password reset link was sent to your email.",
+                    db=self.db,
+                )
+        except Exception as e:
+            logger.warning("Password reset SMS notification failed: %s", e)
 
         return reset_token
 
@@ -945,7 +974,7 @@ class AuthService:
             description="User changed password",
             user_id=user.id,
             user_email=user.email,
-            user_role=user.role,
+            user_role=user.role_slug,
             request=request,
             success=True,
         )

@@ -193,6 +193,40 @@ export const customersApi = {
   },
 
   /**
+   * Update current user's own customer profile (phone, address, etc.)
+   * PUT /api/v1/customers/me
+   */
+  updateMyCustomer: async (data: Partial<CustomerUpdate>): Promise<Customer> => {
+    const response: AxiosResponse<Customer> = await apiClient.put(
+      "/customers/me",
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Get current user's own profile completeness
+   * GET /api/v1/customers/me/profile/completeness
+   */
+  getMyProfileCompleteness: async (): Promise<ProfileCompleteness> => {
+    const response: AxiosResponse<ProfileCompleteness> = await apiClient.get(
+      "/customers/me/profile/completeness"
+    );
+    return response.data;
+  },
+
+  /**
+   * Get current user's own profile missing fields
+   * GET /api/v1/customers/me/profile/missing-fields
+   */
+  getMyMissingFields: async (): Promise<string[]> => {
+    const response: AxiosResponse<string[]> = await apiClient.get(
+      "/customers/me/profile/missing-fields"
+    );
+    return response.data;
+  },
+
+  /**
    * Create a new customer
    * POST /api/v1/customers
    */

@@ -20,6 +20,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.config.database import Base
 from app.modules.auth.models import User
+from app.modules.settings.models import Role
 from app.modules.hosting.models import (
     VPSPlan,
     VPSSubscription,
@@ -79,19 +80,48 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 # ============================================================================
+# Test Roles
+# ============================================================================
+
+@pytest.fixture
+async def test_roles(db_session: AsyncSession) -> dict[str, Role]:
+    """Create test roles (admin, corporate, client)."""
+    roles_data = [
+        ("admin", "Administrator", "admin"),
+        ("corporate", "Corporate", "corporate"),
+        ("client", "Client", "client"),
+    ]
+    roles = {}
+    for slug, name, key in roles_data:
+        role = Role(
+            id=uuid.uuid4(),
+            name=name,
+            slug=slug,
+            is_active=True,
+            is_system=True,
+        )
+        db_session.add(role)
+        roles[key] = role
+    await db_session.commit()
+    for r in roles.values():
+        await db_session.refresh(r)
+    return roles
+
+
+# ============================================================================
 # Test Users
 # ============================================================================
 
 @pytest.fixture
-async def test_client_user(db_session: AsyncSession) -> User:
+async def test_client_user(db_session: AsyncSession, test_roles: dict[str, Role]) -> User:
     """Create a test client user."""
     user = User(
         id=str(uuid.uuid4()),
         email="client@test.com",
         full_name="Test Client",
-        role="client",
+        password_hash="hashed",
+        role_id=test_roles["client"].id,
         is_active=True,
-        created_at=datetime.utcnow(),
     )
     db_session.add(user)
     await db_session.commit()
@@ -100,15 +130,15 @@ async def test_client_user(db_session: AsyncSession) -> User:
 
 
 @pytest.fixture
-async def test_admin_user(db_session: AsyncSession) -> User:
+async def test_admin_user(db_session: AsyncSession, test_roles: dict[str, Role]) -> User:
     """Create a test admin user."""
     user = User(
         id=str(uuid.uuid4()),
         email="admin@test.com",
         full_name="Test Admin",
-        role="admin",
+        password_hash="hashed",
+        role_id=test_roles["admin"].id,
         is_active=True,
-        created_at=datetime.utcnow(),
     )
     db_session.add(user)
     await db_session.commit()
@@ -117,15 +147,15 @@ async def test_admin_user(db_session: AsyncSession) -> User:
 
 
 @pytest.fixture
-async def test_corporate_user(db_session: AsyncSession) -> User:
+async def test_corporate_user(db_session: AsyncSession, test_roles: dict[str, Role]) -> User:
     """Create a test corporate user."""
     user = User(
         id=str(uuid.uuid4()),
         email="corporate@test.com",
         full_name="Test Corporate",
-        role="corporate",
+        password_hash="hashed",
+        role_id=test_roles["corporate"].id,
         is_active=True,
-        created_at=datetime.utcnow(),
     )
     db_session.add(user)
     await db_session.commit()

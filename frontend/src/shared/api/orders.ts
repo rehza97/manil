@@ -17,6 +17,13 @@ export const ordersApi = {
     return response.data;
   },
 
+  getOrderPDF: async (orderId: string) => {
+    const response = await apiClient.get(`/orders/${orderId}/pdf`, {
+      responseType: "blob",
+    });
+    return response.data;
+  },
+
   createOrder: async (data: any) => {
     const response = await apiClient.post("/orders", data);
     return response.data;
@@ -32,10 +39,11 @@ export const ordersApi = {
     return response.data;
   },
 
-  updateOrderStatus: async (orderId: string, status: string) => {
-    const response = await apiClient.put(`/orders/${orderId}/status`, {
-      status,
-    });
+  updateOrderStatus: async (
+    orderId: string,
+    data: { status: string; notes?: string }
+  ) => {
+    const response = await apiClient.post(`/orders/${orderId}/status`, data);
     return response.data;
   },
 

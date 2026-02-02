@@ -3,7 +3,7 @@
  * Displays customer profile completeness indicator
  */
 
-import { useProfileCompleteness } from "../hooks/useCustomers";
+import { useProfileCompleteness, useMyProfileCompleteness } from "../hooks/useCustomers";
 import {
   Card,
   CardContent,
@@ -17,11 +17,15 @@ import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 
 interface ProfileCompletenessProps {
-  customerId: string;
+  customerId?: string;
+  /** When true, use /customers/me/profile/completeness (for client's own profile page) */
+  useMeApi?: boolean;
 }
 
-export function ProfileCompleteness({ customerId }: ProfileCompletenessProps) {
-  const { data: completeness, isLoading, error } = useProfileCompleteness(customerId);
+export function ProfileCompleteness({ customerId, useMeApi }: ProfileCompletenessProps) {
+  const byId = useProfileCompleteness(useMeApi ? "" : (customerId ?? ""));
+  const myCompleteness = useMyProfileCompleteness(!!useMeApi);
+  const { data: completeness, isLoading, error } = useMeApi ? myCompleteness : byId;
 
   if (isLoading) {
     return (

@@ -90,7 +90,7 @@ class SettingsManager:
 
         category_settings = {}
         for setting in settings:
-            value = setting.value.get("value")
+            value = setting.value.get("value") if isinstance(setting.value, dict) else None
             category_settings[setting.key] = value
 
             # Update cache
@@ -112,7 +112,7 @@ class SettingsManager:
 
         public_settings = {}
         for setting in settings:
-            value = setting.value.get("value")
+            value = setting.value.get("value") if isinstance(setting.value, dict) else None
             public_settings[setting.key] = value
 
         return public_settings
@@ -158,7 +158,7 @@ async def get_notification_email_enabled(db: AsyncSession) -> bool:
 async def get_notification_sms_enabled(db: AsyncSession) -> bool:
     """Whether system allows sending SMS notifications (notification.sms_enabled)."""
     manager = SettingsManager(db)
-    return bool(await manager.get("notification.sms_enabled", False))
+    return bool(await manager.get("notification.sms_enabled", True))
 
 
 def _notification_events_key(event: str) -> tuple[str, str] | None:
@@ -337,6 +337,44 @@ _role_permission_cache: Dict[str, Any] = {}
 _ROLE_PERMISSION_CACHE_TTL = 60
 
 
+async def get_role_id_by_slug(db: AsyncSession, slug: str) -> Optional[Any]:
+    """
+    Get role ID by slug. Used when creating users (e.g. registration -> client role).
+    """
+    from app.modules.settings.models import Role
+    result = await db.execute(select(Role.id).where(Role.slug == slug, Role.is_active == True))
+    return result.scalar_one_or_none()
+
+
+async def get_role_permission_slugs_by_id_cached(
+    db: AsyncSession, role_id: str
+) -> Optional[set]:
+    """
+    Get permission slugs for a role by ID. Uses short TTL cache.
+    Returns None if role not found.
+    """
+    import time
+    now = time.time()
+    cache_key = f"role_perms_id:{role_id}"
+    ent = _role_permission_cache.get(cache_key)
+    if ent and (now - ent.get("_ts", 0)) < _ROLE_PERMISSION_CACHE_TTL:
+        return ent.get("slugs")
+    try:
+        from app.modules.settings.repository import RoleRepository
+        from app.modules.settings.service import RoleService
+        from uuid import UUID
+        role_repo = RoleRepository(db)
+        role = await role_repo.get_by_id(UUID(role_id))
+        if not role:
+            return None
+        svc = RoleService(db)
+        slugs = await svc.get_role_permissions(role.id, include_inherited=True)
+        _role_permission_cache[cache_key] = {"slugs": slugs, "_ts": now}
+        return slugs
+    except Exception:
+        return None
+
+
 async def get_role_permission_slugs_cached(
     db: AsyncSession, role_slug: str
 ) -> Optional[set]:
@@ -385,6 +423,8 @@ async def get_email_display_config(db: AsyncSession) -> Dict[str, Optional[str]]
     from app.config.settings import get_settings
 
     cfg = await get_email_config(db)
+    if not isinstance(cfg, dict):
+        cfg = {}
     s = get_settings()
     return {
         "from_address": cfg.get("email.from_address") or s.EMAIL_FROM,
@@ -402,9 +442,13 @@ async def get_email_smtp_config(db: AsyncSession) -> Dict[str, Any]:
     from app.config.settings import get_settings
 
     cfg = await get_email_config(db)
+    if not isinstance(cfg, dict):
+        cfg = {}
     s = get_settings()
 
     smtp_cfg = cfg.get("email.smtp_config", {})
+    if not isinstance(smtp_cfg, dict):
+        smtp_cfg = {}
     if isinstance(smtp_cfg, dict):
         port_val = smtp_cfg.get("port")
         if port_val is not None:

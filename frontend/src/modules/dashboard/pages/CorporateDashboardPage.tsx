@@ -297,7 +297,7 @@ const CorporateDashboardPage: React.FC = () => {
                       {order.customer}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {order.service} • ${order.amount}
+                      {order.service} • {formatDZD(Number(order.amount) ?? 0)}
                     </p>
                   </div>
                   <Button variant="ghost" size="sm" asChild>

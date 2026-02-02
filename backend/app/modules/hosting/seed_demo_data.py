@@ -16,7 +16,8 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.modules.auth.models import User, UserRole
+from app.modules.auth.models import User
+from app.modules.settings.models import Role
 from app.modules.hosting.models import (
     VPSPlan, VPSSubscription, SubscriptionStatus, BillingCycle,
     ContainerStatus, DNSZone, DNSRecord, DNSZoneStatus, DNSRecordType,
@@ -36,28 +37,28 @@ DEMO_USERS = [
         "email": "admin@cloudmanager.dz",
         "password": "Admin123",
         "full_name": "System Administrator",
-        "role": UserRole.ADMIN,
+        "role_slug": "admin",
         "description": "Main system administrator"
     },
     {
         "email": "demo@cloudmanager.dz",
         "password": "Demo123",
         "full_name": "Demo User",
-        "role": UserRole.CLIENT,
+        "role_slug": "client",
         "description": "Regular demo user with VPS subscription"
     },
     {
         "email": "corporate@cloudmanager.dz",
         "password": "Corp123",
         "full_name": "Corporate Demo",
-        "role": UserRole.CORPORATE,
+        "role_slug": "corporate",
         "description": "Corporate customer demo account"
     },
     {
         "email": "client2@cloudmanager.dz",
         "password": "Client123",
         "full_name": "Client Demo 2",
-        "role": UserRole.CLIENT,
+        "role_slug": "client",
         "description": "Second client demo account"
     },
 ]
@@ -321,12 +322,21 @@ async def seed_demo_users(db: AsyncSession) -> dict[str, User]:
         existing_user = result.scalar_one_or_none()
 
         if not existing_user:
+            role_query = select(Role).where(
+                Role.slug == user_data["role_slug"],
+                Role.is_active == True
+            )
+            role_result = await db.execute(role_query)
+            role = role_result.scalar_one_or_none()
+            if not role:
+                print(f"⚠️  Skipping {user_data['email']}: role '{user_data['role_slug']}' not found")
+                continue
             user = User(
                 id=str(uuid.uuid4()),
                 email=user_data["email"],
                 password_hash=get_password_hash(user_data["password"]),
                 full_name=user_data["full_name"],
-                role=user_data["role"],
+                role_id=role.id,
                 is_active=True
             )
             db.add(user)
@@ -633,7 +643,7 @@ async def seed_all_demo_data(db: AsyncSession):
 
         print("\n🔐 Demo Credentials:")
         for user_data in DEMO_USERS:
-            print(f"  {user_data['email']} / {user_data['password']} ({user_data['role'].value})")
+            print(f"  {user_data['email']} / {user_data['password']} ({user_data['role_slug']})")
 
         print("\n✅ System is ready for use!\n")
 

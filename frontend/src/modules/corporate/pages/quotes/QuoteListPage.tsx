@@ -5,7 +5,7 @@
  */
 
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { quotesApi } from "@/shared/api";
 import { Button } from "@/shared/components/ui/button";
@@ -52,6 +52,8 @@ const statusColors: Record<string, string> = {
 
 export const QuoteListPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/corporate";
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
   const [statusFilter, setStatusFilter] = useState<string>("__all__");
@@ -90,7 +92,7 @@ export const QuoteListPage: React.FC = () => {
             Manage quotes, approve, and convert to orders
           </p>
         </div>
-        <Button onClick={() => navigate("/corporate/quotes/new")}>
+        <Button onClick={() => navigate(`${basePath}/quotes/new`)}>
           <Plus className="mr-2 h-4 w-4" />
           New Quote
         </Button>
@@ -187,7 +189,7 @@ export const QuoteListPage: React.FC = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => navigate(`/corporate/quotes/${q.id}`)}
+                        onClick={() => navigate(`${basePath}/quotes/${q.id}`)}
                       >
                         <Eye className="h-4 w-4 mr-1" />
                         View
@@ -198,7 +200,7 @@ export const QuoteListPage: React.FC = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() =>
-                            navigate(`/corporate/quotes/${q.id}/approve`)
+                            navigate(`${basePath}/quotes/${q.id}/approve`)
                           }
                         >
                           <CheckCircle className="h-4 w-4 mr-1" />
@@ -210,7 +212,7 @@ export const QuoteListPage: React.FC = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() =>
-                            navigate(`/corporate/quotes/${q.id}/convert`)
+                            navigate(`${basePath}/quotes/${q.id}/convert`)
                           }
                         >
                           <FileText className="h-4 w-4 mr-1" />

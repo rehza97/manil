@@ -3,7 +3,7 @@ Invoice workflow service.
 
 Business logic for invoice status transitions, payments, and quote conversion.
 """
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from typing import Optional
 
@@ -25,7 +25,7 @@ from app.modules.quotes.models import Quote, QuoteStatus
 from app.modules.quotes.repository import QuoteRepository
 from app.modules.customers.models import Customer
 from app.infrastructure.email.service import EmailService
-from app.modules.notifications.service import user_id_by_email
+from app.modules.notifications.service import user_id_by_email, create_notification
 from app.modules.settings.service import UserNotificationPreferencesService
 from app.modules.settings.utils import notification_gate_allows
 from app.infrastructure.sms.service import SMSService
@@ -88,17 +88,18 @@ class InvoiceWorkflowService:
 
         # Send email if requested
         if send_email:
-            await self._send_invoice_email(invoice)
+            await self._send_invoice_email(invoice, sent_by_id=sent_by_id)
 
         await self.db.commit()
         return invoice
 
-    async def _send_invoice_email(self, invoice: Invoice) -> bool:
+    async def _send_invoice_email(self, invoice: Invoice, sent_by_id: Optional[str] = None) -> bool:
         """
         Send invoice by email with PDF attachment.
 
         Args:
             invoice: Invoice instance with items loaded
+            sent_by_id: User id for timeline (must exist in users; use None for system)
 
         Returns:
             True if email sent successfully
@@ -161,12 +162,12 @@ class InvoiceWorkflowService:
             db=self.db,
         )
 
-        if success:
+        if success and sent_by_id:
             await self.base_service._add_timeline_event(
                 invoice.id,
                 "email_sent",
                 f"Invoice emailed to {customer.email}",
-                "system"
+                sent_by_id,
             )
 
             if (
@@ -189,6 +190,20 @@ class InvoiceWorkflowService:
                             )
                 except Exception as e:
                     logger.warning("Invoice SMS notification failed: %s", e)
+
+            # In-app notification for invoice sent
+            try:
+                if uid:
+                    await create_notification(
+                        self.db,
+                        uid,
+                        "invoice_sent",
+                        f"Invoice {invoice.invoice_number} Sent",
+                        body=f"Invoice for {float(invoice.total_amount):.2f} DZD has been sent. Due: {due_date}",
+                        link=f"/invoices/{invoice.id}",
+                    )
+            except Exception as e:
+                logger.warning("In-app invoice sent notification failed: %s", e)
 
         return success
 
@@ -310,6 +325,23 @@ class InvoiceWorkflowService:
                             amount=payment_data.amount,
                             db=self.db,
                         )
+
+            # In-app notification for payment received
+            uid = await user_id_by_email(self.db, customer.email) if customer and customer.email else None
+            if uid:
+                try:
+                    is_fully_paid = new_paid_amount >= invoice.total_amount
+                    status_text = "fully paid" if is_fully_paid else f"partially paid ({float(payment_data.amount):.2f} DZD received)"
+                    await create_notification(
+                        self.db,
+                        uid,
+                        "invoice_payment_received",
+                        f"Payment Received - Invoice {invoice.invoice_number}",
+                        body=f"Invoice {invoice.invoice_number} is {status_text}. Thank you!",
+                        link=f"/invoices/{invoice.id}",
+                    )
+                except Exception as e:
+                    logger.warning("In-app payment received notification failed: %s", e)
         except Exception as e:
             logger.warning(
                 "Payment confirmation SMS notification failed: %s", e)
@@ -354,11 +386,11 @@ class InvoiceWorkflowService:
                 detail=f"Quote {conversion_data.quote_id} not found"
             )
 
-        # Verify quote is accepted
-        if quote.status != QuoteStatus.ACCEPTED:
+        # Verify quote is accepted/approved; allow CONVERTED so invoice+order can both be created
+        if quote.status not in (QuoteStatus.ACCEPTED, QuoteStatus.APPROVED, QuoteStatus.CONVERTED):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot convert quote with status {quote.status.value}. Quote must be accepted."
+                detail="Quote must be accepted or approved.",
             )
 
         # Check if quote already converted
@@ -368,6 +400,16 @@ class InvoiceWorkflowService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Quote {quote.quote_number} has already been converted to an invoice"
             )
+
+        # Default issue_date and due_date when not provided
+        now = datetime.now(timezone.utc)
+        issue_date = conversion_data.issue_date or now
+        if conversion_data.due_date is not None:
+            due_date = conversion_data.due_date
+        elif quote.valid_until and quote.valid_until >= now:
+            due_date = quote.valid_until
+        else:
+            due_date = issue_date + timedelta(days=30)
 
         # Create invoice from quote
         invoice_items = [
@@ -389,12 +431,14 @@ class InvoiceWorkflowService:
             discount_amount=quote.discount_amount,
             notes=conversion_data.notes,
             items=invoice_items,
-            issue_date=conversion_data.issue_date,
-            due_date=conversion_data.due_date,
+            issue_date=issue_date,
+            due_date=due_date,
         )
 
-        # Create invoice
-        invoice = await self.base_service.create(invoice_data, created_by_id)
+        # Create invoice (allow quote line items without product, e.g. setup fees)
+        invoice = await self.base_service.create(
+            invoice_data, created_by_id, allow_custom_items=True
+        )
 
         # Update quote status
         quote.status = QuoteStatus.CONVERTED

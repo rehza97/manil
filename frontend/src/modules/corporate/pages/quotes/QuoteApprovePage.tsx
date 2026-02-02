@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { quotesApi } from "@/shared/api";
 import { Button } from "@/shared/components/ui/button";
@@ -16,6 +16,8 @@ import { useToast } from "@/shared/components/ui/use-toast";
 export const QuoteApprovePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/corporate";
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [notes, setNotes] = useState("");
@@ -35,7 +37,7 @@ export const QuoteApprovePage: React.FC = () => {
         title: "Quote approved",
         description: "The quote has been approved successfully.",
       });
-      navigate(id ? `/corporate/quotes/${id}` : "/corporate/quotes");
+      navigate(id ? `${basePath}/quotes/${id}` : `${basePath}/quotes`);
     },
     onError: (e: unknown) => {
       const err = e as Error;
@@ -50,7 +52,7 @@ export const QuoteApprovePage: React.FC = () => {
   if (!id) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" onClick={() => navigate("/corporate/quotes")}>
+        <Button variant="ghost" onClick={() => navigate(`${basePath}/quotes`)}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Quotes
         </Button>
@@ -74,7 +76,7 @@ export const QuoteApprovePage: React.FC = () => {
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => navigate(`/corporate/quotes/${id}`)}
+        onClick={() => navigate(`${basePath}/quotes/${id}`)}
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Quote
@@ -111,7 +113,7 @@ export const QuoteApprovePage: React.FC = () => {
           </Button>
           <Button
             variant="outline"
-            onClick={() => navigate(`/corporate/quotes/${id}`)}
+            onClick={() => navigate(`${basePath}/quotes/${id}`)}
           >
             Cancel
           </Button>

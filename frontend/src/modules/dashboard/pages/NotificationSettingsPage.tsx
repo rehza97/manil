@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -15,6 +16,8 @@ import { useToast } from "@/shared/hooks/use-toast";
 import { clientSettingsApi } from "@/shared/api/dashboard/client/settings";
 import { corporateSettingsApi } from "@/shared/api/dashboard/corporate/settings";
 import type { NotificationPrefs } from "@/modules/settings/types";
+
+const NOTIFICATION_SETTINGS_QUERY_KEY = ["notification-settings"] as const;
 
 const DEFAULT_PREFERENCES: NotificationPrefs = {
   email: {
@@ -39,52 +42,49 @@ export const NotificationSettingsPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [notifications, setNotifications] = useState<NotificationPrefs>(DEFAULT_PREFERENCES);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const isCorporate = location.pathname.startsWith("/corporate");
   const api = isCorporate ? corporateSettingsApi : clientSettingsApi;
+  const queryKey = [...NOTIFICATION_SETTINGS_QUERY_KEY, isCorporate ? "corporate" : "client"] as const;
 
-  const fetchPreferences = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await api.getNotificationSettings();
-      if (data && typeof data === "object") {
-        setNotifications({
-          email: { ...DEFAULT_PREFERENCES.email, ...(data.email ?? {}) },
-          push: { ...DEFAULT_PREFERENCES.push, ...(data.push ?? {}) },
-          sms: { ...DEFAULT_PREFERENCES.sms, ...(data.sms ?? {}) },
-        });
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Impossible de charger les préférences de notification.");
-      toast({ title: "Erreur", description: "Impossible de charger les paramètres de notification.", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  }, [api, toast]);
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey,
+    queryFn: () => api.getNotificationSettings(),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
 
   useEffect(() => {
-    fetchPreferences();
-  }, [fetchPreferences]);
-
-  const handleSave = async () => {
-    setSaving(true);
-    setError(null);
-    try {
-      await api.updateNotificationSettings(notifications);
-      toast({ title: "Settings Saved", description: "Your notification preferences have been updated." });
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to save.";
-      setError(msg);
-      toast({ title: "Error", description: "Could not save notification settings.", variant: "destructive" });
-    } finally {
-      setSaving(false);
+    if (data && typeof data === "object") {
+      setNotifications({
+        email: { ...DEFAULT_PREFERENCES.email, ...(data.email ?? {}) },
+        push: { ...DEFAULT_PREFERENCES.push, ...(data.push ?? {}) },
+        sms: { ...DEFAULT_PREFERENCES.sms, ...(data.sms ?? {}) },
+      });
     }
+  }, [data]);
+
+  const saveMutation = useMutation({
+    mutationFn: (prefs: NotificationPrefs) => api.updateNotificationSettings(prefs),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+      toast({ title: "Settings Saved", description: "Your notification preferences have been updated." });
+    },
+    onError: (e) => {
+      const msg = e instanceof Error ? e.message : "Failed to save.";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    },
+  });
+
+  const handleSave = () => {
+    saveMutation.mutate(notifications);
   };
+
+  const loading = isLoading;
+  const saving = saveMutation.isPending;
+  const errorMessage = isError ? (error instanceof Error ? error.message : "Impossible de charger les préférences de notification.") : null;
 
   const backPath = isCorporate ? "/corporate/settings" : "/dashboard/settings";
 
@@ -113,9 +113,9 @@ export const NotificationSettingsPage: React.FC = () => {
         <p className="text-muted-foreground mt-1">
           Configurer la réception des notifications
         </p>
-        {error && (
+        {(errorMessage || saveMutation.isError) && (
           <p className="mt-2 text-sm text-destructive" role="alert">
-            {error}
+            {errorMessage ?? (saveMutation.error instanceof Error ? saveMutation.error.message : "Failed to save.")}
           </p>
         )}
       </div>

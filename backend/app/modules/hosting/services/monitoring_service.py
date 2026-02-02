@@ -29,7 +29,7 @@ from app.modules.hosting.services.cgroup_service import CgroupMonitoringService
 from app.infrastructure.email.service import EmailService
 from app.infrastructure.email import templates
 from app.infrastructure.sms.service import SMSService
-from app.modules.notifications.service import user_id_by_email
+from app.modules.notifications.service import user_id_by_email, create_notification
 from app.modules.settings.service import UserNotificationPreferencesService
 
 
@@ -555,6 +555,22 @@ class ContainerMonitoringService:
                             )
                 except Exception as e:
                     logger.warning(f"Failed to send VPS alert SMS: {e}")
+
+            # In-app notification for VPS alert
+            try:
+                uid = await user_id_by_email(self.db, customer_email)
+                if uid:
+                    current_value = alert.get('current_value', 'N/A')
+                    await create_notification(
+                        self.db,
+                        uid,
+                        f"vps_alert_{alert_type.lower().replace(' ', '_')}",
+                        f"VPS Alert: {alert_type}",
+                        body=f"[{severity.upper()}] {alert.get('message', 'Alert detected')} - Value: {current_value}, Threshold: {threshold}",
+                        link=f"/vps/subscriptions/{subscription.id}/monitoring",
+                    )
+            except Exception as e:
+                logger.warning(f"In-app VPS alert notification failed: {e}")
 
             # Update last notification time
             self._last_alert_notification[alert_key] = datetime.utcnow()

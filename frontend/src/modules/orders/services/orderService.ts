@@ -71,7 +71,10 @@ export const orderService = {
     id: string,
     data: UpdateOrderStatusDTO
   ): Promise<Order> {
-    return await ordersApi.updateOrderStatus(id, data.status);
+    return await ordersApi.updateOrderStatus(id, {
+      status: data.status,
+      notes: data.notes,
+    });
   },
 
   /**
@@ -87,6 +90,13 @@ export const orderService = {
   async getTimeline(orderId: string): Promise<OrderTimelineListResponse> {
     const response = await ordersApi.getOrderTimeline(orderId);
     return response as OrderTimelineListResponse;
+  },
+
+  /**
+   * Get order PDF as blob for download
+   */
+  async getOrderPDF(orderId: string): Promise<Blob> {
+    return await ordersApi.getOrderPDF(orderId) as Blob;
   },
 
   /**

@@ -19,6 +19,7 @@ from app.core.dependencies import get_current_user, require_permission
 from app.core.permissions import Permission
 from app.modules.auth.models import User
 from app.modules.customers.models import Customer
+from app.modules.settings.models import Role
 from app.modules.audit.models import AuditLog, AuditAction
 from app.modules.orders.models import Order, OrderStatus
 from app.modules.invoices.models import Invoice, InvoiceStatus
@@ -440,18 +441,24 @@ async def get_users_by_role(
         User counts grouped by role
     """
     result = await db.execute(
-        select(User.role, func.count(User.id))
-        .group_by(User.role)
+        select(Role.slug, func.count(User.id))
+        .select_from(User)
+        .join(Role, User.role_id == Role.id)
+        .where(User.deleted_at.is_(None))
+        .group_by(Role.slug)
     )
     role_counts = result.all()
 
     # Get active users by role (last 30 days)
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
     active_result = await db.execute(
-        select(User.role, func.count(func.distinct(AuditLog.user_id)))
-        .join(AuditLog, AuditLog.user_id == User.id)
+        select(Role.slug, func.count(func.distinct(AuditLog.user_id)))
+        .select_from(AuditLog)
+        .join(User, AuditLog.user_id == User.id)
+        .join(Role, User.role_id == Role.id)
         .where(AuditLog.created_at >= thirty_days_ago)
-        .group_by(User.role)
+        .where(User.deleted_at.is_(None))
+        .group_by(Role.slug)
     )
     active_by_role = dict(active_result.all())
 

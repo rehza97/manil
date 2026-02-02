@@ -32,7 +32,7 @@ class OrderStatus(str, Enum):
 class OrderItemBase(BaseModel):
     """Base order item schema."""
 
-    product_id: str = Field(..., description="Product ID")
+    product_id: Optional[str] = Field(None, description="Product ID (optional for fee/custom lines)")
     quantity: int = Field(..., ge=1, description="Quantity")
     unit_price: float = Field(..., gt=0, description="Unit price")
     discount_percentage: float = Field(default=0.0, ge=0.0, le=100.0)
@@ -53,6 +53,9 @@ class OrderItemResponse(OrderItemBase):
     order_id: str
     discount_amount: float
     total_price: float
+    product_name: Optional[str] = None
+    product_sku: Optional[str] = None
+    product_short_description: Optional[str] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

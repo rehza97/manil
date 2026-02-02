@@ -24,7 +24,7 @@ from app.modules.tickets.models import (
 from app.modules.customers.models import Customer
 from app.modules.customers.schemas import CustomerStatus, CustomerType
 from app.modules.auth.models import User
-from app.modules.auth.schemas import UserRole
+from app.modules.settings.models import Role
 from app.modules.tickets.services.email_parser_service import ParsedEmail, EmailParserService
 from app.modules.tickets.response_templates import TicketCategory
 
@@ -40,7 +40,7 @@ _CATEGORY_SLUG_MAP = {
 
 def _get_system_user_id(db: Session) -> Optional[str]:
     """Return first admin user id for system-created records, or None."""
-    user = db.query(User).filter(User.role == UserRole.ADMIN).first()
+    user = db.query(User).join(Role, User.role_id == Role.id).filter(Role.slug == "admin").first()
     return str(user.id) if user else None
 
 

@@ -11,14 +11,42 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Card } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
+import { useToast } from "@/shared/components/ui/use-toast";
+import { adminLogsApi } from "@/shared/api/dashboard/admin/logs";
+import { useDownloadExport } from "@/modules/reports/hooks/useReports";
 import type { AuditLogFilters } from "../types";
 
 export const AuditLogsPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<AuditLogFilters>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
+  const downloadMutation = useDownloadExport();
 
   const { data, isLoading } = useAuditLogs(page, 50, filters);
+
+  const handleExport = async (format: "csv" | "excel") => {
+    try {
+      const res = await adminLogsApi.exportAuditLogs(format);
+      await downloadMutation.mutateAsync(res.file_name);
+      toast({
+        title: "Export successful",
+        description: `Audit logs exported (${format.toUpperCase()}).`,
+      });
+    } catch (err) {
+      toast({
+        title: "Export failed",
+        description: err instanceof Error ? err.message : "Failed to export audit logs",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleSearch = () => {
     setFilters({ ...filters });
@@ -43,10 +71,18 @@ export const AuditLogsPage: React.FC = () => {
             Track all system activities and user actions
           </p>
         </div>
-        <Button variant="outline" className="flex items-center gap-2">
-          <Download className="w-4 h-4" />
-          Export Logs
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2" disabled={downloadMutation.isPending}>
+              <Download className="w-4 h-4" />
+              {downloadMutation.isPending ? "Exporting..." : "Export Logs"}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleExport("csv")}>Export CSV</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExport("excel")}>Export Excel</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Filters */}

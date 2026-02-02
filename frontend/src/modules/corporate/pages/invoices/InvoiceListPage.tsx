@@ -52,7 +52,11 @@ export const InvoiceListPage: React.FC = () => {
     navigate(`${BASE}/${invoiceId}`);
   };
 
-  const handleAction = async (action: string, invoiceId: string) => {
+  const handleAction = async (
+    action: string,
+    invoiceId: string,
+    invoice?: { invoice_number?: string }
+  ) => {
     try {
       switch (action) {
         case "send":
@@ -60,10 +64,14 @@ export const InvoiceListPage: React.FC = () => {
           toast({ title: "Success", description: "Invoice sent successfully" });
           refetch();
           break;
-        case "download":
-          await invoiceService.triggerPDFDownload(invoiceId, `invoice-${invoiceId}.pdf`);
+        case "download": {
+          const fileName = invoice?.invoice_number
+            ? `invoice-${invoice.invoice_number}.pdf`
+            : `invoice-${invoiceId}.pdf`;
+          await invoiceService.triggerPDFDownload(invoiceId, fileName);
           toast({ title: "Success", description: "Invoice PDF downloaded" });
           break;
+        }
         case "payment":
           navigate(`${BASE}/${invoiceId}/payment`);
           break;

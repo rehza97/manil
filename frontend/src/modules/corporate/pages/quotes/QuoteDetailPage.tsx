@@ -1,5 +1,5 @@
 import React from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { quotesApi } from "@/shared/api";
 import { Button } from "@/shared/components/ui/button";
@@ -30,6 +30,8 @@ function formatCurrency(n: number, currency = "DZD") {
 export const QuoteDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/corporate";
   const { toast } = useToast();
 
   const { data: quote, isLoading, error } = useQuery({
@@ -69,7 +71,7 @@ export const QuoteDetailPage: React.FC = () => {
   if (!id) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" onClick={() => navigate("/corporate/quotes")}><ArrowLeft className="mr-2 h-4 w-4" />Back to Quotes</Button>
+        <Button variant="ghost" onClick={() => navigate(`${basePath}/quotes`)}><ArrowLeft className="mr-2 h-4 w-4" />Back to Quotes</Button>
         <p className="text-slate-600">Missing quote ID.</p>
       </div>
     );
@@ -80,7 +82,7 @@ export const QuoteDetailPage: React.FC = () => {
   if (error || !q) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" onClick={() => navigate("/corporate/quotes")}><ArrowLeft className="mr-2 h-4 w-4" />Back to Quotes</Button>
+        <Button variant="ghost" onClick={() => navigate(`${basePath}/quotes`)}><ArrowLeft className="mr-2 h-4 w-4" />Back to Quotes</Button>
         <p className="text-red-600">Quote not found or failed to load.</p>
       </div>
     );
@@ -92,12 +94,12 @@ export const QuoteDetailPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/corporate/quotes")}><ArrowLeft className="mr-2 h-4 w-4" />Back to Quotes</Button>
+        <Button variant="ghost" size="sm" onClick={() => navigate(`${basePath}/quotes`)}><ArrowLeft className="mr-2 h-4 w-4" />Back to Quotes</Button>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handleDownloadPdf}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
-          {canApprove && <Button size="sm" onClick={() => navigate(`/corporate/quotes/${id}/approve`)}><CheckCircle className="mr-2 h-4 w-4" />Approve</Button>}
+          {canApprove && <Button size="sm" onClick={() => navigate(`${basePath}/quotes/${id}/approve`)}><CheckCircle className="mr-2 h-4 w-4" />Approve</Button>}
           {canConvert && (
-            <Button size="sm" onClick={() => navigate(`/corporate/quotes/${id}/convert`)}>
+            <Button size="sm" onClick={() => navigate(`${basePath}/quotes/${id}/convert`)}>
               <FileText className="mr-2 h-4 w-4" />
               Convert Quote
             </Button>

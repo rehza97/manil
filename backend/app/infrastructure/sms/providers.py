@@ -142,16 +142,22 @@ class CustomSMSProvider(SMSProvider):
         Returns:
             True if message is successfully queued, False otherwise
         """
+        logger.info(
+            "Custom SMS provider: queuing to=%s (Flutter app will poll /sms/app and send from device)",
+            to,
+        )
         try:
             async with AsyncSessionLocal() as db:
                 repo = SMSRepository(db)
                 sms_message = await repo.create_message(phone_number=to, message=message)
                 logger.info(
-                    f"✅ SMS queued for sending: id={sms_message.id}, to={to}"
+                    "SMS queued: id=%s, to=%s, status=pending (Flutter app picks up and sends)",
+                    sms_message.id,
+                    to,
                 )
                 return True
         except Exception as e:
-            logger.error(f"❌ Failed to queue SMS: {e}")
+            logger.error("Failed to queue SMS: to=%s, error=%s", to, e)
             return False
 
 
@@ -192,16 +198,6 @@ def get_sms_provider() -> SMSProvider:
 
 def get_sms_provider_for_config(config: Dict[str, Any]) -> SMSProvider:
     """
-    Build SMS provider from get_sms_config(db) result.
-    Custom -> CustomSMSProvider (forces sms/ queue -> Flutter).
-    Twilio -> TwilioProvider with DB UI keys (or env fallback).
+    Always use Custom provider so all SMS is queued and the Flutter app sends from the phone.
     """
-    provider = (config.get("provider") or "custom").strip().lower()
-    if provider == "twilio":
-        tw = config.get("twilio") or {}
-        return TwilioProvider(
-            account_sid=tw.get("account_sid") or None,
-            auth_token=tw.get("auth_token") or None,
-            from_number=tw.get("from_number") or None,
-        )
     return CustomSMSProvider()

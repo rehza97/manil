@@ -9,6 +9,7 @@ from typing import Callable
 
 from fastapi import Request, Response, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 
 from app.core.logging import logger, log_request
 from app.config.redis import get_redis
@@ -116,68 +117,78 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     return Response(status_code=204)
                 raise
 
+        async def _call_next() -> Response:
+            try:
+                return await call_next(request)
+            except RuntimeError as e:
+                if "No response returned" in str(e):
+                    return Response(status_code=204)
+                raise
+
+        # Load config (do not swallow downstream exceptions)
         try:
             limit_cfg = await get_rate_limit_cached()
             enabled = limit_cfg.get("enabled", True)
-            requests_per_minute = int(limit_cfg.get(
-                "requests_per_minute") or settings.RATE_LIMIT_PER_MINUTE or 60)
-            if not enabled:
-                try:
-                    return await call_next(request)
-                except RuntimeError as e:
-                    if "No response returned" in str(e):
-                        return Response(status_code=204)
-                    raise
+            requests_per_minute = int(
+                limit_cfg.get("requests_per_minute")
+                or settings.RATE_LIMIT_PER_MINUTE
+                or 60
+            )
+        except Exception as e:
+            logger.warning("Rate limiting skipped: config error (%s)", e)
+            return await _call_next()
 
+        if not enabled:
+            return await _call_next()
+
+        # Redis interactions should never break requests or swallow handler errors
+        try:
             redis = await get_redis()
-            if redis:
-                key = f"rate_limit:{client_ip}"
-                current_requests = await redis.incr(key)
-                if current_requests == 1:
-                    await redis.expire(key, 60)
-
-                if current_requests > requests_per_minute:
-                    logger.warning(
-                        "Rate limit exceeded for IP %s (%s requests)",
-                        client_ip, current_requests)
-                    raise HTTPException(
-                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                        detail="Rate limit exceeded. Please try again later.",
-                        headers={"Retry-After": "60"},
-                    )
-
-                try:
-                    response = await call_next(request)
-                except RuntimeError as e:
-                    if "No response returned" in str(e):
-                        return Response(status_code=204)
-                    raise
-                response.headers["X-RateLimit-Limit"] = str(
-                    requests_per_minute)
-                response.headers["X-RateLimit-Remaining"] = str(
-                    max(0, requests_per_minute - current_requests))
-                return response
-            else:
-                # Redis not available, skip rate limiting
+            if not redis:
                 logger.debug("Redis not available, skipping rate limiting")
-                try:
-                    return await call_next(request)
-                except RuntimeError as e:
-                    if "No response returned" in str(e):
-                        return Response(status_code=204)
-                    raise
+                return await _call_next()
 
+            key = f"rate_limit:{client_ip}"
+            current_requests = await redis.incr(key)
+            if current_requests == 1:
+                await redis.expire(key, 60)
+
+            if current_requests > requests_per_minute:
+                logger.warning(
+                    "Rate limit exceeded for IP %s (%s requests)",
+                    client_ip,
+                    current_requests,
+                )
+                return JSONResponse(
+                    status_code=429,
+                    content={"detail": "Rate limit exceeded. Please try again later."},
+                    headers={"Retry-After": "60"},
+                )
+
+            response = await _call_next()
+            response.headers["X-RateLimit-Limit"] = str(requests_per_minute)
+            response.headers["X-RateLimit-Remaining"] = str(
+                max(0, requests_per_minute - current_requests)
+            )
+            return response
         except HTTPException:
             raise
         except Exception as e:
-            # Log error but don't block request
-            logger.error(f"Rate limiting error: {e}")
-            try:
-                return await call_next(request)
-            except RuntimeError as re:
-                if "No response returned" in str(re):
-                    return Response(status_code=204)
-                raise
+            msg = str(e).lower()
+            if any(
+                x in msg
+                for x in (
+                    "too many connections",
+                    "connection refused",
+                    "connection pool",
+                )
+            ):
+                logger.warning(
+                    "Rate limiting skipped: Redis connection issue (%s)", e
+                )
+            else:
+                logger.warning("Rate limiting skipped: Redis error (%s)", e)
+            return await _call_next()
 
 
 class CORSHeadersMiddleware(BaseHTTPMiddleware):

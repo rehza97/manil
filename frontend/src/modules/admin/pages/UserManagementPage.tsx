@@ -13,34 +13,60 @@ import {
   UserX,
   UserCheck,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import {
   useUsers,
   useDeactivateUser,
   useActivateUser,
+  useDeleteUser,
+  useHardDeleteUser,
 } from "../hooks/useUsers";
 import { CreateUserDialog } from "../components/CreateUserDialog";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Badge } from "@/shared/components/ui/badge";
 import { Card } from "@/shared/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/shared/components/ui/alert-dialog";
 import { useToast } from "@/shared/components/ui/use-toast";
 import type { User } from "../types/user.types";
+
+type StatusFilter = "all" | "active" | "inactive" | "deleted";
 
 export const UserManagementPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
-  // Use real user endpoints
   const { data: usersData, isLoading, error } = useUsers(page, 20, {
     search: searchQuery || undefined,
+    status: statusFilter,
   });
 
   const deactivateUser = useDeactivateUser();
   const activateUser = useActivateUser();
+  const deleteUser = useDeleteUser();
+  const hardDeleteUser = useHardDeleteUser();
 
   // Log users data
   useEffect(() => {
@@ -77,6 +103,38 @@ export const UserManagementPage: React.FC = () => {
 
   const handleEditUser = (userId: string) => {
     navigate(`/admin/users/${userId}/edit`);
+  };
+
+  const handleDeleteUser = async (user: User) => {
+    try {
+      await deleteUser.mutateAsync(user.id);
+      toast({
+        title: "Success",
+        description: "User has been deleted",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.response?.data?.detail || "Failed to delete user",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleHardDeleteUser = async (user: User) => {
+    try {
+      await hardDeleteUser.mutateAsync(user.id);
+      toast({
+        title: "Success",
+        description: "User has been permanently removed",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.response?.data?.detail || "Failed to permanently delete user",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleToggleUserStatus = async (user: User) => {
@@ -157,14 +215,31 @@ export const UserManagementPage: React.FC = () => {
             <Input
               placeholder="Search users by email or name..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
               className="pl-10"
             />
           </div>
-          <Button variant="outline" disabled>
-            <Filter className="w-4 h-4 mr-2" />
-            Filters
-          </Button>
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => {
+              setStatusFilter(v as StatusFilter);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-[140px]">
+              <Filter className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="deleted">Deleted</SelectItem>
+              <SelectItem value="all">All</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </Card>
 
@@ -226,19 +301,21 @@ export const UserManagementPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge className={getRoleBadgeColor(user.role)}>
-                        {user.role}
+                      <Badge className={getRoleBadgeColor(user.role?.slug ?? "")}>
+                        {user.role?.name ?? user.role?.slug ?? "-"}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Badge
                         className={
-                          user.is_active
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
+                          user.deleted_at
+                            ? "bg-red-100 text-red-800"
+                            : user.is_active
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-800"
                         }
                       >
-                        {user.is_active ? "Active" : "Inactive"}
+                        {user.deleted_at ? "Deleted" : user.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -251,29 +328,99 @@ export const UserManagementPage: React.FC = () => {
                           size="sm"
                           onClick={() => handleEditUser(user.id)}
                           disabled={
-                            deactivateUser.isPending || activateUser.isPending
+                            deactivateUser.isPending ||
+                            activateUser.isPending ||
+                            hardDeleteUser.isPending
                           }
                           className="flex items-center gap-1"
                         >
                           <UserCheck className="w-3 h-3" />
                           Edit
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleToggleUserStatus(user)}
-                          disabled={
-                            deactivateUser.isPending || activateUser.isPending
-                          }
-                          className={`flex items-center gap-1 ${
-                            user.is_active
-                              ? "text-red-600 hover:text-red-700 hover:bg-red-50"
-                              : "text-green-600 hover:text-green-700 hover:bg-green-50"
-                          }`}
-                        >
-                          <UserX className="w-3 h-3" />
-                          {user.is_active ? "Deactivate" : "Activate"}
-                        </Button>
+                        {user.deleted_at ? (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                disabled={hardDeleteUser.isPending}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                Permanently Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Permanently Delete User</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently remove the user from the database.
+                                  This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleHardDeleteUser(user)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Permanently Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        ) : (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleToggleUserStatus(user)}
+                              disabled={
+                                deactivateUser.isPending || activateUser.isPending
+                              }
+                              className={`flex items-center gap-1 ${
+                                user.is_active
+                                  ? "text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  : "text-green-600 hover:text-green-700 hover:bg-green-50"
+                              }`}
+                            >
+                              <UserX className="w-3 h-3" />
+                              {user.is_active ? "Deactivate" : "Activate"}
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex items-center gap-1 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                  disabled={deleteUser.isPending}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  Delete
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will mark the user as deleted. They will no longer
+                                    be able to log in. Their data will remain for audit
+                                    purposes. You can permanently delete them later.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteUser(user)}
+                                    className="bg-orange-600 hover:bg-orange-700"
+                                  >
+                                    Delete User
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

@@ -30,16 +30,14 @@ settings = get_settings()
 class KYCService:
     """KYC business logic service."""
 
-    # Required documents for corporate customers
+    # Required documents for corporate customers (one document)
     REQUIRED_CORPORATE_DOCS = {
         KYCDocumentType.BUSINESS_REGISTRATION,
-        KYCDocumentType.TAX_CERTIFICATE,
     }
 
-    # Required documents for individual customers
+    # Required documents for individual customers (one document)
     REQUIRED_INDIVIDUAL_DOCS = {
         KYCDocumentType.NATIONAL_ID,
-        KYCDocumentType.PROOF_OF_ADDRESS,
     }
 
     def __init__(self, db: AsyncSession):
@@ -227,13 +225,13 @@ class KYCService:
             overall_status = "incomplete"
         elif pending > 0 or under_review > 0:
             overall_status = "pending_review"
-        elif approved >= 2:  # At least 2 documents approved
+        elif approved >= 1:  # At least 1 document approved
             overall_status = "complete"
         else:
             overall_status = "incomplete"
 
-        # Customer can be activated if they have at least 2 approved documents
-        can_activate = approved >= 2
+        # Customer can be activated if they have at least 1 approved document
+        can_activate = approved >= 1
 
         return KYCStatusSummary(
             customer_id=customer_id,

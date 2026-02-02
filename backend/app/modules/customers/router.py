@@ -67,10 +67,66 @@ async def get_my_customer(
         raise NotFoundException("Customer profile not found for this user")
     
     # Verify ownership - clients can only access their own customer data
-    if current_user.role == "client" and customer.email != current_user.email:
+    if current_user.role_slug == "client" and customer.email != current_user.email:
         raise ForbiddenException("You can only access your own customer profile")
     
     return customer
+
+
+@router.put("/me", response_model=CustomerResponse)
+async def update_my_customer(
+    customer_data: CustomerUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update current user's own customer profile (phone, address, etc.)."""
+    if not current_user.email:
+        raise NotFoundException("User email not found")
+    service = CustomerService(db)
+    customer = await service.get_by_email(current_user.email)
+    if not customer:
+        raise NotFoundException("Customer profile not found for this user")
+    if current_user.role_slug == "client" and customer.email != current_user.email:
+        raise ForbiddenException("You can only update your own customer profile")
+    return await service.update(customer.id, customer_data, updated_by=current_user.id)
+
+
+@router.get("/me/profile/completeness")
+async def get_my_profile_completeness(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get current user's own customer profile completeness (for clients)."""
+    if not current_user.email:
+        raise NotFoundException("User email not found")
+    service = CustomerService(db)
+    customer = await service.get_by_email(current_user.email)
+    if not customer:
+        raise NotFoundException("Customer profile not found for this user")
+    if current_user.role_slug == "client" and customer.email != current_user.email:
+        raise ForbiddenException("You can only access your own customer profile")
+    from app.modules.customers.profile_service import CustomerProfileService
+    profile_service = CustomerProfileService(db)
+    return await profile_service.get_profile_completeness(customer.id)
+
+
+@router.get("/me/profile/missing-fields")
+async def get_my_missing_fields(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get list of missing required fields for current user's customer profile."""
+    if not current_user.email:
+        raise NotFoundException("User email not found")
+    service = CustomerService(db)
+    customer = await service.get_by_email(current_user.email)
+    if not customer:
+        raise NotFoundException("Customer profile not found for this user")
+    if current_user.role_slug == "client" and customer.email != current_user.email:
+        raise ForbiddenException("You can only access your own customer profile")
+    from app.modules.customers.profile_service import CustomerProfileService
+    profile_service = CustomerProfileService(db)
+    return await profile_service.get_missing_fields(customer.id)
 
 
 @router.get("/statistics", response_model=CustomerStatistics)

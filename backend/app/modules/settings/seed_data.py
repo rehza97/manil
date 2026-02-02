@@ -294,6 +294,8 @@ SYSTEM_ROLES = [
             "invoices:view",
             # Notifications - view own
             "notifications:view",
+            # SMS - view and send (test SMS, queue visibility)
+            "sms:view", "sms:send",
         ]
     },
     {
@@ -319,6 +321,8 @@ SYSTEM_ROLES = [
             "reports:view",
             # Notifications
             "notifications:view", "notifications:manage", "notifications:send",
+            # SMS - view and send (test SMS, queue visibility)
+            "sms:view", "sms:send",
         ]
     },
 ]
@@ -513,7 +517,7 @@ SYSTEM_SETTINGS = [
     },
     {
         "key": "notification.sms_enabled",
-        "value": {"value": False, "type": "boolean"},
+        "value": {"value": True, "type": "boolean"},
         "category": "notification",
         "description": "Enable SMS notifications system-wide",
         "is_public": False,

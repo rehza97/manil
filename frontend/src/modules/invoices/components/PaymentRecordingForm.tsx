@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -60,8 +61,10 @@ export const PaymentRecordingForm: React.FC<PaymentRecordingFormProps> = ({
   onSuccess,
 }) => {
   const { toast } = useToast();
+  const location = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const maxAmount = invoiceTotal - paidAmount;
+  const isClientView = !location.pathname.startsWith("/admin");
 
   const form = useForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),
@@ -72,6 +75,20 @@ export const PaymentRecordingForm: React.FC<PaymentRecordingFormProps> = ({
       payment_notes: "",
     },
   });
+
+  // For clients: lock amount to balance due and date to today when modal opens
+  useEffect(() => {
+    if (open && isClientView) {
+      const today = new Date().toISOString().split("T")[0];
+      form.reset({
+        amount: maxAmount,
+        payment_method: form.getValues("payment_method"),
+        payment_date: today,
+        payment_notes: form.getValues("payment_notes"),
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only run when open/isClientView/maxAmount change
+  }, [open, isClientView, maxAmount]);
 
   const handleSubmit = async (data: PaymentFormData) => {
     if (data.amount > maxAmount) {
@@ -136,6 +153,8 @@ export const PaymentRecordingForm: React.FC<PaymentRecordingFormProps> = ({
                       min="0.01"
                       max={maxAmount}
                       step="0.01"
+                      disabled={isClientView}
+                      readOnly={isClientView}
                       onChange={(e) => field.onChange(Number(e.target.value))}
                     />
                   </FormControl>
@@ -186,7 +205,12 @@ export const PaymentRecordingForm: React.FC<PaymentRecordingFormProps> = ({
                 <FormItem>
                   <FormLabel>Date du paiement</FormLabel>
                   <FormControl>
-                    <Input {...field} type="date" />
+                    <Input
+                      {...field}
+                      type="date"
+                      disabled={isClientView}
+                      readOnly={isClientView}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -64,13 +64,27 @@ export const useUpdateUser = () => {
 };
 
 /**
- * Delete user mutation hook
+ * Delete user mutation hook (soft delete)
  */
 export const useDeleteUser = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (userId: string) => userService.deleteUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+  });
+};
+
+/**
+ * Hard delete user mutation hook (permanent deletion). User must be soft-deleted first.
+ */
+export const useHardDeleteUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => userService.hardDeleteUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },

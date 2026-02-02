@@ -52,10 +52,19 @@ class Invoice(Base):
 
     # Link to VPS subscription (optional - invoice can be created without VPS subscription)
     vps_subscription_id: Mapped[str | None] = mapped_column(
-        String(36), 
-        ForeignKey("vps_subscriptions.id"), 
-        nullable=True, 
+        String(36),
+        ForeignKey("vps_subscriptions.id"),
+        nullable=True,
         index=True
+    )
+
+    # Link to order (optional - invoice created from validated order)
+    order_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("orders.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        unique=True,
     )
 
     # Customer information
@@ -67,10 +76,15 @@ class Invoice(Base):
 
     # Status
     status: Mapped[InvoiceStatus] = mapped_column(
-        SQLEnum(InvoiceStatus),
+        SQLEnum(
+            InvoiceStatus,
+            name="invoicestatus",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
         default=InvoiceStatus.DRAFT,
         nullable=False,
-        index=True
+        index=True,
     )
 
     # Financial information
@@ -107,8 +121,13 @@ class Invoice(Base):
         nullable=False
     )
     payment_method: Mapped[PaymentMethod | None] = mapped_column(
-        SQLEnum(PaymentMethod),
-        nullable=True
+        SQLEnum(
+            PaymentMethod,
+            name="paymentmethod",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=True,
     )
 
     # Dates
@@ -140,6 +159,7 @@ class Invoice(Base):
     customer = relationship("Customer", back_populates="invoices")
     quote = relationship("Quote", foreign_keys=[quote_id])
     vps_subscription = relationship("VPSSubscription", foreign_keys=[vps_subscription_id])
+    order = relationship("Order", foreign_keys=[order_id])
     items = relationship("InvoiceItem", back_populates="invoice", cascade="all, delete-orphan")
     timeline_events = relationship("InvoiceTimeline", back_populates="invoice", cascade="all, delete-orphan")
     created_by = relationship("User", foreign_keys=[created_by_id])

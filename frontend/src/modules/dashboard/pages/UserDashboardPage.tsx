@@ -232,7 +232,7 @@ const UserDashboardPage: React.FC = () => {
                       {order.service}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      ${order.amount} • {new Date(order.created_at).toLocaleDateString()}
+                      {formatDZD(Number(order.amount) ?? 0)} • {new Date(order.created_at).toLocaleDateString()}
                     </p>
                   </div>
                   <Button variant="ghost" size="sm" asChild>

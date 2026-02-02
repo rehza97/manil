@@ -267,11 +267,11 @@ class OrderItem(Base):
         doc="Reference to order",
     )
 
-    # Product Reference
-    product_id: Mapped[str] = mapped_column(
+    # Product Reference (nullable for fee/custom quote lines, e.g. setup fee)
+    product_id: Mapped[Optional[str]] = mapped_column(
         String(36),
         ForeignKey("products.id", ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
         index=True,
         doc="Reference to product",
     )
@@ -327,6 +327,19 @@ class OrderItem(Base):
 
     # Relationships
     order = relationship("Order", back_populates="items")
+    product = relationship("Product", foreign_keys=[product_id])
+
+    @property
+    def product_name(self) -> Optional[str]:
+        return self.product.name if self.product else None
+
+    @property
+    def product_sku(self) -> Optional[str]:
+        return self.product.sku if self.product else None
+
+    @property
+    def product_short_description(self) -> Optional[str]:
+        return self.product.short_description if self.product else None
 
     def __repr__(self) -> str:
         return f"<OrderItem {self.product_id} x{self.quantity}>"

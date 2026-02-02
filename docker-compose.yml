@@ -154,6 +154,8 @@ services:
       - DEBUG=${DEBUG:-True}
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      # Rate limiting (increase for testing, default 3 per hour)
+      - REGISTRATION_RATE_LIMIT_REQUESTS=${REGISTRATION_RATE_LIMIT_REQUESTS:-1000}
       # CoreDNS Configuration
       - COREDNS_ZONES_DIR=/app/coredns/zones
       - COREDNS_CONFIG_DIR=/app/coredns
@@ -290,7 +292,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: cloudmanager-flower
-    command: ["sh", "-c", "celery -A app.core.celery_app flower --port=5555 --basic_auth=$$FLOWER_BASIC_AUTH"]
+    # Run without basic_auth so no login prompt on localhost:5555
+    command: ["sh", "-c", "celery -A app.core.celery_app flower --port=5555"]
     volumes:
       - ./backend:/app
       - logs_data:/app/logs
@@ -307,8 +310,6 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
-      # Flower basic auth (set FLOWER_BASIC_AUTH in production)
-      - FLOWER_BASIC_AUTH=${FLOWER_BASIC_AUTH:-admin:admin}
     ports:
       - "5555:5555"
     networks:

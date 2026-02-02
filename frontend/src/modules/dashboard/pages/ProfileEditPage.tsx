@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/modules/auth";
 import { useUpdateProfile } from "@/modules/auth/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -15,25 +16,59 @@ import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { ArrowLeft, Save } from "lucide-react";
 import { useToast } from "@/shared/hooks/use-toast";
+import { customerService } from "@/modules/customers/services/customerService";
 
 const ProfileEditPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const updateProfile = useUpdateProfile();
 
-  const [formData, setFormData] = useState({
-    name: user?.full_name || "",
-    email: user?.email || "",
-    phone: user?.phone || "",
-    address: user?.address || "",
-    city: user?.city || "",
-    state: user?.state || "",
-    postal_code: user?.postal_code || "",
-    country: user?.country || "",
-    company_name: user?.company_name || "",
-    tax_id: user?.tax_id || "",
+  const { data: customer, isSuccess: customerLoaded } = useQuery({
+    queryKey: ["customers", "me"],
+    queryFn: () => customerService.getMyCustomer(),
+    enabled: !!user?.email,
   });
+
+  const updateMyCustomer = useMutation({
+    mutationFn: (data: Parameters<typeof customerService.updateMyCustomer>[0]) =>
+      customerService.updateMyCustomer(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers", "me"] });
+    },
+  });
+
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    postal_code: "",
+    country: "",
+    company_name: "",
+    tax_id: "",
+  });
+
+  useEffect(() => {
+    if (!user) return;
+    if (!customerLoaded) return;
+    const c = customer as Record<string, string | undefined> | null | undefined;
+    setFormData({
+      name: user.full_name || "",
+      email: user.email || "",
+      phone: c?.phone ?? "",
+      address: c?.address ?? "",
+      city: c?.city ?? "",
+      state: c?.state ?? "",
+      postal_code: c?.postal_code ?? c?.postalCode ?? "",
+      country: c?.country ?? "",
+      company_name: c?.company_name ?? c?.companyName ?? "",
+      tax_id: c?.tax_id ?? c?.taxId ?? "",
+    });
+  }, [user, customerLoaded, customer]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -46,10 +81,20 @@ const ProfileEditPage: React.FC = () => {
     e.preventDefault();
 
     try {
-      await updateProfile.mutateAsync({
-        full_name: formData.name,
-        phone: formData.phone || undefined,
-      });
+      await updateProfile.mutateAsync({ full_name: formData.name });
+
+      if (customer) {
+        await updateMyCustomer.mutateAsync({
+          phone: formData.phone || undefined,
+          address: formData.address || undefined,
+          city: formData.city || undefined,
+          state: formData.state || undefined,
+          postal_code: formData.postal_code || undefined,
+          country: formData.country || undefined,
+          company_name: formData.company_name || undefined,
+          tax_id: formData.tax_id || undefined,
+        });
+      }
 
       toast({
         title: "Profil mis à jour",
@@ -57,14 +102,17 @@ const ProfileEditPage: React.FC = () => {
       });
 
       navigate("/dashboard/profile");
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Échec de la mise à jour du profil. Veuillez réessayer.";
       toast({
         title: "Erreur",
-        description: error.message || "Échec de la mise à jour du profil. Veuillez réessayer.",
+        description: message,
         variant: "destructive",
       });
     }
   };
+
+  const isPending = updateProfile.isPending || updateMyCustomer.isPending;
 
   if (!user) {
     return (
@@ -252,13 +300,13 @@ const ProfileEditPage: React.FC = () => {
             type="button"
             variant="outline"
             onClick={() => navigate("/dashboard/profile")}
-            disabled={updateProfile.isPending}
+            disabled={isPending}
           >
             Annuler
           </Button>
-          <Button type="submit" disabled={updateProfile.isPending}>
+          <Button type="submit" disabled={isPending}>
             <Save className="h-4 w-4 mr-2" />
-            {updateProfile.isPending ? "Enregistrement…" : "Enregistrer"}
+            {isPending ? "Enregistrement…" : "Enregistrer"}
           </Button>
         </div>
       </form>

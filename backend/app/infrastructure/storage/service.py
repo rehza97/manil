@@ -63,6 +63,28 @@ class StorageService:
         # Return relative path from base storage path
         return str(file_path.relative_to(self.base_path))
 
+    def upload_file(
+        self,
+        file_content: bytes,
+        file_path: str,
+        content_type: Optional[str] = None,
+    ) -> str:
+        """
+        Save file to storage at the given relative path.
+
+        Args:
+            file_content: File content as bytes
+            file_path: Relative path (e.g. tickets/{ticket_id}/{filename})
+            content_type: MIME type (optional, for future use)
+
+        Returns:
+            Relative path to saved file
+        """
+        full_path = self.base_path / file_path
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        full_path.write_bytes(file_content)
+        return file_path
+
     def delete_file(self, relative_path: str) -> bool:
         """
         Delete a file from storage.

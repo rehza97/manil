@@ -43,6 +43,12 @@ export const TemplateListPage: React.FC = () => {
           <p className="text-gray-600 mt-1">
             Manage response templates for quick replies to tickets
           </p>
+          <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
+            This page lets you create and manage canned replies. Use templates to speed up
+            ticket responses: agents can insert a template into a reply and variables like
+            {` {{customer_name}}`} or {`{{ticket_id}}`} are replaced with real data. Search or filter
+            by category to find a template; use the actions menu to view, edit, or delete.
+          </p>
         </div>
         <Button onClick={() => navigate('/admin/tickets/templates/create')}>
           <Plus className="h-4 w-4 mr-2" />

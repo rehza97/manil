@@ -5,7 +5,7 @@ Uses Pydantic V2 for data validation.
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
 
 
 class UserRole(str, Enum):
@@ -45,7 +45,7 @@ class UserBase(BaseModel):
 
     email: EmailStr
     full_name: str = Field(..., min_length=2, max_length=255)
-    role: UserRole = Field(default=UserRole.CLIENT)
+    role: str = Field(default="client", description="Role slug (admin, corporate, client)")
 
 
 class UserCreate(UserBase):
@@ -71,6 +71,31 @@ class UserResponse(UserBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("role", mode="before")
+    @classmethod
+    def coerce_role_to_slug(cls, v):
+        if hasattr(v, "slug"):
+            return v.slug
+        return v
+
+    @classmethod
+    def model_validate(cls, obj, **kwargs):
+        """Override to extract role slug from User.role_rel."""
+        if hasattr(obj, "role_slug"):
+            # Build dict with role as slug for User (dynamic roles)
+            data = {
+                "id": obj.id,
+                "email": obj.email,
+                "full_name": obj.full_name,
+                "role": obj.role_slug,
+                "is_active": obj.is_active,
+                "is_2fa_enabled": obj.is_2fa_enabled,
+                "created_at": obj.created_at,
+                "updated_at": obj.updated_at,
+            }
+            return cls(**data)
+        return super().model_validate(obj, **kwargs)
 
 
 class Enable2FAResponse(BaseModel):

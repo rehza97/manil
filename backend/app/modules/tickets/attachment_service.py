@@ -146,7 +146,7 @@ class TicketAttachmentService:
             storage_path = f"tickets/{ticket_id}/{unique_filename}"
 
             # Store file
-            file_url = await self.storage_service.upload_file(
+            file_url = self.storage_service.upload_file(
                 file_content=file_content,
                 file_path=storage_path,
                 content_type=mime_type,

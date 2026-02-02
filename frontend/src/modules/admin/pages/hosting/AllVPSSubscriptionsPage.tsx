@@ -9,8 +9,11 @@ import { useNavigate } from "react-router-dom";
 import {
   useAllVPSSubscriptions,
   useMonitoringOverview,
+  useSuspendSubscription,
+  useReactivateSubscription,
+  useTerminateSubscription,
 } from "@/modules/hosting/hooks";
-import { ResourceGauge } from "@/modules/hosting/components";
+import { ResourceGauge, SubscriptionActionsMenu } from "@/modules/hosting/components";
 import {
   Table,
   TableBody,
@@ -26,6 +29,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
 import {
   Card,
   CardContent,
@@ -46,17 +55,28 @@ import {
   Search,
   Download,
   Eye,
+  Pencil,
   AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import { formatDZD } from "@/shared/utils/formatters";
 import { formatDateSafe } from "@/shared/utils/formatters";
 import type { SubscriptionStatus } from "@/modules/hosting/types";
 import { useExportReport, useDownloadExport } from "@/modules/reports/hooks/useReports";
 import { useToast } from "@/shared/components/ui/use-toast";
+import { CreateSubscriptionDialog } from "./CreateSubscriptionDialog";
+
+const ADMIN_VPS_BASE = "/admin/hosting";
 
 export const AllVPSSubscriptionsPage: React.FC = () => {
   const navigate = useNavigate();
+  const [createOpen, setCreateOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const [actioningId, setActioningId] = useState<string | null>(null);
+
+  const suspendMutation = useSuspendSubscription();
+  const reactivateMutation = useReactivateSubscription();
+  const terminateMutation = useTerminateSubscription();
   const [statusFilter, setStatusFilter] = useState<SubscriptionStatus | "all">(
     "all"
   );
@@ -66,14 +86,42 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
     data: subscriptionsData,
     isLoading,
     error,
+    refetch: refetchSubscriptions,
   } = useAllVPSSubscriptions({
     page,
     page_size: 20,
     status: statusFilter === "all" ? undefined : statusFilter,
   });
 
-  const { data: overview, isLoading: overviewLoading } =
+  const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } =
     useMonitoringOverview();
+
+  const handleRefresh = () => {
+    refetchSubscriptions();
+    refetchOverview();
+  };
+
+  const handleSuspend = (subId: string, reason: string) => {
+    setActioningId(subId);
+    suspendMutation
+      .mutateAsync({ subscriptionId: subId, reason })
+      .then(() => refetchSubscriptions())
+      .finally(() => setActioningId(null));
+  };
+  const handleReactivate = (subId: string) => {
+    setActioningId(subId);
+    reactivateMutation
+      .mutateAsync(subId)
+      .then(() => refetchSubscriptions())
+      .finally(() => setActioningId(null));
+  };
+  const handleTerminate = (subId: string, removeVolumes: boolean) => {
+    setActioningId(subId);
+    terminateMutation
+      .mutateAsync({ subscriptionId: subId, removeVolumes })
+      .then(() => refetchSubscriptions())
+      .finally(() => setActioningId(null));
+  };
 
   const subscriptions = subscriptionsData?.items || [];
 
@@ -122,23 +170,19 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
   const exportMutation = useExportReport();
   const downloadMutation = useDownloadExport();
 
-  // Export handler
-  const handleExportVPS = async () => {
+  // Export handler (csv or excel)
+  const handleExportVPS = async (format: "csv" | "excel") => {
     try {
-      // Request export creation
       const exportResponse = await exportMutation.mutateAsync({
         report_type: "vps",
-        format: "csv",
-        filters: {}, // Can add date filters later if needed
+        format,
+        filters: {},
       });
-      
-      // Download the file
       await downloadMutation.mutateAsync(exportResponse.file_name);
-      
-      // Show success notification
+      const ext = format === "excel" ? "xlsx" : "csv";
       toast({
         title: "Export successful",
-        description: "VPS subscriptions exported successfully",
+        description: `VPS subscriptions exported (${ext.toUpperCase()}).`,
       });
     } catch (error) {
       console.error("Export failed:", error);
@@ -163,16 +207,43 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            className="flex items-center gap-2"
-            onClick={handleExportVPS}
-            disabled={exportMutation.isPending || downloadMutation.isPending}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleRefresh}
+            disabled={isLoading || overviewLoading}
+            title="Refresh data"
           >
-            <Download className="w-4 h-4" />
-            {exportMutation.isPending || downloadMutation.isPending ? "Exporting..." : "Export CSV"}
+            <RefreshCw
+              className={`h-4 w-4 ${isLoading || overviewLoading ? "animate-spin" : ""}`}
+            />
           </Button>
-          <Button className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2"
+                disabled={exportMutation.isPending || downloadMutation.isPending}
+              >
+                <Download className="w-4 h-4" />
+                {exportMutation.isPending || downloadMutation.isPending
+                  ? "Exporting..."
+                  : "Export"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExportVPS("csv")}>
+                Export CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportVPS("excel")}>
+                Export Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            className="flex items-center gap-2"
+            onClick={() => setCreateOpen(true)}
+          >
             <Plus className="w-4 h-4" />
             Create Subscription
           </Button>
@@ -380,18 +451,47 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              navigate(
-                                `/admin/hosting/subscriptions/${subscription.id}`
-                              )
-                            }
-                          >
-                            <Eye className="w-4 h-4 mr-1" />
-                            View
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                navigate(
+                                  `${ADMIN_VPS_BASE}/subscriptions/${subscription.id}`
+                                )
+                              }
+                              title="View details"
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              View
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                navigate(
+                                  `${ADMIN_VPS_BASE}/subscriptions/${subscription.id}`
+                                )
+                              }
+                              title="Edit / Manage"
+                            >
+                              <Pencil className="w-4 h-4 mr-1" />
+                              Edit
+                            </Button>
+                            <SubscriptionActionsMenu
+                              subscription={subscription as import("@/modules/hosting/types").VPSSubscription}
+                              onSuspend={(reason) =>
+                                handleSuspend(subscription.id, reason)
+                              }
+                              onReactivate={() =>
+                                handleReactivate(subscription.id)
+                              }
+                              onTerminate={(removeVolumes) =>
+                                handleTerminate(subscription.id, removeVolumes)
+                              }
+                              isLoading={actioningId === subscription.id}
+                            />
+                          </div>
                         </TableCell>
                       </TableRow>
                     )
@@ -434,6 +534,12 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      <CreateSubscriptionDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onSuccess={() => refetchSubscriptions()}
+      />
     </div>
   );
 };

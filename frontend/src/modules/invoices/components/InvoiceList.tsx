@@ -25,7 +25,7 @@ import { formatCurrency } from "@/shared/utils/formatters";
 interface InvoiceListProps {
   invoices: Invoice[];
   onSelectInvoice?: (invoiceId: string) => void;
-  onAction?: (action: string, invoiceId: string) => void;
+  onAction?: (action: string, invoiceId: string, invoice?: Invoice) => void;
   /** Base path for invoice routes (e.g. /dashboard/invoices or /corporate/invoices). Default: /dashboard/invoices */
   basePath?: string;
 }
@@ -38,10 +38,13 @@ const statusColors: Record<InvoiceStatus, string> = {
   [InvoiceStatus.CANCELLED]: "bg-slate-100 text-slate-800",
 };
 
+const DEFAULT_BASE_PATH = "/dashboard/invoices";
+
 export const InvoiceList: React.FC<InvoiceListProps> = ({
   invoices,
   onSelectInvoice,
   onAction,
+  basePath = DEFAULT_BASE_PATH,
 }) => {
   const navigate = useNavigate();
 
@@ -144,7 +147,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                       {invoice.status === InvoiceStatus.DRAFT && (
                         <DropdownMenuItem
                           onClick={() => {
-                            onAction?.("edit", invoice.id);
+                            onAction?.("edit", invoice.id, invoice);
                             navigate(`${basePath}/${invoice.id}/edit`);
                           }}
                         >
@@ -156,7 +159,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                         invoice.status !== InvoiceStatus.PAID &&
                         invoice.status !== InvoiceStatus.CANCELLED && (
                           <DropdownMenuItem
-                            onClick={() => onAction?.("send", invoice.id)}
+                            onClick={() => onAction?.("send", invoice.id, invoice)}
                           >
                             <Send className="h-4 w-4 mr-2" />
                             Envoyer
@@ -165,14 +168,14 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                       {invoice.status !== InvoiceStatus.PAID &&
                         invoice.status !== InvoiceStatus.CANCELLED && (
                           <DropdownMenuItem
-                            onClick={() => onAction?.("payment", invoice.id)}
+                            onClick={() => onAction?.("payment", invoice.id, invoice)}
                           >
                             <DollarSign className="h-4 w-4 mr-2" />
                             Enregistrer un paiement
                           </DropdownMenuItem>
                         )}
                       <DropdownMenuItem
-                        onClick={() => onAction?.("download", invoice.id)}
+                        onClick={() => onAction?.("download", invoice.id, invoice)}
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Télécharger PDF
@@ -180,7 +183,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                       {invoice.status !== InvoiceStatus.PAID &&
                         invoice.status !== InvoiceStatus.CANCELLED && (
                           <DropdownMenuItem
-                            onClick={() => onAction?.("cancel", invoice.id)}
+                            onClick={() => onAction?.("cancel", invoice.id, invoice)}
                             className="text-red-600"
                           >
                             <X className="h-4 w-4 mr-2" />

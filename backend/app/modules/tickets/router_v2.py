@@ -39,13 +39,13 @@ async def create_ticket(
 ) -> TicketResponse:
     """Create a new support ticket with permission validation."""
     # ✅ FIXED: Added permission validation
-    if current_user.role == "client":
+    if current_user.role_slug == "client":
         # Clients can only create tickets for themselves
         if ticket_data.customer_id != current_user.id:
             raise ForbiddenException(
                 "Clients can only create tickets for themselves"
             )
-    elif current_user.role == "corporate":
+    elif current_user.role_slug == "corporate":
         # TODO: Verify customer belongs to company (when company model ready)
         pass
     # Admins can create for anyone
@@ -67,7 +67,7 @@ async def list_my_tickets(
     current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
 ) -> TicketListResponse:
     """List current user's tickets (for customers)."""
-    if current_user.role != "client":
+    if current_user.role_slug != "client":
         raise ForbiddenException("Only customers can use this endpoint")
 
     service = TicketService(db)
@@ -105,7 +105,7 @@ async def list_tickets(
     service = TicketService(db)
 
     # ✅ FIXED: Added role-based filtering
-    if current_user.role == "client":
+    if current_user.role_slug == "client":
         # Clients can only see their own tickets
         customer_id = current_user.id
 
@@ -146,9 +146,9 @@ async def get_ticket(
     ticket = await service.get_ticket(ticket_id)
 
     # ✅ FIXED: Added ownership check
-    if current_user.role == "client" and ticket.customer_id != current_user.id:
+    if current_user.role_slug == "client" and ticket.customer_id != current_user.id:
         raise ForbiddenException("You can only view your own tickets")
-    elif current_user.role == "corporate":
+    elif current_user.role_slug == "corporate":
         # TODO: Verify ticket is for customer in their company
         pass
 
@@ -176,7 +176,7 @@ async def update_ticket(
     ticket = await service.get_ticket(ticket_id)
 
     # ✅ FIXED: Added permission checks
-    if current_user.role == "client":
+    if current_user.role_slug == "client":
         # Clients can only update their own tickets
         if ticket.customer_id != current_user.id:
             raise ForbiddenException("Cannot update other customers' tickets")

@@ -4,11 +4,12 @@
  * Dialog form for creating new users
  */
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useCreateUser } from "../hooks/useUsers";
+import { useRoles } from "../hooks/useRoles";
 import { Button } from "@/shared/components/ui/button";
 import {
   Dialog,
@@ -36,13 +37,13 @@ import {
 } from "@/shared/components/ui/select";
 import { useToast } from "@/shared/components/ui/use-toast";
 import { Loader2 } from "lucide-react";
-import type { UserRole } from "@/modules/auth/types";
+import type { UserCreate } from "../types";
 
 const createUserSchema = z.object({
   email: z.string().email("Invalid email address"),
   full_name: z.string().min(2, "Full name must be at least 2 characters"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  role: z.enum(["admin", "corporate", "client"] as const),
+  role_id: z.string().min(1, "Role is required"),
   is_active: z.boolean().default(true),
 });
 
@@ -61,6 +62,8 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
 }) => {
   const { toast } = useToast();
   const createUser = useCreateUser();
+  const { data: rolesData } = useRoles(1, 100, { is_active: true });
+  const roles = rolesData?.roles ?? [];
 
   const form = useForm<CreateUserFormValues>({
     resolver: zodResolver(createUserSchema),
@@ -68,14 +71,28 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       email: "",
       full_name: "",
       password: "",
-      role: "client",
+      role_id: "",
       is_active: true,
     },
   });
 
+  useEffect(() => {
+    if (roles.length > 0 && !form.getValues("role_id")) {
+      const defaultRoleId = roles.find((r) => r.slug === "client")?.id ?? roles[0]?.id ?? "";
+      form.setValue("role_id", defaultRoleId);
+    }
+  }, [roles, form]);
+
   const onSubmit = async (data: CreateUserFormValues) => {
     try {
-      await createUser.mutateAsync(data);
+      const payload: UserCreate = {
+        email: data.email,
+        full_name: data.full_name,
+        password: data.password,
+        role_id: data.role_id,
+        is_active: data.is_active,
+      };
+      await createUser.mutateAsync(payload);
       toast({
         title: "Success",
         description: "User created successfully",
@@ -171,15 +188,13 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
 
               <FormField
                 control={form.control}
-                name="role"
+                name="role_id"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium">Role</FormLabel>
                     <Select
-                      onValueChange={(value) =>
-                        field.onChange(value as UserRole)
-                      }
-                      defaultValue={field.value}
+                      onValueChange={field.onChange}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger className="h-10">
@@ -187,9 +202,11 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="corporate">Corporate</SelectItem>
-                        <SelectItem value="client">Client</SelectItem>
+                        {roles.map((role) => (
+                          <SelectItem key={role.id} value={role.id}>
+                            {role.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

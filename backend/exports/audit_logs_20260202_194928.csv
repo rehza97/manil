@@ -1,0 +1,23 @@
+timestamp,user_email,user_id,action,resource_type,resource_id,ip_address,success,description,request_method,request_path
+2026-02-02T05:30:48.524050+00:00,admin@cloudmanager.dz,b4ac16f9-9d97-42c1-bec7-e1fbe5f73d51,update,customer,ea86b115-c70a-4090-8812-c5bc43a2135e,,True,Customer status changed from pending to active. Reason: dfghfdgh,,
+2026-02-02T05:10:00.056255+00:00,fetho0@hotmail.com,d20b8aae-16ab-4707-a829-64786049465b,user_create,user,,172.18.0.1,True,New user registered: fetho0@hotmail.com,POST,/api/v1/auth/register
+2026-02-02T05:01:46.482179+00:00,fethotebib3@gmail.com,871a012e-54de-4136-bbce-acedae499bbe,login_failed,auth,,172.18.0.1,False,Failed login attempt for fethotebib3@gmail.com - invalid password (attempt 2/5),POST,/api/v1/auth/login
+2026-02-02T05:01:18.067150+00:00,fethotebib3@gmail.com,871a012e-54de-4136-bbce-acedae499bbe,login_failed,auth,,172.18.0.1,False,Failed login attempt for fethotebib3@gmail.com - invalid password (attempt 1/5),POST,/api/v1/auth/login
+2026-02-02T04:59:06.931158+00:00,fetho0@hotmail.comm,0fef80e5-f1e4-4d11-afca-40b5a774745f,user_create,user,,172.18.0.1,True,New user registered: fetho0@hotmail.comm,POST,/api/v1/auth/register
+2026-02-02T04:33:02.034123+00:00,fetho@hotmail.com,,user_create,user,,172.18.0.1,True,New user registered: fetho@hotmail.com,POST,/api/v1/auth/register
+2026-02-02T04:21:13.074867+00:00,fetho0@hotmail.com,,user_create,user,,172.18.0.1,True,New user registered: fetho0@hotmail.com,POST,/api/v1/auth/register
+2026-02-02T04:20:11.473721+00:00,azesq@gmail.com,f7f2ffe7-e13d-4c8a-acb1-b364b295f8c9,login_success,auth,,172.18.0.1,True,Successful login for azesq@gmail.com,POST,/api/v1/auth/login
+2026-02-02T04:20:11.361306+00:00,azesq@gmail.com,f7f2ffe7-e13d-4c8a-acb1-b364b295f8c9,password_change,user,,172.18.0.1,True,Password hash migrated from bcrypt to Argon2,POST,/api/v1/auth/login
+2026-02-02T03:32:38.687165+00:00,admin@cloudmanager.dz,b4ac16f9-9d97-42c1-bec7-e1fbe5f73d51,login_success,auth,,172.18.0.1,True,Successful login for admin@cloudmanager.dz (2FA verified),POST,/api/v1/auth/2fa/complete-login
+2026-02-02T03:32:14.209835+00:00,admin@cloudmanager.dz,b4ac16f9-9d97-42c1-bec7-e1fbe5f73d51,password_change,user,,172.18.0.1,True,Password hash migrated from bcrypt to Argon2,POST,/api/v1/auth/login
+2026-02-02T03:31:46.386249+00:00,admin@cloudmanager.dz,b4ac16f9-9d97-42c1-bec7-e1fbe5f73d51,login_failed,auth,,172.18.0.1,False,Failed login attempt for admin@cloudmanager.dz - invalid password (attempt 1/5),POST,/api/v1/auth/login
+2026-01-28T01:47:15.636488+00:00,admin@cloudmanager.dz,b4ac16f9-9d97-42c1-bec7-e1fbe5f73d51,login_success,auth,,172.18.0.1,True,Successful login for admin@cloudmanager.dz (2FA verified),POST,/api/v1/auth/2fa/complete-login
+2026-01-28T01:46:55.773158+00:00,admin@cloudmanager.dz,b4ac16f9-9d97-42c1-bec7-e1fbe5f73d51,password_change,user,,172.18.0.1,True,Password hash migrated from bcrypt to Argon2,POST,/api/v1/auth/login
+2026-01-26T02:38:36.924992+00:00,admin@cloudmanager.dz,b4ac16f9-9d97-42c1-bec7-e1fbe5f73d51,login_success,auth,,172.18.0.1,True,Successful login for admin@cloudmanager.dz (2FA verified),POST,/api/v1/auth/2fa/complete-login
+2026-01-26T02:38:27.467977+00:00,admin@cloudmanager.dz,b4ac16f9-9d97-42c1-bec7-e1fbe5f73d51,password_change,user,,172.18.0.1,True,Password hash migrated from bcrypt to Argon2,POST,/api/v1/auth/login
+2026-01-26T02:38:25.078075+00:00,admin@cloudmanager.dz,b4ac16f9-9d97-42c1-bec7-e1fbe5f73d51,password_change,user,,172.18.0.1,True,Password hash migrated from bcrypt to Argon2,POST,/api/v1/auth/login
+2026-01-26T02:37:15.776606+00:00,admin@cloudmanager.dz,b4ac16f9-9d97-42c1-bec7-e1fbe5f73d51,password_change,user,,172.18.0.1,True,Password hash migrated from bcrypt to Argon2,POST,/api/v1/auth/login
+2026-01-26T02:24:40.369673+00:00,admin@cloudmanager.dz,b4ac16f9-9d97-42c1-bec7-e1fbe5f73d51,password_change,user,,172.18.0.1,True,Password hash migrated from bcrypt to Argon2,POST,/api/v1/auth/login
+2026-01-26T02:17:45.907804+00:00,admin@cloudmanager.dz,b4ac16f9-9d97-42c1-bec7-e1fbe5f73d51,password_change,user,,172.18.0.1,True,Password hash migrated from bcrypt to Argon2,POST,/api/v1/auth/login
+2026-01-26T02:16:00.332966+00:00,admin@cloudmanager.dz,b4ac16f9-9d97-42c1-bec7-e1fbe5f73d51,login_failed,auth,,172.18.0.1,False,Failed login attempt for admin@cloudmanager.dz - invalid password (attempt 2/5),POST,/api/v1/auth/login
+2026-01-26T02:15:25.335800+00:00,admin@cloudmanager.dz,b4ac16f9-9d97-42c1-bec7-e1fbe5f73d51,login_failed,auth,,172.18.0.1,False,Failed login attempt for admin@cloudmanager.dz - invalid password (attempt 1/5),POST,/api/v1/auth/login

@@ -93,8 +93,8 @@ class InvoicePaymentRequest(BaseModel):
 class InvoiceConvertFromQuoteRequest(BaseModel):
     """Schema for converting quote to invoice."""
     quote_id: str
-    issue_date: datetime
-    due_date: datetime
+    issue_date: Optional[datetime] = None
+    due_date: Optional[datetime] = None
     notes: Optional[str] = None
 
 
@@ -106,7 +106,8 @@ class InvoiceResponse(InvoiceBase):
     """Schema for invoice responses."""
     id: str
     invoice_number: str
-    quote_id: Optional[str]
+    quote_id: Optional[str] = None
+    order_id: Optional[str] = None
     customer_id: str
     status: InvoiceStatus
 
