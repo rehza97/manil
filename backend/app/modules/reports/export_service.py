@@ -22,7 +22,7 @@ except ImportError:
 try:
     from weasyprint import HTML as WeasyHTML
     HTML_PDF_ENGINE = "weasyprint"
-except ImportError:
+except (ImportError, OSError):
     try:
         from xhtml2pdf import pisa
         HTML_PDF_ENGINE = "xhtml2pdf"
@@ -51,7 +51,8 @@ class ExportService:
         """
         self.export_dir = Path(export_dir)
         self.export_dir.mkdir(parents=True, exist_ok=True)
-        templates_dir = Path(__file__).resolve().parent.parent.parent / "templates"
+        templates_dir = Path(__file__).resolve(
+        ).parent.parent.parent / "templates"
         self._jinja_env = Environment(
             loader=FileSystemLoader(str(templates_dir)),
             autoescape=select_autoescape(["html", "xml"]),
@@ -135,7 +136,8 @@ class ExportService:
             Dictionary with file information
         """
         if not EXCEL_AVAILABLE:
-            raise ImportError("openpyxl is required for Excel export. Install with: pip install openpyxl")
+            raise ImportError(
+                "openpyxl is required for Excel export. Install with: pip install openpyxl")
 
         if headers is None and not data:
             raise ValueError("No data to export and no headers provided")
@@ -155,7 +157,8 @@ class ExportService:
         ws.title = sheet_name
 
         # Style for header row
-        header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+        header_fill = PatternFill(
+            start_color="4F81BD", end_color="4F81BD", fill_type="solid")
         header_font = Font(bold=True, color="FFFFFF")
         header_alignment = Alignment(horizontal="center", vertical="center")
 
@@ -261,7 +264,8 @@ class ExportService:
                 spaceAfter=12
             )
             elements.append(Paragraph("Summary", summary_style))
-            elements.append(Paragraph(f"Total Records: {len(data)}", meta_style))
+            elements.append(
+                Paragraph(f"Total Records: {len(data)}", meta_style))
             elements.append(Spacer(1, 20))
 
         # Determine headers
@@ -302,7 +306,8 @@ class ExportService:
             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 1), (-1, -1), 8),
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F0F0F0')]),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1),
+             [colors.white, colors.HexColor('#F0F0F0')]),
         ]))
 
         elements.append(table)
@@ -352,11 +357,13 @@ class ExportService:
                 generated_at = datetime.now(timezone.utc).strftime(
                     "%Y-%m-%d %H:%M:%S UTC"
                 )
-                timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+                timestamp = datetime.now(
+                    timezone.utc).strftime("%Y%m%d_%H%M%S")
                 file_name = f"{filename}_{timestamp}.pdf"
                 file_path = self.export_dir / file_name
 
-                template = self._jinja_env.get_template("reports/report_pdf.html")
+                template = self._jinja_env.get_template(
+                    "reports/report_pdf.html")
                 html_content = template.render(
                     title=title,
                     generated_at=generated_at,

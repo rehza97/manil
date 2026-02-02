@@ -17,6 +17,7 @@ import type {
   ContainerStats,
   TimelineEvent,
   MonitoringOverview,
+  PerVPSCurrentStats,
   Alert,
   CreateVPSRequestBody,
   UpgradeSubscriptionBody,
@@ -561,6 +562,14 @@ export const vpsService = {
       params.severity = severity;
     }
     const response = await apiClient.get("/hosting/admin/monitoring/alerts", { params });
+    return response.data;
+  },
+
+  /**
+   * Get current CPU/memory/storage stats for all active VPS (for chart).
+   */
+  async getCurrentStatsAll(): Promise<PerVPSCurrentStats[]> {
+    const response = await apiClient.get("/hosting/admin/monitoring/current-stats");
     return response.data;
   },
 

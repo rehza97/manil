@@ -1,0 +1,31 @@
+{% extends "reports/base_report.html" %}
+{% block summary %}
+  <div class="executive-summary">
+    <div class="kpi-card">
+      <div class="kpi-value">{{ total_resolved or 0 }}</div>
+      <div class="kpi-label">Total Resolved</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ with_first_response or 0 }}</div>
+      <div class="kpi-label">With First Response</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ response_rate | format_percentage if response_rate is defined else '0%' }}</div>
+      <div class="kpi-label">Response Rate</div>
+    </div>
+  </div>
+{% endblock %}
+{% block data %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr><th>Metric</th><th>Value</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Total Resolved Tickets</td><td>{{ total_resolved or 0 }}</td></tr>
+        <tr><td>With First Response</td><td>{{ with_first_response or 0 }}</td></tr>
+        <tr><td>Response Rate (%)</td><td>{{ response_rate | format_percentage if response_rate is defined else '0%' }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

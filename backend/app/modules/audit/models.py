@@ -48,6 +48,7 @@ class AuditAction(str, Enum):
     SECURITY_ALERT = "security_alert"
     DATA_EXPORT = "data_export"
     CONFIG_CHANGE = "config_change"
+    API_REQUEST = "api_request"
 
 
 class AuditLog(Base):

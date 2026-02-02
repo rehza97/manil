@@ -17,6 +17,7 @@ import {
   BillingCycle,
   ProvisioningType,
 } from "@/modules/products/types/product.types";
+import { formatDZD } from "@/shared/utils/formatters";
 
 export const ProductManagementPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);

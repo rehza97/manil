@@ -134,7 +134,8 @@ class UserManagementService:
         from sqlalchemy import select
         from app.modules.settings.models import Role
         role_result = await self.db.execute(
-            select(Role).where(Role.id == user_data.role_id, Role.is_active == True)
+            select(Role).where(
+                Role.id == user_data.role_id, Role.is_active == True)
         )
         role = role_result.scalar_one_or_none()
         if not role:
@@ -176,7 +177,8 @@ class UserManagementService:
                 type="welcome",
                 title=f"Welcome to {app_name}",
                 body="Your account has been created. Complete your profile or explore the dashboard.",
-                link=_welcome_notification_link(user.role_rel.slug if user.role_rel else "client"),
+                link=_welcome_notification_link(
+                    user.role_rel.slug if user.role_rel else "client"),
             )
         except Exception as e:
             logger.warning(
@@ -213,7 +215,8 @@ class UserManagementService:
             from sqlalchemy import select
             from app.modules.settings.models import Role
             role_result = await self.db.execute(
-                select(Role).where(Role.id == user_data.role_id, Role.is_active == True)
+                select(Role).where(
+                    Role.id == user_data.role_id, Role.is_active == True)
             )
             if not role_result.scalar_one_or_none():
                 raise HTTPException(

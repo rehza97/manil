@@ -1,0 +1,29 @@
+{% extends "reports/base_report.html" %}
+{% block summary %}
+  {% if metrics %}
+  <div class="executive-summary">
+    {% for key, value in metrics.items() %}
+    <div class="kpi-card">
+      <div class="kpi-value">{{ value }}</div>
+      <div class="kpi-label">{{ key }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endblock %}
+{% block data %}
+  {% if metrics %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr><th>KPI</th><th>Value</th></tr>
+      </thead>
+      <tbody>
+        {% for key, value in metrics.items() %}
+        <tr><td>{{ key }}</td><td>{{ value }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+{% endblock %}

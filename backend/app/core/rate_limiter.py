@@ -101,7 +101,8 @@ def rate_limit(requests: int, window: int, key_prefix: str):
         async def login(request: Request, ...):
             ...
     """
-    limiter = RateLimiter(requests=requests, window=window, key_prefix=key_prefix)
+    limiter = RateLimiter(
+        requests=requests, window=window, key_prefix=key_prefix)
 
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
@@ -133,7 +134,8 @@ password_reset_rate_limit = rate_limit(
 )
 
 # 2FA verification: 5 attempts per 5 minutes (300 seconds)
-two_fa_rate_limit = rate_limit(requests=5, window=300, key_prefix="auth_2fa_verify")
+two_fa_rate_limit = rate_limit(
+    requests=5, window=300, key_prefix="auth_2fa_verify")
 
 # Registration: configurable via REGISTRATION_RATE_LIMIT_REQUESTS (default 3 per hour)
 _reg_limit = get_settings().REGISTRATION_RATE_LIMIT_REQUESTS

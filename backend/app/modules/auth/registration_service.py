@@ -54,7 +54,8 @@ class RegistrationService:
         # Check if email already exists
         existing_user = db.query(User).filter(User.email == data.email).first()
         if existing_user:
-            raise ConflictException(f"Email {data.email} is already registered")
+            raise ConflictException(
+                f"Email {data.email} is already registered")
 
         existing_registration = db.query(RegistrationRequest).filter(
             and_(
@@ -64,7 +65,8 @@ class RegistrationService:
             )
         ).first()
         if existing_registration:
-            raise ConflictException(f"Registration for {data.email} is already in progress")
+            raise ConflictException(
+                f"Registration for {data.email} is already in progress")
 
         try:
             # Hash the password
@@ -84,7 +86,8 @@ class RegistrationService:
             db.flush()  # Get the ID without committing
 
             # Generate and create email verification token
-            token = RegistrationService._generate_verification_token(db, registration.id)
+            token = RegistrationService._generate_verification_token(
+                db, registration.id)
 
             db.commit()
 
@@ -148,7 +151,8 @@ class RegistrationService:
         ).first()
 
         if not registration:
-            raise NotFoundException(f"Registration request not found: {data.registration_id}")
+            raise NotFoundException(
+                f"Registration request not found: {data.registration_id}")
 
         if registration.is_expired():
             registration.status = RegistrationStatus.EXPIRED
@@ -170,7 +174,8 @@ class RegistrationService:
             raise BadRequestException("Invalid verification token")
 
         if not email_token.is_valid():
-            raise BadRequestException("Verification token has expired or been used")
+            raise BadRequestException(
+                "Verification token has expired or been used")
 
         try:
             # Mark email as verified
@@ -218,7 +223,8 @@ class RegistrationService:
         ).first()
 
         if not registration:
-            raise NotFoundException(f"Registration request not found: {registration_id}")
+            raise NotFoundException(
+                f"Registration request not found: {registration_id}")
 
         if registration.is_expired():
             registration.status = RegistrationStatus.EXPIRED
@@ -226,16 +232,19 @@ class RegistrationService:
             raise BadRequestException("Registration request has expired")
 
         if not registration.email_verified:
-            raise BadRequestException("Email must be verified before account activation")
+            raise BadRequestException(
+                "Email must be verified before account activation")
 
         if registration.account_activated:
             raise BadRequestException("Account has already been activated")
 
         try:
             # Look up client role
-            client_role = db.query(Role).filter(Role.slug == "client", Role.is_active == True).first()
+            client_role = db.query(Role).filter(
+                Role.slug == "client", Role.is_active == True).first()
             if not client_role:
-                raise BadRequestException("System role 'client' not found. Run seed_settings.py.")
+                raise BadRequestException(
+                    "System role 'client' not found. Run seed_settings.py.")
             # Create User account with the password provided during registration
             user = User(
                 email=registration.email,
@@ -305,7 +314,8 @@ class RegistrationService:
         ).first()
 
         if not registration:
-            raise NotFoundException(f"Registration request not found: {registration_id}")
+            raise NotFoundException(
+                f"Registration request not found: {registration_id}")
 
         if registration.is_expired():
             registration.status = RegistrationStatus.EXPIRED
@@ -327,11 +337,13 @@ class RegistrationService:
                     token.used_at = datetime.utcnow()
 
             # Generate new token
-            new_token = RegistrationService._generate_verification_token(db, registration_id)
+            new_token = RegistrationService._generate_verification_token(
+                db, registration_id)
 
             db.commit()
 
-            logger.info(f"Resent verification email for registration: {registration_id}")
+            logger.info(
+                f"Resent verification email for registration: {registration_id}")
 
             return registration, new_token
 
@@ -363,7 +375,8 @@ class RegistrationService:
         ).first()
 
         if not registration:
-            raise NotFoundException(f"Registration request not found: {registration_id}")
+            raise NotFoundException(
+                f"Registration request not found: {registration_id}")
 
         try:
             registration.status = RegistrationStatus.CANCELLED
@@ -398,7 +411,8 @@ class RegistrationService:
         ).first()
 
         if not registration:
-            raise NotFoundException(f"Registration request not found: {registration_id}")
+            raise NotFoundException(
+                f"Registration request not found: {registration_id}")
 
         return registration
 
@@ -432,6 +446,7 @@ class RegistrationService:
             query = query.filter(RegistrationRequest.email.ilike(f"%{email}%"))
 
         total = query.count()
-        registrations = query.order_by(RegistrationRequest.created_at.desc()).offset(skip).limit(limit).all()
+        registrations = query.order_by(
+            RegistrationRequest.created_at.desc()).offset(skip).limit(limit).all()
 
         return registrations, total

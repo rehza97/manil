@@ -10,6 +10,7 @@ from typing import Optional
 
 import asyncpg
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import engine, Base, AsyncSessionLocal
@@ -18,6 +19,20 @@ from app.modules.auth.models import User
 from app.core.security import get_password_hash
 
 settings = get_settings()
+
+
+def _is_connection_error(exc: BaseException) -> bool:
+    """True if the exception indicates DB connection lost or refused (e.g. during stack restart)."""
+    if isinstance(exc, OSError) and getattr(exc, "errno", None) == 111:
+        return True
+    if type(exc).__name__ in ("ConnectionDoesNotExistError", "ConnectionRefusedError"):
+        return True
+    msg = str(exc).lower()
+    if "connection" in msg and ("refused" in msg or "closed" in msg or "does not exist" in msg):
+        return True
+    if isinstance(exc, DBAPIError) and exc.orig is not None:
+        return _is_connection_error(exc.orig)
+    return False
 
 
 async def check_database_exists(database_name: str) -> bool:
@@ -212,6 +227,25 @@ async def initialize_database() -> bool:
     if not await create_tables():
         return False
 
+    try:
+        await _run_seeds()
+    except BaseException as e:
+        if _is_connection_error(e):
+            print(
+                "\n❌ Database initialization failed: database connection lost or refused. "
+                "This can happen during a stack restart. Ensure PostgreSQL is running and try again.\n"
+            )
+            raise RuntimeError(
+                "Database connection lost or refused during initialization"
+            ) from e
+        raise
+
+    print("\n✅ Database initialization completed successfully!\n")
+    return True
+
+
+async def _run_seeds() -> None:
+    """Run all seed steps. Raises on connection errors so caller can return False."""
     # Seed permissions and roles first (admin user needs admin role)
     print("🔐 Seeding default permissions and roles...")
     async with AsyncSessionLocal() as db:
@@ -274,5 +308,72 @@ async def initialize_database() -> bool:
             import traceback
             traceback.print_exc()
 
-    print("\n✅ Database initialization completed successfully!\n")
-    return True
+    # Seeding production-like report data (customers, quotes, orders, invoices, VPS, tickets, audit, metrics)
+    print("📊 Seeding production-like report data...")
+    order_ids: list[str] = []
+    vps_subscription_ids: list[str] = []
+    container_pairs: list[tuple[str, str]] = []
+
+    async with AsyncSessionLocal() as db:
+        try:
+            from app.modules.customers.seed_data import seed_production_customers
+            await seed_production_customers(db)
+            print("  ✅ Production customers")
+        except Exception as e:
+            print(f"  ⚠️  Production customers: {e}")
+
+    async with AsyncSessionLocal() as db:
+        try:
+            from app.modules.quotes.seed_data import seed_production_quotes
+            await seed_production_quotes(db)
+            print("  ✅ Production quotes")
+        except Exception as e:
+            print(f"  ⚠️  Production quotes: {e}")
+
+    async with AsyncSessionLocal() as db:
+        try:
+            from app.modules.orders.seed_data import seed_production_orders
+            order_ids = await seed_production_orders(db)
+            print("  ✅ Production orders")
+        except Exception as e:
+            print(f"  ⚠️  Production orders: {e}")
+
+    async with AsyncSessionLocal() as db:
+        try:
+            from app.modules.hosting.seed_production_data import seed_production_vps
+            vps_subscription_ids, container_pairs = await seed_production_vps(db)
+            print("  ✅ Production VPS subscriptions")
+        except Exception as e:
+            print(f"  ⚠️  Production VPS: {e}")
+
+    async with AsyncSessionLocal() as db:
+        try:
+            from app.modules.invoices.seed_data import seed_production_invoices
+            await seed_production_invoices(db, order_ids, vps_subscription_ids)
+            print("  ✅ Production invoices")
+        except Exception as e:
+            print(f"  ⚠️  Production invoices: {e}")
+
+    async with AsyncSessionLocal() as db:
+        try:
+            from app.modules.tickets.seed_production_data import seed_production_tickets
+            await seed_production_tickets(db)
+            print("  ✅ Production tickets")
+        except Exception as e:
+            print(f"  ⚠️  Production tickets: {e}")
+
+    async with AsyncSessionLocal() as db:
+        try:
+            from app.modules.audit.seed_data import seed_production_audit_logs
+            await seed_production_audit_logs(db)
+            print("  ✅ Production audit logs")
+        except Exception as e:
+            print(f"  ⚠️  Production audit logs: {e}")
+
+    async with AsyncSessionLocal() as db:
+        try:
+            from app.modules.hosting.seed_production_data import seed_container_metrics
+            await seed_container_metrics(db, container_pairs)
+            print("  ✅ Container metrics")
+        except Exception as e:
+            print(f"  ⚠️  Container metrics: {e}")

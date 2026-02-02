@@ -1,0 +1,32 @@
+{% extends "reports/base_report.html" %}
+{% block summary %}
+  <div class="executive-summary">
+    <div class="kpi-card">
+      <div class="kpi-value">{{ total_quotes or 0 }}</div>
+      <div class="kpi-label">Total Quotes</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ converted_quotes or 0 }}</div>
+      <div class="kpi-label">Converted</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ conversion_rate | format_percentage if conversion_rate is defined else '0%' }}</div>
+      <div class="kpi-label">Conversion Rate</div>
+    </div>
+  </div>
+{% endblock %}
+{% block data %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr><th>Metric</th><th>Value</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Total Quotes</td><td>{{ total_quotes or 0 }}</td></tr>
+        <tr><td>Converted Quotes</td><td>{{ converted_quotes or 0 }}</td></tr>
+        <tr><td>Orders from Quotes</td><td>{{ orders_from_quotes or 0 }}</td></tr>
+        <tr><td>Conversion Rate (%)</td><td>{{ conversion_rate | format_percentage if conversion_rate is defined else '0%' }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

@@ -35,7 +35,8 @@ router = APIRouter(prefix="/tickets", tags=["tickets"])
 async def create_ticket(
     ticket_data: TicketCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.TICKETS_CREATE)),
+    current_user: User = Depends(
+        require_permission(Permission.TICKETS_CREATE)),
 ) -> TicketResponse:
     """Create a new support ticket with permission validation."""
     # ✅ FIXED: Added permission validation
@@ -169,7 +170,8 @@ async def update_ticket(
     ticket_id: str,
     ticket_data: TicketUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.TICKETS_CREATE)),
+    current_user: User = Depends(
+        require_permission(Permission.TICKETS_CREATE)),
 ) -> TicketResponse:
     """Update ticket details (limited fields)."""
     service = TicketService(db)
@@ -196,7 +198,8 @@ async def update_ticket(
 async def delete_ticket(
     ticket_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.TICKETS_DELETE)),
+    current_user: User = Depends(
+        require_permission(Permission.TICKETS_DELETE)),
 ) -> None:
     """Delete (soft delete) ticket."""
     service = TicketService(db)
@@ -233,7 +236,8 @@ async def assign_ticket(
     ticket_id: str,
     assignment: TicketAssignment,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.TICKETS_ASSIGN)),
+    current_user: User = Depends(
+        require_permission(Permission.TICKETS_ASSIGN)),
 ) -> TicketResponse:
     """Assign ticket to user with validation."""
     service = TicketService(db)
@@ -253,7 +257,8 @@ async def transfer_ticket(
     ticket_id: str,
     transfer: TicketTransfer,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.TICKETS_ASSIGN)),
+    current_user: User = Depends(
+        require_permission(Permission.TICKETS_ASSIGN)),
 ) -> TicketResponse:
     """Transfer ticket to another user."""
     service = TicketService(db)

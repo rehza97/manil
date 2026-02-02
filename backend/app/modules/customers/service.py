@@ -63,7 +63,8 @@ class CustomerService:
         """Get customer by ID."""
         customer = await self.repository.get_by_id(customer_id)
         if not customer:
-            raise NotFoundException(f"Customer with ID {customer_id} not found")
+            raise NotFoundException(
+                f"Customer with ID {customer_id} not found")
         return customer
 
     async def get_by_email(self, email: str) -> Optional[Customer]:
@@ -80,23 +81,29 @@ class CustomerService:
         - Validate tax_id format if provided
         """
         # #region agent log
-        import json, os, time
+        import json
+        import os
+        import time
         log_path = '/tmp/debug.log'
         dump_data = customer_data.model_dump()
         try:
             with open(log_path, 'a') as f:
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"D","location":"service.py:65","message":"Service received from router","data":{"customer_type":str(customer_data.customer_type),"customer_type_type":str(type(customer_data.customer_type)),"customer_type_value":customer_data.customer_type.value if hasattr(customer_data.customer_type,'value') else None,"model_dump_customer_type":dump_data.get('customer_type'),"model_dump_customer_type_type":str(type(dump_data.get('customer_type'))) if dump_data.get('customer_type') else None},"timestamp":int(time.time()*1000)})+'\n')
-        except: pass
+                f.write(json.dumps({"sessionId": "debug-session", "runId": "run1", "hypothesisId": "D", "location": "service.py:65", "message": "Service received from router", "data": {"customer_type": str(customer_data.customer_type), "customer_type_type": str(type(customer_data.customer_type)), "customer_type_value":
+                        customer_data.customer_type.value if hasattr(customer_data.customer_type, 'value') else None, "model_dump_customer_type": dump_data.get('customer_type'), "model_dump_customer_type_type": str(type(dump_data.get('customer_type'))) if dump_data.get('customer_type') else None}, "timestamp": int(time.time()*1000)})+'\n')
+        except:
+            pass
         # #endregion
         # Check if email already exists
         existing = await self.repository.get_by_email(customer_data.email)
         if existing:
-            raise ConflictException(f"Customer with email {customer_data.email} already exists")
+            raise ConflictException(
+                f"Customer with email {customer_data.email} already exists")
 
         # Validate corporate customer requirements
         if customer_data.customer_type == CustomerType.CORPORATE:
             if not customer_data.company_name:
-                raise ValidationException("Company name is required for corporate customers")
+                raise ValidationException(
+                    "Company name is required for corporate customers")
 
         # Create customer
         customer = await self.repository.create(customer_data, created_by)
@@ -115,18 +122,21 @@ class CustomerService:
                     exclude_id=customer_id
                 )
                 if exists:
-                    raise ConflictException(f"Customer with email {customer_data.email} already exists")
+                    raise ConflictException(
+                        f"Customer with email {customer_data.email} already exists")
 
             # Validate corporate requirements
             updated_type = customer_data.customer_type or customer.customer_type
             updated_company = customer_data.company_name if customer_data.company_name is not None else customer.company_name
             if updated_type == CustomerType.CORPORATE and not updated_company:
-                raise ValidationException("Company name is required for corporate customers")
+                raise ValidationException(
+                    "Company name is required for corporate customers")
 
             # Update customer
             return await self.repository.update(customer, customer_data, updated_by)
         except Exception as e:
-            logger.error(f"Failed to update customer {customer_id}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to update customer {customer_id}: {e}", exc_info=True)
             raise
 
     async def delete(self, customer_id: str, deleted_by: str) -> None:
@@ -134,9 +144,11 @@ class CustomerService:
         try:
             customer = await self.get_by_id(customer_id)
             await self.repository.delete(customer, deleted_by)
-            logger.info(f"Customer {customer_id} soft deleted by user {deleted_by}")
+            logger.info(
+                f"Customer {customer_id} soft deleted by user {deleted_by}")
         except Exception as e:
-            logger.error(f"Failed to delete customer {customer_id}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to delete customer {customer_id}: {e}", exc_info=True)
             raise
 
     async def change_status(
@@ -148,41 +160,41 @@ class CustomerService:
     ) -> Customer:
         """
         Change customer status with validation and audit logging.
-        
+
         Args:
             customer_id: Customer ID
             new_status: New status to transition to
             reason: Reason for status change (required)
             updated_by: User ID making the change
-            
+
         Returns:
             Updated customer instance
         """
         customer = await self.get_by_id(customer_id)
         old_status = customer.status
-        
+
         # Validate transition
         validate_status_transition(old_status, new_status, reason)
-        
+
         # Check KYC requirements if needed
         if new_status == CustomerStatus.ACTIVE:
             await check_kyc_requirements(self.db, customer_id, new_status)
-        
+
         # Update status
         update_data = CustomerUpdate(status=new_status)
         result = await self.repository.update(customer, update_data, updated_by)
-        
+
         # Log to audit system (async)
         try:
             from app.modules.audit.repository import AuditRepository
             from app.modules.audit.schemas import AuditLogCreate
             from sqlalchemy import select
             from app.modules.auth.models import User
-            
+
             # Get user info if available
             user_result = await self.db.execute(select(User).where(User.id == updated_by))
             user = user_result.scalar_one_or_none()
-            
+
             # AuditRepository accepts both Session and AsyncSession
             # The async methods work with AsyncSession
             audit_repo = AuditRepository(self.db)
@@ -200,8 +212,9 @@ class CustomerService:
             await audit_repo.create(audit_data)
         except Exception as e:
             logger.warning(f"Failed to log status change to audit: {e}")
-        
-        logger.info(f"Customer {customer_id} status changed from {old_status.value} to {new_status.value} by {updated_by}")
+
+        logger.info(
+            f"Customer {customer_id} status changed from {old_status.value} to {new_status.value} by {updated_by}")
         return result
 
     async def activate(self, customer_id: str, updated_by: str, reason: str = "Customer activated") -> Customer:
@@ -233,5 +246,6 @@ class CustomerService:
                 inactive=inactive,
             )
         except Exception as e:
-            logger.error(f"Failed to get customer statistics: {e}", exc_info=True)
+            logger.error(
+                f"Failed to get customer statistics: {e}", exc_info=True)
             raise

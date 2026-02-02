@@ -203,7 +203,8 @@ class InvoiceWorkflowService:
                         link=f"/invoices/{invoice.id}",
                     )
             except Exception as e:
-                logger.warning("In-app invoice sent notification failed: %s", e)
+                logger.warning(
+                    "In-app invoice sent notification failed: %s", e)
 
         return success
 
@@ -341,7 +342,8 @@ class InvoiceWorkflowService:
                         link=f"/invoices/{invoice.id}",
                     )
                 except Exception as e:
-                    logger.warning("In-app payment received notification failed: %s", e)
+                    logger.warning(
+                        "In-app payment received notification failed: %s", e)
         except Exception as e:
             logger.warning(
                 "Payment confirmation SMS notification failed: %s", e)

@@ -300,7 +300,8 @@ async def record_payment(
     if current_user.role_slug == "client":
         user_customer_id = await get_customer_id_for_user(db, current_user)
         if not user_customer_id or str(invoice.customer_id) != str(user_customer_id):
-            raise ForbiddenException("You can only record payments on your own invoices.")
+            raise ForbiddenException(
+                "You can only record payments on your own invoices.")
 
     workflow = InvoiceWorkflowService(db)
     return await workflow.record_payment(invoice_id, payment_data, recorded_by_id=current_user.id)

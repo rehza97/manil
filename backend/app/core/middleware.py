@@ -2,6 +2,7 @@
 Custom middleware for the FastAPI application.
 Includes logging, rate limiting, CSRF protection, and request tracking.
 """
+import asyncio
 import time
 import uuid
 import secrets
@@ -13,10 +14,65 @@ from starlette.responses import JSONResponse
 
 from app.core.logging import logger, log_request
 from app.config.redis import get_redis
+from app.config.database import AsyncSessionLocal
 from app.config.settings import get_settings
 from app.modules.settings.utils import get_rate_limit_cached
+from app.modules.audit.models import AuditLog, AuditAction
+from app.modules.system.models import ApiRequestLog
+from app.modules.system.request_log_utils import normalize_request_path
 
 settings = get_settings()
+
+API_REQUEST_LOG_PREFIX = "/api/v1/"
+AUDIT_EXCLUDE_PATH_SUBSTRINGS = ("/health",)
+
+
+async def _record_api_request(
+    path: str,
+    method: str,
+    status_code: int,
+    duration_ms: float,
+) -> None:
+    """Write one API request to api_request_logs (fire-and-forget)."""
+    try:
+        normalized = normalize_request_path(path)
+        async with AsyncSessionLocal() as session:
+            log = ApiRequestLog(
+                request_path=normalized,
+                request_method=method,
+                status_code=status_code,
+                duration_ms=duration_ms,
+            )
+            session.add(log)
+            await session.commit()
+    except Exception as e:
+        logger.debug("API request log write skipped: %s", e)
+
+
+async def _record_audit_api_request(
+    path: str,
+    method: str,
+    status_code: int,
+    duration_ms: float,
+) -> None:
+    """Write one API request to audit_logs (fire-and-forget)."""
+    if any(exc in path for exc in AUDIT_EXCLUDE_PATH_SUBSTRINGS):
+        return
+    try:
+        async with AsyncSessionLocal() as session:
+            entry = AuditLog(
+                action=AuditAction.API_REQUEST,
+                resource_type="api",
+                description=f"{method} {path} -> {status_code}",
+                request_path=path,
+                request_method=method,
+                success=status_code < 400,
+                extra_data={"duration_ms": duration_ms, "status_code": status_code},
+            )
+            session.add(entry)
+            await session.commit()
+    except Exception as e:
+        logger.debug("Audit API request log write skipped: %s", e)
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
@@ -61,12 +117,33 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         response.headers["X-Process-Time"] = str(process_time)
 
         # Log request details
+        path_str = str(request.url.path)
+        process_time_ms = process_time * 1000
         log_request(
             request.method,
-            str(request.url.path),
+            path_str,
             response.status_code,
-            process_time * 1000  # Convert to milliseconds
+            process_time_ms,
         )
+
+        # Record API requests for performance metrics and audit (fire-and-forget)
+        if path_str.startswith(API_REQUEST_LOG_PREFIX):
+            asyncio.create_task(
+                _record_api_request(
+                    path_str,
+                    request.method,
+                    response.status_code,
+                    process_time_ms,
+                )
+            )
+            asyncio.create_task(
+                _record_audit_api_request(
+                    path_str,
+                    request.method,
+                    response.status_code,
+                    process_time_ms,
+                )
+            )
 
         return response
 
@@ -161,7 +238,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 )
                 return JSONResponse(
                     status_code=429,
-                    content={"detail": "Rate limit exceeded. Please try again later."},
+                    content={
+                        "detail": "Rate limit exceeded. Please try again later."},
                     headers={"Retry-After": "60"},
                 )
 

@@ -1,13 +1,11 @@
 /**
- * Reports Page
+ * Advanced Reports Page
  *
- * Admin page for generating and viewing system reports.
- * Uses real APIs (users, activity, security, performance) and export.
+ * Comprehensive reporting system with 28 professional reports across 7 categories.
+ * Features: PDF with charts, multi-sheet Excel, CSV export, date filters, period selection.
  */
 
-import React, { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import React, { useState } from "react";
 import { toast } from "sonner";
 import {
   Download,
@@ -20,464 +18,714 @@ import {
   Calendar,
   Filter,
   Loader2,
-  ExternalLink,
+  DollarSign,
+  ShoppingCart,
+  UserCheck,
+  Headphones,
+  Server,
+  Lock,
+  PieChart,
+  FileBarChart,
+  Table,
+  ChevronRight,
+  Clock,
 } from "lucide-react";
 import { Card } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-
 import {
-  useUserReport,
-  useActivityReport,
-  useSecurityReport,
-  usePerformanceReport,
-  useExportReport,
-} from "../hooks/useReports";
-import type { ReportFilters } from "../services/reportService";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
+import { Badge } from "@/shared/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import advancedReportsApi from "@/shared/api/advancedReports";
+import type { AdvancedReportParams } from "@/shared/api/advancedReports";
 
-const REPORT_TYPE_TO_BACKEND: Record<string, string> = {
-  "user-activity": "users",
-  "security-audit": "security",
-  "system-performance": "performance",
-  "customer-analytics": "customers",
-  activity: "activity",
-};
+// Report Category Type
+interface ReportCategory {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  color: string;
+  reports: ReportType[];
+}
 
-const REPORT_TYPE_TO_QUERY_KEY: Record<string, string> = {
-  "user-activity": "users",
-  "security-audit": "security",
-  "system-performance": "performance",
-  "customer-analytics": "users",
-  activity: "activity",
-};
+// Individual Report Type
+interface ReportType {
+  id: string;
+  name: string;
+  description: string;
+  apiMethod: string;
+}
 
-const SUB_PAGE_LINKS: Record<string, string> = {
-  "user-activity": "/admin/reports/users",
-  "security-audit": "/admin/reports/security",
-  "system-performance": "/admin/reports/performance",
-  "customer-analytics": "/admin/reports/users",
-  activity: "/admin/reports/activity",
-};
+// All 28 Reports organized by 7 categories
+const REPORT_CATEGORIES: ReportCategory[] = [
+  {
+    id: "financial",
+    name: "Financial Reports",
+    description: "Invoice aging, payments, revenue, taxes, profit margins",
+    icon: <DollarSign className="w-5 h-5" />,
+    color: "bg-green-100 text-green-800",
+    reports: [
+      {
+        id: "invoice-aging",
+        name: "Invoice Aging",
+        description: "Aging buckets (0-30, 31-60, 61-90, 90+ days), outstanding amounts",
+        apiMethod: "getInvoiceAging",
+      },
+      {
+        id: "payment-status",
+        name: "Payment Status",
+        description: "Breakdown by paid/unpaid/overdue, payment method distribution",
+        apiMethod: "getPaymentStatus",
+      },
+      {
+        id: "revenue-recognition",
+        name: "Revenue Recognition",
+        description: "Recognized, booked, deferred, recurring revenue analysis",
+        apiMethod: "getRevenueRecognition",
+      },
+      {
+        id: "tax-summary",
+        name: "Tax Summary",
+        description: "TVA (19%) and TAP (0.5%) calculations for Algerian compliance",
+        apiMethod: "getTaxSummary",
+      },
+      {
+        id: "profit-margin",
+        name: "Profit Margin Analysis",
+        description: "Revenue vs. cost by product category, margin percentages",
+        apiMethod: "getProfitMargin",
+      },
+    ],
+  },
+  {
+    id: "sales",
+    name: "Sales Reports",
+    description: "Quote conversion, order pipeline, product performance",
+    icon: <ShoppingCart className="w-5 h-5" />,
+    color: "bg-blue-100 text-blue-800",
+    reports: [
+      {
+        id: "quote-conversion",
+        name: "Quote Conversion",
+        description: "Quote lifecycle funnel, conversion rates to orders/invoices",
+        apiMethod: "getQuoteConversion",
+      },
+      {
+        id: "order-pipeline",
+        name: "Order Pipeline",
+        description: "Orders by status (10 stages), bottleneck analysis, avg time",
+        apiMethod: "getOrderPipeline",
+      },
+      {
+        id: "product-performance",
+        name: "Product Performance",
+        description: "Top products by revenue/volume, growth trends",
+        apiMethod: "getProductPerformance",
+      },
+      {
+        id: "customer-patterns",
+        name: "Customer Purchase Patterns",
+        description: "Segmentation by frequency/value, seasonality analysis",
+        apiMethod: "getCustomerPatterns",
+      },
+    ],
+  },
+  {
+    id: "customers",
+    name: "Customer Intelligence",
+    description: "Lifetime value, segmentation, KYC, churn analysis",
+    icon: <UserCheck className="w-5 h-5" />,
+    color: "bg-purple-100 text-purple-800",
+    reports: [
+      {
+        id: "lifetime-value",
+        name: "Customer Lifetime Value (CLV)",
+        description: "Total revenue per customer, purchase frequency, ranking",
+        apiMethod: "getCustomerLifetimeValue",
+      },
+      {
+        id: "segmentation",
+        name: "Customer Segmentation",
+        description: "By type, status, revenue tier, engagement level",
+        apiMethod: "getCustomerSegmentation",
+      },
+      {
+        id: "kyc-compliance",
+        name: "KYC Compliance",
+        description: "Verification status, compliance rates, pending verifications",
+        apiMethod: "getKYCCompliance",
+      },
+      {
+        id: "churn-analysis",
+        name: "Churn Analysis",
+        description: "At-risk customers, churn rate, inactive customers (90+ days)",
+        apiMethod: "getChurnAnalysis",
+      },
+    ],
+  },
+  {
+    id: "operations",
+    name: "Operations Reports",
+    description: "SLA compliance, agent performance, support quality",
+    icon: <Headphones className="w-5 h-5" />,
+    color: "bg-amber-100 text-amber-800",
+    reports: [
+      {
+        id: "sla-compliance",
+        name: "SLA Compliance",
+        description: "Response/resolution SLA tracking by priority, breach analysis",
+        apiMethod: "getSLACompliance",
+      },
+      {
+        id: "agent-performance",
+        name: "Agent Performance",
+        description: "Tickets per agent, resolution rates, avg times, workload balance",
+        apiMethod: "getAgentPerformance",
+      },
+      {
+        id: "category-analysis",
+        name: "Ticket Category Analysis",
+        description: "Volume by category, resolution times, peak periods",
+        apiMethod: "getCategoryAnalysis",
+      },
+      {
+        id: "quality-metrics",
+        name: "Support Quality Metrics",
+        description: "First Contact Resolution, reopening rate, escalation rate",
+        apiMethod: "getQualityMetrics",
+      },
+    ],
+  },
+  {
+    id: "hosting",
+    name: "Hosting Reports",
+    description: "VPS utilization, lifecycle, uptime, billing (MRR)",
+    icon: <Server className="w-5 h-5" />,
+    color: "bg-indigo-100 text-indigo-800",
+    reports: [
+      {
+        id: "vps-utilization",
+        name: "VPS Utilization",
+        description: "Resource allocation by plan, utilization %, revenue by plan",
+        apiMethod: "getVPSUtilization",
+      },
+      {
+        id: "vps-lifecycle",
+        name: "VPS Lifecycle",
+        description: "New subscriptions, cancellations, churn rate, retention",
+        apiMethod: "getVPSLifecycle",
+      },
+      {
+        id: "vps-uptime",
+        name: "VPS Uptime & Performance",
+        description: "Uptime %, performance metrics, SLA compliance",
+        apiMethod: "getVPSUptime",
+      },
+      {
+        id: "vps-billing",
+        name: "VPS Billing (MRR)",
+        description: "Monthly Recurring Revenue, revenue by plan, forecasts",
+        apiMethod: "getVPSBilling",
+      },
+    ],
+  },
+  {
+    id: "audit",
+    name: "Audit & Compliance",
+    description: "User activity, security events, data changes, compliance",
+    icon: <Lock className="w-5 h-5" />,
+    color: "bg-red-100 text-red-800",
+    reports: [
+      {
+        id: "user-activity",
+        name: "User Activity",
+        description: "Logins, actions performed, most active users by role",
+        apiMethod: "getUserActivity",
+      },
+      {
+        id: "security-events",
+        name: "Security Events",
+        description: "Failed logins by IP, suspicious patterns, high-risk actions",
+        apiMethod: "getSecurityEvents",
+      },
+      {
+        id: "data-changes",
+        name: "Data Change Audit",
+        description: "Critical data modifications with who/when/where tracking",
+        apiMethod: "getDataChanges",
+      },
+      {
+        id: "compliance",
+        name: "Regulatory Compliance",
+        description: "Data retention, access reviews, export tracking",
+        apiMethod: "getCompliance",
+      },
+    ],
+  },
+  {
+    id: "executive",
+    name: "Executive Reports",
+    description: "KPI dashboard, business health, forecasting",
+    icon: <TrendingUp className="w-5 h-5" />,
+    color: "bg-cyan-100 text-cyan-800",
+    reports: [
+      {
+        id: "kpi-dashboard",
+        name: "KPI Dashboard",
+        description: "Revenue, customers, orders, tickets, satisfaction scores with trends",
+        apiMethod: "getKPIDashboard",
+      },
+      {
+        id: "business-health",
+        name: "Business Health",
+        description: "6-month revenue trends, pipeline status, receivables, backlog",
+        apiMethod: "getBusinessHealth",
+      },
+      {
+        id: "forecast",
+        name: "Forecasting",
+        description: "3-month revenue projection, churn prediction, capacity planning",
+        apiMethod: "getForecast",
+      },
+    ],
+  },
+];
 
 export const ReportsPage: React.FC = () => {
+  const [selectedCategory, setSelectedCategory] = useState<string>("financial");
   const [selectedReport, setSelectedReport] = useState<string>("");
+  const [period, setPeriod] = useState<string>("month");
   const [dateFrom, setDateFrom] = useState<string>(
     new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
   );
   const [dateTo, setDateTo] = useState<string>(
     new Date().toISOString().split("T")[0]
   );
+  const [includeCharts, setIncludeCharts] = useState<boolean>(true);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
-  const filters: ReportFilters = useMemo(
-    () => ({ date_from: dateFrom, date_to: dateTo }),
-    [dateFrom, dateTo]
-  );
+  const currentCategory = REPORT_CATEGORIES.find((c) => c.id === selectedCategory);
 
-  const { data: userReport, isLoading: userLoading } = useUserReport(filters);
-  const { data: activityReport, isLoading: activityLoading } =
-    useActivityReport(filters);
-  const { data: securityReport, isLoading: securityLoading } =
-    useSecurityReport(filters);
-  const { data: performanceReport, isLoading: performanceLoading } =
-    usePerformanceReport(filters);
-
-  const exportMutation = useExportReport();
-  const queryClient = useQueryClient();
-
-  const reportTypes = [
-    {
-      id: "user-activity",
-      name: "User Activity Report",
-      description: "User login activity, session data, and engagement metrics",
-      icon: <Users className="w-5 h-5" />,
-      color: "bg-blue-100 text-blue-800",
-    },
-    {
-      id: "security-audit",
-      name: "Security Audit Report",
-      description: "Security events, failed logins, and suspicious activities",
-      icon: <Shield className="w-5 h-5" />,
-      color: "bg-red-100 text-red-800",
-    },
-    {
-      id: "activity",
-      name: "Activity Report",
-      description: "Audit log activity, resources, and trends",
-      icon: <Activity className="w-5 h-5" />,
-      color: "bg-amber-100 text-amber-800",
-    },
-    {
-      id: "system-performance",
-      name: "System Performance Report",
-      description: "System metrics, uptime, and performance indicators",
-      icon: <TrendingUp className="w-5 h-5" />,
-      color: "bg-green-100 text-green-800",
-    },
-    {
-      id: "customer-analytics",
-      name: "Customer Analytics Report",
-      description: "Customer growth, engagement, and business metrics",
-      icon: <BarChart3 className="w-5 h-5" />,
-      color: "bg-purple-100 text-purple-800",
-    },
-  ];
-
-  const isLoading =
-    (selectedReport === "user-activity" && userLoading) ||
-    (selectedReport === "security-audit" && securityLoading) ||
-    (selectedReport === "system-performance" && performanceLoading) ||
-    (selectedReport === "activity" && activityLoading);
-
-  const handleGenerateReport = async () => {
-    if (!selectedReport) return;
-    const queryKey = REPORT_TYPE_TO_QUERY_KEY[selectedReport];
-    if (!queryKey) return;
-    try {
-      await queryClient.refetchQueries({
-        queryKey: ["admin", "reports", queryKey, filters],
-      });
-      toast.success("Report generated");
-    } catch {
-      toast.error("Failed to generate report");
+  const handleGenerateReport = async (format: "pdf" | "excel" | "csv") => {
+    if (!selectedReport || !selectedCategory) {
+      toast.error("Please select a report");
+      return;
     }
-  };
 
-  const handleExportReport = async (format: "pdf" | "csv" | "excel") => {
-    if (!selectedReport) return;
-    const backendType = REPORT_TYPE_TO_BACKEND[selectedReport];
-    if (!backendType) return;
+    setIsGenerating(true);
+
     try {
-      await exportMutation.mutateAsync({
-        reportType: backendType,
+      const params: AdvancedReportParams = {
+        start_date: dateFrom,
+        end_date: dateTo,
+        period,
         format,
-        filters,
-      });
-    } catch (e) {
-      console.error("Export failed:", e);
+        include_charts: includeCharts,
+      };
+
+      await advancedReportsApi.generateReport(
+        selectedCategory,
+        selectedReport,
+        params
+      );
+
+      toast.success(`${format.toUpperCase()} report generated successfully!`);
+    } catch (error: any) {
+      console.error("Report generation failed:", error);
+      toast.error(error?.response?.data?.detail || "Failed to generate report");
+    } finally {
+      setIsGenerating(false);
     }
   };
 
-  const kpiEntries = useMemo(() => {
-    if (!selectedReport) return [];
-    if (selectedReport === "user-activity" && userReport) {
-      return [
-        ["Total Users", String(userReport.total_users)],
-        ["Active Users", String(userReport.active_users)],
-        ["New Users", String(userReport.new_users)],
-      ];
-    }
-    if (selectedReport === "security-audit" && securityReport) {
-      return [
-        ["Total Events", String(securityReport.total_security_events)],
-        ["Failed Logins", String(securityReport.failed_logins)],
-        ["Successful Logins", String(securityReport.successful_logins)],
-        ["Security Score", "-"],
-      ];
-    }
-    if (selectedReport === "activity" && activityReport) {
-      const activityTypesCount =
-        activityReport.activities_by_type?.length ?? 0;
-      return [
-        ["Total Activities", String(activityReport.total_activities)],
-        ["Activity Types", String(activityTypesCount)],
-        [
-          "Top Resources",
-          String(activityReport.top_resources?.length ?? 0),
-        ],
-      ];
-    }
-    if (selectedReport === "system-performance" && performanceReport) {
-      return [
-        ["Uptime", `${performanceReport.system_uptime ?? 0}%`],
-        ["Avg Response", `${performanceReport.average_response_time ?? 0}ms`],
-        [
-          "DB Query Time",
-          performanceReport.database_performance
-            ? `${performanceReport.database_performance.query_time ?? 0}ms`
-            : "-",
-        ],
-      ];
-    }
-    if (selectedReport === "customer-analytics") {
-      return [
-        ["Export", "Use CSV/Excel/PDF below"],
-      ];
-    }
-    return [];
-  }, [
-    selectedReport,
-    userReport,
-    activityReport,
-    securityReport,
-    performanceReport,
-  ]);
+  const handleQuickGenerate = async (reportId: string) => {
+    setSelectedReport(reportId);
+    // Auto-generate PDF after selecting
+    setTimeout(async () => {
+      const params: AdvancedReportParams = {
+        start_date: dateFrom,
+        end_date: dateTo,
+        period,
+        format: "pdf",
+        include_charts: includeCharts,
+      };
 
-  const subPageLink = selectedReport ? SUB_PAGE_LINKS[selectedReport] : null;
+      try {
+        setIsGenerating(true);
+        await advancedReportsApi.generateReport(
+          selectedCategory,
+          reportId,
+          params
+        );
+        toast.success("PDF report generated!");
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to generate report");
+      } finally {
+        setIsGenerating(false);
+      }
+    }, 100);
+  };
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">System Reports</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Advanced Reports System
+          </h1>
           <p className="text-gray-600 mt-1">
-            Generate and export system analytics and reports
+            Comprehensive analytics across all business modules • 28 Professional Reports
           </p>
         </div>
+        <Badge variant="outline" className="text-sm px-3 py-1">
+          <BarChart3 className="w-4 h-4 mr-1" />
+          7 Categories • 28 Reports
+        </Badge>
       </div>
 
-      <Card className="p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <Filter className="w-5 h-5 text-gray-400" />
-          <h3 className="text-lg font-semibold text-gray-900">
-            Select Report Type
-          </h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          {reportTypes.map((report) => (
-            <div
-              key={report.id}
-              className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                selectedReport === report.id
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-gray-200 hover:border-gray-300"
-              }`}
-              onClick={() => setSelectedReport(report.id)}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded ${report.color}`}>
-                  {report.icon}
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-medium text-gray-900">{report.name}</h4>
-                  <p className="text-sm text-gray-600">{report.description}</p>
-                </div>
-                {selectedReport === report.id && (
-                  <div className="w-4 h-4 rounded-full bg-blue-500" />
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              From Date
-            </label>
-            <Input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              To Date
-            </label>
-            <Input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="flex gap-4">
-          <Button
-            onClick={handleGenerateReport}
-            disabled={!selectedReport}
-            className="flex items-center gap-2"
-          >
-            <BarChart3 className="w-4 h-4" />
-            Generate Report
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setSelectedReport("")}
-            disabled={!selectedReport}
-          >
-            Clear Selection
-          </Button>
-        </div>
-      </Card>
-
-      {selectedReport && (
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <TrendingUp className="w-5 h-5 text-gray-400" />
-              <h3 className="text-lg font-semibold text-gray-900">
-                Report Preview
-              </h3>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleExportReport("pdf")}
-                disabled={exportMutation.isPending}
-                className="flex items-center gap-1"
-              >
-                <FileText className="w-3 h-3" />
-                PDF
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleExportReport("csv")}
-                disabled={exportMutation.isPending}
-                className="flex items-center gap-1"
-              >
-                <Download className="w-3 h-3" />
-                CSV
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleExportReport("excel")}
-                disabled={exportMutation.isPending}
-                className="flex items-center gap-1"
-              >
-                <Download className="w-3 h-3" />
-                Excel
-              </Button>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="text-sm text-gray-600 mb-4">
-              <strong>Report Type:</strong>{" "}
-              {reportTypes.find((r) => r.id === selectedReport)?.name}
-              <br />
-              <strong>Date Range:</strong> {dateFrom} to {dateTo}
-              <br />
-              <strong>Generated:</strong> {new Date().toLocaleString()}
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Sidebar - Category & Report Selection */}
+        <div className="lg:col-span-1 space-y-4">
+          {/* Category Selection */}
+          <Card className="p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Filter className="w-4 h-4 text-gray-400" />
+              <h3 className="font-semibold text-gray-900">Select Category</h3>
             </div>
 
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {kpiEntries.map(([key, value]) => (
-                  <div
-                    key={key}
-                    className="text-center p-3 bg-white rounded border"
-                  >
-                    <div className="text-2xl font-bold text-gray-900">
-                      {value}
+            <div className="space-y-2">
+              {REPORT_CATEGORIES.map((category) => (
+                <div
+                  key={category.id}
+                  className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                    selectedCategory === category.id
+                      ? "border-blue-500 bg-blue-50 shadow-sm"
+                      : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                  }`}
+                  onClick={() => {
+                    setSelectedCategory(category.id);
+                    setSelectedReport("");
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded ${category.color}`}>
+                      {category.icon}
                     </div>
-                    <div className="text-sm text-gray-600 capitalize">
-                      {key.replace(/([A-Z])/g, " $1").trim()}
+                    <div className="flex-1">
+                      <div className="font-medium text-sm text-gray-900">
+                        {category.name}
+                      </div>
+                      <div className="text-xs text-gray-600 mt-0.5">
+                        {category.reports.length} reports
+                      </div>
+                    </div>
+                    {selectedCategory === category.id && (
+                      <ChevronRight className="w-4 h-4 text-blue-600" />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* Report Selection */}
+          {currentCategory && (
+            <Card className="p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <FileBarChart className="w-4 h-4 text-gray-400" />
+                <h3 className="font-semibold text-gray-900">
+                  {currentCategory.name}
+                </h3>
+              </div>
+
+              <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                {currentCategory.reports.map((report) => (
+                  <div
+                    key={report.id}
+                    className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                      selectedReport === report.id
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                    onClick={() => setSelectedReport(report.id)}
+                  >
+                    <div className="font-medium text-sm text-gray-900 mb-1">
+                      {report.name}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      {report.description}
                     </div>
                   </div>
                 ))}
               </div>
-            )}
+            </Card>
+          )}
+        </div>
 
-            {subPageLink && selectedReport !== "customer-analytics" && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <Link to={subPageLink}>
-                  <Button variant="link" className="p-0 h-auto gap-1">
-                    <ExternalLink className="w-4 h-4" />
-                    View full report
-                  </Button>
-                </Link>
+        {/* Right Content - Filters & Generation */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Filters Card */}
+          <Card className="p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <Calendar className="w-5 h-5 text-gray-400" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Report Parameters
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {/* Period Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Period
+                </label>
+                <Select value={period} onValueChange={setPeriod}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select period" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="week">Last 7 Days</SelectItem>
+                    <SelectItem value="month">Last 30 Days</SelectItem>
+                    <SelectItem value="quarter">Last Quarter</SelectItem>
+                    <SelectItem value="year">Last Year</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            )}
-          </div>
-        </Card>
-      )}
 
+              {/* Include Charts */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Options
+                </label>
+                <div className="flex items-center h-10 px-3 border rounded-md bg-gray-50">
+                  <input
+                    type="checkbox"
+                    id="includeCharts"
+                    checked={includeCharts}
+                    onChange={(e) => setIncludeCharts(e.target.checked)}
+                    className="mr-2"
+                  />
+                  <label htmlFor="includeCharts" className="text-sm cursor-pointer">
+                    Include Charts & Visualizations
+                  </label>
+                </div>
+              </div>
+
+              {/* From Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  From Date
+                </label>
+                <Input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                />
+              </div>
+
+              {/* To Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  To Date
+                </label>
+                <Input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Generate Buttons */}
+            <div className="flex flex-wrap gap-3">
+              <Button
+                onClick={() => handleGenerateReport("pdf")}
+                disabled={!selectedReport || isGenerating}
+                className="flex items-center gap-2"
+              >
+                {isGenerating ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <FileText className="w-4 h-4" />
+                )}
+                Generate PDF with Charts
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleGenerateReport("excel")}
+                disabled={!selectedReport || isGenerating}
+                className="flex items-center gap-2"
+              >
+                <Table className="w-4 h-4" />
+                Excel (Multi-Sheet)
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleGenerateReport("csv")}
+                disabled={!selectedReport || isGenerating}
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                CSV Export
+              </Button>
+            </div>
+          </Card>
+
+          {/* Report Preview/Info */}
+          {selectedReport && currentCategory && (
+            <Card className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className={`p-3 rounded-lg ${currentCategory.color}`}>
+                  {currentCategory.icon}
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {currentCategory.reports.find((r) => r.id === selectedReport)?.name}
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {currentCategory.reports.find((r) => r.id === selectedReport)
+                      ?.description}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-100">
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <div className="text-xs font-medium text-gray-600 mb-1">
+                      Category
+                    </div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      {currentCategory.name}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-medium text-gray-600 mb-1">
+                      Date Range
+                    </div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      {dateFrom} to {dateTo}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-medium text-gray-600 mb-1">
+                      Period
+                    </div>
+                    <div className="text-sm font-semibold text-gray-900 capitalize">
+                      {period}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-medium text-gray-600 mb-1">
+                      Visualizations
+                    </div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      {includeCharts ? "Enabled" : "Disabled"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <Clock className="w-3 h-3" />
+                  <span>
+                    Report will be generated with current parameters
+                  </span>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Quick Info Card */}
+          {!selectedReport && (
+            <Card className="p-6 bg-gradient-to-br from-gray-50 to-blue-50">
+              <div className="text-center py-8">
+                <PieChart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Select a Report to Get Started
+                </h3>
+                <p className="text-sm text-gray-600 max-w-md mx-auto">
+                  Choose a category from the left sidebar, then select a specific report
+                  to generate professional PDFs with charts, multi-sheet Excel workbooks,
+                  or CSV exports.
+                </p>
+                <div className="mt-6 flex items-center justify-center gap-4 text-xs text-gray-500">
+                  <div className="flex items-center gap-1">
+                    <FileText className="w-4 h-4" />
+                    <span>PDF with Charts</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Table className="w-4 h-4" />
+                    <span>Multi-Sheet Excel</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Download className="w-4 h-4" />
+                    <span>CSV Export</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      {/* Features Info */}
       <Card className="p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <Calendar className="w-5 h-5 text-gray-400" />
+        <div className="flex items-center gap-2 mb-4">
+          <BarChart3 className="w-5 h-5 text-gray-400" />
           <h3 className="text-lg font-semibold text-gray-900">
-            Report Pages
+            Report Features
           </h3>
         </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
-            <div className="flex items-center gap-3">
-              <FileText className="w-4 h-4 text-gray-400" />
-              <div>
-                <div className="font-medium text-gray-900">
-                  User Reports
-                </div>
-                <div className="text-sm text-gray-600">
-                  User analytics, registration trends, role distribution
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex items-start gap-3 p-4 bg-green-50 rounded-lg border border-green-100">
+            <FileText className="w-5 h-5 text-green-600 mt-0.5" />
+            <div>
+              <div className="font-medium text-sm text-gray-900 mb-1">
+                Professional PDF Reports
+              </div>
+              <div className="text-xs text-gray-600">
+                HTML-to-PDF conversion with executive summary, KPI cards, charts
+                (bar, pie, line, area), conditional formatting, and multi-page support
               </div>
             </div>
-            <Link to="/admin/reports/users">
-              <Button variant="outline" size="sm">
-                <ExternalLink className="w-3 h-3 mr-1" />
-                Open
-              </Button>
-            </Link>
           </div>
 
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
-            <div className="flex items-center gap-3">
-              <FileText className="w-4 h-4 text-gray-400" />
-              <div>
-                <div className="font-medium text-gray-900">
-                  Activity Reports
-                </div>
-                <div className="text-sm text-gray-600">
-                  Audit log activity, resources, trends
-                </div>
+          <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-100">
+            <Table className="w-5 h-5 text-blue-600 mt-0.5" />
+            <div>
+              <div className="font-medium text-sm text-gray-900 mb-1">
+                Multi-Sheet Excel Workbooks
+              </div>
+              <div className="text-xs text-gray-600">
+                Summary sheet, detailed data, embedded charts, raw data, professional
+                formatting, formulas, and conditional formatting
               </div>
             </div>
-            <Link to="/admin/reports/activity">
-              <Button variant="outline" size="sm">
-                <ExternalLink className="w-3 h-3 mr-1" />
-                Open
-              </Button>
-            </Link>
           </div>
 
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
-            <div className="flex items-center gap-3">
-              <FileText className="w-4 h-4 text-gray-400" />
-              <div>
-                <div className="font-medium text-gray-900">
-                  Security Reports
-                </div>
-                <div className="text-sm text-gray-600">
-                  Security events, logins, suspicious activity
-                </div>
+          <div className="flex items-start gap-3 p-4 bg-purple-50 rounded-lg border border-purple-100">
+            <BarChart3 className="w-5 h-5 text-purple-600 mt-0.5" />
+            <div>
+              <div className="font-medium text-sm text-gray-900 mb-1">
+                Advanced Analytics
+              </div>
+              <div className="text-xs text-gray-600">
+                Cross-module insights, trend analysis, forecasting, customer lifetime
+                value, churn prediction, and SLA compliance tracking
               </div>
             </div>
-            <Link to="/admin/reports/security">
-              <Button variant="outline" size="sm">
-                <ExternalLink className="w-3 h-3 mr-1" />
-                Open
-              </Button>
-            </Link>
-          </div>
-
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
-            <div className="flex items-center gap-3">
-              <FileText className="w-4 h-4 text-gray-400" />
-              <div>
-                <div className="font-medium text-gray-900">
-                  Performance Reports
-                </div>
-                <div className="text-sm text-gray-600">
-                  Uptime, response times, API and DB metrics
-                </div>
-              </div>
-            </div>
-            <Link to="/admin/reports/performance">
-              <Button variant="outline" size="sm">
-                <ExternalLink className="w-3 h-3 mr-1" />
-                Open
-              </Button>
-            </Link>
           </div>
         </div>
       </Card>

@@ -143,7 +143,8 @@ class DashboardService:
         open_tickets_query = select(func.count(Ticket.id)).where(
             and_(
                 Ticket.deleted_at.is_(None),
-                Ticket.status.in_(["open", "in_progress", "waiting_for_response"])
+                Ticket.status.in_(
+                    ["open", "in_progress", "waiting_for_response"])
             )
         )
         open_tickets = await self.db.scalar(open_tickets_query) or 0
@@ -232,7 +233,8 @@ class DashboardService:
             and_(
                 Ticket.deleted_at.is_(None),
                 Ticket.customer_id == customer_id,
-                Ticket.status.in_(["open", "in_progress", "waiting_for_response"])
+                Ticket.status.in_(
+                    ["open", "in_progress", "waiting_for_response"])
             )
         )
         open_tickets = await self.db.scalar(open_tickets_query) or 0
@@ -277,7 +279,8 @@ class DashboardService:
         from app.modules.revenue.service import RevenueService
         revenue_service = RevenueService(self.db)
         revenue_overview = await revenue_service.get_overview(period="month", customer_id=customer_id)
-        total_revenue = float(revenue_overview.metrics.booked_revenue)  # Use booked revenue (delivered orders)
+        # Use booked revenue (delivered orders)
+        total_revenue = float(revenue_overview.metrics.booked_revenue)
 
         return DashboardMetrics(
             total_customers=0,  # Not applicable for customer view
@@ -398,7 +401,8 @@ class DashboardService:
                     description=f"Total: {order.total_amount} DZD",
                     timestamp=order.created_at,
                     status=order.status,
-                    amount=float(order.total_amount),  # Include amount for orders
+                    # Include amount for orders
+                    amount=float(order.total_amount),
                 )
             )
 
@@ -413,7 +417,8 @@ class DashboardService:
         end_date = datetime.utcnow()
 
         if period == "today":
-            start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
+            start_date = end_date.replace(
+                hour=0, minute=0, second=0, microsecond=0)
             days = 1
         elif period == "week":
             start_date = end_date - timedelta(days=7)

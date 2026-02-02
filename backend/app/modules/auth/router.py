@@ -244,7 +244,7 @@ async def request_password_reset(
         message = "If the email exists and has a phone number, a password reset code has been sent via SMS"
     else:
         message = "If the email exists, a password reset link has been sent"
-    
+
     return PasswordResetResponse(
         message=message,
         email=reset_data.email,
@@ -260,7 +260,7 @@ async def setup_required_2fa(
 ):
     """
     Setup 2FA when required for role (unauthenticated endpoint).
-    
+
     Allows users to enable 2FA before first login when their role requires it.
     Verifies credentials using email/password instead of JWT token.
 
@@ -297,7 +297,7 @@ async def verify_setup_required_2fa(
 ):
     """
     Verify 2FA code during required setup (unauthenticated endpoint).
-    
+
     Verifies credentials and 2FA code to complete the setup process.
     After successful verification, user can proceed with login.
 
@@ -333,7 +333,7 @@ async def check_2fa_requirement(
 ):
     """
     Check if 2FA is required for a user's role (public endpoint).
-    
+
     Allows frontend to check 2FA requirement before login attempt.
     Does not require authentication and does not reveal if user exists.
 
@@ -379,7 +379,7 @@ async def confirm_password_reset(
         Updated user information
     """
     service = AuthService(db)
-    
+
     # Support both token (email) and code (SMS) methods
     if reset_data.token:
         user = await service.reset_password(
@@ -397,7 +397,7 @@ async def confirm_password_reset(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Either token or (code and email) must be provided"
         )
-    
+
     return user
 
 
@@ -491,7 +491,8 @@ async def get_login_history(
     filters = AuditLogFilter(user_id=user_id)
     logs = await service.get_logs(page=page, page_size=page_size, filters=filters)
     # Filter to only include login-related actions
-    login_actions = [log for log in logs.data if log.action in [AuditAction.LOGIN_SUCCESS, AuditAction.LOGIN_FAILED]]
+    login_actions = [log for log in logs.data if log.action in [
+        AuditAction.LOGIN_SUCCESS, AuditAction.LOGIN_FAILED]]
     # Return filtered results with same pagination structure
     from app.modules.audit.schemas import AuditLogListResponse
     return AuditLogListResponse(
@@ -499,7 +500,8 @@ async def get_login_history(
         total=len(login_actions),
         page=page,
         page_size=page_size,
-        total_pages=(len(login_actions) + page_size - 1) // page_size if page_size > 0 else 1
+        total_pages=(len(login_actions) + page_size -
+                     1) // page_size if page_size > 0 else 1
     )
 
 

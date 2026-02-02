@@ -184,9 +184,11 @@ class UserRepository:
 
         # Apply status filter: all, active, inactive, deleted
         if status == "active":
-            query = query.where(User.deleted_at.is_(None), User.is_active == True)
+            query = query.where(User.deleted_at.is_(None),
+                                User.is_active == True)
         elif status == "inactive":
-            query = query.where(User.deleted_at.is_(None), User.is_active == False)
+            query = query.where(User.deleted_at.is_(None),
+                                User.is_active == False)
         elif status == "deleted":
             query = query.where(User.deleted_at.isnot(None))
         else:
@@ -197,7 +199,8 @@ class UserRepository:
         # Apply filters
         if role:
             from app.modules.settings.models import Role
-            query = query.join(Role, User.role_id == Role.id).where(Role.slug == role)
+            query = query.join(Role, User.role_id ==
+                               Role.id).where(Role.slug == role)
         if is_active is not None and status not in ("active", "inactive", "deleted"):
             query = query.where(User.is_active == is_active)
         if search:
@@ -216,7 +219,8 @@ class UserRepository:
 
         # Apply pagination
         offset = (page - 1) * limit
-        query = query.offset(offset).limit(limit).order_by(User.created_at.desc())
+        query = query.offset(offset).limit(
+            limit).order_by(User.created_at.desc())
 
         # Execute query
         result = await self.db.execute(query)

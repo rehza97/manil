@@ -399,7 +399,8 @@ async def generate_quote_pdf(
     if current_user.role_slug == "client":
         client_customer = await _resolve_client_customer(db, current_user)
         if not client_customer:
-            raise ForbiddenException("Customer profile not found for your account")
+            raise ForbiddenException(
+                "Customer profile not found for your account")
         if str(quote.customer_id) != str(client_customer.id):
             raise ForbiddenException("You can only download your own quotes")
 

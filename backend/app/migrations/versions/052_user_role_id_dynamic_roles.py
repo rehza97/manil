@@ -88,7 +88,8 @@ def downgrade() -> None:
     """)
     op.execute("UPDATE users SET role = 'client'::user_role WHERE role IS NULL")
     op.alter_column("users", "role", nullable=False)
-    op.execute("ALTER TABLE users ALTER COLUMN role SET DEFAULT 'client'::user_role")
+    op.execute(
+        "ALTER TABLE users ALTER COLUMN role SET DEFAULT 'client'::user_role")
 
     # 4. Drop role_id
     op.drop_index("ix_users_role_id", table_name="users")

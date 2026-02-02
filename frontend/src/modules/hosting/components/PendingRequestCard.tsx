@@ -22,6 +22,7 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { Label } from "@/shared/components/ui/label";
 import { CheckCircle2, X, User, Calendar, Server } from "lucide-react";
 import type { VPSSubscription } from "../types";
+import { formatDZD } from "@/shared/utils/formatters";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 

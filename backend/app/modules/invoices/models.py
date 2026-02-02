@@ -45,10 +45,12 @@ class Invoice(Base):
         primary_key=True,
         default=lambda: str(uuid.uuid4())
     )
-    invoice_number: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
+    invoice_number: Mapped[str] = mapped_column(
+        String(50), unique=True, index=True, nullable=False)
 
     # Link to quote (optional - invoice can be created without quote)
-    quote_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("quotes.id"), nullable=True, index=True)
+    quote_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("quotes.id"), nullable=True, index=True)
 
     # Link to VPS subscription (optional - invoice can be created without VPS subscription)
     vps_subscription_id: Mapped[str | None] = mapped_column(
@@ -68,7 +70,8 @@ class Invoice(Base):
     )
 
     # Customer information
-    customer_id: Mapped[str] = mapped_column(String(36), ForeignKey("customers.id"), nullable=False, index=True)
+    customer_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("customers.id"), nullable=False, index=True)
 
     # Invoice details
     title: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -131,17 +134,22 @@ class Invoice(Base):
     )
 
     # Dates
-    issue_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    due_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    issue_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False)
+    due_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False)
+    sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True)
+    paid_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True)
 
     # Notes
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     payment_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Audit fields
-    created_by_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+    created_by_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
@@ -153,15 +161,19 @@ class Invoice(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False
     )
-    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True)
 
     # Relationships
     customer = relationship("Customer", back_populates="invoices")
     quote = relationship("Quote", foreign_keys=[quote_id])
-    vps_subscription = relationship("VPSSubscription", foreign_keys=[vps_subscription_id])
+    vps_subscription = relationship(
+        "VPSSubscription", foreign_keys=[vps_subscription_id])
     order = relationship("Order", foreign_keys=[order_id])
-    items = relationship("InvoiceItem", back_populates="invoice", cascade="all, delete-orphan")
-    timeline_events = relationship("InvoiceTimeline", back_populates="invoice", cascade="all, delete-orphan")
+    items = relationship(
+        "InvoiceItem", back_populates="invoice", cascade="all, delete-orphan")
+    timeline_events = relationship(
+        "InvoiceTimeline", back_populates="invoice", cascade="all, delete-orphan")
     created_by = relationship("User", foreign_keys=[created_by_id])
 
 
@@ -175,16 +187,20 @@ class InvoiceItem(Base):
         primary_key=True,
         default=lambda: str(uuid.uuid4())
     )
-    invoice_id: Mapped[str] = mapped_column(String(36), ForeignKey("invoices.id"), nullable=False, index=True)
+    invoice_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("invoices.id"), nullable=False, index=True)
 
     # Item details
     description: Mapped[str] = mapped_column(Text, nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
-    unit_price: Mapped[Decimal] = mapped_column(Numeric(precision=12, scale=2), nullable=False)
-    line_total: Mapped[Decimal] = mapped_column(Numeric(precision=12, scale=2), nullable=False)
+    unit_price: Mapped[Decimal] = mapped_column(
+        Numeric(precision=12, scale=2), nullable=False)
+    line_total: Mapped[Decimal] = mapped_column(
+        Numeric(precision=12, scale=2), nullable=False)
 
     # Optional product link
-    product_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("products.id"), nullable=True)
+    product_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("products.id"), nullable=True)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
@@ -208,14 +224,17 @@ class InvoiceTimeline(Base):
         primary_key=True,
         default=lambda: str(uuid.uuid4())
     )
-    invoice_id: Mapped[str] = mapped_column(String(36), ForeignKey("invoices.id"), nullable=False, index=True)
+    invoice_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("invoices.id"), nullable=False, index=True)
 
     # Event details
-    event_type: Mapped[str] = mapped_column(String(50), nullable=False)  # created, issued, sent, paid, etc.
+    # created, issued, sent, paid, etc.
+    event_type: Mapped[str] = mapped_column(String(50), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
 
     # Actor
-    user_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
+    user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id"), nullable=True)
 
     # Timestamp
     created_at: Mapped[datetime] = mapped_column(

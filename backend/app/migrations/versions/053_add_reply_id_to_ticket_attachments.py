@@ -36,5 +36,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("ix_ticket_attachments_reply_id", table_name="ticket_attachments")
+    op.drop_index("ix_ticket_attachments_reply_id",
+                  table_name="ticket_attachments")
     op.drop_column("ticket_attachments", "reply_id")

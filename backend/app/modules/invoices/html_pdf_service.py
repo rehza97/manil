@@ -16,11 +16,11 @@ from decimal import Decimal
 import qrcode
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-# Try WeasyPrint first, fallback to xhtml2pdf
+# Try WeasyPrint first, fallback to xhtml2pdf (OSError if native libs missing)
 try:
     from weasyprint import HTML, CSS
     PDF_ENGINE = "weasyprint"
-except ImportError:
+except (ImportError, OSError):
     try:
         from xhtml2pdf import pisa
         PDF_ENGINE = "xhtml2pdf"
@@ -456,7 +456,8 @@ class HTMLPDFService:
         discount = float(order.discount_amount)
         tax_amount = float(order.tax_amount)
         total = float(order.total_amount)
-        status_val = order.status.value if hasattr(order.status, "value") else str(order.status)
+        status_val = order.status.value if hasattr(
+            order.status, "value") else str(order.status)
 
         order_data = {
             "order_number": order.order_number,
@@ -490,7 +491,8 @@ class HTMLPDFService:
             bank=self.bank,
             currency="DZD",
             currency_name="Dinars Algeriens",
-            generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+            generated_at=datetime.now(timezone.utc).strftime(
+                "%Y-%m-%d %H:%M:%S UTC"),
         )
 
         safe_number = re.sub(r"[^a-zA-Z0-9_-]", "", order.order_number)

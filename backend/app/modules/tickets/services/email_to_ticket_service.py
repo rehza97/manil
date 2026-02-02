@@ -40,7 +40,8 @@ _CATEGORY_SLUG_MAP = {
 
 def _get_system_user_id(db: Session) -> Optional[str]:
     """Return first admin user id for system-created records, or None."""
-    user = db.query(User).join(Role, User.role_id == Role.id).filter(Role.slug == "admin").first()
+    user = db.query(User).join(Role, User.role_id == Role.id).filter(
+        Role.slug == "admin").first()
     return str(user.id) if user else None
 
 
@@ -149,7 +150,8 @@ class EmailToTicketService:
                 return cls._create_new_ticket(db, parsed_email, email_account, customer)
 
         except Exception as e:
-            logger.error(f"Failed to process email {parsed_email.message_id}: {e}")
+            logger.error(
+                f"Failed to process email {parsed_email.message_id}: {e}")
             return TicketCreationResult(
                 success=False,
                 error_message=f"Failed to process email: {str(e)}",
@@ -175,7 +177,8 @@ class EmailToTicketService:
                 return db.query(Ticket).filter(Ticket.id == email_msg.ticket_id).first()
 
         # Check subject line for ticket ID (UUID). Match " (Ticket <uuid>)" from reply templates.
-        ticket_id_match = re.search(r"\(Ticket ([a-f0-9-]{36})\)", parsed_email.subject, re.I)
+        ticket_id_match = re.search(
+            r"\(Ticket ([a-f0-9-]{36})\)", parsed_email.subject, re.I)
         if ticket_id_match:
             ticket_id = ticket_id_match.group(1)
             return db.query(Ticket).filter(Ticket.id == ticket_id).first()
@@ -213,12 +216,15 @@ class EmailToTicketService:
         try:
             # Find or create customer from email
             if not customer:
-                customer = cls._find_or_create_customer(db, parsed_email.from_address)
+                customer = cls._find_or_create_customer(
+                    db, parsed_email.from_address)
 
             # Create ticket
             ticket_id = str(uuid.uuid4())
-            priority = cls._detect_priority(parsed_email.subject, parsed_email.body_text)
-            category_slug = cls._detect_category(parsed_email.subject, parsed_email.body_text)
+            priority = cls._detect_priority(
+                parsed_email.subject, parsed_email.body_text)
+            category_slug = cls._detect_category(
+                parsed_email.subject, parsed_email.body_text)
             category_id = _resolve_category_id(db, category_slug)
             system_user_id = _get_system_user_id(db)
             if not system_user_id:
@@ -252,7 +258,8 @@ class EmailToTicketService:
 
             db.commit()
 
-            logger.info(f"Created ticket {ticket_id} from email {parsed_email.message_id}")
+            logger.info(
+                f"Created ticket {ticket_id} from email {parsed_email.message_id}")
 
             return TicketCreationResult(
                 success=True,
@@ -299,7 +306,8 @@ class EmailToTicketService:
             # Create TicketReply so it appears in timeline and GET /tickets/:id/replies
             system_user_id = _get_system_user_id(db)
             if system_user_id:
-                reply_body = (parsed_email.body_text or parsed_email.body_html or "(no content)")[: 64 * 1024]
+                reply_body = (parsed_email.body_text or parsed_email.body_html or "(no content)")[
+                    : 64 * 1024]
                 reply = TicketReply(
                     id=str(uuid.uuid4()),
                     ticket_id=ticket.id,
@@ -318,7 +326,8 @@ class EmailToTicketService:
 
             db.commit()
 
-            logger.info(f"Added reply to ticket {ticket.id} from email {parsed_email.message_id}")
+            logger.info(
+                f"Added reply to ticket {ticket.id} from email {parsed_email.message_id}")
 
             return TicketCreationResult(
                 success=True,
@@ -357,13 +366,15 @@ class EmailToTicketService:
             message_id=parsed_email.message_id,
             from_address=parsed_email.from_address,
             to_addresses=json.dumps(parsed_email.to_addresses),
-            cc_addresses=json.dumps(parsed_email.cc_addresses) if parsed_email.cc_addresses else None,
+            cc_addresses=json.dumps(
+                parsed_email.cc_addresses) if parsed_email.cc_addresses else None,
             subject=parsed_email.subject,
             body_text=parsed_email.body_text,
             body_html=parsed_email.body_html,
             raw_email="",  # Would store actual RFC822 if desired
             in_reply_to=parsed_email.in_reply_to,
-            references=json.dumps(parsed_email.references) if parsed_email.references else None,
+            references=json.dumps(
+                parsed_email.references) if parsed_email.references else None,
             ticket_id=ticket_id,
             has_attachments=parsed_email.has_attachments(),
             attachment_count=len(parsed_email.attachments),
@@ -378,7 +389,8 @@ class EmailToTicketService:
         # Create attachment records
         for attachment in parsed_email.attachments:
             try:
-                file_path = EmailParserService.save_attachment(attachment, email_msg.id)
+                file_path = EmailParserService.save_attachment(
+                    attachment, email_msg.id)
 
                 attachment_record = EmailAttachment(
                     id=str(uuid.uuid4()),
@@ -392,7 +404,8 @@ class EmailToTicketService:
 
                 db.add(attachment_record)
             except Exception as e:
-                logger.warning(f"Failed to save attachment {attachment.filename}: {e}")
+                logger.warning(
+                    f"Failed to save attachment {attachment.filename}: {e}")
 
         return email_msg
 

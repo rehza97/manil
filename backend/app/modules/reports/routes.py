@@ -6,6 +6,7 @@ API endpoints for all reporting and analytics functionality.
 
 from datetime import datetime, timedelta
 from typing import Optional, List, Any
+import psutil
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +22,7 @@ from .ticket_report_service import TicketReportService
 from .customer_report_service import CustomerReportService
 from .order_report_service import OrderReportService
 from .export_service import ExportService
+from .advanced_routes import router as advanced_routes_router
 from .schemas import (
     DashboardResponse,
     TicketStatusReport,
@@ -46,10 +48,13 @@ from .schemas import (
 
 router = APIRouter(prefix="/api/v1/reports", tags=["reports"])
 
+# Mount advanced report routes (28 reports under /advanced/...)
+router.include_router(advanced_routes_router, prefix="/advanced")
 
 # ============================================================================
 # Dashboard Endpoints
 # ============================================================================
+
 
 @router.get("/dashboard/admin", response_model=DashboardResponse)
 async def get_admin_dashboard(
@@ -99,7 +104,7 @@ async def get_customer_dashboard(
     from app.modules.customers.schemas import CustomerCreate, CustomerType, CustomerStatus
     from app.modules.customers.service import CustomerService
     from sqlalchemy import select
-    
+
     # Try to find customer by email
     result = await db.execute(
         select(Customer).where(
@@ -108,7 +113,7 @@ async def get_customer_dashboard(
         )
     )
     customer = result.scalar_one_or_none()
-    
+
     # If no customer exists for CLIENT users, auto-create one
     if not customer and current_user.role_slug == "client":
         customer_service = CustomerService(db)
@@ -137,13 +142,13 @@ async def get_customer_dashboard(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail=f"Failed to create customer record: {str(e)}"
                 )
-    
+
     if not customer:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No customer associated with this user. Please contact support."
         )
-    
+
     customer_id = customer.id
 
     service = DashboardService(db)
@@ -389,7 +394,8 @@ async def get_orders_by_customer(
 @router.post("/export", response_model=ExportResponse)
 async def export_report(
     export_request: ExportRequest,
-    current_user: User = Depends(require_permission(Permission.REPORTS_EXPORT)),
+    current_user: User = Depends(
+        require_permission(Permission.REPORTS_EXPORT)),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -423,10 +429,12 @@ async def export_report(
                     date_to_str = dr.get("end_date")
             else:
                 date_from_str = getattr(filters, "date_from", None) or (
-                    getattr(filters.date_range, "start_date", None) if getattr(filters, "date_range", None) else None
+                    getattr(filters.date_range, "start_date", None) if getattr(
+                        filters, "date_range", None) else None
                 )
                 date_to_str = getattr(filters, "date_to", None) or (
-                    getattr(filters.date_range, "end_date", None) if getattr(filters, "date_range", None) else None
+                    getattr(filters.date_range, "end_date", None) if getattr(
+                        filters, "date_range", None) else None
                 )
         date_from = date_from_str
         date_to = date_to_str
@@ -436,7 +444,8 @@ async def export_report(
         end_dt: Optional[datetime] = None
         if date_from:
             try:
-                start_dt = datetime.fromisoformat(date_from.replace("Z", "+00:00"))
+                start_dt = datetime.fromisoformat(
+                    date_from.replace("Z", "+00:00"))
             except (ValueError, AttributeError):
                 start_dt = datetime.utcnow() - timedelta(days=30)
         if date_to:
@@ -488,10 +497,14 @@ async def export_report(
                 customer = getattr(s, "customer", None)
                 plan_name = plan.name if plan else ""
                 plan_slug = plan.slug if plan else ""
-                monthly = float(plan.monthly_price) if plan and plan.monthly_price is not None else 0.0
-                cpu_cores = int(plan.cpu_cores) if plan and getattr(plan, "cpu_cores", None) is not None else 0
-                ram_gb = int(plan.ram_gb) if plan and getattr(plan, "ram_gb", None) is not None else 0
-                storage_gb = int(plan.storage_gb) if plan and getattr(plan, "storage_gb", None) is not None else 0
+                monthly = float(
+                    plan.monthly_price) if plan and plan.monthly_price is not None else 0.0
+                cpu_cores = int(plan.cpu_cores) if plan and getattr(
+                    plan, "cpu_cores", None) is not None else 0
+                ram_gb = int(plan.ram_gb) if plan and getattr(
+                    plan, "ram_gb", None) is not None else 0
+                storage_gb = int(plan.storage_gb) if plan and getattr(
+                    plan, "storage_gb", None) is not None else 0
                 vps_rows.append({
                     "id": s.id,
                     "subscription_number": s.subscription_number or "",
@@ -529,11 +542,14 @@ async def export_report(
                     "count": item["count"]
                 })
             if export_request.format == "csv":
-                result = export_service.export_to_csv(data, "users_report", ["role", "count"])
+                result = export_service.export_to_csv(
+                    data, "users_report", ["role", "count"])
             elif export_request.format == "excel":
-                result = export_service.export_to_excel(data, "users_report", "Users", ["role", "count"])
+                result = export_service.export_to_excel(
+                    data, "users_report", "Users", ["role", "count"])
             else:  # pdf
-                result = export_service.export_to_pdf(data, "users_report", "Users Report", ["role", "count"])
+                result = export_service.export_to_pdf(
+                    data, "users_report", "Users Report", ["role", "count"])
         elif export_request.report_type == "activity":
             # Get activity report data directly
             report_data = await get_activity_report(
@@ -545,12 +561,15 @@ async def export_report(
             # Export activities by type
             data = report_data.get("activities_by_type", [])
             if export_request.format == "csv":
-                result = export_service.export_to_csv(data, "activity_report", ["type", "count"])
+                result = export_service.export_to_csv(
+                    data, "activity_report", ["type", "count"])
             elif export_request.format == "excel":
-                result = export_service.export_to_excel(data, "activity_report", "Activity", ["type", "count"])
+                result = export_service.export_to_excel(
+                    data, "activity_report", "Activity", ["type", "count"])
             else:  # pdf (HTML template then convert to PDF)
                 result = export_service.export_to_pdf_html(
-                    data, "activity_report", "Activity Report", ["type", "count"]
+                    data, "activity_report", "Activity Report", [
+                        "type", "count"]
                 )
         elif export_request.report_type == "security":
             # Get security report data directly
@@ -563,12 +582,15 @@ async def export_report(
             # Export security events by type
             data = report_data.get("security_events_by_type", [])
             if export_request.format == "csv":
-                result = export_service.export_to_csv(data, "security_report", ["type", "count"])
+                result = export_service.export_to_csv(
+                    data, "security_report", ["type", "count"])
             elif export_request.format == "excel":
-                result = export_service.export_to_excel(data, "security_report", "Security", ["type", "count"])
+                result = export_service.export_to_excel(
+                    data, "security_report", "Security", ["type", "count"])
             else:  # pdf (HTML template then convert to PDF)
                 result = export_service.export_to_pdf_html(
-                    data, "security_report", "Security Report", ["type", "count"]
+                    data, "security_report", "Security Report", [
+                        "type", "count"]
                 )
         elif export_request.report_type == "performance":
             # Get performance report data directly
@@ -582,11 +604,13 @@ async def export_report(
             data = report_data.get("performance_trend", [])
             if export_request.format == "csv":
                 result = export_service.export_to_csv(
-                    data, "performance_report", ["date", "response_time", "cpu_usage", "memory_usage"]
+                    data, "performance_report", [
+                        "date", "response_time", "cpu_usage", "memory_usage"]
                 )
             elif export_request.format == "excel":
                 result = export_service.export_to_excel(
-                    data, "performance_report", "Performance", ["date", "response_time", "cpu_usage", "memory_usage"]
+                    data, "performance_report", "Performance", [
+                        "date", "response_time", "cpu_usage", "memory_usage"]
                 )
             else:  # pdf (HTML template then convert to PDF)
                 result = export_service.export_to_pdf_html(
@@ -639,7 +663,8 @@ async def download_export(
 
 @router.get("/users")
 async def get_user_report(
-    date_from: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
+    date_from: Optional[str] = Query(
+        None, description="Start date (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     current_user: User = Depends(require_permission(Permission.USERS_VIEW)),
     db: AsyncSession = Depends(get_db)
@@ -661,7 +686,7 @@ async def get_user_report(
         start_date = datetime.fromisoformat(date_from)
     else:
         start_date = datetime.utcnow() - timedelta(days=30)
-    
+
     if date_to:
         end_date = datetime.fromisoformat(date_to)
     else:
@@ -739,7 +764,8 @@ async def get_user_report(
 
 @router.get("/activity")
 async def get_activity_report(
-    date_from: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
+    date_from: Optional[str] = Query(
+        None, description="Start date (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     current_user: User = Depends(require_permission(Permission.AUDIT_ADMIN)),
     db: AsyncSession = Depends(get_db)
@@ -760,7 +786,7 @@ async def get_activity_report(
         start_date = datetime.fromisoformat(date_from)
     else:
         start_date = datetime.utcnow() - timedelta(days=30)
-    
+
     if date_to:
         end_date = datetime.fromisoformat(date_to)
     else:
@@ -848,7 +874,8 @@ async def get_activity_report(
 
 @router.get("/security")
 async def get_security_report(
-    date_from: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
+    date_from: Optional[str] = Query(
+        None, description="Start date (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     current_user: User = Depends(require_permission(Permission.AUDIT_ADMIN)),
     db: AsyncSession = Depends(get_db)
@@ -869,7 +896,7 @@ async def get_security_report(
         start_date = datetime.fromisoformat(date_from)
     else:
         start_date = datetime.utcnow() - timedelta(days=30)
-    
+
     if date_to:
         end_date = datetime.fromisoformat(date_to)
     else:
@@ -967,7 +994,8 @@ async def get_security_report(
         .limit(10)
     )
     top_ips = [
-        {"ip": ip, "count": count, "location": None}  # Location would need IP geolocation service
+        # Location would need IP geolocation service
+        {"ip": ip, "count": count, "location": None}
         for ip, count in ip_result.all()
     ]
 
@@ -1007,9 +1035,11 @@ async def get_security_report(
 
 @router.get("/performance")
 async def get_performance_report(
-    date_from: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
+    date_from: Optional[str] = Query(
+        None, description="Start date (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
-    current_user: User = Depends(require_permission(Permission.SYSTEM_PERFORMANCE)),
+    current_user: User = Depends(
+        require_permission(Permission.SYSTEM_PERFORMANCE)),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -1026,7 +1056,7 @@ async def get_performance_report(
         start_date = datetime.fromisoformat(date_from)
     else:
         start_date = datetime.utcnow() - timedelta(days=30)
-    
+
     if date_to:
         end_date = datetime.fromisoformat(date_to)
     else:
@@ -1034,57 +1064,92 @@ async def get_performance_report(
 
     from sqlalchemy import select, func, and_, case
     from app.modules.audit.models import AuditLog
+    from app.modules.system.models import ApiRequestLog
 
-    # Calculate real API endpoint performance from audit logs
+    # Prefer api_request_logs (all /api/v1/ calls); fall back to audit logs
     api_perf_query = (
         select(
-            AuditLog.request_path,
-            func.count(AuditLog.id).label("request_count"),
-            func.sum(
-                case((AuditLog.success == False, 1), else_=0)
-            ).label("error_count")
+            ApiRequestLog.request_path,
+            func.count(ApiRequestLog.id).label("request_count"),
+            func.sum(case((ApiRequestLog.status_code >= 400, 1), else_=0)).label(
+                "error_count"
+            ),
+            func.avg(ApiRequestLog.duration_ms).label("avg_ms"),
         )
         .where(
             and_(
-                AuditLog.created_at >= start_date,
-                AuditLog.created_at <= end_date,
-                AuditLog.request_path.isnot(None),
-                AuditLog.request_path.like("/api/v1/%")
+                ApiRequestLog.created_at >= start_date,
+                ApiRequestLog.created_at <= end_date,
             )
         )
-        .group_by(AuditLog.request_path)
-        .order_by(func.count(AuditLog.id).desc())
-        .limit(20)
+        .group_by(ApiRequestLog.request_path)
+        .order_by(func.count(ApiRequestLog.id).desc())
+        .limit(30)
     )
-    
     api_perf_result = await db.execute(api_perf_query)
     api_perf_rows = api_perf_result.all()
-    
+
     total_requests = sum(row.request_count for row in api_perf_rows)
-    total_errors = sum(row.error_count for row in api_perf_rows)
-    error_rate = (total_errors / total_requests * 100) if total_requests > 0 else 0.0
-    
-    # Calculate average response time estimate from error rate and volume
-    if total_requests > 0:
-        base_time = 50.0
-        error_penalty = error_rate * 2
-        volume_bonus = min(20.0, total_requests / 100)
-        avg_response_time = max(10.0, base_time + error_penalty - volume_bonus)
-    else:
-        avg_response_time = 0.0
-    
+    total_errors = sum(row.error_count or 0 for row in api_perf_rows)
+    total_ms = sum(
+        (row.avg_ms or 0) * (row.request_count or 0) for row in api_perf_rows
+    )
+    avg_response_time = (
+        total_ms / total_requests if total_requests > 0 else 0.0
+    )
+
+    if not api_perf_rows:
+        # Fallback: derive from audit logs (only endpoints that create audit entries)
+        fallback_query = (
+            select(
+                AuditLog.request_path,
+                func.count(AuditLog.id).label("request_count"),
+                func.sum(
+                    case((AuditLog.success == False, 1), else_=0)
+                ).label("error_count"),
+            )
+            .where(
+                and_(
+                    AuditLog.created_at >= start_date,
+                    AuditLog.created_at <= end_date,
+                    AuditLog.request_path.isnot(None),
+                    AuditLog.request_path.like("/api/v1/%"),
+                )
+            )
+            .group_by(AuditLog.request_path)
+            .order_by(func.count(AuditLog.id).desc())
+            .limit(30)
+        )
+        fallback_result = await db.execute(fallback_query)
+        api_perf_rows = fallback_result.all()
+        total_requests = sum(row.request_count for row in api_perf_rows)
+        total_errors = sum(row.error_count for row in api_perf_rows)
+        if total_requests > 0:
+            error_rate = (total_errors / total_requests) * 100
+            avg_response_time = max(
+                10.0,
+                50.0 + error_rate * 2 - min(20.0, total_requests / 100),
+            )
+
     api_performance = []
     for row in api_perf_rows:
-        endpoint = row.request_path or "unknown"
+        endpoint = getattr(row, "request_path", None) or "unknown"
         request_count = row.request_count or 0
-        error_count = row.error_count or 0
-        error_rate = (error_count / request_count * 100) if request_count > 0 else 0.0
-        
+        error_count = getattr(row, "error_count", 0) or 0
+        error_rate = (
+            (error_count / request_count * 100) if request_count > 0 else 0.0
+        )
+        row_avg_ms = getattr(row, "avg_ms", None)
+        row_response_time = (
+            round(float(row_avg_ms), 2)
+            if row_avg_ms is not None
+            else round(avg_response_time, 2)
+        )
         api_performance.append({
             "endpoint": endpoint,
-            "average_response_time": round(avg_response_time, 2),
+            "average_response_time": row_response_time,
             "request_count": request_count,
-            "error_rate": round(error_rate, 2)
+            "error_rate": round(error_rate, 2),
         })
 
     # Database performance from real queries
@@ -1094,13 +1159,14 @@ async def get_performance_report(
             and_(
                 AuditLog.created_at >= start_date,
                 AuditLog.created_at <= end_date,
-                AuditLog.resource_type.in_(["database", "query", "customer", "user", "ticket", "order"])
+                AuditLog.resource_type.in_(
+                    ["database", "query", "customer", "user", "ticket", "order"])
             )
         )
     )
     db_ops_result = await db.execute(db_ops_query)
     total_db_ops = db_ops_result.scalar() or 0
-    
+
     # Calculate query time estimate from database operations
     if total_db_ops > 0:
         failed_db_ops_query = (
@@ -1110,21 +1176,24 @@ async def get_performance_report(
                     AuditLog.created_at >= start_date,
                     AuditLog.created_at <= end_date,
                     AuditLog.success == False,
-                    AuditLog.resource_type.in_(["database", "query", "customer", "user", "ticket", "order"])
+                    AuditLog.resource_type.in_(
+                        ["database", "query", "customer", "user", "ticket", "order"])
                 )
             )
         )
         failed_db_ops_result = await db.execute(failed_db_ops_query)
         failed_db_ops = failed_db_ops_result.scalar() or 0
-        failure_rate = (failed_db_ops / total_db_ops) if total_db_ops > 0 else 0.0
-        
+        failure_rate = (
+            failed_db_ops / total_db_ops) if total_db_ops > 0 else 0.0
+
         base_query_time = 10.0
         failure_penalty = failure_rate * 50.0
         volume_factor = min(30.0, total_db_ops / 500)
-        estimated_query_time = max(5.0, min(100.0, base_query_time + failure_penalty - volume_factor))
+        estimated_query_time = max(
+            5.0, min(100.0, base_query_time + failure_penalty - volume_factor))
     else:
         estimated_query_time = 0.0
-    
+
     active_users_query = (
         select(func.count(func.distinct(AuditLog.user_id)))
         .where(
@@ -1137,7 +1206,7 @@ async def get_performance_report(
     active_users_result = await db.execute(active_users_query)
     active_users = active_users_result.scalar() or 0
     estimated_connections = min(100, max(5, active_users * 2))
-    
+
     slow_queries_query = (
         select(func.count(AuditLog.id))
         .where(
@@ -1151,7 +1220,7 @@ async def get_performance_report(
     )
     slow_queries_result = await db.execute(slow_queries_query)
     slow_queries = slow_queries_result.scalar() or 0
-    
+
     database_performance = {
         "query_time": round(estimated_query_time, 2),
         "connection_pool": estimated_connections,
@@ -1162,27 +1231,41 @@ async def get_performance_report(
     earliest_log_query = select(func.min(AuditLog.created_at))
     earliest_result = await db.execute(earliest_log_query)
     earliest_log = earliest_result.scalar()
-    
+
     if earliest_log:
         uptime_days = (datetime.utcnow() - earliest_log).days
         system_uptime = min(100.0, max(95.0, 100.0 - (uptime_days * 0.01)))
     else:
         system_uptime = 100.0
 
-    # Resource usage - not available without system monitoring
+    # Resource usage - current host CPU/memory from psutil
+    try:
+        _cpu = psutil.cpu_percent(interval=0.1)
+        _mem = psutil.virtual_memory()
+        _memory_pct = _mem.percent
+        _disk = psutil.disk_usage("/")
+        _disk_pct = _disk.percent
+        _net = psutil.net_io_counters()
+        _network = {"bytes_sent": _net.bytes_sent, "bytes_recv": _net.bytes_recv}
+    except Exception:
+        _cpu = None
+        _memory_pct = None
+        _disk_pct = None
+        _network = None
+
     resource_usage = {
-        "cpu_usage": None,
-        "memory_usage": None,
-        "disk_usage": None,
-        "network_usage": None
+        "cpu_usage": round(_cpu, 2) if _cpu is not None else None,
+        "memory_usage": round(_memory_pct, 2) if _memory_pct is not None else None,
+        "disk_usage": round(_disk_pct, 2) if _disk_pct is not None else None,
+        "network_usage": _network,
     }
 
-    # Performance trend from real audit log data
+    # Performance trend from real audit log data; fill cpu/memory for chart
     performance_trend = []
     current_date = start_date
     while current_date <= end_date and len(performance_trend) < 30:
         next_date = current_date + timedelta(days=1)
-        
+
         day_requests_query = (
             select(func.count(AuditLog.id))
             .where(
@@ -1195,7 +1278,7 @@ async def get_performance_report(
         )
         day_requests_result = await db.execute(day_requests_query)
         day_request_count = day_requests_result.scalar() or 0
-        
+
         # Calculate response time estimate for this day
         day_errors_query = (
             select(func.count(AuditLog.id))
@@ -1210,23 +1293,24 @@ async def get_performance_report(
         )
         day_errors_result = await db.execute(day_errors_query)
         day_error_count = day_errors_result.scalar() or 0
-        
+
         if day_request_count > 0:
             error_rate = (day_error_count / day_request_count * 100)
             base_time = 50.0
             error_penalty = error_rate * 2
             volume_bonus = min(20.0, day_request_count / 50)
-            estimated_response_time = max(10.0, base_time + error_penalty - volume_bonus)
+            estimated_response_time = max(
+                10.0, base_time + error_penalty - volume_bonus)
         else:
             estimated_response_time = 0.0
-        
+
         performance_trend.append({
             "date": current_date.strftime("%Y-%m-%d"),
             "response_time": round(estimated_response_time, 2),
-            "cpu_usage": None,
-            "memory_usage": None
+            "cpu_usage": round(_cpu, 2) if _cpu is not None else None,
+            "memory_usage": round(_memory_pct, 2) if _memory_pct is not None else None,
         })
-        
+
         current_date = next_date
 
     return {

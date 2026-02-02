@@ -107,7 +107,8 @@ class OrderRepository:
 
         total = query.count()
         orders = (
-            query.options(joinedload(Order.items).joinedload(OrderItem.product))
+            query.options(joinedload(
+                Order.items).joinedload(OrderItem.product))
             .order_by(desc(Order.created_at))
             .offset(skip)
             .limit(limit)

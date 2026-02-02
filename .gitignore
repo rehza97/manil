@@ -6,3 +6,8 @@
 *.md
 Internship report.docx
 .gitignore
+backend/exports/invoice_aging_20260202_213438.xlsx
+backend/exports/invoice_aging_20260202_213447.csv
+backend/exports/invoice_aging_20260202_223601.xlsx
+backend/exports/payment_status_20260202_213506.xlsx
+backend/exports/users_report_20260202_224234.pdf

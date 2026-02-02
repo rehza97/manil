@@ -26,7 +26,8 @@ router = APIRouter(prefix="/admin/reports", tags=["admin-reports"])
 
 @router.get("/users")
 async def admin_get_user_report(
-    date_from: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
+    date_from: Optional[str] = Query(
+        None, description="Start date (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
@@ -37,7 +38,8 @@ async def admin_get_user_report(
 
 @router.get("/activity")
 async def admin_get_activity_report(
-    date_from: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
+    date_from: Optional[str] = Query(
+        None, description="Start date (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db)
@@ -48,7 +50,8 @@ async def admin_get_activity_report(
 
 @router.get("/security")
 async def admin_get_security_report(
-    date_from: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
+    date_from: Optional[str] = Query(
+        None, description="Start date (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -59,22 +62,26 @@ async def admin_get_security_report(
 
 @router.get("/performance")
 async def admin_get_performance_report(
-    date_from: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
+    date_from: Optional[str] = Query(
+        None, description="Start date (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
-    current_user: User = Depends(require_permission(Permission.SYSTEM_PERFORMANCE)),
+    current_user: User = Depends(
+        require_permission(Permission.SYSTEM_PERFORMANCE)),
     db: AsyncSession = Depends(get_db)
 ):
     """Admin endpoint for performance reports - maps to /reports/performance"""
     return await get_performance_report(date_from, date_to, current_user, db)
 
 
+@router.post("/cache/invalidate")
+async def invalidate_report_cache(
+    report_type: Optional[str] = Query(
+        None, description="Report type (e.g. financial, sales) or all"),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
+):
+    """Invalidate cached report files by type. Omit report_type to clear all."""
+    from .cache_service import ReportCacheService
 
-
-
-
-
-
-
-
-
-
+    cache = ReportCacheService()
+    await cache.invalidate_reports(report_type or "*")
+    return {"status": "ok", "message": f"Cache invalidated for {report_type or 'all'}"}

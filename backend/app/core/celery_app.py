@@ -11,6 +11,7 @@ from app.config.settings import get_settings
 # This prevents "failed to locate a name" errors in Celery workers
 from app.modules.products.models import Product, ProductCategory  # noqa: F401
 from app.modules.quotes.models import Quote, QuoteItem, QuoteTimeline  # noqa: F401
+from app.modules.orders.models import Order  # noqa: F401
 from app.modules.customers.models import Customer  # noqa: F401
 from app.modules.invoices.models import Invoice  # noqa: F401
 from app.modules.auth.models import User  # noqa: F401

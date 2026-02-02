@@ -63,7 +63,8 @@ class Order(Base):
 
     # Order Status
     status: Mapped[OrderStatus] = mapped_column(
-        SQLEnum(OrderStatus, name="order_status_enum", native_enum=True, values_callable=lambda x: [e.value for e in x]),
+        SQLEnum(OrderStatus, name="order_status_enum", native_enum=True,
+                values_callable=lambda x: [e.value for e in x]),
         default=OrderStatus.REQUEST,
         nullable=False,
         index=True,
@@ -236,8 +237,10 @@ class Order(Base):
     )
 
     # Relationships
-    items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
-    timeline = relationship("OrderTimeline", back_populates="order", cascade="all, delete-orphan")
+    items = relationship("OrderItem", back_populates="order",
+                         cascade="all, delete-orphan")
+    timeline = relationship(
+        "OrderTimeline", back_populates="order", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<Order {self.order_number} ({self.status})>"
@@ -371,12 +374,14 @@ class OrderTimeline(Base):
 
     # Status Change
     previous_status: Mapped[Optional[OrderStatus]] = mapped_column(
-        SQLEnum(OrderStatus, name="order_status_enum", native_enum=True, values_callable=lambda x: [e.value for e in x]),
+        SQLEnum(OrderStatus, name="order_status_enum", native_enum=True,
+                values_callable=lambda x: [e.value for e in x]),
         nullable=True,
         doc="Previous status",
     )
     new_status: Mapped[OrderStatus] = mapped_column(
-        SQLEnum(OrderStatus, name="order_status_enum", native_enum=True, values_callable=lambda x: [e.value for e in x]),
+        SQLEnum(OrderStatus, name="order_status_enum", native_enum=True,
+                values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         doc="New status",
     )

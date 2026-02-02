@@ -407,6 +407,16 @@ class AlertSchema(BaseModel):
     subscription_number: Optional[str] = None
 
 
+class PerVPSCurrentStatsSchema(BaseModel):
+    """Per-VPS current resource stats for dashboard chart."""
+    subscription_id: str
+    subscription_number: str
+    hostname: str
+    cpu_usage_percent: Optional[float] = None
+    memory_usage_percent: Optional[float] = None
+    storage_usage_percent: Optional[float] = None
+
+
 # ============================================================================
 # Upgrade Response Schema
 # ============================================================================

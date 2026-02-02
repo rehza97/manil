@@ -25,6 +25,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAuth } from "@/modules/auth";
+import { formatDZD } from "@/shared/utils/formatters";
 import { useCorporateDashboard } from "../hooks/useDashboard";
 import { RevenueCard } from "@/modules/revenue/components";
 import { useQuery } from "@tanstack/react-query";

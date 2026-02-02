@@ -77,7 +77,8 @@ class Settings(BaseSettings):
     EMAIL_PROVIDER: str = "smtp"  # smtp | sendgrid | ses
     EMAIL_FROM: str = "noreply@localhost"
     EMAIL_FROM_NAME: str = "CloudManager"
-    ADMIN_EMAIL: str = "admin@cloudmanager.dz"  # Admin email for critical notifications
+    # Admin email for critical notifications
+    ADMIN_EMAIL: str = "admin@cloudmanager.dz"
     SENDGRID_API_KEY: str | None = None
     AWS_SES_REGION: str = "us-east-1"
     AWS_ACCESS_KEY_ID: str | None = None
@@ -87,7 +88,7 @@ class Settings(BaseSettings):
     SMTP_USERNAME: str = ""
     SMTP_PASSWORD: str = ""
     SMTP_USE_TLS: bool = True
-    
+
     # Webhook Configuration
     SENDGRID_WEBHOOK_SECRET: str | None = None
     MAILGUN_WEBHOOK_SECRET: str | None = None

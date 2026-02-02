@@ -34,10 +34,13 @@ async def list_users(
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
     role: Optional[str] = Query(None, description="Filter by role"),
-    is_active: Optional[bool] = Query(None, description="Filter by active status"),
-    status: Optional[str] = Query(None, description="Filter: all, active, inactive, deleted"),
-    search: Optional[str] = Query(None, description="Search in name and email"),
-    current_user = Depends(require_admin),
+    is_active: Optional[bool] = Query(
+        None, description="Filter by active status"),
+    status: Optional[str] = Query(
+        None, description="Filter: all, active, inactive, deleted"),
+    search: Optional[str] = Query(
+        None, description="Search in name and email"),
+    current_user=Depends(require_admin),
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ):
     """
@@ -66,7 +69,7 @@ async def list_users(
 @router.get("/{user_id}", response_model=UserDetailResponse)
 async def get_user(
     user_id: str,
-    current_user = Depends(require_admin),
+    current_user=Depends(require_admin),
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ):
     """
@@ -85,7 +88,7 @@ async def get_user(
 @router.post("", response_model=UserDetailResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(
     user_data: AdminUserCreate,
-    current_user = Depends(require_admin),
+    current_user=Depends(require_admin),
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ):
     """
@@ -105,7 +108,7 @@ async def create_user(
 async def update_user(
     user_id: str,
     user_data: AdminUserUpdate,
-    current_user = Depends(require_admin),
+    current_user=Depends(require_admin),
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ):
     """
@@ -125,7 +128,7 @@ async def update_user(
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
     user_id: str,
-    current_user = Depends(require_admin),
+    current_user=Depends(require_admin),
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ):
     """
@@ -144,7 +147,7 @@ async def delete_user(
 @router.delete("/{user_id}/permanent", status_code=status.HTTP_204_NO_CONTENT)
 async def hard_delete_user(
     user_id: str,
-    current_user = Depends(require_admin),
+    current_user=Depends(require_admin),
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ):
     """
@@ -160,7 +163,7 @@ async def hard_delete_user(
 async def update_user_status(
     user_id: str,
     status_data: UserStatusUpdate,
-    current_user = Depends(require_admin),
+    current_user=Depends(require_admin),
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ):
     """
@@ -183,7 +186,7 @@ async def update_user_status(
 @router.post("/{user_id}/unlock", response_model=UserDetailResponse)
 async def unlock_user_account(
     user_id: str,
-    current_user = Depends(require_admin),
+    current_user=Depends(require_admin),
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ):
     """
@@ -205,7 +208,7 @@ async def unlock_user_account(
 async def assign_user_role(
     user_id: str,
     role_data: RoleAssignment,
-    current_user = Depends(require_admin),
+    current_user=Depends(require_admin),
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ):
     """
@@ -225,7 +228,7 @@ async def assign_user_role(
 @router.post("/{user_id}/password-reset", status_code=status.HTTP_204_NO_CONTENT)
 async def force_password_reset(
     user_id: str,
-    current_user = Depends(require_admin),
+    current_user=Depends(require_admin),
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ):
     """
@@ -246,7 +249,7 @@ async def force_password_reset(
 @router.get("/{user_id}/stats", response_model=UserStats)
 async def get_user_statistics(
     user_id: str,
-    current_user = Depends(require_admin),
+    current_user=Depends(require_admin),
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ):
     """
@@ -273,7 +276,7 @@ async def get_user_statistics(
 @router.get("/{user_id}/sessions", response_model=UserSessionListResponse)
 async def get_user_sessions(
     user_id: str,
-    current_user = Depends(require_admin),
+    current_user=Depends(require_admin),
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ):
     """
@@ -293,7 +296,7 @@ async def get_user_sessions(
 async def revoke_user_session(
     user_id: str,
     session_id: str,
-    current_user = Depends(require_admin),
+    current_user=Depends(require_admin),
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ):
     """
@@ -313,7 +316,7 @@ async def revoke_user_session(
 @router.delete("/{user_id}/sessions", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_all_user_sessions(
     user_id: str,
-    current_user = Depends(require_admin),
+    current_user=Depends(require_admin),
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ):
     """
@@ -334,7 +337,7 @@ async def get_user_activity(
     user_id: str,
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
-    current_user = Depends(require_admin),
+    current_user=Depends(require_admin),
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ):
     """

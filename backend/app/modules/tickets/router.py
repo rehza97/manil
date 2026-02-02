@@ -46,7 +46,6 @@ router.include_router(watcher_router, tags=["watchers"])
 router.include_router(sla_router, tags=["sla-metrics"])
 
 
-
 @router.post(
     "",
     response_model=TicketResponse,
@@ -56,19 +55,20 @@ router.include_router(sla_router, tags=["sla-metrics"])
 async def create_ticket(
     ticket_data: TicketCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.TICKETS_CREATE)),
+    current_user: User = Depends(
+        require_permission(Permission.TICKETS_CREATE)),
 ):
     """Create a new support ticket."""
     from app.modules.customers.repository import CustomerRepository
     from app.modules.customers.schemas import CustomerCreate, CustomerType
     from sqlalchemy import select
     from app.modules.customers.models import Customer
-    
+
     # For client users, automatically find or create customer by email
     customer_id = ticket_data.customer_id
     if current_user.role_slug == "client":
         customer_repo = CustomerRepository(db)
-        
+
         # Try to find customer by email
         result = await db.execute(
             select(Customer).where(
@@ -77,7 +77,7 @@ async def create_ticket(
             )
         )
         customer = result.scalar_one_or_none()
-        
+
         # Auto-create customer if doesn't exist
         if not customer:
             from app.modules.customers.service import CustomerService
@@ -101,7 +101,7 @@ async def create_ticket(
                     )
                 )
                 customer = result.scalar_one_or_none()
-        
+
         if customer:
             # Use the found/created customer ID
             customer_id = customer.id
@@ -110,7 +110,7 @@ async def create_ticket(
                 **ticket_data.model_dump(exclude={"customer_id"}),
                 customer_id=customer_id
             )
-    
+
     service = TicketService(db)
     ticket = await service.create_ticket(ticket_data, current_user.id)
     return ticket
@@ -135,7 +135,7 @@ async def list_my_tickets(
     from app.modules.customers.repository import CustomerRepository
     customer_repo = CustomerRepository(db)
     customer = await customer_repo.get_by_email(current_user.email)
-    
+
     if not customer:
         # No customer found for this user, return empty list
         pagination = PaginationMetadata(
@@ -231,7 +231,8 @@ async def update_ticket(
     ticket_id: str,
     ticket_data: TicketUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.TICKETS_CREATE)),
+    current_user: User = Depends(
+        require_permission(Permission.TICKETS_CREATE)),
 ):
     """Update ticket details (limited fields)."""
     service = TicketService(db)
@@ -247,7 +248,8 @@ async def update_ticket(
 async def delete_ticket(
     ticket_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.TICKETS_DELETE)),
+    current_user: User = Depends(
+        require_permission(Permission.TICKETS_DELETE)),
 ):
     """Delete (soft delete) ticket."""
     service = TicketService(db)
@@ -283,7 +285,8 @@ async def assign_ticket(
     ticket_id: str,
     assignment: TicketAssignment,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.TICKETS_ASSIGN)),
+    current_user: User = Depends(
+        require_permission(Permission.TICKETS_ASSIGN)),
 ):
     """Assign ticket to user."""
     service = TicketService(db)
@@ -300,7 +303,8 @@ async def transfer_ticket(
     ticket_id: str,
     transfer: TicketTransfer,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.TICKETS_ASSIGN)),
+    current_user: User = Depends(
+        require_permission(Permission.TICKETS_ASSIGN)),
 ):
     """Transfer ticket to another user."""
     service = TicketService(db)

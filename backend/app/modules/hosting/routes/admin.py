@@ -3,6 +3,7 @@ VPS Hosting Admin API routes.
 
 Admin-only endpoints for managing all VPS subscriptions.
 """
+import asyncio
 from typing import Optional, List
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -49,6 +50,7 @@ from app.modules.hosting.schemas import (
     UpgradeResponseSchema,
     MonitoringOverviewSchema,
     AlertSchema,
+    PerVPSCurrentStatsSchema,
 )
 from pydantic import BaseModel, Field
 import psutil
@@ -56,7 +58,8 @@ import psutil
 from app.modules.hosting.routes.client import CreateVPSRequestBody
 from app.modules.hosting.distros import SUPPORTED_DISTROS
 
-router = APIRouter(prefix="/api/v1/hosting/admin", tags=["VPS Hosting - Admin"])
+router = APIRouter(prefix="/api/v1/hosting/admin",
+                   tags=["VPS Hosting - Admin"])
 
 
 @router.get(
@@ -102,36 +105,38 @@ async def list_pending_requests(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Page size"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.HOSTING_APPROVE))
+    current_user: User = Depends(
+        require_permission(Permission.HOSTING_APPROVE))
 ):
     """
     List all pending VPS requests.
-    
+
     Args:
         page: Page number (starts at 1)
         page_size: Number of items per page (1-100)
         db: Database session
         current_user: Authenticated user (requires hosting:approve permission)
-    
+
     Returns:
         Paginated list of pending subscriptions
-    
+
     Raises:
         403: If user lacks hosting:approve permission
     """
     repo = VPSSubscriptionRepository(db)
     skip = (page - 1) * page_size
-    
+
     subscriptions, total = await repo.get_all(
         skip=skip,
         limit=page_size,
         status=SubscriptionStatus.PENDING
     )
-    
+
     total_pages = (total + page_size - 1) // page_size
-    
+
     return VPSSubscriptionListResponse(
-        items=[VPSSubscriptionResponse.model_validate(sub) for sub in subscriptions],
+        items=[VPSSubscriptionResponse.model_validate(
+            sub) for sub in subscriptions],
         total=total,
         page=page,
         page_size=page_size,
@@ -161,20 +166,21 @@ async def approve_vps_request(
     subscription_id: str,
     request: Optional[VPSApprovalRequest] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.HOSTING_APPROVE))
+    current_user: User = Depends(
+        require_permission(Permission.HOSTING_APPROVE))
 ):
     """
     Approve VPS request (triggers async provisioning).
-    
+
     Args:
         subscription_id: Unique identifier of the subscription
         request: Optional approval request body
         db: Database session
         current_user: Authenticated user (requires hosting:approve permission)
-    
+
     Returns:
         Updated subscription with PROVISIONING status
-    
+
     Raises:
         404: If subscription not found
         400: If subscription is not in PENDING status
@@ -182,7 +188,7 @@ async def approve_vps_request(
     """
     provisioning_service = VPSProvisioningService(db)
     subscription = await provisioning_service.approve_vps_request(subscription_id, current_user.id)
-    
+
     return VPSSubscriptionResponse.model_validate(subscription)
 
 
@@ -208,20 +214,21 @@ async def reject_vps_request(
     subscription_id: str,
     request: RejectRequestBody,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.HOSTING_APPROVE))
+    current_user: User = Depends(
+        require_permission(Permission.HOSTING_APPROVE))
 ):
     """
     Reject VPS request with reason.
-    
+
     Args:
         subscription_id: Unique identifier of the subscription
         request: Rejection request body with reason
         db: Database session
         current_user: Authenticated user (requires hosting:approve permission)
-    
+
     Returns:
         Success response with rejection status
-    
+
     Raises:
         404: If subscription not found
         400: If subscription is not in PENDING status
@@ -229,23 +236,24 @@ async def reject_vps_request(
     """
     repo = VPSSubscriptionRepository(db)
     subscription = await repo.get_by_id(subscription_id)
-    
+
     if not subscription:
         raise NotFoundException(f"Subscription {subscription_id} not found")
-    
+
     if subscription.status != SubscriptionStatus.PENDING:
-        raise BadRequestException(f"Subscription is not pending (current status: {subscription.status})")
-    
+        raise BadRequestException(
+            f"Subscription is not pending (current status: {subscription.status})")
+
     # Update subscription status
     subscription.status = SubscriptionStatus.CANCELLED
     subscription.status_reason = f"Request rejected: {request.reason}"
     subscription.cancelled_at = datetime.utcnow()
     await repo.update(subscription)
-    
+
     # Create timeline event
     from app.modules.hosting.repository import SubscriptionTimelineRepository
     from app.modules.hosting.models import TimelineEventType, ActorType
-    
+
     timeline_repo = SubscriptionTimelineRepository(db)
     await timeline_repo.create_event(
         subscription_id=subscription.id,
@@ -255,11 +263,12 @@ async def reject_vps_request(
         actor_type="ADMIN",
         metadata={"reason": request.reason}
     )
-    
+
     await db.commit()
-    
-    logger.info(f"VPS request rejected: {subscription.subscription_number} by {current_user.id}")
-    
+
+    logger.info(
+        f"VPS request rejected: {subscription.subscription_number} by {current_user.id}")
+
     return {"status": "rejected", "message": "VPS request has been rejected"}
 
 
@@ -290,8 +299,10 @@ async def reject_vps_request(
     """
 )
 async def list_all_subscriptions(
-    status: Optional[SubscriptionStatus] = Query(None, description="Filter by status"),
-    customer_id: Optional[str] = Query(None, description="Filter by customer ID"),
+    status: Optional[SubscriptionStatus] = Query(
+        None, description="Filter by status"),
+    customer_id: Optional[str] = Query(
+        None, description="Filter by customer ID"),
     plan_id: Optional[str] = Query(None, description="Filter by plan ID"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Page size"),
@@ -300,7 +311,7 @@ async def list_all_subscriptions(
 ):
     """
     List all VPS subscriptions (all customers, filtered).
-    
+
     Args:
         status: Optional subscription status filter
         customer_id: Optional customer ID filter
@@ -309,16 +320,16 @@ async def list_all_subscriptions(
         page_size: Number of items per page (1-100)
         db: Database session
         current_user: Authenticated user (requires hosting:admin permission)
-    
+
     Returns:
         Paginated list of all subscriptions
-    
+
     Raises:
         403: If user lacks hosting:admin permission
     """
     repo = VPSSubscriptionRepository(db)
     skip = (page - 1) * page_size
-    
+
     subscriptions, total = await repo.get_all(
         skip=skip,
         limit=page_size,
@@ -326,11 +337,12 @@ async def list_all_subscriptions(
         plan_id=plan_id,
         status=status
     )
-    
+
     total_pages = (total + page_size - 1) // page_size
-    
+
     return VPSSubscriptionListResponse(
-        items=[VPSSubscriptionResponse.model_validate(sub) for sub in subscriptions],
+        items=[VPSSubscriptionResponse.model_validate(
+            sub) for sub in subscriptions],
         total=total,
         page=page,
         page_size=page_size,
@@ -361,41 +373,43 @@ async def get_subscription_admin(
 ):
     """
     Get full subscription details (admin view, includes sensitive data).
-    
+
     Args:
         subscription_id: Unique identifier of the subscription
         db: Database session
         current_user: Authenticated user (requires hosting:admin permission)
-    
+
     Returns:
         Detailed subscription object with all information
-    
+
     Raises:
         404: If subscription not found
         403: If user lacks hosting:admin permission
     """
     repo = VPSSubscriptionRepository(db)
     subscription = await repo.get_by_id(subscription_id)
-    
+
     if not subscription:
         raise NotFoundException(f"Subscription {subscription_id} not found")
-    
+
     # Get timeline
     from app.modules.hosting.repository import SubscriptionTimelineRepository
     from app.modules.hosting.schemas import SubscriptionTimelineResponse, ContainerMetricsResponse
     timeline_repo = SubscriptionTimelineRepository(db)
     timeline_events = await timeline_repo.get_by_subscription_id(subscription_id, limit=100)
-    
+
     # Get recent metrics
     metrics_repo = ContainerMetricsRepository(db)
     recent_metrics = await metrics_repo.get_recent_metrics(subscription_id, hours=24)
-    recent_metrics_response = [ContainerMetricsResponse.model_validate(m) for m in recent_metrics] if recent_metrics else []
-    
+    recent_metrics_response = [ContainerMetricsResponse.model_validate(
+        m) for m in recent_metrics] if recent_metrics else []
+
     # Build response
     response = VPSSubscriptionDetailResponse.model_validate(subscription)
-    response.timeline = [SubscriptionTimelineResponse.model_validate(e) for e in timeline_events]
+    response.timeline = [SubscriptionTimelineResponse.model_validate(
+        e) for e in timeline_events]
     response.recent_metrics = recent_metrics_response
-    
+
     return response
 
 
@@ -412,7 +426,8 @@ async def get_subscription_admin(
 )
 async def stream_subscription_logs_admin(
     subscription_id: str,
-    tail: int = Query(100, ge=1, le=1000, description="Number of initial log lines"),
+    tail: int = Query(100, ge=1, le=1000,
+                      description="Number of initial log lines"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_permission(Permission.HOSTING_ADMIN)),
 ):
@@ -423,7 +438,8 @@ async def stream_subscription_logs_admin(
         raise NotFoundException(f"Subscription {subscription_id} not found")
 
     if not subscription.container:
-        raise NotFoundException(f"Container not found for subscription {subscription_id}")
+        raise NotFoundException(
+            f"Container not found for subscription {subscription_id}")
 
     docker_service = DockerManagementService(db)
     container_id = subscription.container.container_id
@@ -435,7 +451,8 @@ async def stream_subscription_logs_admin(
         try:
             yield "event: open\ndata: connected\n\n"
         except GeneratorExit:
-            logger.info(f"Client disconnected during open event for container {container_id}")
+            logger.info(
+                f"Client disconnected during open event for container {container_id}")
             raise
 
         try:
@@ -447,7 +464,8 @@ async def stream_subscription_logs_admin(
             keepalive_interval = 15  # Send keepalive every 15 seconds
 
             # Use a non-blocking approach to iterate logs
-            log_iterator = docker_service.iter_container_logs(container_id, tail=tail)
+            log_iterator = docker_service.iter_container_logs(
+                container_id, tail=tail)
 
             while True:
                 try:
@@ -460,11 +478,13 @@ async def stream_subscription_logs_admin(
                             if line:
                                 try:
                                     # Properly escape the line for SSE
-                                    escaped_line = line.replace('\r', '').strip()
+                                    escaped_line = line.replace(
+                                        '\r', '').strip()
                                     if escaped_line:
                                         yield f"data: {escaped_line}\n\n"
                                 except GeneratorExit:
-                                    logger.info(f"Client disconnected while streaming logs for container {container_id}")
+                                    logger.info(
+                                        f"Client disconnected while streaming logs for container {container_id}")
                                     raise
 
                     # Send keepalive if no activity for a while
@@ -473,12 +493,14 @@ async def stream_subscription_logs_admin(
                             yield ": keepalive\n\n"
                             last_activity = time.time()
                         except GeneratorExit:
-                            logger.info(f"Client disconnected during keepalive for container {container_id}")
+                            logger.info(
+                                f"Client disconnected during keepalive for container {container_id}")
                             raise
 
                 except StopIteration:
                     # Logs stream ended - send close event and exit gracefully
-                    logger.info(f"Log stream ended for container {container_id}")
+                    logger.info(
+                        f"Log stream ended for container {container_id}")
                     try:
                         yield "event: close\ndata: stream_ended\n\n"
                     except GeneratorExit:
@@ -488,16 +510,19 @@ async def stream_subscription_logs_admin(
                     # Client disconnected - let it propagate for proper cleanup
                     raise
                 except Exception as chunk_error:
-                    logger.error(f"Error processing log chunk for container {container_id}: {chunk_error}")
+                    logger.error(
+                        f"Error processing log chunk for container {container_id}: {chunk_error}")
                     # Continue streaming despite chunk errors
                     continue
 
         except GeneratorExit:
             # Client disconnected - let it propagate for proper cleanup
-            logger.info(f"Client disconnected, cleaning up log stream for container {container_id}")
+            logger.info(
+                f"Client disconnected, cleaning up log stream for container {container_id}")
             raise
         except Exception as e:
-            logger.error(f"Error streaming logs for container {container_id}: {e}", exc_info=True)
+            logger.error(
+                f"Error streaming logs for container {container_id}: {e}", exc_info=True)
             try:
                 payload = json.dumps({"error": str(e)})
                 yield f"event: error\ndata: {payload}\n\n"
@@ -529,7 +554,8 @@ async def stream_subscription_logs_admin(
 )
 async def get_subscription_stats_admin(
     subscription_id: str,
-    hours: int = Query(24, ge=1, le=168, description="Hours of history to retrieve"),
+    hours: int = Query(
+        24, ge=1, le=168, description="Hours of history to retrieve"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_permission(Permission.HOSTING_ADMIN)),
 ):
@@ -540,7 +566,8 @@ async def get_subscription_stats_admin(
         raise NotFoundException(f"Subscription {subscription_id} not found")
 
     if not subscription.container:
-        raise NotFoundException(f"Container not found for subscription {subscription_id}")
+        raise NotFoundException(
+            f"Container not found for subscription {subscription_id}")
 
     monitoring_service = ContainerMonitoringService(db)
     current_stats = await monitoring_service.get_real_time_stats(subscription.container.id)
@@ -548,7 +575,8 @@ async def get_subscription_stats_admin(
 
     from app.modules.hosting.schemas import ContainerMetricsResponse, ContainerStatsResponse
 
-    history_response = [ContainerMetricsResponse.model_validate(m) for m in history] if history else []
+    history_response = [ContainerMetricsResponse.model_validate(
+        m) for m in history] if history else []
     return ContainerStatsResponse(current=current_stats, history=history_response)
 
 
@@ -626,8 +654,10 @@ async def get_subscription_download_status_admin(
 
 class ExecCommandRequest(BaseModel):
     """Schema for executing a command in VPS container."""
-    command: str = Field(..., min_length=1, max_length=1000, description="Command to execute")
-    tty: bool = Field(default=False, description="Allocate pseudo-TTY for interactive commands")
+    command: str = Field(..., min_length=1, max_length=1000,
+                         description="Command to execute")
+    tty: bool = Field(
+        default=False, description="Allocate pseudo-TTY for interactive commands")
 
 
 @router.post(
@@ -650,23 +680,25 @@ async def exec_container_command_admin(
     """Execute command in VPS container."""
     repo = VPSSubscriptionRepository(db)
     subscription = await repo.get_by_id(subscription_id)
-    
+
     if not subscription:
         raise NotFoundException(f"Subscription {subscription_id} not found")
-    
+
     if not subscription.container:
-        raise NotFoundException(f"Container not found for subscription {subscription_id}")
-    
+        raise NotFoundException(
+            f"Container not found for subscription {subscription_id}")
+
     docker_service = DockerManagementService(db)
     result = await docker_service.exec_command(
         container_id=subscription.container.container_id,
         command=request.command,
         tty=request.tty
     )
-    
+
     if result is None:
-        raise BadRequestException("Failed to execute command. Docker may not be available.")
-    
+        raise BadRequestException(
+            "Failed to execute command. Docker may not be available.")
+
     return {
         "subscription_id": subscription_id,
         "command": request.command,
@@ -693,7 +725,8 @@ async def exec_container_command_admin(
 )
 async def stream_exec_command_admin(
     subscription_id: str,
-    command: str = Query(..., min_length=1, max_length=1000, description="Command to execute"),
+    command: str = Query(..., min_length=1, max_length=1000,
+                         description="Command to execute"),
     tty: bool = Query(False, description="Allocate pseudo-TTY"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_permission(Permission.HOSTING_ADMIN)),
@@ -701,34 +734,35 @@ async def stream_exec_command_admin(
     """Stream command execution output."""
     repo = VPSSubscriptionRepository(db)
     subscription = await repo.get_by_id(subscription_id)
-    
+
     if not subscription:
         raise NotFoundException(f"Subscription {subscription_id} not found")
-    
+
     if not subscription.container:
-        raise NotFoundException(f"Container not found for subscription {subscription_id}")
-    
+        raise NotFoundException(
+            f"Container not found for subscription {subscription_id}")
+
     docker_service = DockerManagementService(db)
     container_id = subscription.container.container_id
-    
+
     def event_stream():
         # Always yield the open event first to ensure a response is returned
         try:
             yield "event: open\ndata: connected\n\n"
         except GeneratorExit:
             raise
-        
+
         try:
             if not docker_service.docker_available:
                 yield f"event: error\ndata: {json.dumps({'error': 'Docker not available'})}\n\n"
                 return
-            
+
             output_gen = docker_service.exec_command_stream(
                 container_id=container_id,
                 command=command,
                 tty=tty
             )
-            
+
             for chunk in output_gen:
                 if chunk:
                     # Escape newlines for SSE
@@ -737,7 +771,7 @@ async def stream_exec_command_admin(
                         yield f"data: {escaped}\n\n"
                     except GeneratorExit:
                         raise
-            
+
             try:
                 yield "event: close\ndata: command_completed\n\n"
             except GeneratorExit:
@@ -746,7 +780,8 @@ async def stream_exec_command_admin(
             # Client disconnected - let it propagate for proper cleanup
             raise
         except Exception as e:
-            logger.error(f"Error executing command in container {container_id}: {e}")
+            logger.error(
+                f"Error executing command in container {container_id}: {e}")
             try:
                 payload = json.dumps({"error": str(e)})
                 yield f"event: error\ndata: {payload}\n\n"
@@ -754,7 +789,7 @@ async def stream_exec_command_admin(
                 raise
             except:
                 pass  # Ignore other errors when client has disconnected
-    
+
     return StreamingResponse(
         event_stream(),
         media_type="text/event-stream",
@@ -788,21 +823,24 @@ async def stream_exec_command_admin(
 )
 async def deploy_files_to_container_admin(
     subscription_id: str,
-    file: UploadFile = File(..., description="Project archive (zip, tar, tar.gz)"),
-    target_path: str = Form("/data", description="Target directory in container"),
+    file: UploadFile = File(...,
+                            description="Project archive (zip, tar, tar.gz)"),
+    target_path: str = Form(
+        "/data", description="Target directory in container"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_permission(Permission.HOSTING_ADMIN)),
 ):
     """Deploy files directly to VPS container."""
     repo = VPSSubscriptionRepository(db)
     subscription = await repo.get_by_id(subscription_id)
-    
+
     if not subscription:
         raise NotFoundException(f"Subscription {subscription_id} not found")
-    
+
     if not subscription.container:
-        raise NotFoundException(f"Container not found for subscription {subscription_id}")
-    
+        raise NotFoundException(
+            f"Container not found for subscription {subscription_id}")
+
     # Validate file type
     filename = file.filename or "archive"
     allowed_extensions = ['.zip', '.tar', '.gz', '.tar.gz']
@@ -810,24 +848,26 @@ async def deploy_files_to_container_admin(
         raise BadRequestException(
             f"Invalid file type. Allowed: {', '.join(allowed_extensions)}"
         )
-    
+
     # Save uploaded file temporarily
     temp_file = None
     try:
         # Create temp file
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=Path(filename).suffix)
-        
+        temp_file = tempfile.NamedTemporaryFile(
+            delete=False, suffix=Path(filename).suffix)
+
         # Read and save file (with size limit: 500 MB)
         max_size = 500 * 1024 * 1024  # 500 MB
         file_size = 0
         while chunk := await file.read(8192):
             file_size += len(chunk)
             if file_size > max_size:
-                raise BadRequestException("File too large. Maximum size: 500 MB")
+                raise BadRequestException(
+                    "File too large. Maximum size: 500 MB")
             temp_file.write(chunk)
-        
+
         temp_file.close()
-        
+
         # Deploy to container
         docker_service = DockerManagementService(db)
         result = await docker_service.deploy_files_to_container(
@@ -835,10 +875,11 @@ async def deploy_files_to_container_admin(
             archive_path=temp_file.name,
             target_path=target_path
         )
-        
+
         if not result.get("success"):
-            raise BadRequestException(f"Deployment failed: {result.get('error', 'Unknown error')}")
-        
+            raise BadRequestException(
+                f"Deployment failed: {result.get('error', 'Unknown error')}")
+
         return {
             "subscription_id": subscription_id,
             "success": True,
@@ -847,11 +888,12 @@ async def deploy_files_to_container_admin(
             "archive_size": file_size,
             "deployed_at": datetime.utcnow().isoformat()
         }
-        
+
     except BadRequestException:
         raise
     except Exception as e:
-        logger.error(f"Failed to deploy files to container: {e}", exc_info=True)
+        logger.error(
+            f"Failed to deploy files to container: {e}", exc_info=True)
         raise BadRequestException(f"Deployment failed: {str(e)}")
     finally:
         # Cleanup temp file
@@ -877,31 +919,34 @@ async def deploy_files_to_container_admin(
 )
 async def trigger_build_deploy_admin(
     subscription_id: str,
-    file: UploadFile = File(..., description="Project archive with Dockerfile"),
+    file: UploadFile = File(...,
+                            description="Project archive with Dockerfile"),
     image_name: Optional[str] = Form(None, description="Custom image name"),
     image_tag: str = Form("latest", description="Image tag"),
-    dockerfile_path: str = Form("Dockerfile", description="Path to Dockerfile in archive"),
-    build_args: Optional[str] = Form(None, description="Build arguments as JSON string"),
+    dockerfile_path: str = Form(
+        "Dockerfile", description="Path to Dockerfile in archive"),
+    build_args: Optional[str] = Form(
+        None, description="Build arguments as JSON string"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_permission(Permission.HOSTING_ADMIN)),
 ):
     """Trigger custom Docker image build for VPS."""
     repo = VPSSubscriptionRepository(db)
     subscription = await repo.get_by_id(subscription_id)
-    
+
     if not subscription:
         raise NotFoundException(f"Subscription {subscription_id} not found")
-    
+
     # Reuse existing custom image build service
     from app.modules.hosting.services.image_build_service import DockerImageBuildService
-    
+
     try:
         # Parse build_args from JSON string
         build_args_dict = json.loads(build_args) if build_args else None
-        
+
         # Create build service
         build_service = DockerImageBuildService(db)
-        
+
         # Upload and create record
         image = await build_service.upload_project_files(
             customer_id=subscription.customer_id,
@@ -913,11 +958,11 @@ async def trigger_build_deploy_admin(
             dockerfile_path=dockerfile_path,
             build_args=build_args_dict
         )
-        
+
         # Trigger async build via Celery
         from app.modules.hosting.tasks import build_docker_image_task
         build_docker_image_task.delay(str(image.id))
-        
+
         return {
             "subscription_id": subscription_id,
             "image_id": str(image.id),
@@ -927,7 +972,7 @@ async def trigger_build_deploy_admin(
             "build_triggered_at": datetime.utcnow().isoformat(),
             "message": "Build process started. Check custom-images endpoint for progress."
         }
-        
+
     except ValueError as e:
         raise BadRequestException(str(e))
     except Exception as e:
@@ -963,16 +1008,16 @@ async def suspend_subscription_admin(
 ):
     """
     Suspend subscription (admin action).
-    
+
     Args:
         subscription_id: Unique identifier of the subscription
         request: Suspension request body with reason
         db: Database session
         current_user: Authenticated user (requires hosting:admin permission)
-    
+
     Returns:
         Updated subscription with SUSPENDED status
-    
+
     Raises:
         404: If subscription not found
         403: If user lacks hosting:admin permission
@@ -982,7 +1027,7 @@ async def suspend_subscription_admin(
         subscription_id,
         request.reason
     )
-    
+
     return VPSSubscriptionResponse.model_validate(subscription)
 
 
@@ -1012,16 +1057,16 @@ async def reactivate_subscription_admin(
 ):
     """
     Reactivate suspended subscription (admin action).
-    
+
     Args:
         subscription_id: Unique identifier of the subscription
         request: Optional reactivation request body
         db: Database session
         current_user: Authenticated user (requires hosting:admin permission)
-    
+
     Returns:
         Updated subscription with ACTIVE status
-    
+
     Raises:
         404: If subscription not found
         400: If subscription is not in SUSPENDED status
@@ -1029,7 +1074,7 @@ async def reactivate_subscription_admin(
     """
     provisioning_service = VPSProvisioningService(db)
     subscription = await provisioning_service.reactivate_subscription(subscription_id)
-    
+
     return VPSSubscriptionResponse.model_validate(subscription)
 
 
@@ -1081,7 +1126,8 @@ async def upgrade_subscription_admin(
     )
 
     return UpgradeResponseSchema(
-        subscription=VPSSubscriptionResponse.model_validate(updated_subscription),
+        subscription=VPSSubscriptionResponse.model_validate(
+            updated_subscription),
         prorated_amount=prorated_amount,
         message="Upgrade successful. Pro-rated invoice generated."
     )
@@ -1110,31 +1156,32 @@ async def upgrade_subscription_admin(
 )
 async def terminate_subscription_admin(
     subscription_id: str,
-    remove_volumes: bool = Query(True, description="Remove persistent volumes"),
+    remove_volumes: bool = Query(
+        True, description="Remove persistent volumes"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_permission(Permission.HOSTING_ADMIN))
 ):
     """
     Terminate subscription permanently (delete container + data).
-    
+
     Args:
         subscription_id: Unique identifier of the subscription
         remove_volumes: Whether to delete persistent volumes (default: True)
         db: Database session
         current_user: Authenticated user (requires hosting:admin permission)
-    
+
     Returns:
         Success response with termination status
-    
+
     Raises:
         404: If subscription not found
         403: If user lacks hosting:admin permission
-    
+
     Warning: This operation permanently deletes all data and cannot be undone.
     """
     provisioning_service = VPSProvisioningService(db)
     subscription = await provisioning_service.terminate_subscription(subscription_id)
-    
+
     return {
         "status": "terminated",
         "message": "Subscription terminated and all data deleted",
@@ -1164,67 +1211,72 @@ async def terminate_subscription_admin(
 )
 async def get_monitoring_overview(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.HOSTING_MONITOR))
+    current_user: User = Depends(
+        require_permission(Permission.HOSTING_MONITOR))
 ):
     """
     Get system-wide VPS metrics.
-    
+
     Args:
         db: Database session
         current_user: Authenticated user (requires hosting:monitor permission)
-    
+
     Returns:
         Monitoring overview with aggregated statistics
-    
+
     Raises:
         403: If user lacks hosting:monitor permission
     """
     repo = VPSSubscriptionRepository(db)
-    
+
     # Total subscriptions
     all_subs, total_subscriptions = await repo.get_all(skip=0, limit=10000)
-    
+
     # Active containers
     active_subs, active_count = await repo.get_all(
         skip=0,
         limit=10000,
         status=SubscriptionStatus.ACTIVE
     )
-    
+
     # Total monthly revenue using RevenueService for consistency
     from app.modules.revenue.service import RevenueService
     revenue_service = RevenueService(db)
     recurring_revenue = await revenue_service.repository.get_recurring_revenue()
     total_monthly_revenue = recurring_revenue
-    
+
     # Average resource usage (from recent metrics)
     metrics_repo = ContainerMetricsRepository(db)
     cutoff_time = datetime.utcnow() - timedelta(hours=1)
-    
+
     # Get recent metrics for all active subscriptions
     all_cpu_values = []
     all_memory_values = []
     all_alerts = []
-    
+
     monitoring_service = ContainerMonitoringService(db)
-    
+
     for sub in active_subs:
         # Get recent metrics
         recent_metrics = await metrics_repo.get_recent_metrics(sub.id, hours=1)
         if recent_metrics:
-            all_cpu_values.extend([m.cpu_usage_percent for m in recent_metrics])
-            all_memory_values.extend([m.memory_usage_percent for m in recent_metrics])
-        
+            all_cpu_values.extend(
+                [m.cpu_usage_percent for m in recent_metrics])
+            all_memory_values.extend(
+                [m.memory_usage_percent for m in recent_metrics])
+
         # Check alerts
         alerts = await monitoring_service.check_resource_alerts(sub.id)
         for alert in alerts:
             alert['subscription_id'] = sub.id
             alert['subscription_number'] = sub.subscription_number
         all_alerts.extend(alerts)
-    
+
     # Calculate averages from container metrics, or fall back to host when none
-    avg_cpu = sum(all_cpu_values) / len(all_cpu_values) if all_cpu_values else None
-    avg_memory = sum(all_memory_values) / len(all_memory_values) if all_memory_values else None
+    avg_cpu = sum(all_cpu_values) / \
+        len(all_cpu_values) if all_cpu_values else None
+    avg_memory = sum(all_memory_values) / \
+        len(all_memory_values) if all_memory_values else None
     if avg_cpu is None or avg_memory is None:
         try:
             host_cpu = psutil.cpu_percent(interval=0.1)
@@ -1238,11 +1290,85 @@ async def get_monitoring_overview(
     return MonitoringOverviewSchema(
         total_subscriptions=total_subscriptions,
         active_containers=active_count,
-        total_monthly_revenue=float(total_monthly_revenue),  # Convert Decimal to float for JSON
+        # Convert Decimal to float for JSON
+        total_monthly_revenue=float(total_monthly_revenue),
         avg_cpu_usage=round(float(avg_cpu), 2),
         avg_memory_usage=round(float(avg_memory), 2),
         alerts=[AlertSchema.model_validate(a) for a in all_alerts]
     )
+
+
+@router.get(
+    "/monitoring/current-stats",
+    response_model=List[PerVPSCurrentStatsSchema],
+    summary="Get current stats for all active VPS",
+    description="""
+    Returns current CPU, memory, and storage usage per active VPS (one row per VPS).
+    Capped at 50 VPS. Used by the Performance Metrics Active VPS chart.
+    **Permissions Required:** hosting:admin
+    """,
+)
+async def get_monitoring_current_stats(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.HOSTING_ADMIN)),
+):
+    """Get current resource stats for each active VPS (parallel, capped at 50)."""
+    repo = VPSSubscriptionRepository(db)
+    active_subs, _ = await repo.get_all(
+        skip=0,
+        limit=50,
+        status=SubscriptionStatus.ACTIVE,
+    )
+    subs_with_container = [s for s in active_subs if getattr(s, "container", None) is not None]
+    if not subs_with_container:
+        return []
+
+    monitoring_service = ContainerMonitoringService(db)
+
+    async def one_stats(sub):
+        container = sub.container
+        hostname = getattr(container, "hostname", "") or ""
+        try:
+            raw = await monitoring_service.get_real_time_stats(container.id)
+        except Exception as e:
+            logger.debug("current-stats for %s: %s", sub.id, e)
+            return PerVPSCurrentStatsSchema(
+                subscription_id=sub.id,
+                subscription_number=sub.subscription_number,
+                hostname=hostname,
+                cpu_usage_percent=None,
+                memory_usage_percent=None,
+                storage_usage_percent=None,
+            )
+        curr = raw.get("current_stats") or {}
+        return PerVPSCurrentStatsSchema(
+            subscription_id=sub.id,
+            subscription_number=sub.subscription_number,
+            hostname=hostname,
+            cpu_usage_percent=round(curr.get("cpu_usage_percent"), 2) if curr.get("cpu_usage_percent") is not None else None,
+            memory_usage_percent=round(curr.get("memory_usage_percent"), 2) if curr.get("memory_usage_percent") is not None else None,
+            storage_usage_percent=round(curr.get("storage_usage_percent"), 2) if curr.get("storage_usage_percent") is not None else None,
+        )
+
+    results = await asyncio.gather(*[one_stats(s) for s in subs_with_container], return_exceptions=True)
+    out = []
+    for i, r in enumerate(results):
+        if isinstance(r, Exception):
+            logger.warning("current-stats exception for sub %s: %s", subs_with_container[i].id, r)
+            sub = subs_with_container[i]
+            out.append(
+                PerVPSCurrentStatsSchema(
+                    subscription_id=sub.id,
+                    subscription_number=sub.subscription_number,
+                    hostname=getattr(sub.container, "hostname", "") or "",
+                    cpu_usage_percent=None,
+                    memory_usage_percent=None,
+                    storage_usage_percent=None,
+                )
+            )
+        else:
+            out.append(r)
+    return out
 
 
 @router.get(
@@ -1265,21 +1391,23 @@ async def get_monitoring_overview(
     """
 )
 async def get_alerts(
-    severity: Optional[str] = Query(None, description="Filter by severity (HIGH, CRITICAL)"),
+    severity: Optional[str] = Query(
+        None, description="Filter by severity (HIGH, CRITICAL)"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.HOSTING_MONITOR))
+    current_user: User = Depends(
+        require_permission(Permission.HOSTING_MONITOR))
 ):
     """
     Get active resource alerts.
-    
+
     Args:
         severity: Optional severity filter (HIGH, CRITICAL)
         db: Database session
         current_user: Authenticated user (requires hosting:monitor permission)
-    
+
     Returns:
         List of active alerts with subscription details
-    
+
     Raises:
         403: If user lacks hosting:monitor permission
     """
@@ -1289,21 +1417,22 @@ async def get_alerts(
         limit=10000,
         status=SubscriptionStatus.ACTIVE
     )
-    
+
     monitoring_service = ContainerMonitoringService(db)
     all_alerts = []
-    
+
     for sub in active_subs:
         alerts = await monitoring_service.check_resource_alerts(sub.id)
         for alert in alerts:
             alert['subscription_id'] = sub.id
             alert['subscription_number'] = sub.subscription_number
         all_alerts.extend(alerts)
-    
+
     # Filter by severity if provided
     if severity:
-        all_alerts = [a for a in all_alerts if a.get('severity') == severity.upper()]
-    
+        all_alerts = [a for a in all_alerts if a.get(
+            'severity') == severity.upper()]
+
     return [AlertSchema.model_validate(a) for a in all_alerts]
 
 
@@ -1313,9 +1442,11 @@ async def get_alerts(
 
 class AdminCreateSubscriptionRequest(BaseModel):
     """Schema for admin creating subscription for a customer."""
-    customer_id: str = Field(..., description="Customer ID to create subscription for")
+    customer_id: str = Field(...,
+                             description="Customer ID to create subscription for")
     plan_id: str = Field(..., description="VPS plan ID")
-    os_distro_id: Optional[str] = Field(default="ubuntu-22.04", description="Selected OS distro ID")
+    os_distro_id: Optional[str] = Field(
+        default="ubuntu-22.04", description="Selected OS distro ID")
 
 
 @router.post(
@@ -1347,15 +1478,15 @@ async def create_subscription_admin(
 ):
     """
     Create VPS subscription for a customer (admin action).
-    
+
     Args:
         request: Request body with customer_id and plan_id
         db: Database session
         current_user: Authenticated user (requires hosting:admin permission)
-    
+
     Returns:
         Created subscription with PENDING status
-    
+
     Raises:
         404: If customer or plan not found
         400: If plan is inactive
@@ -1363,7 +1494,7 @@ async def create_subscription_admin(
     """
     provisioning_service = VPSProvisioningService(db)
     quote = await provisioning_service.request_vps(request.customer_id, request.plan_id, os_distro_id=request.os_distro_id)
-    
+
     # Get the subscription that was created
     repo = VPSSubscriptionRepository(db)
     subscriptions, _ = await repo.get_all(
@@ -1372,12 +1503,11 @@ async def create_subscription_admin(
         customer_id=request.customer_id,
         plan_id=request.plan_id
     )
-    
+
     if not subscriptions:
         raise NotFoundException("Subscription was not created")
-    
+
     # Get the most recent subscription (should be the one we just created)
     subscription = subscriptions[0]
-    
-    return VPSSubscriptionResponse.model_validate(subscription)
 
+    return VPSSubscriptionResponse.model_validate(subscription)

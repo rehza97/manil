@@ -22,9 +22,11 @@ class RoleSummary(BaseModel):
 class UserListFilter(BaseModel):
     """Filters for user listing."""
 
-    role: Optional[str] = Field(None, description="Filter by role slug (admin, corporate, client)")
+    role: Optional[str] = Field(
+        None, description="Filter by role slug (admin, corporate, client)")
     is_active: Optional[bool] = None
-    status: Optional[str] = Field(None, description="Filter: all, active, inactive, deleted")
+    status: Optional[str] = Field(
+        None, description="Filter: all, active, inactive, deleted")
     search: Optional[str] = Field(None, description="Search in name and email")
 
 

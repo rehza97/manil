@@ -14,7 +14,8 @@ AUDIT_EXPORT_HEADERS = [
     "request_method", "request_path",
 ]
 
-SYSTEM_EXPORT_HEADERS = ["id", "level", "component", "message", "timestamp", "stack_trace"]
+SYSTEM_EXPORT_HEADERS = ["id", "level", "component",
+                         "message", "timestamp", "stack_trace"]
 
 SECURITY_ACTIONS = [
     AuditAction.LOGIN_SUCCESS,

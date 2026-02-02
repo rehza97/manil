@@ -39,7 +39,8 @@ async def add_watcher(
     try:
         # Verify ticket exists
         ticket_res = await db.execute(
-            select(Ticket).where(and_(Ticket.id == ticket_id, Ticket.deleted_at.is_(None)))
+            select(Ticket).where(
+                and_(Ticket.id == ticket_id, Ticket.deleted_at.is_(None)))
         )
         ticket = ticket_res.scalar_one_or_none()
         if not ticket:
@@ -92,7 +93,8 @@ async def get_ticket_watchers(
     Requires: TICKETS_VIEW permission
     """
     total_res = await db.execute(
-        select(func.count()).select_from(TicketWatcher).where(TicketWatcher.ticket_id == ticket_id)
+        select(func.count()).select_from(TicketWatcher).where(
+            TicketWatcher.ticket_id == ticket_id)
     )
     total_count = int(total_res.scalar() or 0)
 
@@ -125,7 +127,8 @@ async def remove_watcher(
     try:
         watcher_res = await db.execute(
             select(TicketWatcher).where(
-                and_(TicketWatcher.ticket_id == ticket_id, TicketWatcher.user_id == user_id)
+                and_(TicketWatcher.ticket_id == ticket_id,
+                     TicketWatcher.user_id == user_id)
             )
         )
         watcher = watcher_res.scalar_one_or_none()
@@ -157,7 +160,8 @@ async def update_watcher_preferences(
     try:
         watcher_res = await db.execute(
             select(TicketWatcher).where(
-                and_(TicketWatcher.ticket_id == ticket_id, TicketWatcher.user_id == user_id)
+                and_(TicketWatcher.ticket_id == ticket_id,
+                     TicketWatcher.user_id == user_id)
             )
         )
         watcher = watcher_res.scalar_one_or_none()
@@ -191,7 +195,8 @@ async def is_user_watching(
 
     watcher_res = await db.execute(
         select(TicketWatcher.id).where(
-            and_(TicketWatcher.ticket_id == ticket_id, TicketWatcher.user_id == user_id)
+            and_(TicketWatcher.ticket_id == ticket_id,
+                 TicketWatcher.user_id == user_id)
         )
     )
     return {"is_watching": watcher_res.scalar_one_or_none() is not None}
@@ -208,6 +213,7 @@ async def get_watcher_statistics(
     Requires: TICKETS_VIEW permission
     """
     total_res = await db.execute(
-        select(func.count()).select_from(TicketWatcher).where(TicketWatcher.ticket_id == ticket_id)
+        select(func.count()).select_from(TicketWatcher).where(
+            TicketWatcher.ticket_id == ticket_id)
     )
     return {"ticket_id": ticket_id, "watchers": int(total_res.scalar() or 0)}

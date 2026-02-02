@@ -26,12 +26,16 @@ class LoginRequest(BaseModel):
 class LoginResponse(BaseModel):
     """Schema for login response."""
 
-    access_token: str = Field(..., description="JWT access token (empty when requires_2fa)")
-    refresh_token: str = Field(..., description="JWT refresh token (empty when requires_2fa)")
+    access_token: str = Field(...,
+                              description="JWT access token (empty when requires_2fa)")
+    refresh_token: str = Field(...,
+                               description="JWT refresh token (empty when requires_2fa)")
     token_type: str = Field(default="bearer", description="Token type")
     user: "UserResponse"
-    requires_2fa: bool = Field(default=False, description="True if 2FA code must be submitted to complete login")
-    pending_2fa_token: str | None = Field(default=None, description="Short-lived token for 2FA complete-login (when requires_2fa)")
+    requires_2fa: bool = Field(
+        default=False, description="True if 2FA code must be submitted to complete login")
+    pending_2fa_token: str | None = Field(
+        default=None, description="Short-lived token for 2FA complete-login (when requires_2fa)")
 
 
 class RefreshTokenRequest(BaseModel):
@@ -45,7 +49,8 @@ class UserBase(BaseModel):
 
     email: EmailStr
     full_name: str = Field(..., min_length=2, max_length=255)
-    role: str = Field(default="client", description="Role slug (admin, corporate, client)")
+    role: str = Field(default="client",
+                      description="Role slug (admin, corporate, client)")
 
 
 class UserCreate(UserBase):
@@ -115,7 +120,8 @@ class Verify2FARequest(BaseModel):
 class CompleteLogin2FARequest(BaseModel):
     """Schema for completing login after 2FA verification."""
 
-    pending_2fa_token: str = Field(..., description="Token from login response when requires_2fa")
+    pending_2fa_token: str = Field(...,
+                                   description="Token from login response when requires_2fa")
     code: str = Field(..., min_length=6, max_length=6, description="TOTP code")
 
 
@@ -123,16 +129,21 @@ class PasswordResetRequest(BaseModel):
     """Schema for password reset request."""
 
     email: EmailStr = Field(..., description="User email address")
-    method: str = Field(default="email", description="Reset method: 'email' or 'sms'")
+    method: str = Field(
+        default="email", description="Reset method: 'email' or 'sms'")
 
 
 class PasswordResetConfirm(BaseModel):
     """Schema for password reset confirmation."""
 
-    token: str | None = Field(None, description="Password reset token (for email method)")
-    code: str | None = Field(None, description="Password reset code (for SMS method, 6 digits)")
-    email: EmailStr | None = Field(None, description="User email (required when using code)")
-    new_password: str = Field(..., min_length=8, max_length=100, description="New password")
+    token: str | None = Field(
+        None, description="Password reset token (for email method)")
+    code: str | None = Field(
+        None, description="Password reset code (for SMS method, 6 digits)")
+    email: EmailStr | None = Field(
+        None, description="User email (required when using code)")
+    new_password: str = Field(..., min_length=8,
+                              max_length=100, description="New password")
 
 
 class PasswordResetResponse(BaseModel):
@@ -146,7 +157,8 @@ class ChangePasswordRequest(BaseModel):
     """Schema for password change request."""
 
     current_password: str = Field(..., description="Current password")
-    new_password: str = Field(..., min_length=8, max_length=100, description="New password")
+    new_password: str = Field(..., min_length=8,
+                              max_length=100, description="New password")
 
 
 class SetupRequired2FARequest(BaseModel):
@@ -167,7 +179,8 @@ class VerifySetupRequired2FARequest(BaseModel):
 class VerifySetupRequired2FAResponse(BaseModel):
     """Schema for verify setup required 2FA response."""
 
-    success: bool = Field(..., description="Whether verification was successful")
+    success: bool = Field(...,
+                          description="Whether verification was successful")
     message: str = Field(..., description="Status message")
 
 

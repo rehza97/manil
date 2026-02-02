@@ -273,6 +273,15 @@ export interface MonitoringOverview {
   alerts: Alert[];
 }
 
+export interface PerVPSCurrentStats {
+  subscription_id: string;
+  subscription_number: string;
+  hostname: string;
+  cpu_usage_percent?: number | null;
+  memory_usage_percent?: number | null;
+  storage_usage_percent?: number | null;
+}
+
 // ============================================================================
 // Request Types
 // ============================================================================

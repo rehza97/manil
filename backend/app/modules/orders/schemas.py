@@ -32,7 +32,8 @@ class OrderStatus(str, Enum):
 class OrderItemBase(BaseModel):
     """Base order item schema."""
 
-    product_id: Optional[str] = Field(None, description="Product ID (optional for fee/custom lines)")
+    product_id: Optional[str] = Field(
+        None, description="Product ID (optional for fee/custom lines)")
     quantity: int = Field(..., ge=1, description="Quantity")
     unit_price: float = Field(..., gt=0, description="Unit price")
     discount_percentage: float = Field(default=0.0, ge=0.0, le=100.0)
@@ -84,8 +85,10 @@ class OrderCreate(BaseModel):
     customer_notes: Optional[str] = None
     delivery_address: Optional[str] = None
     delivery_contact: Optional[str] = None
-    validation_required: bool = Field(default=True, description="Whether order requires commercial/technical validation")
-    items: list[OrderItemCreate] = Field(..., min_items=1, description="Order items")
+    validation_required: bool = Field(
+        default=True, description="Whether order requires commercial/technical validation")
+    items: list[OrderItemCreate] = Field(...,
+                                         min_items=1, description="Order items")
 
 
 class OrderUpdate(BaseModel):
@@ -191,27 +194,33 @@ class SubmitForValidationRequest(BaseModel):
 class CommercialValidationRequest(BaseModel):
     """Schema for commercial validation decision."""
 
-    approved: bool = Field(..., description="Whether commercial validation is approved")
-    notes: Optional[str] = Field(None, description="Notes explaining the decision")
+    approved: bool = Field(...,
+                           description="Whether commercial validation is approved")
+    notes: Optional[str] = Field(
+        None, description="Notes explaining the decision")
 
 
 class TechnicalValidationRequest(BaseModel):
     """Schema for technical validation decision."""
 
-    approved: bool = Field(..., description="Whether technical validation is approved")
-    notes: Optional[str] = Field(None, description="Notes explaining the decision")
+    approved: bool = Field(...,
+                           description="Whether technical validation is approved")
+    notes: Optional[str] = Field(
+        None, description="Notes explaining the decision")
 
 
 class ResubmitValidationRequest(BaseModel):
     """Schema for resubmitting order after rejection."""
 
-    notes: Optional[str] = Field(None, description="Notes explaining changes made")
+    notes: Optional[str] = Field(
+        None, description="Notes explaining changes made")
 
 
 class SkipValidationRequest(BaseModel):
     """Schema for skipping validation workflow."""
 
-    notes: Optional[str] = Field(None, description="Reason for skipping validation")
+    notes: Optional[str] = Field(
+        None, description="Reason for skipping validation")
 
 
 class ValidationSummary(BaseModel):
@@ -241,7 +250,11 @@ class OrderConvertFromQuoteRequest(BaseModel):
     """Schema for converting a quote to an order."""
 
     quote_id: str = Field(..., description="Quote ID to convert")
-    customer_notes: Optional[str] = Field(None, description="Additional customer notes for the order")
-    delivery_address: Optional[str] = Field(None, description="Delivery address")
-    delivery_contact: Optional[str] = Field(None, description="Delivery contact person")
-    validation_required: bool = Field(default=True, description="Whether order requires validation workflow")
+    customer_notes: Optional[str] = Field(
+        None, description="Additional customer notes for the order")
+    delivery_address: Optional[str] = Field(
+        None, description="Delivery address")
+    delivery_contact: Optional[str] = Field(
+        None, description="Delivery contact person")
+    validation_required: bool = Field(
+        default=True, description="Whether order requires validation workflow")

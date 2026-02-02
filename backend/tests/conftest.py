@@ -62,18 +62,18 @@ TestSessionLocal = async_sessionmaker(
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
     """
     Create a test database session with transaction rollback.
-    
+
     Creates all tables, yields a session, then rolls back all changes.
     """
     # Create all tables
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+
     # Create session
     async with TestSessionLocal() as session:
         yield session
         await session.rollback()
-    
+
     # Drop all tables
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
@@ -208,7 +208,8 @@ async def test_professional_plan(db_session: AsyncSession) -> VPSPlan:
         bandwidth_tb=2.0,
         monthly_price=Decimal("20.00"),
         setup_fee=Decimal("0.00"),
-        features={"ssh": True, "ipv4": True, "backup": True, "snapshots": True},
+        features={"ssh": True, "ipv4": True,
+                  "backup": True, "snapshots": True},
         docker_image="ubuntu:22.04",
         is_active=True,
         display_order=1,
@@ -423,7 +424,7 @@ async def test_stopped_container(
 def mock_docker_client():
     """Create a mock Docker client for testing."""
     client = MagicMock()
-    
+
     # Mock container operations
     container = MagicMock()
     container.id = "test-container-id-123"
@@ -439,7 +440,7 @@ def mock_docker_client():
             }
         }
     }
-    
+
     # Mock container methods
     container.start = MagicMock(return_value=None)
     container.stop = MagicMock(return_value=None)
@@ -475,7 +476,7 @@ def mock_docker_client():
     })
     container.logs = MagicMock(return_value=b"Container logs here...")
     container.exec_run = MagicMock(return_value=(0, b"df output"))
-    
+
     # Mock client methods
     client.containers.get = MagicMock(return_value=container)
     client.containers.create = MagicMock(return_value=container)
@@ -483,7 +484,7 @@ def mock_docker_client():
     client.networks.create = MagicMock(return_value=MagicMock())
     client.networks.get = MagicMock(return_value=MagicMock())
     client.images.pull = MagicMock(return_value=None)
-    
+
     return client
 
 
@@ -517,13 +518,3 @@ def mock_email_service():
     with patch("app.infrastructure.email.service.EmailService.send_email") as mock_send:
         mock_send.return_value = AsyncMock(return_value=True)
         yield mock_send
-
-
-
-
-
-
-
-
-
-

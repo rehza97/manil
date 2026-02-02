@@ -91,9 +91,11 @@ async def export_audit_logs(
     export_svc = ExportService()
     fmt = format.lower()
     if fmt == "excel":
-        out = export_svc.export_to_excel(rows, "audit_logs", "Audit Logs", AUDIT_EXPORT_HEADERS)
+        out = export_svc.export_to_excel(
+            rows, "audit_logs", "Audit Logs", AUDIT_EXPORT_HEADERS)
     else:
-        out = export_svc.export_to_csv(rows, "audit_logs", AUDIT_EXPORT_HEADERS)
+        out = export_svc.export_to_csv(
+            rows, "audit_logs", AUDIT_EXPORT_HEADERS)
     return {"file_name": out["file_name"], "format": out["format"]}
 
 
@@ -116,13 +118,16 @@ async def export_security_logs(
     logs = list(result.scalars().all())
     rows = audit_logs_to_rows(logs)
     if not rows:
-        raise HTTPException(status_code=404, detail="No security logs to export")
+        raise HTTPException(
+            status_code=404, detail="No security logs to export")
     export_svc = ExportService()
     fmt = format.lower()
     if fmt == "excel":
-        out = export_svc.export_to_excel(rows, "security_logs", "Security Logs", AUDIT_EXPORT_HEADERS)
+        out = export_svc.export_to_excel(
+            rows, "security_logs", "Security Logs", AUDIT_EXPORT_HEADERS)
     else:
-        out = export_svc.export_to_csv(rows, "security_logs", AUDIT_EXPORT_HEADERS)
+        out = export_svc.export_to_csv(
+            rows, "security_logs", AUDIT_EXPORT_HEADERS)
     return {"file_name": out["file_name"], "format": out["format"]}
 
 
@@ -134,11 +139,13 @@ async def export_system_logs(
     db: AsyncSession = Depends(get_db),
 ):
     """Export system logs as CSV or Excel."""
-    system_actions = [AuditAction.SYSTEM_ERROR, AuditAction.CONFIG_CHANGE, AuditAction.SECURITY_ALERT]
+    system_actions = [AuditAction.SYSTEM_ERROR,
+                      AuditAction.CONFIG_CHANGE, AuditAction.SECURITY_ALERT]
     query = select(AuditLog).where(
         or_(
             AuditLog.action.in_(system_actions),
-            AuditLog.resource_type.in_(["system", "database", "cache", "email", "api"]),
+            AuditLog.resource_type.in_(
+                ["system", "database", "cache", "email", "api"]),
             AuditLog.description.like("%system%"),
             AuditLog.description.like("%error%"),
             AuditLog.description.like("%warning%"),
@@ -172,9 +179,11 @@ async def export_system_logs(
     export_svc = ExportService()
     fmt = format.lower()
     if fmt == "excel":
-        out = export_svc.export_to_excel(rows, "system_logs", "System Logs", SYSTEM_EXPORT_HEADERS)
+        out = export_svc.export_to_excel(
+            rows, "system_logs", "System Logs", SYSTEM_EXPORT_HEADERS)
     else:
-        out = export_svc.export_to_csv(rows, "system_logs", SYSTEM_EXPORT_HEADERS)
+        out = export_svc.export_to_csv(
+            rows, "system_logs", SYSTEM_EXPORT_HEADERS)
     return {"file_name": out["file_name"], "format": out["format"]}
 
 
@@ -189,21 +198,20 @@ async def export_user_activity_logs(
     """Export user activity logs as CSV or Excel."""
     from app.core.permissions import has_permission
     if not has_permission(current_user.role_slug, Permission.AUDIT_ADMIN) and current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="You can only export your own logs")
+        raise HTTPException(
+            status_code=403, detail="You can only export your own logs")
     repo = AuditRepository(db)
     logs = await repo.get_by_user(user_id, skip=0, limit=page_size)
     rows = audit_logs_to_rows(list(logs))
     if not rows:
-        raise HTTPException(status_code=404, detail="No user activity logs to export")
+        raise HTTPException(
+            status_code=404, detail="No user activity logs to export")
     export_svc = ExportService()
     fmt = format.lower()
     if fmt == "excel":
-        out = export_svc.export_to_excel(rows, f"user_activity_{user_id}", "User Activity", AUDIT_EXPORT_HEADERS)
+        out = export_svc.export_to_excel(
+            rows, f"user_activity_{user_id}", "User Activity", AUDIT_EXPORT_HEADERS)
     else:
-        out = export_svc.export_to_csv(rows, f"user_activity_{user_id}", AUDIT_EXPORT_HEADERS)
+        out = export_svc.export_to_csv(
+            rows, f"user_activity_{user_id}", AUDIT_EXPORT_HEADERS)
     return {"file_name": out["file_name"], "format": out["format"]}
-
-
-
-
-

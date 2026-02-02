@@ -71,7 +71,8 @@ class KYCRepository:
 
         if status:
             # Cast enum to string and compare with enum value to bypass SQLAlchemy's enum binding issue
-            query = query.where(cast(KYCDocument.status, String) == status.value)
+            query = query.where(
+                cast(KYCDocument.status, String) == status.value)
 
         query = query.order_by(KYCDocument.created_at.desc())
 
@@ -137,7 +138,8 @@ class KYCRepository:
         if status:
             # Case-insensitive comparison: DB may store "approved" or "Approved"
             query = query.where(
-                func.lower(cast(KYCDocument.status, String)) == status.value.lower()
+                func.lower(cast(KYCDocument.status, String)
+                           ) == status.value.lower()
             )
 
         result = await self.db.execute(query)
@@ -176,14 +178,15 @@ class KYCRepository:
         # Use cast to ensure proper enum comparison in PostgreSQL
         # Cast the string value to the enum type for comparison
         from sqlalchemy.dialects.postgresql import ENUM as PG_ENUM
-        
+
         query = select(func.count()).where(
             and_(
                 KYCDocument.customer_id == customer_id,
                 cast(KYCDocument.document_type, String) == document_type.value,
                 or_(
                     cast(KYCDocument.status, String) == KYCStatus.PENDING.value,
-                    cast(KYCDocument.status, String) == KYCStatus.UNDER_REVIEW.value,
+                    cast(KYCDocument.status,
+                         String) == KYCStatus.UNDER_REVIEW.value,
                     cast(KYCDocument.status, String) == KYCStatus.APPROVED.value
                 ),
                 KYCDocument.deleted_at.is_(None)

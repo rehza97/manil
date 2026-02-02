@@ -378,7 +378,8 @@ async def seed_support_groups(db: AsyncSession):
     print("\n=== Seeding Support Groups ===\n")
 
     for group_data in SUPPORT_GROUPS:
-        query = select(SupportGroup).where(SupportGroup.name == group_data["name"])
+        query = select(SupportGroup).where(
+            SupportGroup.name == group_data["name"])
         result = await db.execute(query)
         existing = result.scalar_one_or_none()
 
@@ -402,7 +403,8 @@ async def seed_tags(db: AsyncSession):
     # Get admin user for created_by field
     from app.modules.auth.models import User
     from app.modules.settings.models import Role
-    admin_query = select(User).join(Role, User.role_id == Role.id).where(Role.slug == "admin").limit(1)
+    admin_query = select(User).join(Role, User.role_id ==
+                                    Role.id).where(Role.slug == "admin").limit(1)
     admin_result = await db.execute(admin_query)
     admin = admin_result.scalar_one_or_none()
 
@@ -436,7 +438,8 @@ async def seed_ticket_categories(db: AsyncSession):
     # Get admin user for created_by field
     from app.modules.auth.models import User
     from app.modules.settings.models import Role
-    admin_query = select(User).join(Role, User.role_id == Role.id).where(Role.slug == "admin").limit(1)
+    admin_query = select(User).join(Role, User.role_id ==
+                                    Role.id).where(Role.slug == "admin").limit(1)
     admin_result = await db.execute(admin_query)
     admin = admin_result.scalar_one_or_none()
 
@@ -447,10 +450,12 @@ async def seed_ticket_categories(db: AsyncSession):
     # Get support groups for default assignments
     support_groups_query = select(SupportGroup)
     support_groups_result = await db.execute(support_groups_query)
-    support_groups = {sg.name: sg for sg in support_groups_result.scalars().all()}
+    support_groups = {
+        sg.name: sg for sg in support_groups_result.scalars().all()}
 
     for category_data in TICKET_CATEGORIES:
-        query = select(TicketCategory).where(TicketCategory.name == category_data["name"])
+        query = select(TicketCategory).where(
+            TicketCategory.name == category_data["name"])
         result = await db.execute(query)
         existing = result.scalar_one_or_none()
 
@@ -487,7 +492,8 @@ async def seed_response_templates(db: AsyncSession):
     # Get admin user for created_by field
     from app.modules.auth.models import User
     from app.modules.settings.models import Role
-    admin_query = select(User).join(Role, User.role_id == Role.id).where(Role.slug == "admin").limit(1)
+    admin_query = select(User).join(Role, User.role_id ==
+                                    Role.id).where(Role.slug == "admin").limit(1)
     admin_result = await db.execute(admin_query)
     admin = admin_result.scalar_one_or_none()
 
@@ -496,7 +502,8 @@ async def seed_response_templates(db: AsyncSession):
         return
 
     for template_data in RESPONSE_TEMPLATES:
-        query = select(ResponseTemplate).where(ResponseTemplate.title == template_data["title"])
+        query = select(ResponseTemplate).where(
+            ResponseTemplate.title == template_data["title"])
         result = await db.execute(query)
         existing = result.scalar_one_or_none()
 
@@ -509,7 +516,8 @@ async def seed_response_templates(db: AsyncSession):
             db.add(template)
             print(f"✓ Created response template: {template_data['title']}")
         else:
-            print(f"⊘ Response template already exists: {template_data['title']}")
+            print(
+                f"⊘ Response template already exists: {template_data['title']}")
 
     await db.commit()
 
@@ -519,7 +527,8 @@ async def seed_automation_rules(db: AsyncSession):
     print("\n=== Seeding Automation Rules ===\n")
 
     for rule_data in AUTOMATION_RULES:
-        query = select(AutomationRule).where(AutomationRule.name == rule_data["name"])
+        query = select(AutomationRule).where(
+            AutomationRule.name == rule_data["name"])
         result = await db.execute(query)
         existing = result.scalar_one_or_none()
 

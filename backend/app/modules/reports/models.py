@@ -55,7 +55,8 @@ class Export(Base):
     )
 
     # Export identification
-    export_number: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
+    export_number: Mapped[str] = mapped_column(
+        String(50), unique=True, index=True, nullable=False)
 
     # Export details
     export_type: Mapped[ExportType] = mapped_column(
@@ -77,14 +78,17 @@ class Export(Base):
     # File information
     file_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)  # in bytes
+    file_size: Mapped[int | None] = mapped_column(
+        Integer, nullable=True)  # in bytes
     mime_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # Export metadata
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    filters: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # Store applied filters
-    parameters: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # Additional parameters
+    filters: Mapped[dict | None] = mapped_column(
+        JSON, nullable=True)  # Store applied filters
+    parameters: Mapped[dict | None] = mapped_column(
+        JSON, nullable=True)  # Additional parameters
 
     # Statistics
     total_records: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -93,16 +97,22 @@ class Export(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Timing
-    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True)
 
     # Download tracking
-    download_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    last_downloaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    download_count: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False)
+    last_downloaded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True)
 
     # User who requested the export
-    requested_by_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    requested_by_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id"), nullable=False, index=True)
 
     # Audit fields
     created_at: Mapped[datetime] = mapped_column(
@@ -151,3 +161,36 @@ class Export(Base):
         """Record a download of this export."""
         self.download_count += 1
         self.last_downloaded_at = datetime.now(timezone.utc)
+
+
+class ReportHistory(Base):
+    """Tracks advanced report generation for audit."""
+
+    __tablename__ = "report_history"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4())
+    )
+    report_type: Mapped[str] = mapped_column(
+        String(100), nullable=False, index=True)
+    report_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    format: Mapped[str] = mapped_column(String(20), nullable=False)
+    parameters: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    generated_by: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False
+    )
+    download_count: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False)
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(50), default="completed", nullable=False)

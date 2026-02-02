@@ -33,12 +33,17 @@ router = APIRouter(prefix="/customers", tags=["customers"])
 @router.get("", response_model=CustomerListResponse)
 async def get_customers(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(100, ge=1, le=1000, description="Maximum records to return"),
-    status: Optional[CustomerStatus] = Query(None, description="Filter by status"),
-    customer_type: Optional[CustomerType] = Query(None, description="Filter by type"),
-    search: Optional[str] = Query(None, description="Search in name, email, or company"),
+    limit: int = Query(100, ge=1, le=1000,
+                       description="Maximum records to return"),
+    status: Optional[CustomerStatus] = Query(
+        None, description="Filter by status"),
+    customer_type: Optional[CustomerType] = Query(
+        None, description="Filter by type"),
+    search: Optional[str] = Query(
+        None, description="Search in name, email, or company"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.CUSTOMERS_VIEW)),
+    current_user: User = Depends(
+        require_permission(Permission.CUSTOMERS_VIEW)),
 ):
     """Get all customers with pagination and optional filtering."""
     service = CustomerService(db)
@@ -59,17 +64,18 @@ async def get_my_customer(
     """Get current user's own customer profile (for clients)."""
     if not current_user.email:
         raise NotFoundException("User email not found")
-    
+
     service = CustomerService(db)
     customer = await service.get_by_email(current_user.email)
-    
+
     if not customer:
         raise NotFoundException("Customer profile not found for this user")
-    
+
     # Verify ownership - clients can only access their own customer data
     if current_user.role_slug == "client" and customer.email != current_user.email:
-        raise ForbiddenException("You can only access your own customer profile")
-    
+        raise ForbiddenException(
+            "You can only access your own customer profile")
+
     return customer
 
 
@@ -87,7 +93,8 @@ async def update_my_customer(
     if not customer:
         raise NotFoundException("Customer profile not found for this user")
     if current_user.role_slug == "client" and customer.email != current_user.email:
-        raise ForbiddenException("You can only update your own customer profile")
+        raise ForbiddenException(
+            "You can only update your own customer profile")
     return await service.update(customer.id, customer_data, updated_by=current_user.id)
 
 
@@ -104,7 +111,8 @@ async def get_my_profile_completeness(
     if not customer:
         raise NotFoundException("Customer profile not found for this user")
     if current_user.role_slug == "client" and customer.email != current_user.email:
-        raise ForbiddenException("You can only access your own customer profile")
+        raise ForbiddenException(
+            "You can only access your own customer profile")
     from app.modules.customers.profile_service import CustomerProfileService
     profile_service = CustomerProfileService(db)
     return await profile_service.get_profile_completeness(customer.id)
@@ -123,7 +131,8 @@ async def get_my_missing_fields(
     if not customer:
         raise NotFoundException("Customer profile not found for this user")
     if current_user.role_slug == "client" and customer.email != current_user.email:
-        raise ForbiddenException("You can only access your own customer profile")
+        raise ForbiddenException(
+            "You can only access your own customer profile")
     from app.modules.customers.profile_service import CustomerProfileService
     profile_service = CustomerProfileService(db)
     return await profile_service.get_missing_fields(customer.id)
@@ -132,7 +141,8 @@ async def get_my_missing_fields(
 @router.get("/statistics", response_model=CustomerStatistics)
 async def get_customer_statistics(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.CUSTOMERS_VIEW)),
+    current_user: User = Depends(
+        require_permission(Permission.CUSTOMERS_VIEW)),
 ):
     """Get customer statistics (counts by status)."""
     service = CustomerService(db)
@@ -143,7 +153,8 @@ async def get_customer_statistics(
 async def get_customer(
     customer_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.CUSTOMERS_VIEW)),
+    current_user: User = Depends(
+        require_permission(Permission.CUSTOMERS_VIEW)),
 ):
     """Get customer by ID."""
     service = CustomerService(db)
@@ -154,16 +165,21 @@ async def get_customer(
 async def create_customer(
     customer_data: CustomerCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.CUSTOMERS_CREATE)),
+    current_user: User = Depends(
+        require_permission(Permission.CUSTOMERS_CREATE)),
 ):
     """Create a new customer."""
     # #region agent log
-    import json, os, time
+    import json
+    import os
+    import time
     log_path = '/tmp/debug.log'
     try:
         with open(log_path, 'a') as f:
-            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"D","location":"router.py:69","message":"Pydantic received data","data":{"customer_type":str(customer_data.customer_type),"customer_type_type":str(type(customer_data.customer_type)),"has_value":hasattr(customer_data.customer_type,'value'),"customer_type_value":customer_data.customer_type.value if hasattr(customer_data.customer_type,'value') else None,"model_dump":customer_data.model_dump()},"timestamp":int(time.time()*1000)})+'\n')
-    except: pass
+            f.write(json.dumps({"sessionId": "debug-session", "runId": "run1", "hypothesisId": "D", "location": "router.py:69", "message": "Pydantic received data", "data": {"customer_type": str(customer_data.customer_type), "customer_type_type": str(type(customer_data.customer_type)),
+                    "has_value": hasattr(customer_data.customer_type, 'value'), "customer_type_value": customer_data.customer_type.value if hasattr(customer_data.customer_type, 'value') else None, "model_dump": customer_data.model_dump()}, "timestamp": int(time.time()*1000)})+'\n')
+    except:
+        pass
     # #endregion
     service = CustomerService(db)
     result = await service.create(customer_data, created_by=current_user.id)
@@ -175,7 +191,8 @@ async def update_customer(
     customer_id: str,
     customer_data: CustomerUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.CUSTOMERS_EDIT)),
+    current_user: User = Depends(
+        require_permission(Permission.CUSTOMERS_EDIT)),
 ):
     """Update an existing customer."""
     service = CustomerService(db)
@@ -186,7 +203,8 @@ async def update_customer(
 async def delete_customer(
     customer_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.CUSTOMERS_DELETE)),
+    current_user: User = Depends(
+        require_permission(Permission.CUSTOMERS_DELETE)),
 ):
     """Soft delete a customer."""
     service = CustomerService(db)
@@ -195,7 +213,8 @@ async def delete_customer(
 
 class StatusChangeRequest(BaseModel):
     """Request schema for status change."""
-    reason: str = Field(..., min_length=3, description="Reason for status change")
+    reason: str = Field(..., min_length=3,
+                        description="Reason for status change")
 
 
 @router.post("/{customer_id}/activate", response_model=CustomerResponse)
@@ -203,18 +222,22 @@ async def activate_customer(
     customer_id: str,
     request: StatusChangeRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.CUSTOMERS_ACTIVATE)),
+    current_user: User = Depends(
+        require_permission(Permission.CUSTOMERS_ACTIVATE)),
 ):
     """Activate a customer account with validation."""
-    logger.info(f"[activate_customer] Received request: customer_id={customer_id}, reason={request.reason}, reason_length={len(request.reason)}")
-    
+    logger.info(
+        f"[activate_customer] Received request: customer_id={customer_id}, reason={request.reason}, reason_length={len(request.reason)}")
+
     try:
         service = CustomerService(db)
         result = await service.activate(customer_id, updated_by=current_user.id, reason=request.reason)
-        logger.info(f"[activate_customer] Successfully activated customer {customer_id}")
+        logger.info(
+            f"[activate_customer] Successfully activated customer {customer_id}")
         return result
     except Exception as e:
-        logger.error(f"[activate_customer] Error activating customer {customer_id}: {e}", exc_info=True)
+        logger.error(
+            f"[activate_customer] Error activating customer {customer_id}: {e}", exc_info=True)
         raise
 
 
@@ -223,7 +246,8 @@ async def suspend_customer(
     customer_id: str,
     request: StatusChangeRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.CUSTOMERS_SUSPEND)),
+    current_user: User = Depends(
+        require_permission(Permission.CUSTOMERS_SUSPEND)),
 ):
     """Suspend a customer account with validation."""
     service = CustomerService(db)
@@ -235,7 +259,8 @@ async def submit_for_approval(
     customer_id: str,
     notes: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.CUSTOMERS_EDIT)),
+    current_user: User = Depends(
+        require_permission(Permission.CUSTOMERS_EDIT)),
 ):
     """Submit customer for approval."""
     workflow_service = CustomerWorkflowService(db)
@@ -257,7 +282,8 @@ async def approve_customer(
     customer_id: str,
     request: ApprovalRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.CUSTOMERS_APPROVE)),
+    current_user: User = Depends(
+        require_permission(Permission.CUSTOMERS_APPROVE)),
 ):
     """Approve customer."""
     workflow_service = CustomerWorkflowService(db)
@@ -269,7 +295,8 @@ async def reject_customer(
     customer_id: str,
     request: RejectionRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.CUSTOMERS_REJECT)),
+    current_user: User = Depends(
+        require_permission(Permission.CUSTOMERS_REJECT)),
 ):
     """Reject customer approval."""
     workflow_service = CustomerWorkflowService(db)
@@ -282,7 +309,8 @@ async def get_status_history(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.CUSTOMERS_VIEW)),
+    current_user: User = Depends(
+        require_permission(Permission.CUSTOMERS_VIEW)),
 ):
     """Get status change history for a customer."""
     history_service = CustomerStatusHistoryService(db)
@@ -293,7 +321,8 @@ async def get_status_history(
 async def get_profile_completeness(
     customer_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.CUSTOMERS_VIEW)),
+    current_user: User = Depends(
+        require_permission(Permission.CUSTOMERS_VIEW)),
 ):
     """Get profile completeness information for a customer."""
     from app.modules.customers.profile_service import CustomerProfileService
@@ -305,7 +334,8 @@ async def get_profile_completeness(
 async def get_missing_fields(
     customer_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.CUSTOMERS_VIEW)),
+    current_user: User = Depends(
+        require_permission(Permission.CUSTOMERS_VIEW)),
 ):
     """Get list of missing required fields for customer profile."""
     from app.modules.customers.profile_service import CustomerProfileService

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>{{ report_title or 'Report' }}</title>
+  <style>
+    @page { size: A4; margin: 2cm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 12px;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+      line-height: 1.4;
+    }
+    .header {
+      border-bottom: 2px solid #1F4788;
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+    }
+    .header h1 { font-size: 22px; color: #1F4788; margin: 0 0 8px 0; }
+    .header .meta { color: #666; font-size: 11px; }
+    .executive-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 12px 16px;
+      min-width: 140px;
+    }
+    .kpi-value { font-size: 18px; font-weight: bold; color: #1F4788; }
+    .kpi-label { font-size: 10px; color: #666; margin-top: 4px; }
+    .kpi-trend { font-size: 11px; margin-top: 4px; }
+    .trend-up { color: green; }
+    .trend-down { color: red; }
+    .trend-neutral { color: #666; }
+    .chart-section { margin-bottom: 24px; }
+    .chart-container { margin-bottom: 20px; }
+    .chart-container h3 { font-size: 14px; color: #1F4788; margin-bottom: 8px; }
+    .chart-container img { max-width: 100%; height: auto; }
+    .data-section { margin-top: 20px; }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    .data-table th, .data-table td {
+      border: 1px solid #333;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    .data-table th {
+      background-color: #1F4788;
+      color: #fff;
+      font-weight: bold;
+    }
+    .data-table tr:nth-child(even) { background-color: #f9f9f9; }
+    .data-table tr.highlight { background-color: #fff3cd; }
+    .data-table .totals-row { font-weight: bold; background-color: #e9ecef; }
+    .status-paid { color: green; }
+    .status-overdue { color: red; font-weight: bold; }
+    .status-pending { color: #856404; }
+    .status-default { color: #333; }
+    .footer {
+      margin-top: 30px;
+      padding-top: 12px;
+      border-top: 1px solid #ddd;
+      font-size: 10px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>{{ report_title or 'Report' }}</h1>
+    <p class="meta">Period: {{ start_date or 'N/A' }} - {{ end_date or 'N/A' }}</p>
+    <p class="meta">Generated: {{ generated_at or 'N/A' }}</p>
+  </div>
+
+  {% block summary %}
+  {% if metrics %}
+  <div class="executive-summary">
+    {% for key, value in metrics.items() %}
+    <div class="kpi-card">
+      <div class="kpi-value">{{ value }}</div>
+      <div class="kpi-label">{{ key }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endblock %}
+
+  {% block charts %}
+  {% if charts %}
+  <div class="chart-section">
+    {% for chart in charts %}
+    <div class="chart-container">
+      <h3>{{ chart.title if chart.title is defined else 'Chart' }}</h3>
+      <img src="{{ chart.image_base64 if chart.image_base64 is defined else chart }}" alt="Chart" />
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endblock %}
+
+  {% block data %}
+  {% if headers and data is defined %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr>
+          {% for header in headers %}
+          <th>{{ header }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in data %}
+        <tr class="{{ 'highlight' if row is mapping and row.get('needs_attention') else '' }}">
+          {% if row is sequence and row is not string %}
+          {% for cell in row %}
+          <td>{{ cell }}</td>
+          {% endfor %}
+          {% else %}
+          {% for key in headers %}
+          <td>{{ row.get(key, '') }}</td>
+          {% endfor %}
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if totals %}
+      <tfoot>
+        <tr class="totals-row">
+          <td>Total</td>
+          {% for v in totals.values() %}
+          <td>{{ v }}</td>
+          {% endfor %}
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+  {% endif %}
+  {% endblock %}
+
+  <div class="footer">
+    <p>{{ company.name or 'CloudManager' }} | {{ company.website or 'www.cloudmanager.dz' }}</p>
+  </div>
+</body>
+</html>

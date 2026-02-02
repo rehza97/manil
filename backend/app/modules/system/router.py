@@ -10,7 +10,7 @@ import psutil
 
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, or_, cast, String
+from sqlalchemy import select, func, and_, or_, cast, String, case
 from pydantic import BaseModel
 
 from app.config.database import get_db
@@ -21,6 +21,7 @@ from app.modules.auth.models import User
 from app.modules.customers.models import Customer
 from app.modules.settings.models import Role
 from app.modules.audit.models import AuditLog, AuditAction
+from app.modules.system.models import ApiRequestLog
 from app.modules.orders.models import Order, OrderStatus
 from app.modules.invoices.models import Invoice, InvoiceStatus
 
@@ -76,7 +77,8 @@ class PerformanceMetrics(BaseModel):
     database_performance: dict
     api_performance: List[dict]
     resource_usage: dict  # May contain None values for unavailable metrics
-    performance_trend: List[dict]  # May contain None values for unavailable metrics
+    # May contain None values for unavailable metrics
+    performance_trend: List[dict]
 
 
 class SystemLog(BaseModel):
@@ -169,9 +171,10 @@ async def get_system_stats(
     from app.modules.revenue.service import RevenueService
     revenue_service = RevenueService(db)
     revenue_overview = await revenue_service.get_overview(period="month")
-    
+
     monthly_revenue = float(revenue_overview.metrics.monthly_revenue)
-    previous_month_revenue = float(revenue_overview.metrics.previous_month_revenue)
+    previous_month_revenue = float(
+        revenue_overview.metrics.previous_month_revenue)
     revenue_growth = revenue_overview.metrics.revenue_growth
 
     # Calculate system uptime from earliest audit log
@@ -211,7 +214,7 @@ async def _calculate_system_uptime(db: AsyncSession) -> float:
     earliest_query = select(func.min(AuditLog.created_at))
     earliest_result = await db.execute(earliest_query)
     earliest_log = earliest_result.scalar()
-    
+
     if earliest_log:
         uptime_days = (datetime.utcnow() - earliest_log).days
         # Calculate uptime percentage (assuming system is up if we have logs)
@@ -234,7 +237,7 @@ async def _calculate_avg_response_time(db: AsyncSession) -> float:
     )
     recent_requests_result = await db.execute(recent_requests_query)
     request_count = recent_requests_result.scalar() or 0
-    
+
     # Calculate response time estimate from request patterns
     # Note: Actual response times are not stored, so we estimate from error rates
     if request_count > 0:
@@ -251,8 +254,9 @@ async def _calculate_avg_response_time(db: AsyncSession) -> float:
         )
         error_result = await db.execute(error_query)
         error_count = error_result.scalar() or 0
-        error_rate = (error_count / request_count * 100) if request_count > 0 else 0.0
-        
+        error_rate = (error_count / request_count *
+                      100) if request_count > 0 else 0.0
+
         # Estimate: base time + error penalty - volume bonus
         base_time = 50.0
         error_penalty = error_rate * 2
@@ -278,12 +282,14 @@ async def get_detailed_health(
         test_query_start = datetime.utcnow()
         await db.execute(select(func.count(User.id)))
         test_query_end = datetime.utcnow()
-        db_response_time = (test_query_end - test_query_start).total_seconds() * 1000  # Convert to ms
+        db_response_time = (
+            # Convert to ms
+            test_query_end - test_query_start).total_seconds() * 1000
         db_status = "healthy" if db_response_time < 100 else "degraded"
     except Exception:
         db_response_time = 0
         db_status = "down"
-    
+
     # Get active database connections (estimate from concurrent users)
     active_users_query = (
         select(func.count(func.distinct(AuditLog.user_id)))
@@ -296,10 +302,10 @@ async def get_detailed_health(
     )
     active_users_result = await db.execute(active_users_query)
     active_connections = active_users_result.scalar() or 0
-    
+
     # Calculate database uptime from earliest log
     db_uptime = await _calculate_system_uptime(db)
-    
+
     # Redis health - check if Redis is available
     redis_status = "healthy"
     redis_uptime = 99.8
@@ -324,7 +330,7 @@ async def get_detailed_health(
             redis_status = "unavailable"
     except Exception:
         redis_status = "unavailable"
-    
+
     # API server health from recent requests
     recent_requests_query = (
         select(func.count(AuditLog.id))
@@ -332,7 +338,7 @@ async def get_detailed_health(
     )
     recent_requests_result = await db.execute(recent_requests_query)
     recent_request_count = recent_requests_result.scalar() or 0
-    
+
     api_response_time = await _calculate_avg_response_time(db)
     api_uptime = await _calculate_system_uptime(db)
 
@@ -475,9 +481,12 @@ async def get_users_by_role(
 @router.get("/performance", response_model=PerformanceMetrics)
 async def get_performance_metrics(
     db: Annotated[AsyncSession, Depends(get_db)],
-    start_date: Optional[datetime] = Query(None, description="Start date for metrics"),
-    end_date: Optional[datetime] = Query(None, description="End date for metrics"),
-    current_user: User = Depends(require_permission(Permission.SYSTEM_PERFORMANCE)),
+    start_date: Optional[datetime] = Query(
+        None, description="Start date for metrics"),
+    end_date: Optional[datetime] = Query(
+        None, description="End date for metrics"),
+    current_user: User = Depends(
+        require_permission(Permission.SYSTEM_PERFORMANCE)),
 ):
     """
     Get system performance metrics.
@@ -492,61 +501,87 @@ async def get_performance_metrics(
     if not start_date:
         start_date = end_date - timedelta(days=30)
 
-    # Calculate real API endpoint performance from audit logs
-    # Group by request_path to get endpoint statistics
+    # Prefer API request logs (all /api/v1/ calls); fall back to audit logs
     api_perf_query = (
         select(
-            AuditLog.request_path,
-            func.count(AuditLog.id).label("request_count"),
-            func.sum(func.cast(AuditLog.success == False, int)).label("error_count")
+            ApiRequestLog.request_path,
+            func.count(ApiRequestLog.id).label("request_count"),
+            func.sum(case((ApiRequestLog.status_code >= 400, 1), else_=0)).label(
+                "error_count"
+            ),
+            func.avg(ApiRequestLog.duration_ms).label("avg_ms"),
         )
         .where(
             and_(
-                AuditLog.created_at >= start_date,
-                AuditLog.created_at <= end_date,
-                AuditLog.request_path.isnot(None),
-                AuditLog.request_path.like("/api/v1/%")
+                ApiRequestLog.created_at >= start_date,
+                ApiRequestLog.created_at <= end_date,
             )
         )
-        .group_by(AuditLog.request_path)
-        .order_by(func.count(AuditLog.id).desc())
-        .limit(20)
+        .group_by(ApiRequestLog.request_path)
+        .order_by(func.count(ApiRequestLog.id).desc())
+        .limit(30)
     )
-    
     api_perf_result = await db.execute(api_perf_query)
     api_perf_rows = api_perf_result.all()
-    
-    # Calculate total requests and errors for average
+
     total_requests = sum(row.request_count for row in api_perf_rows)
-    total_errors = sum(row.error_count for row in api_perf_rows)
-    
-    # Calculate average response time from actual request patterns
-    # Note: Actual response times are not stored in audit logs
-    # This calculates an estimate based on request volume and error rates
-    # In production, you'd track actual response times in extra_data or separate table
-    avg_response_time = 0.0
-    if total_requests > 0:
-        # Calculate based on error rate (higher errors = slower responses)
-        error_rate = (total_errors / total_requests * 100) if total_requests > 0 else 0.0
-        # Estimate: lower error rate and higher volume = better performance
-        base_time = 50.0
-        error_penalty = error_rate * 2  # Each % error adds 2ms
-        volume_bonus = min(20.0, total_requests / 100)  # High volume = better caching
-        avg_response_time = max(10.0, base_time + error_penalty - volume_bonus)
-    
-    # Build API performance list
+    total_errors = sum(row.error_count or 0 for row in api_perf_rows)
+    total_ms = sum((row.avg_ms or 0) * (row.request_count or 0) for row in api_perf_rows)
+    avg_response_time = (
+        total_ms / total_requests if total_requests > 0 else 0.0
+    )
+
+    if not api_perf_rows:
+        # Fallback: derive from audit logs (only endpoints that create audit entries)
+        fallback_query = (
+            select(
+                AuditLog.request_path,
+                func.count(AuditLog.id).label("request_count"),
+                func.sum(func.cast(AuditLog.success == False, int)).label(
+                    "error_count"
+                ),
+            )
+            .where(
+                and_(
+                    AuditLog.created_at >= start_date,
+                    AuditLog.created_at <= end_date,
+                    AuditLog.request_path.isnot(None),
+                    AuditLog.request_path.like("/api/v1/%"),
+                )
+            )
+            .group_by(AuditLog.request_path)
+            .order_by(func.count(AuditLog.id).desc())
+            .limit(30)
+        )
+        fallback_result = await db.execute(fallback_query)
+        api_perf_rows = fallback_result.all()
+        total_requests = sum(row.request_count for row in api_perf_rows)
+        total_errors = sum(row.error_count for row in api_perf_rows)
+        if total_requests > 0:
+            error_rate = (total_errors / total_requests) * 100
+            avg_response_time = max(
+                10.0, 50.0 + error_rate * 2 - min(20.0, total_requests / 100)
+            )
+
     api_performance = []
     for row in api_perf_rows:
-        endpoint = row.request_path or "unknown"
+        endpoint = getattr(row, "request_path", None) or "unknown"
         request_count = row.request_count or 0
-        error_count = row.error_count or 0
-        error_rate = (error_count / request_count * 100) if request_count > 0 else 0.0
-        
+        error_count = getattr(row, "error_count", 0) or 0
+        error_rate = (
+            (error_count / request_count * 100) if request_count > 0 else 0.0
+        )
+        row_avg_ms = getattr(row, "avg_ms", None)
+        row_response_time = (
+            round(float(row_avg_ms), 2)
+            if row_avg_ms is not None
+            else round(avg_response_time, 2)
+        )
         api_performance.append({
             "endpoint": endpoint,
-            "average_response_time": round(avg_response_time, 2),  # Would use real data if available
+            "average_response_time": row_response_time,
             "request_count": request_count,
-            "error_rate": round(error_rate, 2)
+            "error_rate": round(error_rate, 2),
         })
 
     # Get database performance from actual queries
@@ -557,13 +592,14 @@ async def get_performance_metrics(
             and_(
                 AuditLog.created_at >= start_date,
                 AuditLog.created_at <= end_date,
-                AuditLog.resource_type.in_(["database", "query", "customer", "user", "ticket", "order"])
+                AuditLog.resource_type.in_(
+                    ["database", "query", "customer", "user", "ticket", "order"])
             )
         )
     )
     db_ops_result = await db.execute(db_ops_query)
     total_db_ops = db_ops_result.scalar() or 0
-    
+
     # Calculate query time estimate based on database operations
     # Note: Actual query execution times are not tracked
     # This estimates based on operation volume and error rates
@@ -577,20 +613,24 @@ async def get_performance_metrics(
                     AuditLog.created_at >= start_date,
                     AuditLog.created_at <= end_date,
                     AuditLog.success == False,
-                    AuditLog.resource_type.in_(["database", "query", "customer", "user", "ticket", "order"])
+                    AuditLog.resource_type.in_(
+                        ["database", "query", "customer", "user", "ticket", "order"])
                 )
             )
         )
         failed_db_ops_result = await db.execute(failed_db_ops_query)
         failed_db_ops = failed_db_ops_result.scalar() or 0
-        failure_rate = (failed_db_ops / total_db_ops) if total_db_ops > 0 else 0.0
-        
+        failure_rate = (
+            failed_db_ops / total_db_ops) if total_db_ops > 0 else 0.0
+
         # Estimate: base time + failure penalty
         base_query_time = 10.0
         failure_penalty = failure_rate * 50.0
-        volume_factor = min(30.0, total_db_ops / 500)  # High volume = better optimization
-        estimated_query_time = max(5.0, min(100.0, base_query_time + failure_penalty - volume_factor))
-    
+        # High volume = better optimization
+        volume_factor = min(30.0, total_db_ops / 500)
+        estimated_query_time = max(
+            5.0, min(100.0, base_query_time + failure_penalty - volume_factor))
+
     # Get active database connections (estimate from concurrent users)
     active_users_query = (
         select(func.count(func.distinct(AuditLog.user_id)))
@@ -603,10 +643,10 @@ async def get_performance_metrics(
     )
     active_users_result = await db.execute(active_users_query)
     active_users = active_users_result.scalar() or 0
-    
+
     # Estimate connection pool (active users + some buffer)
     estimated_connections = min(100, max(5, active_users * 2))
-    
+
     # Count slow queries (operations that took longer - estimated from failed operations)
     slow_queries_query = (
         select(func.count(AuditLog.id))
@@ -621,7 +661,7 @@ async def get_performance_metrics(
     )
     slow_queries_result = await db.execute(slow_queries_query)
     slow_queries = slow_queries_result.scalar() or 0
-    
+
     database_performance = {
         "query_time": round(estimated_query_time, 2),
         "connection_pool": estimated_connections,
@@ -632,7 +672,7 @@ async def get_performance_metrics(
     earliest_log_query = select(func.min(AuditLog.created_at))
     earliest_result = await db.execute(earliest_log_query)
     earliest_log = earliest_result.scalar()
-    
+
     if earliest_log:
         uptime_days = (datetime.utcnow() - earliest_log).days
         # Calculate uptime percentage (assuming system is up if we have logs)
@@ -671,7 +711,7 @@ async def get_performance_metrics(
     current_date = start_date
     while current_date <= end_date and len(performance_trend) < 30:
         next_date = current_date + timedelta(days=1)
-        
+
         # Count requests for this day
         day_requests_query = (
             select(func.count(AuditLog.id))
@@ -685,7 +725,7 @@ async def get_performance_metrics(
         )
         day_requests_result = await db.execute(day_requests_query)
         day_request_count = day_requests_result.scalar() or 0
-        
+
         # Calculate response time estimate for this day
         # Count errors for this day to estimate performance
         day_errors_query = (
@@ -701,23 +741,24 @@ async def get_performance_metrics(
         )
         day_errors_result = await db.execute(day_errors_query)
         day_error_count = day_errors_result.scalar() or 0
-        
+
         if day_request_count > 0:
             error_rate = (day_error_count / day_request_count * 100)
             base_time = 50.0
             error_penalty = error_rate * 2
             volume_bonus = min(20.0, day_request_count / 50)
-            estimated_response_time = max(10.0, base_time + error_penalty - volume_bonus)
+            estimated_response_time = max(
+                10.0, base_time + error_penalty - volume_bonus)
         else:
             estimated_response_time = 0.0
-        
+
         performance_trend.append({
             "date": current_date.strftime("%Y-%m-%d"),
             "response_time": round(estimated_response_time, 2),
-            "cpu_usage": None,  # Would need system monitoring
-            "memory_usage": None  # Would need system monitoring
+            "cpu_usage": round(cpu_usage, 2) if cpu_usage is not None else None,
+            "memory_usage": round(memory_usage, 2) if memory_usage is not None else None,
         })
-        
+
         current_date = next_date
 
     return PerformanceMetrics(
@@ -737,9 +778,12 @@ async def get_performance_metrics(
 @router.get("/alerts", response_model=AlertResponse)
 async def get_alerts(
     db: Annotated[AsyncSession, Depends(get_db)],
-    severity: Optional[AlertSeverity] = Query(None, description="Filter by severity"),
-    status_filter: Optional[AlertStatus] = Query(None, alias="status", description="Filter by status"),
-    resolved: Optional[bool] = Query(None, description="Filter by resolved status"),
+    severity: Optional[AlertSeverity] = Query(
+        None, description="Filter by severity"),
+    status_filter: Optional[AlertStatus] = Query(
+        None, alias="status", description="Filter by status"),
+    resolved: Optional[bool] = Query(
+        None, description="Filter by resolved status"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=100, description="Items per page"),
     current_user: User = Depends(require_permission(Permission.SYSTEM_ALERTS)),
@@ -868,7 +912,8 @@ async def acknowledge_alert(
 @router.get("/logs", response_model=SystemLogsResponse)
 async def get_system_logs(
     db: Annotated[AsyncSession, Depends(get_db)],
-    level: Optional[str] = Query(None, description="Filter by log level (error, warning, info, debug)"),
+    level: Optional[str] = Query(
+        None, description="Filter by log level (error, warning, info, debug)"),
     component: Optional[str] = Query(None, description="Filter by component"),
     start_date: Optional[datetime] = Query(None, description="Start date"),
     end_date: Optional[datetime] = Query(None, description="End date"),
@@ -890,13 +935,14 @@ async def get_system_logs(
         AuditAction.CONFIG_CHANGE,
         AuditAction.SECURITY_ALERT,
     ]
-    
+
     # Also include logs where resource_type indicates system components
     from sqlalchemy import or_
     query = select(AuditLog).where(
         or_(
             AuditLog.action.in_(system_actions),
-            AuditLog.resource_type.in_(["system", "database", "cache", "email", "api"]),
+            AuditLog.resource_type.in_(
+                ["system", "database", "cache", "email", "api"]),
             AuditLog.description.like("%system%"),
             AuditLog.description.like("%error%"),
             AuditLog.description.like("%warning%"),
@@ -907,7 +953,7 @@ async def get_system_logs(
         query = query.where(AuditLog.created_at >= start_date)
     if end_date:
         query = query.where(AuditLog.created_at <= end_date)
-    
+
     # Filter by level if provided (check in extra_data)
     if level:
         # For PostgreSQL, we can use JSONB operations
@@ -918,7 +964,8 @@ async def get_system_logs(
     offset = (page - 1) * page_size
     # Fetch more records to account for post-filtering
     fetch_limit = page_size * 3 if (level or component) else page_size
-    query = query.order_by(AuditLog.created_at.desc()).limit(fetch_limit).offset(offset)
+    query = query.order_by(AuditLog.created_at.desc()).limit(
+        fetch_limit).offset(offset)
 
     result = await db.execute(query)
     audit_logs = result.scalars().all()
@@ -927,7 +974,7 @@ async def get_system_logs(
     logs = []
     for log in audit_logs:
         extra_data = log.extra_data or {}
-        
+
         # Determine log level from action or extra_data
         log_level = extra_data.get("level", "info")
         if not log_level or log_level == "info":
@@ -939,27 +986,28 @@ async def get_system_logs(
                 log_level = "warning"
             else:
                 log_level = "info"
-        
+
         # Determine component from resource_type or extra_data
-        component = extra_data.get("component") or log.resource_type or "system"
-        
+        log_component = extra_data.get(
+            "component") or log.resource_type or "system"
+
         # Filter by level if provided
         if level and log_level.lower() != level.lower():
             continue
-            
+
         # Filter by component if provided
-        if component_filter and component.lower() != component_filter.lower():
+        if component and log_component.lower() != component.lower():
             continue
-        
+
         logs.append(SystemLog(
             id=log.id,
             level=log_level,
-            component=component,
+            component=log_component,
             message=log.description or "No message",
             timestamp=log.created_at,
             stack_trace=extra_data.get("stack_trace")
         ))
-        
+
         # Stop if we have enough logs after filtering
         if len(logs) >= page_size:
             break
@@ -969,7 +1017,8 @@ async def get_system_logs(
     count_query = select(func.count(AuditLog.id)).where(
         or_(
             AuditLog.action.in_(system_actions),
-            AuditLog.resource_type.in_(["system", "database", "cache", "email", "api"]),
+            AuditLog.resource_type.in_(
+                ["system", "database", "cache", "email", "api"]),
             AuditLog.description.like("%system%"),
             AuditLog.description.like("%error%"),
             AuditLog.description.like("%warning%"),
@@ -979,7 +1028,7 @@ async def get_system_logs(
         count_query = count_query.where(AuditLog.created_at >= start_date)
     if end_date:
         count_query = count_query.where(AuditLog.created_at <= end_date)
-    
+
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
 

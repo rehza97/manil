@@ -26,11 +26,16 @@ router = APIRouter(prefix="/audit", tags=["audit"])
 async def get_audit_logs(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Page size"),
-    action: Optional[AuditAction] = Query(None, description="Filter by action"),
-    resource_type: Optional[str] = Query(None, description="Filter by resource type"),
-    resource_id: Optional[str] = Query(None, description="Filter by resource ID"),
-    user_email: Optional[str] = Query(None, description="Filter by user email"),
-    success: Optional[bool] = Query(None, description="Filter by success status"),
+    action: Optional[AuditAction] = Query(
+        None, description="Filter by action"),
+    resource_type: Optional[str] = Query(
+        None, description="Filter by resource type"),
+    resource_id: Optional[str] = Query(
+        None, description="Filter by resource ID"),
+    user_email: Optional[str] = Query(
+        None, description="Filter by user email"),
+    success: Optional[bool] = Query(
+        None, description="Filter by success status"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

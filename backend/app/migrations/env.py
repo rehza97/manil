@@ -16,6 +16,7 @@ from app.modules.audit.models import AuditLog
 from app.modules.auth.models import User
 from app.modules.reports.models import Export
 from app.modules.orders.models import Order, OrderItem, OrderTimeline
+from app.modules.system.models import ApiRequestLog  # noqa: F401
 from app.config.settings import get_settings
 from app.config.database import Base
 

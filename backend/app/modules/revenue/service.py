@@ -127,13 +127,13 @@ class RevenueService:
         )
         anomalies = self.detect_revenue_anomalies(metrics, previous_metrics)
         
-        # Log warnings and anomalies if any
+        # Log validation warnings and anomalies (anomalies at INFO so they are not treated as errors)
         if validation_warnings or anomalies:
             from app.core.logging import logger
             if validation_warnings:
                 logger.warning(f"Revenue validation warnings: {validation_warnings}")
             if anomalies:
-                logger.warning(f"Revenue anomalies detected: {anomalies}")
+                logger.info(f"Revenue anomalies detected: {anomalies}")
 
         return RevenueOverview(
             metrics=metrics,
@@ -392,8 +392,10 @@ class RevenueService:
                     f"from {historical_metrics.monthly_revenue} to {current_metrics.monthly_revenue}"
                 )
         
-        # Detect if deferred revenue is unusually high compared to recognized revenue
-        if current_metrics.total_revenue > 0:
+        # Detect if deferred revenue is unusually high compared to recognized revenue.
+        # Only flag when total revenue is above threshold to avoid noise in dev/demo/small data.
+        REVENUE_ANOMALY_THRESHOLD = Decimal("1000")
+        if current_metrics.total_revenue >= REVENUE_ANOMALY_THRESHOLD:
             deferred_ratio = float(current_metrics.deferred_revenue) / float(current_metrics.total_revenue)
             if deferred_ratio > 0.5:  # More than 50% deferred
                 anomalies.append(

@@ -22,6 +22,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAuth } from "@/modules/auth";
+import { formatDZD } from "@/shared/utils/formatters";
 import { useCustomerDashboard } from "../hooks/useDashboard";
 
 const UserDashboardPage: React.FC = () => {

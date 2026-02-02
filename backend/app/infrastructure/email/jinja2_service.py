@@ -43,7 +43,8 @@ class Jinja2TemplateService:
         self.env.filters["format_date"] = self._format_date
 
         # Add global variables
-        self.env.globals["site_url"] = getattr(settings, "FRONTEND_URL", "https://cloudmanager.dz")
+        self.env.globals["site_url"] = getattr(
+            settings, "FRONTEND_URL", "https://cloudmanager.dz")
 
     @staticmethod
     def _format_currency(value: float, currency: str = "DZD") -> str:
@@ -110,7 +111,8 @@ class Jinja2TemplateService:
             TemplateNotFound: If template doesn't exist
             TemplateError: If template rendering fails
         """
-        html_content = self.render_template(template_name, context, format="html")
+        html_content = self.render_template(
+            template_name, context, format="html")
 
         # Text version: use .txt template if it exists, otherwise derive from HTML
         import re
@@ -150,7 +152,8 @@ class Jinja2TemplateService:
             filtered = [v for v in variables if not v.startswith("_")]
             return sorted(list(filtered))
         except Exception as e:
-            logger.warning(f"Could not extract variables from {template_name}: {e}")
+            logger.warning(
+                f"Could not extract variables from {template_name}: {e}")
             return []
 
 

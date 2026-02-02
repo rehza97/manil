@@ -1,0 +1,33 @@
+{% extends "reports/base_report.html" %}
+{% block summary %}
+  <div class="executive-summary">
+    <div class="kpi-card">
+      <div class="kpi-value">{{ total_outstanding | format_currency }}</div>
+      <div class="kpi-label">Total Outstanding</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ total_invoices }}</div>
+      <div class="kpi-label">Invoices</div>
+    </div>
+  </div>
+  {% if total_invoices is defined and total_invoices == 0 %}
+  <p class="meta" style="margin-top: 12px; color: #666;">No outstanding invoices in this period. Ensure seed data has been run if you expect data.</p>
+  {% endif %}
+{% endblock %}
+{% block charts %}
+  {{ super() }}
+{% endblock %}
+{% block data %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr><th>Bucket</th><th>Count</th><th>Amount (DZD)</th></tr>
+      </thead>
+      <tbody>
+        {% for row in aging_buckets or [] %}
+        <tr><td>{{ row.bucket }}</td><td>{{ row.count }}</td><td>{{ row.amount | format_currency }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

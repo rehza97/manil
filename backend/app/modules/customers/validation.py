@@ -25,23 +25,23 @@ def validate_status_transition(
 ) -> None:
     """
     Validate if a status transition is allowed.
-    
+
     Args:
         old_status: Current customer status
         new_status: Desired new status
         reason: Optional reason for the transition
-        
+
     Raises:
         ValidationException: If transition is not allowed
     """
     allowed_transitions = STATUS_TRANSITIONS.get(old_status, [])
-    
+
     if new_status not in allowed_transitions:
         raise ValidationException(
             f"Cannot transition from {old_status.value} to {new_status.value}. "
             f"Allowed transitions: {[s.value for s in allowed_transitions]}"
         )
-    
+
     # Reason is required for all transitions
     if not reason or not reason.strip():
         raise ValidationException("Reason is required for status transitions")
@@ -54,12 +54,12 @@ async def check_kyc_requirements(
 ) -> None:
     """
     Check if KYC requirements are met for a status transition.
-    
+
     Args:
         db: Database session
         customer_id: Customer ID
         target_status: Target status to transition to
-        
+
     Raises:
         ValidationException: If KYC requirements are not met
     """
@@ -67,7 +67,7 @@ async def check_kyc_requirements(
     if target_status == CustomerStatus.ACTIVE:
         kyc_service = KYCService(db)
         kyc_status = await kyc_service.get_customer_kyc_status(customer_id)
-        
+
         # Check if KYC is complete and approved
         if kyc_status.kyc_status != "approved":
             missing = kyc_status.missing_documents or []
@@ -85,7 +85,7 @@ async def check_kyc_requirements(
                     "At least one required document (National ID for individual, Business registration for corporate) must be uploaded and approved."
                 )
             raise ValidationException(msg)
-        
+
         # Verify all required documents are approved
         summary = kyc_status.summary
         if not summary.can_activate:
@@ -105,24 +105,24 @@ async def can_transition_to(
 ) -> tuple[bool, Optional[str]]:
     """
     Check if customer can transition to new status.
-    
+
     Args:
         db: Database session
         customer: Customer instance
         new_status: Desired new status
         reason: Optional reason for transition
-        
+
     Returns:
         Tuple of (can_transition: bool, error_message: Optional[str])
     """
     try:
         # Validate transition rules
         validate_status_transition(customer.status, new_status, reason)
-        
+
         # Check KYC requirements if needed
         if new_status == CustomerStatus.ACTIVE:
             await check_kyc_requirements(db, customer.id, new_status)
-        
+
         return True, None
     except ValidationException as e:
         return False, str(e)

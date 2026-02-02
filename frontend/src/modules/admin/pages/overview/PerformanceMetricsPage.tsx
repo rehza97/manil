@@ -45,6 +45,7 @@ import {
 import { useSystemStats, useDetailedHealth } from "../../hooks/useSystem";
 import { usePerformanceReport } from "../../hooks/useReports";
 import type { ReportFilters } from "../../components/reports/ReportFilters";
+import { ActiveVPSTab } from "./ActiveVPSTab";
 
 export const PerformanceMetricsPage: React.FC = () => {
   const [filters, setFilters] = useState<ReportFilters>({});
@@ -70,8 +71,12 @@ export const PerformanceMetricsPage: React.FC = () => {
 
   const isLoading = statsLoading || healthLoading || reportLoading;
 
-  // Use real API data - handle empty data gracefully
-  const performanceTrendData = performanceReport?.performance_trend || [];
+  // Use real API data - handle empty data gracefully; coerce null to 0 for charts
+  const performanceTrendData = (performanceReport?.performance_trend || []).map((d) => ({
+    ...d,
+    cpu_usage: d.cpu_usage ?? 0,
+    memory_usage: d.memory_usage ?? 0,
+  }));
 
   if (isLoading && !performanceReport) {
     return (
@@ -176,6 +181,7 @@ export const PerformanceMetricsPage: React.FC = () => {
           <TabsTrigger value="response-time">Response Time</TabsTrigger>
           <TabsTrigger value="resource-usage">Resource Usage</TabsTrigger>
           <TabsTrigger value="api-performance">API Performance</TabsTrigger>
+          <TabsTrigger value="active-vps">Active VPS</TabsTrigger>
         </TabsList>
 
         <TabsContent value="response-time">
@@ -231,6 +237,7 @@ export const PerformanceMetricsPage: React.FC = () => {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" />
                     <YAxis
+                      domain={[0, 100]}
                       label={{
                         value: "Usage (%)",
                         angle: -90,
@@ -312,6 +319,10 @@ export const PerformanceMetricsPage: React.FC = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="active-vps">
+          <ActiveVPSTab />
         </TabsContent>
       </Tabs>
 

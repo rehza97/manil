@@ -354,24 +354,13 @@ async def restore_backup(
     env["PGPASSWORD"] = password
 
     try:
-        # Step 1: Drop all tables and types in the database
-        # This prevents "already exists" errors
-        drop_sql = """
-        DO $$
-        DECLARE
-            r RECORD;
-        BEGIN
-            -- Drop all tables
-            FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
-                EXECUTE 'DROP TABLE IF EXISTS public.' || quote_ident(r.tablename) || ' CASCADE';
-            END LOOP;
-
-            -- Drop all types
-            FOR r IN (SELECT typname FROM pg_type WHERE typnamespace = 'public'::regnamespace AND typtype = 'e') LOOP
-                EXECUTE 'DROP TYPE IF EXISTS public.' || quote_ident(r.typname) || ' CASCADE';
-            END LOOP;
-        END $$;
-        """
+        # Step 1: Drop public schema and recreate (fast single operation)
+        # This prevents "already exists" errors on restore
+        drop_sql = (
+            "DROP SCHEMA public CASCADE; "
+            "CREATE SCHEMA public; "
+            "GRANT ALL ON SCHEMA public TO current_user;"
+        )
 
         drop_command = [
             "psql",
@@ -442,7 +431,11 @@ async def restore_backup(
     except subprocess.TimeoutExpired:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Restore operation timed out"
+            detail=(
+                "Restore operation timed out. The database may be in an inconsistent "
+                "state (partially dropped). Try running the restore again, or restore "
+                "from a backup file manually."
+            ),
         )
     except HTTPException:
         raise

@@ -1,0 +1,23 @@
+{% extends "reports/base_report.html" %}
+{% block summary %}
+  <div class="executive-summary">
+    <div class="kpi-card">
+      <div class="kpi-value">{{ details | length if details is defined else 0 }}</div>
+      <div class="kpi-label">Plans with Subscriptions</div>
+    </div>
+  </div>
+{% endblock %}
+{% block data %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr><th>Plan Name</th><th>Slug</th><th>Subscription Count</th></tr>
+      </thead>
+      <tbody>
+        {% for row in details or [] %}
+        <tr><td>{{ row.plan_name }}</td><td>{{ row.slug }}</td><td>{{ row.subscription_count }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}
