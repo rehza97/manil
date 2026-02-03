@@ -62,6 +62,19 @@ async def get_product_performance(
     return await generate_report_response(db, data, "reports/base_report.html", "Product Performance", format, "product_performance", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
 
 
+async def _customer_patterns_response(
+    start_date: Optional[str], end_date: Optional[str], format: str,
+    current_user: User, db: AsyncSession,
+):
+    start, end = _parse_dates(start_date, end_date)
+    data = await SalesReportService(db).get_customer_purchase_patterns_report(start, end)
+    return await generate_report_response(
+        db, data, "reports/base_report.html", "Customer Purchase Patterns",
+        format, "customer_patterns", export_details_key="details",
+        generated_by=current_user.id, start_date=start, end_date=end,
+    )
+
+
 @router.get("/customer-purchase-patterns")
 async def get_customer_purchase_patterns(
     start_date: Optional[str] = None, end_date: Optional[str] = None,
@@ -69,6 +82,15 @@ async def get_customer_purchase_patterns(
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db),
 ):
-    start, end = _parse_dates(start_date, end_date)
-    data = await SalesReportService(db).get_customer_purchase_patterns_report(start, end)
-    return await generate_report_response(db, data, "reports/base_report.html", "Customer Purchase Patterns", format, "customer_patterns", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await _customer_patterns_response(start_date, end_date, format, current_user, db)
+
+
+@router.get("/customer-patterns")
+async def get_customer_patterns(
+    start_date: Optional[str] = None, end_date: Optional[str] = None,
+    format: str = Query("pdf", enum=["pdf", "excel", "csv"]),
+    current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
+    db: AsyncSession = Depends(get_db),
+):
+    """Alias for customer-purchase-patterns; both paths return the same report."""
+    return await _customer_patterns_response(start_date, end_date, format, current_user, db)

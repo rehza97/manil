@@ -16,7 +16,8 @@ from app.modules.hosting.models import (
     VPSSubscription,
     VPSPlan,
     SubscriptionStatus,
-    TimelineEventType
+    TimelineEventType,
+    VpsPaymentApplied,
 )
 from app.modules.hosting.repository import VPSSubscriptionRepository, SubscriptionTimelineRepository
 from app.modules.invoices.service import InvoiceService
@@ -430,6 +431,21 @@ class SubscriptionBillingService:
         if not subscription:
             logger.warning(f"Subscription {subscription_id} not found for invoice {invoice_id}")
             return
+
+        # Idempotency: skip if this invoice was already applied to subscription total_paid
+        check = await self.db.execute(
+            select(VpsPaymentApplied).where(VpsPaymentApplied.invoice_id == invoice_id)
+        )
+        if check.scalar_one_or_none():
+            return
+
+        self.db.add(
+            VpsPaymentApplied(
+                invoice_id=invoice_id,
+                subscription_id=subscription_id,
+            )
+        )
+        await self.db.flush()
 
         # Update total paid
         subscription.total_paid += invoice.total_amount

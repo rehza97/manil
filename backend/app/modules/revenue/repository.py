@@ -223,12 +223,14 @@ class RevenueRepository:
             )
             recurring = await self.get_recurring_revenue()
 
+            # total_revenue = recognized only (cash received) to avoid double-counting
+            # same sale in both recognized and booked; UI can show series separately
             trends.append({
                 "date": date_str,
                 "recognized_revenue": recognized,
                 "booked_revenue": booked,
                 "recurring_revenue": recurring,
-                "total_revenue": recognized + booked + recurring,
+                "total_revenue": recognized,
             })
 
             current_date = period_end
@@ -381,7 +383,7 @@ class RevenueRepository:
         )
         total_invoices_revenue = Decimal(str(await self.db.scalar(invoices_query) or 0))
 
-        # Get orders with invoices (matched)
+        # Matched pairs: order-derived invoices linked by order_id (canonical FK)
         matched_query = (
             select(
                 Order.id.label("order_id"),
@@ -389,8 +391,9 @@ class RevenueRepository:
                 Order.total_amount.label("order_amount"),
                 Invoice.paid_amount.label("invoice_amount")
             )
-            .join(Invoice, Invoice.quote_id == Order.quote_id)
-            .where(and_(*order_conditions, Order.quote_id.isnot(None)))
+            .select_from(Order)
+            .join(Invoice, and_(Invoice.order_id == Order.id, Invoice.deleted_at.is_(None)))
+            .where(and_(*order_conditions))
         )
         matched_result = await self.db.execute(matched_query)
         matched_rows = matched_result.all()

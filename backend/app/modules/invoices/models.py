@@ -246,3 +246,34 @@ class InvoiceTimeline(Base):
     # Relationships
     invoice = relationship("Invoice", back_populates="timeline_events")
     user = relationship("User", foreign_keys=[user_id])
+
+
+class InvoicePayment(Base):
+    """Invoice payment record for idempotency (one row per payment)."""
+
+    __tablename__ = "invoice_payments"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    invoice_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("invoices.id"), nullable=False, index=True
+    )
+    amount: Mapped[Decimal] = mapped_column(
+        Numeric(precision=12, scale=2), nullable=False
+    )
+    payment_method: Mapped[str] = mapped_column(String(50), nullable=False)
+    payment_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    recorded_by_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id"), nullable=True
+    )
+    idempotency_key: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, unique=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )

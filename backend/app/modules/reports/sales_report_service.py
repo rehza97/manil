@@ -69,7 +69,7 @@ class SalesReportService(BaseReportService):
                  OrderStatus.DELIVERED.value, Order.created_at <= end)
         ).group_by(OrderItem.product_id).order_by(func.count(OrderItem.id).desc()).limit(limit)
         rows = (await self.db.execute(q)).all()
-        details = [{"product_id": r[0], "order_count": r[1]} for r in rows]
+        details = [{"product_id": str(r[0]), "order_count": r[1]} for r in rows]
         return {"details": details, "end_date": end}
 
     async def get_customer_purchase_patterns_report(
@@ -88,6 +88,6 @@ class SalesReportService(BaseReportService):
                  OrderStatus.DELIVERED.value, Order.created_at <= end)
         ).group_by(Order.customer_id)
         rows = (await self.db.execute(q)).all()
-        details = [{"customer_id": r[0], "order_count": r[1],
+        details = [{"customer_id": str(r[0]), "order_count": r[1],
                     "total_value": float(r[2] or 0)} for r in rows]
         return {"details": details, "end_date": end}

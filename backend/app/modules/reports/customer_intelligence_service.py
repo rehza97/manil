@@ -2,6 +2,7 @@
 Customer Intelligence Report Service
 
 Four reports: lifetime value, segmentation, KYC compliance, churn analysis.
+Uses RevenueRepository as single source for by-customer revenue.
 """
 
 from datetime import datetime, timezone, timedelta
@@ -12,8 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.customers.models import Customer
 from app.modules.orders.models import Order
-from app.modules.tickets.models import Ticket
 from app.modules.orders.models import OrderStatus
+from app.modules.revenue.repository import RevenueRepository
 from .base_report_service import BaseReportService
 
 
@@ -22,6 +23,7 @@ class CustomerIntelligenceService(BaseReportService):
 
     def __init__(self, db: AsyncSession):
         self.db = db
+        self.revenue_repo = RevenueRepository(db)
 
     async def get_lifetime_value_report(
         self,
@@ -29,22 +31,19 @@ class CustomerIntelligenceService(BaseReportService):
         end_date: Optional[datetime] = None,
         limit: int = 50,
     ) -> Dict[str, Any]:
-        """Total revenue per customer, purchase frequency, ranking."""
+        """Total revenue per customer from single source (recognized revenue)."""
         end = end_date or datetime.now(timezone.utc)
-        q = select(
-            Order.customer_id,
-            func.count(Order.id).label("orders"),
-            func.sum(Order.total_amount).label("total"),
-        ).where(
-            and_(
-                Order.deleted_at.is_(None),
-                Order.status == OrderStatus.DELIVERED.value,
-                Order.created_at <= end,
-            )
-        ).group_by(Order.customer_id).order_by(func.sum(Order.total_amount).desc()).limit(limit)
-        rows = (await self.db.execute(q)).all()
-        details = [{"customer_id": r[0], "order_count": r[1],
-                    "total_revenue": float(r[2] or 0)} for r in rows]
+        customer_data = await self.revenue_repo.get_revenue_by_customer(
+            start_date=None, end_date=end, limit=limit
+        )
+        details = [
+            {
+                "customer_id": item["customer_id"],
+                "order_count": item.get("invoice_count", 0),
+                "total_revenue": float(item["revenue"]),
+            }
+            for item in customer_data
+        ]
         return {"details": details, "end_date": end}
 
     async def get_segmentation_report(

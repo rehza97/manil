@@ -585,6 +585,25 @@ class SubscriptionTimeline(Base):
     actor: Mapped["User"] = relationship("User")
 
 
+class VpsPaymentApplied(Base):
+    """Tracks which invoices have been applied to subscription total_paid (webhook idempotency)."""
+
+    __tablename__ = "vps_payment_applied"
+
+    invoice_id: Mapped[str] = mapped_column(
+        String(36), primary_key=True
+    )
+    subscription_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("vps_subscriptions.id"),
+        nullable=False,
+        index=True,
+    )
+    applied_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.utcnow(), nullable=False
+    )
+
+
 class CustomDockerImage(Base):
     """Custom Docker Image database model - tracks user-uploaded Docker images."""
 

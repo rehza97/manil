@@ -2,16 +2,15 @@
 Executive Report Service
 
 Three reports: KPI dashboard, business health, forecast (linear trend on revenue).
+Uses RevenueRepository as single source for revenue metrics.
 """
 
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, List
 
-from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.orders.models import Order
-from app.modules.orders.models import OrderStatus
+from app.modules.revenue.repository import RevenueRepository
 from .dashboard_service import DashboardService
 from .base_report_service import BaseReportService
 
@@ -22,6 +21,7 @@ class ExecutiveReportService(BaseReportService):
     def __init__(self, db: AsyncSession):
         self.db = db
         self.dashboard = DashboardService(db)
+        self.revenue_repo = RevenueRepository(db)
 
     async def get_kpi_dashboard_report(
         self,
@@ -46,20 +46,16 @@ class ExecutiveReportService(BaseReportService):
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
     ) -> Dict[str, Any]:
-        """6-month revenue trends, pipeline status, receivables, support backlog."""
+        """6-month revenue trends (booked revenue from single source)."""
         end = end_date or datetime.now(timezone.utc)
         start = start_date or (end - timedelta(days=180))
-        q = select(func.date(Order.created_at).label("date"), func.sum(Order.total_amount).label("total")).where(
-            and_(
-                Order.deleted_at.is_(None),
-                Order.status == OrderStatus.DELIVERED.value,
-                Order.created_at >= start,
-                Order.created_at <= end,
-            )
-        ).group_by(func.date(Order.created_at)).order_by(func.date(Order.created_at))
-        rows = (await self.db.execute(q)).all()
+        trend_data = await self.revenue_repo.get_revenue_trends(
+            start_date=start, end_date=end, group_by="day"
+        )
         revenue_trend = [
-            {"date": str(r.date), "total": float(r.total or 0)} for r in rows]
+            {"date": item["date"], "total": float(item["booked_revenue"])}
+            for item in trend_data
+        ]
         return {"revenue_trend": revenue_trend, "start_date": start, "end_date": end}
 
     async def get_forecast_report(
@@ -68,19 +64,13 @@ class ExecutiveReportService(BaseReportService):
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
     ) -> Dict[str, Any]:
-        """Simple linear trend on historical revenue for next N months."""
+        """Simple linear trend on historical booked revenue for next N months."""
         end = end_date or datetime.now(timezone.utc)
         start = start_date or (end - timedelta(days=180))
-        q = select(func.date(Order.created_at).label("date"), func.sum(Order.total_amount).label("total")).where(
-            and_(
-                Order.deleted_at.is_(None),
-                Order.status == OrderStatus.DELIVERED.value,
-                Order.created_at >= start,
-                Order.created_at <= end,
-            )
-        ).group_by(func.date(Order.created_at)).order_by(func.date(Order.created_at))
-        rows = (await self.db.execute(q)).all()
-        totals = [float(r.total or 0) for r in rows]
+        trend_data = await self.revenue_repo.get_revenue_trends(
+            start_date=start, end_date=end, group_by="day"
+        )
+        totals = [float(item["booked_revenue"]) for item in trend_data]
         avg = sum(totals) / len(totals) if totals else 0
         forecast_values = [avg * (1 + 0.02 * i) for i in range(months)]
         details = [

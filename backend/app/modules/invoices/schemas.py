@@ -83,11 +83,12 @@ class InvoiceIssueRequest(BaseModel):
 
 
 class InvoicePaymentRequest(BaseModel):
-    """Schema for recording a payment."""
+    """Schema for recording a payment. Optional idempotency_key prevents duplicate application."""
     amount: Decimal = Field(..., gt=0)
     payment_method: PaymentMethod
     payment_date: datetime
     payment_notes: Optional[str] = None
+    idempotency_key: Optional[str] = Field(None, max_length=64)
 
 
 class InvoiceConvertFromQuoteRequest(BaseModel):

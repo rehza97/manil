@@ -179,14 +179,12 @@ class DashboardService:
         )
         completed_orders = await self.db.scalar(completed_orders_query) or 0
 
-        # Calculate total revenue
-        revenue_query = select(func.sum(Order.total_amount)).where(
-            and_(
-                Order.deleted_at.is_(None),
-                Order.status == "delivered"
-            )
+        # Total revenue from single source (RevenueService)
+        from app.modules.revenue.service import RevenueService
+        revenue_service = RevenueService(self.db)
+        total_revenue = float(
+            await revenue_service.get_total_booked_revenue(customer_id=None)
         )
-        total_revenue = await self.db.scalar(revenue_query) or 0.0
 
         # Product metrics
         total_products_query = select(func.count(Product.id)).where(

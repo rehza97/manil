@@ -42,8 +42,13 @@ async def generate_report_response(
         if template == "reports/base_report.html" and "headers" not in payload and "data" not in payload:
             details_list = payload.get("details") or payload.get(export_details_key) or []
             if details_list and all(isinstance(x, dict) for x in details_list):
-                payload["headers"] = list(details_list[0].keys())
-                payload["data"] = details_list
+                headers = list(details_list[0].keys())
+                payload["headers"] = headers
+                # List-of-lists so template uses sequence branch and renders actual cell values
+                payload["data"] = [
+                    [str(row.get(h, "")) for h in headers]
+                    for row in details_list
+                ]
         file_path = await factory.generate_pdf(
             template=template,
             data=payload,

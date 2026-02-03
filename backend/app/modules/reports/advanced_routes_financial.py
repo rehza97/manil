@@ -1,6 +1,6 @@
 """Advanced report routes: Financial (5 reports)."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -24,6 +24,24 @@ def _parse_dates(start_date: Optional[str], end_date: Optional[str]):
         "Z", "+00:00")) if start_date else None
     end = datetime.fromisoformat(end_date.replace(
         "Z", "+00:00")) if end_date else datetime.now(timezone.utc)
+    return start, end
+
+
+def _period_to_dates(period: str):
+    """Compute start_date and end_date from period (today, week, month, quarter, year)."""
+    end = datetime.now(timezone.utc)
+    if period == "today":
+        start = end.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif period == "week":
+        start = end - timedelta(days=7)
+    elif period == "month":
+        start = end - timedelta(days=30)
+    elif period == "quarter":
+        start = end - timedelta(days=90)
+    elif period == "year":
+        start = end - timedelta(days=365)
+    else:
+        start = end - timedelta(days=30)
     return start, end
 
 
@@ -76,8 +94,12 @@ async def get_revenue_recognition(
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db),
 ):
+    start, end = _period_to_dates(period)
     data = await FinancialReportService(db).get_revenue_recognition_report(period=period)
-    return await generate_report_response(db, data, "reports/base_report.html", "Revenue Recognition", format, "revenue_recognition", export_details_key="details", generated_by=current_user.id)
+    return await generate_report_response(
+        db, data, "reports/base_report.html", "Revenue Recognition", format, "revenue_recognition",
+        export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end,
+    )
 
 
 @router.get("/tax-summary")

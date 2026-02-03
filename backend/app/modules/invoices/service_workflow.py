@@ -11,7 +11,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.modules.invoices.models import Invoice, InvoiceItem, InvoiceStatus
+from app.modules.invoices.models import Invoice, InvoiceItem, InvoiceStatus, InvoicePayment
 from app.modules.invoices.repository import InvoiceRepository
 from app.modules.invoices.service import InvoiceService
 from app.modules.invoices.schemas import (
@@ -214,8 +214,18 @@ class InvoiceWorkflowService:
         payment_data: InvoicePaymentRequest,
         recorded_by_id: str
     ) -> Invoice:
-        """Record a payment for an invoice."""
+        """Record a payment for an invoice. Idempotent when idempotency_key is provided."""
         invoice = await self.base_service.get_by_id(invoice_id)
+
+        if payment_data.idempotency_key:
+            q = select(InvoicePayment).where(
+                InvoicePayment.invoice_id == invoice_id,
+                InvoicePayment.idempotency_key == payment_data.idempotency_key,
+            )
+            result = await self.db.execute(q)
+            existing = result.scalar_one_or_none()
+            if existing:
+                return invoice
 
         if invoice.status in [InvoiceStatus.CANCELLED, InvoiceStatus.DRAFT]:
             raise HTTPException(
@@ -248,6 +258,16 @@ class InvoiceWorkflowService:
             invoice.payment_notes = payment_data.payment_notes
 
         invoice = await self.repository.update(invoice)
+
+        payment_record = InvoicePayment(
+            invoice_id=invoice.id,
+            amount=payment_data.amount,
+            payment_method=payment_data.payment_method.value,
+            payment_date=payment_data.payment_date,
+            recorded_by_id=recorded_by_id,
+            idempotency_key=payment_data.idempotency_key,
+        )
+        self.db.add(payment_record)
 
         await self.base_service._add_timeline_event(
             invoice.id,

@@ -128,8 +128,8 @@
           <td>{{ cell }}</td>
           {% endfor %}
           {% else %}
-          {% for key in headers %}
-          <td>{{ row.get(key, '') }}</td>
+          {% for header_name in headers %}
+          <td>{{ row.get(header_name, '') }}</td>
           {% endfor %}
           {% endif %}
         </tr>

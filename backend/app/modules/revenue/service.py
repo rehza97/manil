@@ -33,6 +33,27 @@ class RevenueService:
         self.db = db
         self.repository = RevenueRepository(db)
 
+    async def get_total_booked_revenue(
+        self, customer_id: Optional[str] = None
+    ) -> Decimal:
+        """
+        All-time booked revenue (delivered orders). Single source for dashboards/reports.
+        """
+        return await self.repository.get_booked_revenue(
+            start_date=None, end_date=None, customer_id=customer_id
+        )
+
+    async def get_booked_revenue_for_range(
+        self,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        customer_id: Optional[str] = None,
+    ) -> Decimal:
+        """Booked revenue (delivered orders) within optional date range. For reports."""
+        return await self.repository.get_booked_revenue(
+            start_date=start_date, end_date=end_date, customer_id=customer_id
+        )
+
     async def get_overview(
         self,
         period: str = "month",
