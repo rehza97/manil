@@ -29,46 +29,78 @@ def _parse_dates(start_date: Optional[str], end_date: Optional[str]):
 @router.get("/sla-compliance")
 async def get_sla_compliance(
     priority: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None,
-    format: str = Query("pdf", enum=["pdf", "excel", "csv"]),
+    format: str = Query("json", enum=["json", "pdf", "excel", "csv"]),
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db),
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await OperationsReportService(db).get_sla_compliance_report(priority, start, end)
-    return await generate_report_response(db, data, "reports/operations/sla_compliance.html", "SLA Compliance", format, "sla_compliance", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(
+        db, data, "reports/operations/sla_compliance.html", "SLA Compliance", format, "sla_compliance",
+        export_details_key="details",
+        generated_by=current_user.id,
+        start_date=start,
+        end_date=end,
+        report_type="operations_sla_compliance",
+        description="Service level agreement tracking",
+    )
 
 
 @router.get("/agent-performance")
 async def get_agent_performance(
     agent_id: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None,
-    format: str = Query("pdf", enum=["pdf", "excel", "csv"]),
+    format: str = Query("json", enum=["json", "pdf", "excel", "csv"]),
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db),
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await OperationsReportService(db).get_agent_performance_report(agent_id, start, end)
-    return await generate_report_response(db, data, "reports/operations/agent_performance.html", "Agent Performance", format, "agent_performance", export_details_key="agents", generated_by=current_user.id)
+    return await generate_report_response(
+        db, data, "reports/operations/agent_performance.html", "Agent Performance", format, "agent_performance",
+        export_details_key="agents",
+        generated_by=current_user.id,
+        start_date=start,
+        end_date=end,
+        report_type="operations_agent_performance",
+        description="Agent performance and productivity",
+    )
 
 
 @router.get("/ticket-category-analysis")
 async def get_ticket_category_analysis(
     start_date: Optional[str] = None, end_date: Optional[str] = None,
-    format: str = Query("pdf", enum=["pdf", "excel", "csv"]),
+    format: str = Query("json", enum=["json", "pdf", "excel", "csv"]),
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db),
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await OperationsReportService(db).get_ticket_category_analysis_report(start, end)
-    return await generate_report_response(db, data, "reports/operations/ticket_category_analysis.html", "Ticket Category Analysis", format, "category_analysis", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(
+        db, data, "reports/operations/ticket_category_analysis.html", "Ticket Category Analysis", format, "category_analysis",
+        export_details_key="details",
+        generated_by=current_user.id,
+        start_date=start,
+        end_date=end,
+        report_type="operations_ticket_category_analysis",
+        description="Ticket volume by category",
+    )
 
 
 @router.get("/quality-metrics")
 async def get_quality_metrics(
     start_date: Optional[str] = None, end_date: Optional[str] = None,
-    format: str = Query("pdf", enum=["pdf", "excel", "csv"]),
+    format: str = Query("json", enum=["json", "pdf", "excel", "csv"]),
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db),
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await OperationsReportService(db).get_quality_metrics_report(start, end)
-    return await generate_report_response(db, data, "reports/operations/quality_metrics.html", "Support Quality Metrics", format, "quality_metrics", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(
+        db, data, "reports/operations/quality_metrics.html", "Support Quality Metrics", format, "quality_metrics",
+        export_details_key="details",
+        generated_by=current_user.id,
+        start_date=start,
+        end_date=end,
+        report_type="operations_quality_metrics",
+        description="Support quality and first response metrics",
+    )

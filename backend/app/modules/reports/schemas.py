@@ -428,3 +428,138 @@ class ExportListResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ============================================================================
+# Live Report Preview Schemas
+# ============================================================================
+
+class ChartDataPoint(BaseModel):
+    """Single data point in a chart"""
+    label: str
+    value: float
+    percentage: Optional[float] = None
+    color: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ChartSeries(BaseModel):
+    """Chart series for multi-series charts"""
+    name: str
+    dataKey: str
+    color: Optional[str] = None
+    data: List[Dict[str, Any]] = []
+
+    class Config:
+        from_attributes = True
+
+
+class ChartConfig(BaseModel):
+    """Chart configuration for live preview"""
+    chart_id: str
+    chart_type: str  # bar, line, pie, area, donut, scatter
+    title: str
+    subtitle: Optional[str] = None
+    data: List[Dict[str, Any]] = []  # Array of data objects
+    dataKeys: Optional[Dict[str, str]] = None  # {xAxis: "name", yAxis: "value"}
+    series: Optional[List[ChartSeries]] = []  # For multi-series charts
+    colors: Optional[List[str]] = None  # Color palette
+    xAxisLabel: Optional[str] = None
+    yAxisLabel: Optional[str] = None
+    showLegend: bool = True
+    showGrid: bool = True
+    stacked: bool = False
+    height: Optional[int] = 300
+    config: Optional[Dict[str, Any]] = None  # Additional chart-specific config
+
+    class Config:
+        from_attributes = True
+
+
+class TableColumn(BaseModel):
+    """Table column definition"""
+    key: str
+    label: str
+    type: str  # text, number, currency, percentage, date, datetime, duration
+    align: Optional[str] = "left"  # left, center, right
+    sortable: bool = True
+    format: Optional[str] = None  # Format string for numbers/dates
+    width: Optional[str] = None  # CSS width value
+
+    class Config:
+        from_attributes = True
+
+
+class TableRow(BaseModel):
+    """Table row data"""
+    data: Dict[str, Any]  # Column key -> value mapping
+    metadata: Optional[Dict[str, Any]] = None
+    className: Optional[str] = None  # CSS class for styling
+
+    class Config:
+        from_attributes = True
+
+
+class TableData(BaseModel):
+    """Table configuration for live preview"""
+    table_id: str
+    title: str
+    subtitle: Optional[str] = None
+    columns: List[TableColumn]
+    rows: List[TableRow]
+    totals: Optional[Dict[str, Any]] = None  # Summary row data
+    pagination: bool = True
+    pageSize: int = 10
+    sortBy: Optional[str] = None
+    sortOrder: Optional[str] = "asc"  # asc, desc
+
+    class Config:
+        from_attributes = True
+
+
+class ReportMetadata(BaseModel):
+    """Report metadata"""
+    report_id: str
+    report_type: str
+    report_name: str
+    description: Optional[str] = None
+    generated_at: datetime
+    generated_by: Optional[str] = None
+    date_range: Optional[Dict[str, Any]] = None
+    filters: Optional[Dict[str, Any]] = None
+    total_records: Optional[int] = None
+    period_label: Optional[str] = None  # "Last 30 days", "Q1 2024", etc.
+
+    class Config:
+        from_attributes = True
+
+
+class ReportSummary(BaseModel):
+    """Report summary statistics"""
+    key: str
+    label: str
+    value: Any
+    format: Optional[str] = None  # number, currency, percentage, etc.
+    trend: Optional[str] = None  # up, down, neutral
+    trendValue: Optional[float] = None
+    icon: Optional[str] = None
+    color: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ReportPreviewData(BaseModel):
+    """Complete report preview data with charts and tables"""
+    metadata: ReportMetadata
+    summary: List[ReportSummary] = []
+    charts: List[ChartConfig] = []
+    tables: List[TableData] = []
+    raw_data: Optional[Dict[str, Any]] = None  # Original data for custom rendering
+    export_formats: List[str] = ["pdf", "excel", "csv"]  # Available export formats
+
+    class Config:
+        from_attributes = True

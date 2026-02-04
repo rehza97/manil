@@ -268,6 +268,71 @@ export const reportService = {
     });
     return response.data;
   },
+
+  // ============================================================================
+  // Advanced Reports API
+  // ============================================================================
+
+  /**
+   * Get advanced report preview data (JSON format with charts and tables)
+   */
+  async getAdvancedReport(
+    category: string,
+    reportId: string,
+    params: {
+      start_date?: string;
+      end_date?: string;
+      format?: 'json';
+      [key: string]: any;
+    }
+  ): Promise<any> {
+    const response = await axios.get(
+      `${API_BASE_URL}/api/v1/reports/advanced/${category}/${reportId}`,
+      {
+        params: { ...params, format: 'json' },
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+      }
+    );
+    return response.data;
+  },
+
+  /**
+   * Download advanced report in PDF, Excel, or CSV format
+   */
+  async downloadAdvancedReport(
+    category: string,
+    reportId: string,
+    params: {
+      start_date?: string;
+      end_date?: string;
+      format: 'pdf' | 'excel' | 'csv';
+      include_charts?: boolean;
+      [key: string]: any;
+    }
+  ): Promise<void> {
+    const response = await axios.get(
+      `${API_BASE_URL}/api/v1/reports/advanced/${category}/${reportId}`,
+      {
+        params,
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+        responseType: 'blob',
+      }
+    );
+
+    // Trigger download
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+
+    // Determine file extension
+    const extension = params.format === 'excel' ? 'xlsx' : params.format;
+    link.setAttribute('download', `${category}-${reportId}.${extension}`);
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };
 
 export default reportService;

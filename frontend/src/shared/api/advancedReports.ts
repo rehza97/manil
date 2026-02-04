@@ -10,7 +10,7 @@ export interface AdvancedReportParams {
   start_date?: string;
   end_date?: string;
   period?: "today" | "week" | "month" | "quarter" | "year";
-  format?: "pdf" | "excel" | "csv";
+  format?: "json" | "pdf" | "excel" | "csv";
   include_charts?: boolean;
   customer_id?: string;
   agent_id?: string;
@@ -280,16 +280,21 @@ export const advancedReportsApi = {
     reportType: string,
     params: AdvancedReportParams = {}
   ) => {
+    const isFileDownload =
+      params.format === "pdf" ||
+      params.format === "excel" ||
+      params.format === "csv";
+
     const response = await apiClient.get(
       `/reports/advanced/${category}/${reportType}`,
       {
         params,
-        responseType: params.format ? "blob" : "json",
+        responseType: isFileDownload ? "blob" : "json",
       }
     );
 
-    // If it's a blob (file download), trigger download
-    if (params.format && response.data instanceof Blob) {
+    // Only trigger file download for PDF/Excel/CSV, not for JSON preview
+    if (isFileDownload && response.data instanceof Blob) {
       const url = window.URL.createObjectURL(response.data);
       const link = document.createElement("a");
       link.href = url;

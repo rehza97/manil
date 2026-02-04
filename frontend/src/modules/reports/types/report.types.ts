@@ -253,3 +253,98 @@ export interface PieChartData {
   percentage: number;
   color?: string;
 }
+
+// ============================================================================
+// Live Report Preview Types
+// ============================================================================
+
+export interface ChartSeries {
+  name: string;
+  dataKey: string;
+  color?: string;
+  data?: Record<string, any>[];
+}
+
+export interface ChartConfig {
+  chart_id: string;
+  chart_type: 'bar' | 'line' | 'pie' | 'area' | 'donut' | 'scatter';
+  title: string;
+  subtitle?: string;
+  data: Record<string, any>[];
+  dataKeys?: {
+    xAxis?: string;
+    yAxis?: string;
+    [key: string]: string | undefined;
+  };
+  series?: ChartSeries[];
+  colors?: string[];
+  xAxisLabel?: string;
+  yAxisLabel?: string;
+  showLegend?: boolean;
+  showGrid?: boolean;
+  stacked?: boolean;
+  height?: number;
+  config?: Record<string, any>;
+}
+
+export interface TableColumn {
+  key: string;
+  label: string;
+  type: 'text' | 'number' | 'currency' | 'percentage' | 'date' | 'datetime' | 'duration';
+  align?: 'left' | 'center' | 'right';
+  sortable?: boolean;
+  format?: string;
+  width?: string;
+}
+
+export interface TableRow {
+  data: Record<string, any>;
+  metadata?: Record<string, any>;
+  className?: string;
+}
+
+export interface TableData {
+  table_id: string;
+  title: string;
+  subtitle?: string;
+  columns: TableColumn[];
+  rows: TableRow[];
+  totals?: Record<string, any>;
+  pagination?: boolean;
+  pageSize?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface ReportMetadata {
+  report_id: string;
+  report_type: string;
+  report_name: string;
+  description?: string;
+  generated_at: string;
+  generated_by?: string;
+  date_range?: Record<string, any>;
+  filters?: Record<string, any>;
+  total_records?: number;
+  period_label?: string;
+}
+
+export interface ReportSummary {
+  key: string;
+  label: string;
+  value: any;
+  format?: string;
+  trend?: 'up' | 'down' | 'neutral';
+  trendValue?: number;
+  icon?: string;
+  color?: string;
+}
+
+export interface ReportPreviewData {
+  metadata: ReportMetadata;
+  summary: ReportSummary[];
+  charts: ChartConfig[];
+  tables: TableData[];
+  raw_data?: Record<string, any>;
+  export_formats: string[];
+}

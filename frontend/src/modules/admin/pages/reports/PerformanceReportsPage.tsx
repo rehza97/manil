@@ -111,6 +111,21 @@ export const PerformanceReportsPage: React.FC = () => {
 
   const reportData = performanceReport;
 
+  const networkUsage = reportData.resource_usage?.network_usage;
+  const networkUsageIsNumber =
+    typeof networkUsage === "number" &&
+    networkUsage !== null &&
+    networkUsage !== undefined;
+  const networkUsageDisplay =
+    networkUsageIsNumber
+      ? `${networkUsage}%`
+      : typeof networkUsage === "object" &&
+          networkUsage !== null &&
+          "bytes_sent" in networkUsage &&
+          "bytes_recv" in networkUsage
+        ? `Envoyé: ${((networkUsage as { bytes_sent: number }).bytes_sent / 1024 / 1024).toFixed(1)} MB · Reçu: ${((networkUsage as { bytes_recv: number }).bytes_recv / 1024 / 1024).toFixed(1)} MB`
+        : "N/A";
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -381,19 +396,15 @@ export const PerformanceReportsPage: React.FC = () => {
                 <div className="flex justify-between mb-2">
                   <span className="text-sm font-medium">Utilisation réseau</span>
                   <span className="text-sm text-slate-600">
-                    {reportData.resource_usage?.network_usage ?? "N/A"}
-                    {reportData.resource_usage?.network_usage !== null &&
-                      reportData.resource_usage?.network_usage !== undefined &&
-                      "%"}
+                    {networkUsageDisplay}
                   </span>
                 </div>
-                {reportData.resource_usage?.network_usage !== null &&
-                reportData.resource_usage?.network_usage !== undefined ? (
+                {networkUsageIsNumber ? (
                   <div className="w-full bg-slate-200 rounded-full h-2">
                     <div
                       className="bg-purple-600 h-2 rounded-full"
                       style={{
-                        width: `${reportData.resource_usage.network_usage}%`,
+                        width: `${networkUsage}%`,
                       }}
                     />
                   </div>

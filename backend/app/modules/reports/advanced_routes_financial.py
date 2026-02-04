@@ -48,7 +48,7 @@ def _period_to_dates(period: str):
 @router.get("/invoice-aging")
 async def get_invoice_aging(
     start_date: Optional[str] = None, end_date: Optional[str] = None,
-    format: str = Query("pdf", enum=["pdf", "excel", "csv"]), include_charts: bool = True,
+    format: str = Query("json", enum=["json", "pdf", "excel", "csv"]), include_charts: bool = True,
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db),
 ):
@@ -64,15 +64,17 @@ async def get_invoice_aging(
             charts.append({"title": "Invoice Aging", "image_base64": chart_b64})
     return await generate_report_response(
         db, data, "reports/financial/invoice_aging.html", "Invoice Aging Report",
-        format, "invoice_aging", charts=charts, export_details_key="details",
-        generated_by=current_user.id, start_date=start, end_date=end
+        format, "invoice_aging", charts=charts, export_details_key="aging_buckets",
+        generated_by=current_user.id, start_date=start, end_date=end,
+        report_type="financial_invoice_aging",
+        description="Analysis of invoice aging by time buckets (0-30, 31-60, 61-90, 90+ days)"
     )
 
 
 @router.get("/payment-status")
 async def get_payment_status(
     start_date: Optional[str] = None, end_date: Optional[str] = None,
-    format: str = Query("pdf", enum=["pdf", "excel", "csv"]), include_charts: bool = True,
+    format: str = Query("json", enum=["json", "pdf", "excel", "csv"]), include_charts: bool = True,
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db),
 ):
@@ -85,42 +87,44 @@ async def get_payment_status(
             [r["amount"] for r in data["by_status"]], [r["status"] for r in data["by_status"]])
         if chart_b64 is not None:
             charts.append({"title": "Payment Status", "image_base64": chart_b64})
-    return await generate_report_response(db, data, "reports/financial/payment_status.html", "Payment Status", format, "payment_status", charts=charts, export_details_key="by_status", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(db, data, "reports/financial/payment_status.html", "Payment Status Report", format, "payment_status", charts=charts, export_details_key="by_status", generated_by=current_user.id, start_date=start, end_date=end, report_type="financial_payment_status", description="Breakdown of payments by status (paid/unpaid/overdue/in_progress)")
 
 
 @router.get("/revenue-recognition")
 async def get_revenue_recognition(
-    period: str = Query("month"), format: str = Query("pdf", enum=["pdf", "excel", "csv"]),
+    period: str = Query("month"), format: str = Query("json", enum=["json", "pdf", "excel", "csv"]),
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db),
 ):
     start, end = _period_to_dates(period)
     data = await FinancialReportService(db).get_revenue_recognition_report(period=period)
     return await generate_report_response(
-        db, data, "reports/financial/revenue_recognition.html", "Revenue Recognition", format, "revenue_recognition",
+        db, data, "reports/financial/revenue_recognition.html", "Revenue Recognition Report", format, "revenue_recognition",
         export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end,
+        report_type="financial_revenue_recognition",
+        description="Revenue accounting and compliance reporting"
     )
 
 
 @router.get("/tax-summary")
 async def get_tax_summary(
     start_date: Optional[str] = None, end_date: Optional[str] = None,
-    format: str = Query("pdf", enum=["pdf", "excel", "csv"]),
+    format: str = Query("json", enum=["json", "pdf", "excel", "csv"]),
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db),
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await FinancialReportService(db).get_tax_summary_report(start, end)
-    return await generate_report_response(db, data, "reports/financial/tax_summary.html", "Tax Summary", format, "tax_summary", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(db, data, "reports/financial/tax_summary.html", "Tax Summary Report", format, "tax_summary", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end, report_type="financial_tax_summary", description="VAT and tax compliance summary")
 
 
 @router.get("/profit-margin")
 async def get_profit_margin(
     start_date: Optional[str] = None, end_date: Optional[str] = None,
-    format: str = Query("pdf", enum=["pdf", "excel", "csv"]),
+    format: str = Query("json", enum=["json", "pdf", "excel", "csv"]),
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db),
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await FinancialReportService(db).get_profit_margin_report(start, end)
-    return await generate_report_response(db, data, "reports/financial/profit_margin.html", "Profit Margin", format, "profit_margin", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(db, data, "reports/financial/profit_margin.html", "Profit Margin Analysis", format, "profit_margin", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end, report_type="financial_profit_margin", description="Profitability analysis with margins and trends")

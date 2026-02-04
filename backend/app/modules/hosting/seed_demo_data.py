@@ -438,63 +438,13 @@ async def seed_demo_vps_subscriptions(
     db: AsyncSession,
     users: dict[str, User]
 ) -> list[VPSSubscription]:
-    """Seed demo VPS subscriptions."""
-    print("\n=== Seeding Demo VPS Subscriptions ===\n")
+    """
+    Seed demo VPS subscriptions.
 
-    # Get VPS plans
-    query = select(VPSPlan).where(VPSPlan.is_active == True)
-    result = await db.execute(query)
-    plans = result.scalars().all()
-
-    if not plans:
-        print("⚠️  No VPS plans found. Skipping subscription seeding.")
-        return []
-
-    subscriptions = []
-    demo_user = users.get("demo@cloudmanager.dz")
-    corporate_user = users.get("corporate@cloudmanager.dz")
-
-    if not demo_user:
-        print("⚠️  Demo user not found. Skipping subscription seeding.")
-        return []
-
-    # Create subscription for demo user
-    subscription_data = {
-        "customer_id": demo_user.id,
-        "plan_id": plans[0].id,  # Starter plan
-        "subscription_number": f"VPS-{datetime.now().strftime('%Y%m%d')}-00001",
-        "status": SubscriptionStatus.ACTIVE,
-        "billing_cycle": BillingCycle.MONTHLY,
-        "start_date": date.today(),
-        "next_billing_date": date.today() + timedelta(days=30),
-        "auto_renew": True,
-        "is_trial": False
-    }
-
-    query = select(VPSSubscription).where(
-        VPSSubscription.subscription_number == subscription_data["subscription_number"]
-    )
-    result = await db.execute(query)
-    existing = result.scalar_one_or_none()
-
-    if not existing:
-        subscription = VPSSubscription(
-            id=str(uuid.uuid4()),
-            **subscription_data
-        )
-        db.add(subscription)
-        await db.flush()
-        await db.refresh(subscription)
-        subscriptions.append(subscription)
-        print(f"✓ Created demo VPS subscription: {subscription.subscription_number}")
-        print(f"  Customer: {demo_user.email}")
-        print(f"  Plan: {plans[0].name}")
-    else:
-        subscriptions.append(existing)
-        print(f"⊘ Demo subscription already exists")
-
-    await db.commit()
-    return subscriptions
+    NOTE: Demo VPS seeding is disabled. This function is a no-op.
+    """
+    print("⚠️  Demo VPS seeding is disabled. Skipping seed_demo_vps_subscriptions.")
+    return []
 
 
 async def seed_demo_dns_zones(

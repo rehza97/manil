@@ -29,43 +29,67 @@ def _parse_dates(start_date: Optional[str], end_date: Optional[str]):
 @router.get("/vps-utilization")
 async def get_vps_utilization(
     start_date: Optional[str] = None, end_date: Optional[str] = None,
-    format: str = Query("pdf", enum=["pdf", "excel", "csv"]),
+    format: str = Query("json", enum=["json", "pdf", "excel", "csv"]),
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db),
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await HostingReportService(db).get_vps_utilization_report(start, end)
-    return await generate_report_response(db, data, "reports/hosting/vps_utilization.html", "VPS Utilization", format, "vps_utilization", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(
+        db, data, "reports/hosting/vps_utilization.html", "VPS Utilization", format, "vps_utilization",
+        export_details_key="details",
+        generated_by=current_user.id,
+        start_date=start,
+        end_date=end,
+        report_type="hosting_vps_utilization",
+        description="VPS resource usage and capacity",
+    )
 
 
 @router.get("/vps-lifecycle")
 async def get_vps_lifecycle(
     start_date: Optional[str] = None, end_date: Optional[str] = None,
-    format: str = Query("pdf", enum=["pdf", "excel", "csv"]),
+    format: str = Query("json", enum=["json", "pdf", "excel", "csv"]),
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db),
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await HostingReportService(db).get_vps_lifecycle_report(start, end)
-    return await generate_report_response(db, data, "reports/hosting/vps_lifecycle.html", "VPS Lifecycle", format, "vps_lifecycle", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(
+        db, data, "reports/hosting/vps_lifecycle.html", "VPS Lifecycle", format, "vps_lifecycle",
+        export_details_key="details",
+        generated_by=current_user.id,
+        start_date=start,
+        end_date=end,
+        report_type="hosting_vps_lifecycle",
+        description="VPS lifecycle and provisioning",
+    )
 
 
 @router.get("/vps-uptime")
 async def get_vps_uptime(
     start_date: Optional[str] = None, end_date: Optional[str] = None,
-    format: str = Query("pdf", enum=["pdf", "excel", "csv"]),
+    format: str = Query("json", enum=["json", "pdf", "excel", "csv"]),
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db),
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await HostingReportService(db).get_vps_uptime_report(start, end)
-    return await generate_report_response(db, data, "reports/hosting/vps_uptime.html", "VPS Uptime", format, "vps_uptime", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(
+        db, data, "reports/hosting/vps_uptime.html", "VPS Uptime", format, "vps_uptime",
+        export_details_key="details",
+        generated_by=current_user.id,
+        start_date=start,
+        end_date=end,
+        report_type="hosting_infrastructure_health",
+        description="System health and uptime",
+    )
 
 
 @router.get("/vps-billing")
 async def get_vps_billing(
     start_date: Optional[str] = None, end_date: Optional[str] = None,
-    format: str = Query("pdf", enum=["pdf", "excel", "csv"]),
+    format: str = Query("json", enum=["json", "pdf", "excel", "csv"]),
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db),
 ):

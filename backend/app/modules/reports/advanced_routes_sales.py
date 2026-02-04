@@ -29,37 +29,61 @@ def _parse_dates(start_date: Optional[str], end_date: Optional[str]):
 @router.get("/quote-conversion")
 async def get_quote_conversion(
     start_date: Optional[str] = None, end_date: Optional[str] = None,
-    format: str = Query("pdf", enum=["pdf", "excel", "csv"]),
+    format: str = Query("json", enum=["json", "pdf", "excel", "csv"]),
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db),
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await SalesReportService(db).get_quote_conversion_report(start, end)
-    return await generate_report_response(db, data, "reports/sales/quote_conversion.html", "Quote Conversion", format, "quote_conversion", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(
+        db, data, "reports/sales/quote_conversion.html", "Quote Conversion", format, "quote_conversion",
+        export_details_key="details",
+        generated_by=current_user.id,
+        start_date=start,
+        end_date=end,
+        report_type="sales_quote_conversion",
+        description="Quote to order conversion analysis",
+    )
 
 
 @router.get("/order-pipeline")
 async def get_order_pipeline(
     start_date: Optional[str] = None, end_date: Optional[str] = None,
-    format: str = Query("pdf", enum=["pdf", "excel", "csv"]), include_charts: bool = True,
+    format: str = Query("json", enum=["json", "pdf", "excel", "csv"]), include_charts: bool = True,
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db),
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await SalesReportService(db).get_order_pipeline_report(start, end)
-    return await generate_report_response(db, data, "reports/sales/order_pipeline.html", "Order Pipeline", format, "order_pipeline", export_details_key="by_status", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(
+        db, data, "reports/sales/order_pipeline.html", "Order Pipeline", format, "order_pipeline",
+        export_details_key="by_status",
+        generated_by=current_user.id,
+        start_date=start,
+        end_date=end,
+        report_type="sales_order_pipeline",
+        description="Sales pipeline by stage and value",
+    )
 
 
 @router.get("/product-performance")
 async def get_product_performance(
     start_date: Optional[str] = None, end_date: Optional[str] = None,
-    format: str = Query("pdf", enum=["pdf", "excel", "csv"]),
+    format: str = Query("json", enum=["json", "pdf", "excel", "csv"]),
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db),
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await SalesReportService(db).get_product_performance_report(start, end)
-    return await generate_report_response(db, data, "reports/sales/product_performance.html", "Product Performance", format, "product_performance", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(
+        db, data, "reports/sales/product_performance.html", "Product Performance", format, "product_performance",
+        export_details_key="details",
+        generated_by=current_user.id,
+        start_date=start,
+        end_date=end,
+        report_type="sales_product_performance",
+        description="Product sales analysis and trends",
+    )
 
 
 async def _customer_patterns_response(
@@ -70,15 +94,20 @@ async def _customer_patterns_response(
     data = await SalesReportService(db).get_customer_purchase_patterns_report(start, end)
     return await generate_report_response(
         db, data, "reports/sales/customer_purchase_patterns.html", "Customer Purchase Patterns",
-        format, "customer_patterns", export_details_key="details",
-        generated_by=current_user.id, start_date=start, end_date=end,
+        format, "customer_patterns",
+        export_details_key="details",
+        generated_by=current_user.id,
+        start_date=start,
+        end_date=end,
+        report_type="sales_customer_purchase_patterns",
+        description="Customer buying behavior analysis",
     )
 
 
 @router.get("/customer-purchase-patterns")
 async def get_customer_purchase_patterns(
     start_date: Optional[str] = None, end_date: Optional[str] = None,
-    format: str = Query("pdf", enum=["pdf", "excel", "csv"]),
+    format: str = Query("json", enum=["json", "pdf", "excel", "csv"]),
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db),
 ):
@@ -88,7 +117,7 @@ async def get_customer_purchase_patterns(
 @router.get("/customer-patterns")
 async def get_customer_patterns(
     start_date: Optional[str] = None, end_date: Optional[str] = None,
-    format: str = Query("pdf", enum=["pdf", "excel", "csv"]),
+    format: str = Query("json", enum=["json", "pdf", "excel", "csv"]),
     current_user: User = Depends(require_permission(Permission.REPORTS_VIEW)),
     db: AsyncSession = Depends(get_db),
 ):

@@ -44,6 +44,9 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import advancedReportsApi from "@/shared/api/advancedReports";
 import type { AdvancedReportParams } from "@/shared/api/advancedReports";
+import { ReportPreview } from "@/modules/reports/components/ReportPreview";
+import { useQuery } from "@tanstack/react-query";
+import type { ReportPreviewData } from "@/modules/reports/types/report.types";
 
 // Report Category Type
 interface ReportCategory {
@@ -172,6 +175,37 @@ export const ReportsPage: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
   const currentCategory = REPORT_CATEGORIES.find((c) => c.id === selectedCategory);
+
+  // Fetch report preview data (JSON format)
+  const { data: previewData, isLoading: isLoadingPreview, error: previewError, refetch: refetchPreview } = useQuery<ReportPreviewData>({
+    queryKey: ['report-preview', selectedCategory, selectedReport, dateFrom, dateTo],
+    queryFn: async () => {
+      if (!selectedCategory || !selectedReport) return null;
+
+      const params: AdvancedReportParams = {
+        start_date: dateFrom,
+        end_date: dateTo,
+        period,
+        format: 'json', // Request JSON for preview
+        include_charts: true,
+      };
+
+      const response = await advancedReportsApi.generateReport(
+        selectedCategory,
+        selectedReport,
+        params
+      );
+
+      // Defensive: never use a Blob as preview data (expect JSON for format: 'json')
+      if (response instanceof Blob) {
+        console.warn("Report preview received Blob instead of JSON; skipping preview.");
+        return null;
+      }
+      return response as ReportPreviewData;
+    },
+    enabled: !!selectedCategory && !!selectedReport,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   const handleGenerateReport = async (format: "pdf" | "excel" | "csv") => {
     if (!selectedReport || !selectedCategory) {
@@ -442,68 +476,43 @@ export const ReportsPage: React.FC = () => {
             </div>
           </Card>
 
-          {/* Report Preview/Info */}
+          {/* Live Report Preview with KPIs and Charts */}
           {selectedReport && currentCategory && (
-            <Card className="p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className={`p-3 rounded-lg ${currentCategory.color}`}>
-                  {currentCategory.icon}
+            <div className="space-y-4">
+              {/* Report Info Header */}
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-lg ${currentCategory.color}`}>
+                    {currentCategory.icon}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {currentCategory.reports.find((r) => r.id === selectedReport)?.name}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {currentCategory.reports.find((r) => r.id === selectedReport)?.description}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <Badge variant="outline">{currentCategory.name}</Badge>
+                    <Badge variant="outline">{dateFrom} → {dateTo}</Badge>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {currentCategory.reports.find((r) => r.id === selectedReport)?.name}
-                  </h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {currentCategory.reports.find((r) => r.id === selectedReport)
-                      ?.description}
-                  </p>
-                </div>
-              </div>
+              </Card>
 
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-100">
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <div className="text-xs font-medium text-gray-600 mb-1">
-                      Catégorie
-                    </div>
-                    <div className="text-sm font-semibold text-gray-900">
-                      {currentCategory.name}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs font-medium text-gray-600 mb-1">
-                      Plage de dates
-                    </div>
-                    <div className="text-sm font-semibold text-gray-900">
-                      {dateFrom} → {dateTo}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs font-medium text-gray-600 mb-1">
-                      Période
-                    </div>
-                    <div className="text-sm font-semibold text-gray-900 capitalize">
-                      {period}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs font-medium text-gray-600 mb-1">
-                      Visualisations
-                    </div>
-                    <div className="text-sm font-semibold text-gray-900">
-                      {includeCharts ? "Activé" : "Désactivé"}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <Clock className="w-3 h-3" />
-                  <span>
-                    Le rapport sera généré avec les paramètres actuels
-                  </span>
-                </div>
-              </div>
-            </Card>
+              {/* Live Preview Component */}
+              <ReportPreview
+                data={previewData}
+                loading={isLoadingPreview}
+                error={previewError?.message}
+                onExport={async (format) => {
+                  await handleGenerateReport(format);
+                }}
+                onRefresh={() => {
+                  refetchPreview();
+                }}
+              />
+            </div>
           )}
 
           {/* Quick Info Card */}

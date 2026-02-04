@@ -30,10 +30,10 @@ async def verify_seed_counts():
             "Quotes": (Quote, Quote.deleted_at.is_(None), 40),
             "Orders": (Order, Order.deleted_at.is_(None), 50),
             "Invoices": (Invoice, Invoice.deleted_at.is_(None), 50),
-            "VPS Subscriptions": (VPSSubscription, VPSSubscription.subscription_number.like("VPS-PROD-%"), 15),
+            "VPS Subscriptions (disabled)": (VPSSubscription, VPSSubscription.subscription_number.like("VPS-PROD-%"), 0),
             "Tickets": (Ticket, Ticket.deleted_at.is_(None), 50),
             "Audit Logs (seed)": (AuditLog, AuditLog.description.like("%[seed]%"), 100),
-            "Container Metrics": (ContainerMetrics, None, 300),
+            "Container Metrics (disabled)": (ContainerMetrics, None, 0),
         }
 
         results = []
