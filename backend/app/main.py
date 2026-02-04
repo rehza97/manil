@@ -10,6 +10,8 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 
+from anyio import EndOfStream
+
 from app.config.database import close_db, init_db
 from app.config.redis import init_redis, close_redis
 from app.config.settings import get_settings
@@ -204,6 +206,17 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         response.headers["Access-Control-Allow-Headers"] = "*"
 
     return response
+
+
+@app.exception_handler(EndOfStream)
+async def end_of_stream_handler(request: Request, exc: EndOfStream):
+    """Handle client disconnect (stream closed) without logging as error."""
+    logger.debug(
+        "Client disconnected (EndOfStream) for %s %s",
+        request.method,
+        request.url.path,
+    )
+    return JSONResponse(status_code=499, content={"detail": "Client closed request"})
 
 
 @app.exception_handler(Exception)

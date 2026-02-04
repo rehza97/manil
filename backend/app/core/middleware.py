@@ -8,6 +8,7 @@ import uuid
 import secrets
 from typing import Callable
 
+from anyio import EndOfStream
 from fastapi import Request, Response, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
@@ -102,6 +103,10 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         # Process request
         try:
             response = await call_next(request)
+        except EndOfStream:
+            # Client disconnected before response was sent (stream closed).
+            logger.debug("Client disconnected (EndOfStream) for %s %s", request.method, request.url.path)
+            return Response(status_code=499)
         except RuntimeError as e:
             # BaseHTTPMiddleware can raise "No response returned." on client disconnects,
             # especially with streaming responses (SSE). Treat as disconnected client.
@@ -288,6 +293,9 @@ class CORSHeadersMiddleware(BaseHTTPMiddleware):
         """
         try:
             response = await call_next(request)
+        except EndOfStream:
+            logger.debug("Client disconnected (EndOfStream) for %s %s", request.method, request.url.path)
+            return Response(status_code=499)
         except RuntimeError as e:
             if "No response returned" in str(e):
                 return Response(status_code=204)
