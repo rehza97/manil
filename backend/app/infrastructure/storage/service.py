@@ -1,5 +1,6 @@
 """File storage service for managing documents and uploads."""
 
+import asyncio
 import os
 import uuid
 from pathlib import Path
@@ -145,6 +146,21 @@ class StorageService:
         if not file_path.exists():
             raise FileNotFoundError(f"File not found: {relative_path}")
         return file_path.read_bytes()
+
+    async def download_file(self, relative_path: str) -> bytes:
+        """
+        Read file content asynchronously (for use from async callers).
+
+        Args:
+            relative_path: Relative path to file (as returned by save methods)
+
+        Returns:
+            File content as bytes
+
+        Raises:
+            FileNotFoundError: If the file does not exist
+        """
+        return await asyncio.to_thread(self.get_file_content, relative_path)
 
     def cleanup_customer_directory(self, customer_id: str) -> bool:
         """

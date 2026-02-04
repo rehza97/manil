@@ -128,7 +128,13 @@ export const TicketTransferPage: React.FC = () => {
               <option value="">Select an agent...</option>
               {transferableUsers.map((user: any) => (
                 <option key={user.id} value={user.id}>
-                  {user.full_name || user.email} ({user.role})
+                  {user.full_name || user.email} (
+                  {typeof user.role === "string"
+                    ? user.role
+                    : (user.role as { name?: string; slug?: string })?.name ??
+                      (user.role as { name?: string; slug?: string })?.slug ??
+                      "—"}
+                )
                 </option>
               ))}
             </select>

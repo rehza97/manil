@@ -46,9 +46,14 @@ export const RoleGuard = ({
       return;
     }
 
+    const roleSlug =
+      typeof user.role === "string"
+        ? user.role
+        : (user.role as { slug?: string })?.slug ?? "";
+
     // Wrong role - redirect to their dashboard
-    if (user.role !== allowedRole) {
-      const roleDashboards = {
+    if (roleSlug !== allowedRole) {
+      const roleDashboards: Record<string, string> = {
         admin: "/admin",
         corporate: "/corporate",
         client: "/dashboard",
@@ -56,10 +61,10 @@ export const RoleGuard = ({
         support_supervisor: "/dashboard",
       };
 
-      const userDashboard = roleDashboards[user.role];
+      const userDashboard = roleDashboards[roleSlug];
 
       console.warn(
-        `Role mismatch detected: User with role "${user.role}" attempted to access ${layoutName} (requires "${allowedRole}")`
+        `Role mismatch detected: User with role "${roleSlug}" attempted to access ${layoutName} (requires "${allowedRole}")`
       );
 
       navigate(userDashboard, {

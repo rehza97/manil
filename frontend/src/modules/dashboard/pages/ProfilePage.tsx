@@ -49,6 +49,11 @@ const ProfilePage: React.FC = () => {
     );
   }
 
+  const roleSlug =
+    typeof user.role === "string"
+      ? user.role
+      : (user.role as { slug?: string })?.slug ?? "";
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -101,7 +106,11 @@ const ProfilePage: React.FC = () => {
                   Rôle du compte
                 </label>
                 <Badge variant="secondary" className="font-medium">
-                  {user.role}
+                  {typeof user.role === "string"
+                    ? user.role
+                    : (user.role as { name?: string; slug?: string })?.name ??
+                      (user.role as { name?: string; slug?: string })?.slug ??
+                      "—"}
                 </Badge>
               </div>
 
@@ -184,9 +193,9 @@ const ProfilePage: React.FC = () => {
                   </Button>
                 )}
               </div>
-              {!user.is_2fa_enabled && (
+                {!user.is_2fa_enabled && (
                 <p className="text-xs text-muted-foreground">
-                  {user.role === "admin" || user.role === "corporate"
+                  {roleSlug === "admin" || roleSlug === "corporate"
                     ? "La 2FA peut être exigée pour votre rôle"
                     : "Option de sécurité facultative"}
                 </p>

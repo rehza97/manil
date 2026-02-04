@@ -5,6 +5,7 @@ Uses SQLAlchemy 2.0 with async support.
 from typing import AsyncGenerator, Generator
 
 from sqlalchemy import create_engine
+from sqlalchemy.exc import InterfaceError as SQLAlchemyInterfaceError
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -59,7 +60,11 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         try:
             yield session
         finally:
-            await session.close()
+            try:
+                await session.close()
+            except SQLAlchemyInterfaceError:
+                # During shutdown the connection may already be closed; ignore.
+                pass
 
 
 async def init_db() -> None:
@@ -77,8 +82,12 @@ async def init_db() -> None:
 
 
 async def close_db() -> None:
-    """Close async database connections."""
-    await engine.dispose()
+    """Close async database connections. Tolerates already-closed connections during shutdown."""
+    try:
+        await engine.dispose()
+    except SQLAlchemyInterfaceError:
+        # Connection already closed (e.g. during app shutdown); ignore.
+        pass
 
 
 # -----------------------------------------------------------------------------

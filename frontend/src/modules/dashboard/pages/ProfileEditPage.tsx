@@ -259,7 +259,9 @@ const ProfileEditPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {user.role === "corporate" && (
+        {(typeof user.role === "string"
+          ? user.role
+          : (user.role as { slug?: string })?.slug) === "corporate" && (
           <Card>
             <CardHeader>
               <CardTitle>Informations société</CardTitle>

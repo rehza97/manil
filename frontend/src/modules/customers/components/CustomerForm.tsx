@@ -202,7 +202,12 @@ export function CustomerForm({
                         value={user.id}
                         className="bg-white hover:bg-gray-50"
                       >
-                        {user.full_name} ({user.email}) - {user.role}
+                        {user.full_name} ({user.email}) -{" "}
+                        {typeof user.role === "string"
+                          ? user.role
+                          : (user.role as { name?: string; slug?: string })?.name ??
+                            (user.role as { name?: string; slug?: string })?.slug ??
+                            "—"}
                       </SelectItem>
                     ))}
                   </SelectContent>
