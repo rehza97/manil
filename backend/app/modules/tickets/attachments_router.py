@@ -1,6 +1,6 @@
 """Ticket attachment API endpoints."""
 from fastapi import APIRouter, Depends, status, UploadFile, File, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
@@ -116,15 +116,18 @@ async def download_attachment(
     if not attachment or attachment.ticket_id != ticket_id:
         raise NotFoundException(f"Attachment {attachment_id} not found")
 
-    # Download file
+    # Download file (in-memory bytes; use Response, not FileResponse)
     file_content, mime_type = await service.download_attachment(
         attachment_id, current_user.id
     )
 
-    return FileResponse(
+    filename = (attachment.original_filename or "attachment").replace('"', "_")
+    return Response(
         content=file_content,
         media_type=mime_type,
-        filename=attachment.original_filename,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
     )
 
 
