@@ -59,7 +59,7 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Filter className="h-5 w-5 text-muted-foreground" />
-            <CardTitle className="text-lg font-semibold">Filters</CardTitle>
+            <CardTitle className="text-lg font-semibold">Filtres</CardTitle>
           </div>
           {onClose && (
             <Button
@@ -69,7 +69,7 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
               className="h-8 w-8 lg:hidden"
             >
               <X className="h-4 w-4" />
-              <span className="sr-only">Close filters</span>
+              <span className="sr-only">Fermer les filtres</span>
             </Button>
           )}
         </div>
@@ -106,11 +106,11 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
 
         {/* Price Range Filter */}
         <div className="space-y-4">
-          <Label className="text-sm font-semibold">Price Range</Label>
+          <Label className="text-sm font-semibold">Fourchette de prix</Label>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="min-price" className="text-xs text-muted-foreground">
-                Min Price
+                Prix min
               </Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
@@ -161,7 +161,7 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
 
         {/* Service Filters */}
         <div className="space-y-4">
-          <Label className="text-sm font-semibold">Service Type</Label>
+          <Label className="text-sm font-semibold">Type de service</Label>
           <Select
             value={filters.service_type || "all"}
             onValueChange={(value) =>
@@ -171,19 +171,19 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
             }
           >
             <SelectTrigger>
-              <SelectValue placeholder="All Service Types" />
+              <SelectValue placeholder="Tous les types" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Service Types</SelectItem>
-              <SelectItem value="general">General</SelectItem>
+              <SelectItem value="all">Tous les types</SelectItem>
+              <SelectItem value="general">Général</SelectItem>
               <SelectItem value="dns">DNS</SelectItem>
-              <SelectItem value="ssl">SSL Certificate</SelectItem>
-              <SelectItem value="email">Email Hosting</SelectItem>
-              <SelectItem value="backup">Backup Service</SelectItem>
-              <SelectItem value="monitoring">Monitoring</SelectItem>
-              <SelectItem value="domain">Domain Registration</SelectItem>
-              <SelectItem value="hosting">Hosting</SelectItem>
-              <SelectItem value="storage">Storage</SelectItem>
+              <SelectItem value="ssl">Certificat SSL</SelectItem>
+              <SelectItem value="email">Hébergement e-mail</SelectItem>
+              <SelectItem value="backup">Service de sauvegarde</SelectItem>
+              <SelectItem value="monitoring">Surveillance</SelectItem>
+              <SelectItem value="domain">Enregistrement de domaine</SelectItem>
+              <SelectItem value="hosting">Hébergement</SelectItem>
+              <SelectItem value="storage">Stockage</SelectItem>
               <SelectItem value="cdn">CDN</SelectItem>
             </SelectContent>
           </Select>
@@ -219,7 +219,7 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
 
         {/* Status Filters */}
         <div className="space-y-3">
-          <Label className="text-sm font-semibold">Status</Label>
+          <Label className="text-sm font-semibold">Statut</Label>
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <Checkbox
@@ -232,7 +232,7 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
                 }
               />
               <Label htmlFor="featured" className="font-normal cursor-pointer">
-                Featured Only
+                En vedette uniquement
               </Label>
             </div>
             <div className="flex items-center space-x-2">
@@ -246,7 +246,7 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
                 }
               />
               <Label htmlFor="recurring" className="font-normal cursor-pointer">
-                Recurring Services Only
+                Services récurrents uniquement
               </Label>
             </div>
           </div>

@@ -64,12 +64,15 @@ export const CustomerKYCPage: React.FC = () => {
       });
       toast.success(
         `Document ${
-          action === "approve" ? "approved" : "rejected"
-        } successfully`
+          action === "approve" ? "approuvé" : "rejeté"
+        } avec succès`
       );
     } catch (error: any) {
       toast.error(
-        error?.response?.data?.message || `Failed to ${action} document`
+        error?.response?.data?.message ||
+          (action === "approve"
+            ? "Impossible d'approuver le document"
+            : "Impossible de rejeter le document")
       );
     }
   };
@@ -106,21 +109,21 @@ export const CustomerKYCPage: React.FC = () => {
         return (
           <Badge className="bg-green-100 text-green-800">
             <CheckCircle className="h-3 w-3 mr-1" />
-            Complete
+            Complet
           </Badge>
         );
       case "pending_review":
         return (
           <Badge className="bg-yellow-100 text-yellow-800">
             <FileText className="h-3 w-3 mr-1" />
-            Pending Review
+            En attente de vérification
           </Badge>
         );
       case "incomplete":
         return (
           <Badge className="bg-red-100 text-red-800">
             <XCircle className="h-3 w-3 mr-1" />
-            Incomplete
+            Incomplet
           </Badge>
         );
       default:
@@ -161,32 +164,32 @@ export const CustomerKYCPage: React.FC = () => {
       {kycStatus && (
         <Card>
           <CardHeader>
-            <CardTitle>KYC Status Overview</CardTitle>
-            <CardDescription>Current KYC verification status</CardDescription>
+            <CardTitle>Vue d&apos;ensemble du statut KYC</CardTitle>
+            <CardDescription>Statut actuel de la vérification KYC</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <p className="text-sm text-slate-600">Overall Status</p>
+                <p className="text-sm text-slate-600">Statut global</p>
                 <p className="text-lg font-semibold capitalize">
                   {kycStatus.summary.overallStatus.replace(/_/g, " ")}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-slate-600">Documents Uploaded</p>
+                <p className="text-sm text-slate-600">Documents téléversés</p>
                 <p className="text-lg font-semibold">
                   {kycStatus.summary.uploadedCount} /{" "}
                   {kycStatus.summary.requiredCount}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-slate-600">Verified</p>
+                <p className="text-sm text-slate-600">Vérifiés</p>
                 <p className="text-lg font-semibold text-green-600">
                   {kycStatus.summary.verifiedCount}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-slate-600">Pending</p>
+                <p className="text-sm text-slate-600">En attente</p>
                 <p className="text-lg font-semibold text-yellow-600">
                   {kycStatus.summary.pendingCount}
                 </p>
@@ -197,7 +200,7 @@ export const CustomerKYCPage: React.FC = () => {
               kycStatus.summary.missingDocuments.length > 0 && (
                 <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <p className="text-sm font-medium text-yellow-800 mb-2">
-                    Missing Documents:
+                    Documents manquants :
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {kycStatus.summary.missingDocuments.map((doc: string) => (
@@ -219,9 +222,9 @@ export const CustomerKYCPage: React.FC = () => {
       {documents && documents.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Document Verification</CardTitle>
+            <CardTitle>Vérification des documents</CardTitle>
             <CardDescription>
-              Review and verify uploaded documents
+              Examiner et vérifier les documents téléversés
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -235,18 +238,18 @@ export const CustomerKYCPage: React.FC = () => {
                         {doc.verification_status === "approved" && (
                           <Badge className="bg-green-100 text-green-800">
                             <CheckCircle className="h-3 w-3 mr-1" />
-                            Approved
+                            Approuvé
                           </Badge>
                         )}
                         {doc.verification_status === "rejected" && (
                           <Badge className="bg-red-100 text-red-800">
                             <XCircle className="h-3 w-3 mr-1" />
-                            Rejected
+                            Rejeté
                           </Badge>
                         )}
                         {doc.verification_status === "pending" && (
                           <Badge className="bg-yellow-100 text-yellow-800">
-                            Pending
+                            En attente
                           </Badge>
                         )}
                       </div>
@@ -265,13 +268,13 @@ export const CustomerKYCPage: React.FC = () => {
                           disabled={verifyMutation.isPending}
                         >
                           <CheckCircle className="h-4 w-4 mr-1" />
-                          Approve
+                          Approuver
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => {
-                            const reason = window.prompt("Rejection reason:");
+                            const reason = window.prompt("Raison du rejet :");
                             if (reason) {
                               handleVerify(doc.id, "reject", reason);
                             }
@@ -279,7 +282,7 @@ export const CustomerKYCPage: React.FC = () => {
                           disabled={verifyMutation.isPending}
                         >
                           <XCircle className="h-4 w-4 mr-1" />
-                          Reject
+                          Rejeter
                         </Button>
                       </div>
                     )}

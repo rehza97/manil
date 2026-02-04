@@ -38,9 +38,9 @@ import { useEffect, useState } from "react";
 
 const customerFormSchema = z
   .object({
-    name: z.string().min(2, "Name must be at least 2 characters"),
-    email: z.string().email("Invalid email address"),
-    phone: z.string().min(7, "Phone must be at least 7 characters"),
+    name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
+    email: z.string().email("Adresse e-mail invalide"),
+    phone: z.string().min(7, "Le téléphone doit contenir au moins 7 caractères"),
     customerType: z.nativeEnum(CustomerType).optional(),
     companyName: z.string().optional(),
     taxId: z.string().optional(),
@@ -50,7 +50,7 @@ const customerFormSchema = z
     country: z.string().optional(),
     postalCode: z
       .string()
-      .max(20, "Postal code must be max 20 characters")
+      .max(20, "Le code postal doit contenir au maximum 20 caractères")
       .optional(),
   })
   .refine(
@@ -61,7 +61,7 @@ const customerFormSchema = z
       return true;
     },
     {
-      message: "Company name is required for corporate customers",
+      message: "Le nom de l'entreprise est requis pour les clients professionnels",
       path: ["companyName"],
     }
   );
@@ -185,15 +185,15 @@ export function CustomerForm({
             {!isEdit && (
               <div className="space-y-2 p-4 bg-gray-50 rounded-lg border">
                 <FormLabel className="text-base font-medium">
-                  Link to Existing User (Optional)
+                  Lier à un utilisateur existant (optionnel)
                 </FormLabel>
                 <FormDescription>
-                  Select an existing user to auto-fill customer information.
-                  Leave empty to create a new customer.
+                  Sélectionnez un utilisateur existant pour préremplir les informations client.
+                  Laissez vide pour créer un nouveau client.
                 </FormDescription>
                 <Select value={selectedUserId} onValueChange={handleUserSelect}>
                   <SelectTrigger className="bg-white border-gray-200">
-                    <SelectValue placeholder="Select a user (optional)" />
+                    <SelectValue placeholder="Sélectionner un utilisateur (optionnel)" />
                   </SelectTrigger>
                   <SelectContent className="bg-white border-gray-200">
                     {users.map((user) => (
@@ -218,7 +218,7 @@ export function CustomerForm({
                       setValue("email", "");
                     }}
                   >
-                    Clear selection
+                    Effacer la sélection
                   </Button>
                 )}
               </div>
@@ -226,16 +226,16 @@ export function CustomerForm({
 
             {/* Basic Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Basic Information</h3>
+              <h3 className="text-lg font-medium">Informations de base</h3>
 
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Name *</FormLabel>
+                    <FormLabel>Nom complet *</FormLabel>
                     <FormControl>
-                      <Input placeholder="John Doe" {...field} />
+                      <Input placeholder="Jean Dupont" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -247,11 +247,11 @@ export function CustomerForm({
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email Address *</FormLabel>
+                    <FormLabel>Adresse e-mail *</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
-                        placeholder="john@example.com"
+                        placeholder="jean@exemple.com"
                         {...field}
                       />
                     </FormControl>
@@ -265,9 +265,9 @@ export function CustomerForm({
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone Number *</FormLabel>
+                    <FormLabel>Numéro de téléphone *</FormLabel>
                     <FormControl>
-                      <Input placeholder="+213 555 123 456" {...field} />
+                      <Input placeholder="+33 6 12 34 56 78" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -316,19 +316,19 @@ export function CustomerForm({
             {/* Corporate Information */}
             {customerType === CustomerType.corporate && (
               <div className="space-y-4">
-                <h3 className="text-lg font-medium">Corporate Information</h3>
+                <h3 className="text-lg font-medium">Informations entreprise</h3>
 
                 <FormField
                   control={form.control}
                   name="companyName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Company Name *</FormLabel>
+                      <FormLabel>Nom de l&apos;entreprise *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Acme Corporation" {...field} />
+                        <Input placeholder="Société Exemple SAS" {...field} />
                       </FormControl>
                       <FormDescription>
-                        Required for corporate customers
+                        Requis pour les clients professionnels
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -340,9 +340,9 @@ export function CustomerForm({
                   name="taxId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tax ID / NIF</FormLabel>
-                      <FormControl>
-                        <Input placeholder="123456789" {...field} />
+                    <FormLabel>N° TVA / SIRET</FormLabel>
+                    <FormControl>
+                      <Input placeholder="123 456 789 00012" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -353,16 +353,16 @@ export function CustomerForm({
 
             {/* Address Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Address (Optional)</h3>
+              <h3 className="text-lg font-medium">Adresse (optionnel)</h3>
 
               <FormField
                 control={form.control}
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Street Address</FormLabel>
+                    <FormLabel>Adresse</FormLabel>
                     <FormControl>
-                      <Input placeholder="123 Main Street" {...field} />
+                      <Input placeholder="123 rue Principale" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -389,9 +389,9 @@ export function CustomerForm({
                   name="state"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>State / Province</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Algiers" {...field} />
+                    <FormLabel>Région / Département</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Île-de-France" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -419,9 +419,9 @@ export function CustomerForm({
                   name="postalCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Postal Code</FormLabel>
-                      <FormControl>
-                        <Input placeholder="16000" {...field} />
+                    <FormLabel>Code postal</FormLabel>
+                    <FormControl>
+                      <Input placeholder="75001" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -434,12 +434,12 @@ export function CustomerForm({
             <div className="flex justify-end gap-3">
               {onCancel && (
                 <Button type="button" variant="outline" onClick={onCancel}>
-                  Cancel
+                  Annuler
                 </Button>
               )}
               <Button type="submit" disabled={isSaving}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isEdit ? "Update Customer" : "Create Customer"}
+                {isEdit ? "Mettre à jour le client" : "Créer le client"}
               </Button>
             </div>
           </form>

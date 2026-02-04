@@ -62,9 +62,9 @@ export const CacheManagementPage: React.FC = () => {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Cache Management</h1>
+        <h1 className="text-3xl font-bold">Gestion du cache</h1>
         <p className="text-muted-foreground mt-2">
-          Monitor and manage system cache performance
+          Surveiller et gérer les performances du cache système
         </p>
       </div>
 
@@ -72,7 +72,7 @@ export const CacheManagementPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Keys</CardTitle>
+            <CardTitle className="text-sm font-medium">Clés totales</CardTitle>
             <RefreshCw className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -83,20 +83,20 @@ export const CacheManagementPage: React.FC = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Memory Used</CardTitle>
+            <CardTitle className="text-sm font-medium">Mémoire utilisée</CardTitle>
             <Zap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {stats?.memory_used_mb.toFixed(2) || "0.00"} MB
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Cache memory</p>
+            <p className="text-xs text-muted-foreground mt-1">Mémoire cache</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Hit Rate</CardTitle>
+            <CardTitle className="text-sm font-medium">Taux de succès</CardTitle>
             <RefreshCw className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -106,21 +106,21 @@ export const CacheManagementPage: React.FC = () => {
                 : "N/A"}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Cache efficiency
+              Efficacité du cache
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Requests</CardTitle>
+            <CardTitle className="text-sm font-medium">Requêtes</CardTitle>
             <RefreshCw className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {(stats?.keyspace_hits || 0) + (stats?.keyspace_misses || 0)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Total requests</p>
+            <p className="text-xs text-muted-foreground mt-1">Requêtes totales</p>
           </CardContent>
         </Card>
       </div>
@@ -128,18 +128,17 @@ export const CacheManagementPage: React.FC = () => {
       {/* Cache Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Cache Operations</CardTitle>
+          <CardTitle>Opérations sur le cache</CardTitle>
           <CardDescription>
-            Clear cache or warm cache with common data
+            Vider le cache ou le précharger avec des données courantes
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-medium">Clear All Cache</h3>
+              <h3 className="font-medium">Vider tout le cache</h3>
               <p className="text-sm text-muted-foreground">
-                Remove all cached data. This will temporarily slow down the
-                system until cache is rebuilt.
+                Supprimer toutes les données en cache. Le système sera temporairement ralenti jusqu&apos;à la reconstruction du cache.
               </p>
             </div>
             <Button
@@ -147,15 +146,15 @@ export const CacheManagementPage: React.FC = () => {
               onClick={() => setIsClearDialogOpen(true)}
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              Clear All
+              Tout vider
             </Button>
           </div>
 
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-medium">Clear by Pattern</h3>
+              <h3 className="font-medium">Vider par motif</h3>
               <p className="text-sm text-muted-foreground">
-                Remove cache keys matching a specific pattern (e.g., "user:*").
+                Supprimer les clés correspondant à un motif (ex. « user:* »).
               </p>
             </div>
             <Button
@@ -163,20 +162,20 @@ export const CacheManagementPage: React.FC = () => {
               onClick={() => setIsPatternDialogOpen(true)}
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              Clear Pattern
+              Vider par motif
             </Button>
           </div>
 
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-medium">Warm Cache</h3>
+              <h3 className="font-medium">Préchauffer le cache</h3>
               <p className="text-sm text-muted-foreground">
-                Preload common data into cache to improve performance.
+                Précharger les données courantes dans le cache pour améliorer les performances.
               </p>
             </div>
             <Button variant="outline" onClick={handleWarm}>
               <Zap className="h-4 w-4 mr-2" />
-              Warm Cache
+              Préchauffer le cache
             </Button>
           </div>
         </CardContent>
@@ -192,25 +191,25 @@ export const CacheManagementPage: React.FC = () => {
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-muted-foreground">Keyspace Hits</Label>
+                <Label className="text-muted-foreground">Succès Keyspace</Label>
                 <div className="text-2xl font-bold">{stats.keyspace_hits}</div>
               </div>
               <div>
-                <Label className="text-muted-foreground">Keyspace Misses</Label>
+                <Label className="text-muted-foreground">Échecs Keyspace</Label>
                 <div className="text-2xl font-bold">
                   {stats.keyspace_misses}
                 </div>
               </div>
               <div>
                 <Label className="text-muted-foreground">
-                  Memory Used (Bytes)
+                  Mémoire utilisée (octets)
                 </Label>
                 <div className="text-2xl font-bold">
                   {stats.memory_used.toLocaleString()}
                 </div>
               </div>
               <div>
-                <Label className="text-muted-foreground">Hit Rate</Label>
+                <Label className="text-muted-foreground">Taux de succès</Label>
                 <div className="text-2xl font-bold">
                   {stats.hit_rate !== null && stats.hit_rate !== undefined
                     ? `${stats.hit_rate.toFixed(2)}%`
@@ -234,8 +233,7 @@ export const CacheManagementPage: React.FC = () => {
           <Alert>
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              Clearing all cache will temporarily slow down the system until
-              cache is rebuilt through normal usage.
+              Vider tout le cache ralentira temporairement le système jusqu&apos;à sa reconstruction par l&apos;usage normal.
             </AlertDescription>
           </Alert>
           <DialogFooter>
@@ -243,7 +241,7 @@ export const CacheManagementPage: React.FC = () => {
               variant="outline"
               onClick={() => setIsClearDialogOpen(false)}
             >
-              Cancel
+              Annuler
             </Button>
             <Button
               variant="destructive"
@@ -253,7 +251,7 @@ export const CacheManagementPage: React.FC = () => {
               {clearAllMutation.isPending && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
-              Clear All Cache
+              Vider tout le cache
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -263,14 +261,14 @@ export const CacheManagementPage: React.FC = () => {
       <Dialog open={isPatternDialogOpen} onOpenChange={setIsPatternDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Clear Cache by Pattern</DialogTitle>
+            <DialogTitle>Vider le cache par motif</DialogTitle>
             <DialogDescription>
-              Enter a pattern to match cache keys (e.g., "user:*", "session:*").
+              Saisir un motif pour cibler les clés (ex. « user:* », « session:* »).
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="pattern">Pattern</Label>
+              <Label htmlFor="pattern">Motif</Label>
               <Input
                 id="pattern"
                 value={pattern}
@@ -287,7 +285,7 @@ export const CacheManagementPage: React.FC = () => {
                 setPattern("");
               }}
             >
-              Cancel
+              Annuler
             </Button>
             <Button
               onClick={handleClearPattern}
@@ -296,7 +294,7 @@ export const CacheManagementPage: React.FC = () => {
               {clearPatternMutation.isPending && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
-              Clear Pattern
+              Vider par motif
             </Button>
           </DialogFooter>
         </DialogContent>

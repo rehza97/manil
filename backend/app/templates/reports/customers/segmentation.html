@@ -1,0 +1,41 @@
+{% extends "reports/base_report.html" %}
+
+{% block summary %}
+  <div class="executive-summary">
+    <div class="kpi-card">
+      <div class="kpi-value">{{ details | length }}</div>
+      <div class="kpi-label">Segments</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ details | sum(attribute='count') if details else 0 }}</div>
+      <div class="kpi-label">Total Customers</div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block charts %}
+  {{ super() }}
+{% endblock %}
+
+{% block data %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Customer Type</th>
+          <th>Status</th>
+          <th>Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in details or [] %}
+        <tr>
+          <td>{{ row.customer_type | upper }}</td>
+          <td>{{ row.status | upper }}</td>
+          <td>{{ row.count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

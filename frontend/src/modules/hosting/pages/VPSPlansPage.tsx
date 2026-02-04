@@ -111,7 +111,7 @@ export const VPSPlansPage: React.FC = () => {
         <Card className="p-12 text-center">
           <AlertCircle className="h-12 w-12 text-slate-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-slate-900 mb-2">
-            No plans available
+            Aucun plan disponible
           </h3>
           <p className="text-slate-600">
             There are currently no VPS hosting plans available. Please check back later.

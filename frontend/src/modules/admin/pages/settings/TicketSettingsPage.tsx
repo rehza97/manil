@@ -67,9 +67,9 @@ export const TicketSettingsPage: React.FC = () => {
     if (updates.length > 0) {
       try {
         await updateMutation.mutateAsync(updates);
-        toast.success("Ticket settings saved successfully");
+        toast.success("Paramètres des tickets enregistrés avec succès");
       } catch (error: any) {
-        toast.error("Failed to save settings", {
+        toast.error("Échec de l'enregistrement des paramètres", {
           description: error.response?.data?.detail || error.message,
         });
       }
@@ -100,20 +100,20 @@ export const TicketSettingsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Ticket Settings</h1>
+        <h1 className="text-3xl font-bold">Paramètres des tickets</h1>
         <p className="text-slate-600 mt-2">
-          Configure ticket automation and management settings.
+          Configurer l'automatisation et la gestion des tickets.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Automation Settings</CardTitle>
-          <CardDescription>Configure automatic ticket management</CardDescription>
+          <CardTitle>Paramètres d'automatisation</CardTitle>
+          <CardDescription>Configurer la gestion automatique des tickets</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {ticketSettings.length === 0 ? (
-            <p className="text-muted-foreground">No ticket settings found.</p>
+            <p className="text-muted-foreground">Aucun paramètre de ticket trouvé.</p>
           ) : (
             ticketSettings.map((setting) => (
               <div key={setting.key} className="space-y-2">
@@ -156,7 +156,7 @@ export const TicketSettingsPage: React.FC = () => {
                     className="text-xs"
                   >
                     <RefreshCw className="h-3 w-3 mr-1" />
-                    Reset to default
+                    Réinitialiser par défaut
                   </Button>
                 )}
               </div>
@@ -174,12 +174,12 @@ export const TicketSettingsPage: React.FC = () => {
           {updateMutation.isPending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
+              Enregistrement…
             </>
           ) : (
             <>
               <Save className="mr-2 h-4 w-4" />
-              Save Changes
+              Enregistrer les modifications
             </>
           )}
         </Button>

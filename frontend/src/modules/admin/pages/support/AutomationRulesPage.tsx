@@ -139,7 +139,7 @@ export const AutomationRulesPage: React.FC = () => {
 
   const handleDelete = async (ruleId: string) => {
     if (
-      window.confirm("Are you sure you want to delete this automation rule?")
+      window.confirm("Êtes-vous sûr de vouloir supprimer cette règle d'automatisation ?")
     ) {
       await deleteMutation.mutateAsync(ruleId);
     }
@@ -168,16 +168,16 @@ export const AutomationRulesPage: React.FC = () => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Rules</CardTitle>
+              <CardTitle>Règles</CardTitle>
               <CardDescription>
                 {filteredRules.length}{" "}
-                {filteredRules.length === 1 ? "rule" : "rules"}
+                {filteredRules.length === 1 ? "règle" : "règles"}
               </CardDescription>
             </div>
             <div className="relative w-64">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search rules..."
+                placeholder="Rechercher des règles..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8"
@@ -194,7 +194,7 @@ export const AutomationRulesPage: React.FC = () => {
             <div className="text-center py-12">
               <Zap className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">
-                No automation rules found.
+                Aucune règle d&apos;automatisation trouvée.
               </p>
             </div>
           ) : (
@@ -218,7 +218,7 @@ export const AutomationRulesPage: React.FC = () => {
                     <TableCell>{rule.priority}</TableCell>
                     <TableCell>
                       <Badge variant={rule.is_active ? "default" : "secondary"}>
-                        {rule.is_active ? "Active" : "Inactive"}
+                        {rule.is_active ? "Actif" : "Inactif"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -231,7 +231,7 @@ export const AutomationRulesPage: React.FC = () => {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleEdit(rule)}>
                             <Edit className="h-4 w-4 mr-2" />
-                            Edit
+                            Modifier
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleToggle(rule.id)}
@@ -239,12 +239,12 @@ export const AutomationRulesPage: React.FC = () => {
                             {rule.is_active ? (
                               <>
                                 <PowerOff className="h-4 w-4 mr-2" />
-                                Deactivate
+                                Désactiver
                               </>
                             ) : (
                               <>
                                 <Power className="h-4 w-4 mr-2" />
-                                Activate
+                                Activer
                               </>
                             )}
                           </DropdownMenuItem>
@@ -253,7 +253,7 @@ export const AutomationRulesPage: React.FC = () => {
                             className="text-red-600"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
+                            Supprimer
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -292,14 +292,14 @@ export const AutomationRulesPage: React.FC = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">Nom</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                placeholder="e.g., Auto-assign high priority tickets"
+                placeholder="ex. Assignation auto des tickets haute priorité"
               />
             </div>
             <div>
@@ -310,11 +310,11 @@ export const AutomationRulesPage: React.FC = () => {
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                placeholder="Rule description..."
+                placeholder="Description de la règle..."
               />
             </div>
             <div>
-              <Label htmlFor="trigger_type">Trigger Type</Label>
+              <Label htmlFor="trigger_type">Type de déclencheur</Label>
               <Select
                 value={formData.trigger_type}
                 onValueChange={(value: any) =>
@@ -325,14 +325,14 @@ export const AutomationRulesPage: React.FC = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ticket_created">Ticket Created</SelectItem>
-                  <SelectItem value="ticket_updated">Ticket Updated</SelectItem>
-                  <SelectItem value="ticket_replied">Ticket Replied</SelectItem>
+                  <SelectItem value="ticket_created">Ticket créé</SelectItem>
+                  <SelectItem value="ticket_updated">Ticket mis à jour</SelectItem>
+                  <SelectItem value="ticket_replied">Ticket répondu</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label htmlFor="priority">Priority</Label>
+              <Label htmlFor="priority">Priorité</Label>
               <Input
                 id="priority"
                 type="number"
@@ -395,7 +395,7 @@ export const AutomationRulesPage: React.FC = () => {
                 setSelectedRule(null);
               }}
             >
-              Cancel
+              Annuler
             </Button>
             <Button
               onClick={isEditDialogOpen ? handleUpdate : handleCreate}
@@ -411,7 +411,7 @@ export const AutomationRulesPage: React.FC = () => {
                 : createMutation.isPending) && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
-              {isEditDialogOpen ? "Update" : "Create"}
+              {isEditDialogOpen ? "Mettre à jour" : "Créer"}
             </Button>
           </DialogFooter>
         </DialogContent>

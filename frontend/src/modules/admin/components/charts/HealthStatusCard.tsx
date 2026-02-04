@@ -53,28 +53,28 @@ export const HealthStatusCard: React.FC<HealthStatusCardProps> = ({
         return (
           <Badge className="bg-green-100 text-green-800">
             <CheckCircle className="h-3 w-3 mr-1" />
-            Healthy
+            Opérationnel
           </Badge>
         );
       case "warning":
         return (
           <Badge className="bg-yellow-100 text-yellow-800">
             <AlertCircle className="h-3 w-3 mr-1" />
-            Warning
+            Avertissement
           </Badge>
         );
       case "error":
         return (
           <Badge className="bg-red-100 text-red-800">
             <XCircle className="h-3 w-3 mr-1" />
-            Error
+            Erreur
           </Badge>
         );
       default:
         return (
           <Badge variant="outline">
             <Activity className="h-3 w-3 mr-1" />
-            Unknown
+            Inconnu
           </Badge>
         );
     }
@@ -118,7 +118,7 @@ export const HealthStatusCard: React.FC<HealthStatusCardProps> = ({
         <div className="space-y-2 text-sm">
           {component.uptime !== undefined && (
             <div className="flex justify-between">
-              <span className="text-slate-600">Uptime:</span>
+              <span className="text-slate-600">Disponibilité :</span>
               <span className="font-medium">
                 {component.uptime.toFixed(1)}%
               </span>
@@ -126,25 +126,25 @@ export const HealthStatusCard: React.FC<HealthStatusCardProps> = ({
           )}
           {component.response_time !== undefined && (
             <div className="flex justify-between">
-              <span className="text-slate-600">Response Time:</span>
+              <span className="text-slate-600">Temps de réponse :</span>
               <span className="font-medium">{component.response_time}ms</span>
             </div>
           )}
           {component.cpu_usage !== undefined && (
             <div className="flex justify-between">
-              <span className="text-slate-600">CPU Usage:</span>
+              <span className="text-slate-600">Utilisation CPU :</span>
               <span className="font-medium">{component.cpu_usage}%</span>
             </div>
           )}
           {component.memory_usage && (
             <div className="flex justify-between">
-              <span className="text-slate-600">Memory:</span>
+              <span className="text-slate-600">Mémoire :</span>
               <span className="font-medium">{component.memory_usage}</span>
             </div>
           )}
           {component.hit_rate !== undefined && (
             <div className="flex justify-between">
-              <span className="text-slate-600">Hit Rate:</span>
+              <span className="text-slate-600">Taux de succès :</span>
               <span className="font-medium">
                 {component.hit_rate.toFixed(1)}%
               </span>
@@ -152,13 +152,13 @@ export const HealthStatusCard: React.FC<HealthStatusCardProps> = ({
           )}
           {component.usage_percent !== undefined && (
             <div className="flex justify-between">
-              <span className="text-slate-600">Usage:</span>
+              <span className="text-slate-600">Utilisation :</span>
               <span className="font-medium">{component.usage_percent}%</span>
             </div>
           )}
           {component.connections !== undefined && (
             <div className="flex justify-between">
-              <span className="text-slate-600">Connections:</span>
+              <span className="text-slate-600">Connexions :</span>
               <span className="font-medium">
                 {component.connections}
                 {component.max_connections && ` / ${component.max_connections}`}
@@ -167,7 +167,7 @@ export const HealthStatusCard: React.FC<HealthStatusCardProps> = ({
           )}
           {component.available_gb !== undefined && (
             <div className="flex justify-between">
-              <span className="text-slate-600">Available:</span>
+              <span className="text-slate-600">Disponible :</span>
               <span className="font-medium">
                 {component.available_gb} GB
                 {component.total_gb && ` / ${component.total_gb} GB`}

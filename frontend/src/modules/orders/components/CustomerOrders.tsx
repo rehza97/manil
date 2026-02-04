@@ -36,6 +36,12 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
   request: "bg-blue-100 text-blue-800",
+  pending_commercial: "bg-orange-100 text-orange-800",
+  commercial_approved: "bg-emerald-100 text-emerald-800",
+  commercial_rejected: "bg-red-100 text-red-800",
+  pending_technical: "bg-purple-100 text-purple-800",
+  technical_approved: "bg-teal-100 text-teal-800",
+  technical_rejected: "bg-rose-100 text-rose-800",
   validated: "bg-purple-100 text-purple-800",
   in_progress: "bg-yellow-100 text-yellow-800",
   delivered: "bg-green-100 text-green-800",
@@ -43,11 +49,17 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
 };
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
-  request: "Request",
-  validated: "Validated",
-  in_progress: "In Progress",
-  delivered: "Delivered",
-  cancelled: "Cancelled",
+  request: "Demande",
+  pending_commercial: "En attente validation commerciale",
+  commercial_approved: "Validation commerciale approuvée",
+  commercial_rejected: "Validation commerciale rejetée",
+  pending_technical: "En attente validation technique",
+  technical_approved: "Validation technique approuvée",
+  technical_rejected: "Validation technique rejetée",
+  validated: "Validée",
+  in_progress: "En cours",
+  delivered: "Livrée",
+  cancelled: "Annulée",
 };
 
 interface CustomerOrdersProps {
@@ -109,10 +121,10 @@ export function CustomerOrders({
     return (
       <Card className={className}>
         <CardHeader>
-          <CardTitle>Customer Orders</CardTitle>
+          <CardTitle>Commandes client</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-500">No customer selected</p>
+          <p className="text-sm text-gray-500">Aucun client sélectionné</p>
         </CardContent>
       </Card>
     );
@@ -122,13 +134,13 @@ export function CustomerOrders({
     return (
       <Card className={`border-red-200 bg-red-50 ${className}`}>
         <CardHeader>
-          <CardTitle className="text-red-800">Error Loading Orders</CardTitle>
+          <CardTitle className="text-red-800">Erreur lors du chargement des commandes</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-red-700">
             {error instanceof Error
               ? error.message
-              : "An error occurred while loading orders"}
+              : "Une erreur s'est produite lors du chargement des commandes"}
           </p>
         </CardContent>
       </Card>
@@ -138,13 +150,13 @@ export function CustomerOrders({
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle>Customer Orders</CardTitle>
+        <CardTitle>Commandes client</CardTitle>
         <CardDescription>
           {isLoading
-            ? "Loading..."
+            ? "Chargement…"
             : data
-              ? `${data.data.length} order(s) (${data.total} total)`
-              : "No orders"}
+              ? `${data.data.length} commande(s) (${data.total} au total)`
+              : "Aucune commande"}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -153,11 +165,11 @@ export function CustomerOrders({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Order Number</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Total Amount</TableHead>
-                <TableHead>Items</TableHead>
-                <TableHead>Created</TableHead>
+                <TableHead>N° commande</TableHead>
+                <TableHead>Statut</TableHead>
+                <TableHead className="text-right">Montant total</TableHead>
+                <TableHead>Articles</TableHead>
+                <TableHead>Créée le</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -201,7 +213,7 @@ export function CustomerOrders({
                     <TableCell className="text-right font-semibold">
                       {formatCurrency(order.total_amount)}
                     </TableCell>
-                    <TableCell>{order.items.length} items</TableCell>
+                    <TableCell>{order.items.length} article(s)</TableCell>
                     <TableCell>{formatDate(order.created_at)}</TableCell>
                     <TableCell className="text-right">
                       <Button
@@ -209,7 +221,7 @@ export function CustomerOrders({
                         size="sm"
                         onClick={() => handleViewOrder(order.id)}
                       >
-                        View
+                        Voir
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -217,7 +229,7 @@ export function CustomerOrders({
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="py-8 text-center text-gray-500">
-                    No orders found for this customer
+                    Aucune commande pour ce client
                   </TableCell>
                 </TableRow>
               )}

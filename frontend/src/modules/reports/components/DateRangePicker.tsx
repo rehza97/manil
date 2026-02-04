@@ -20,11 +20,11 @@ interface DateRangePickerProps {
 }
 
 const PREDEFINED_RANGES = [
-  { label: 'Today', value: 'today' as const },
-  { label: 'Last 7 Days', value: 'week' as const },
-  { label: 'Last 30 Days', value: 'month' as const },
-  { label: 'Last 90 Days', value: 'quarter' as const },
-  { label: 'Last Year', value: 'year' as const },
+  { label: "Aujourd'hui", value: "today" as const },
+  { label: "7 derniers jours", value: "week" as const },
+  { label: "30 derniers jours", value: "month" as const },
+  { label: "90 derniers jours", value: "quarter" as const },
+  { label: "Dernière année", value: "year" as const },
 ];
 
 export const DateRangePicker: React.FC<DateRangePickerProps> = ({
@@ -92,7 +92,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
                 : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:border-slate-400'
             }`}
           >
-            Custom Range
+            Plage personnalisée
           </button>
         )}
       </div>
@@ -114,7 +114,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
           </div>
           <div className="flex-1 w-full sm:w-auto">
             <label htmlFor="end-date" className="block text-xs font-medium text-slate-700 mb-1.5">
-              End Date
+              Date de fin
             </label>
             <input
               id="end-date"

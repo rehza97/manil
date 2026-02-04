@@ -1,0 +1,37 @@
+{% extends "reports/base_report.html" %}
+
+{% block summary %}
+  <div class="executive-summary">
+    <div class="kpi-card">
+      <div class="kpi-value">{{ inactive_count }}</div>
+      <div class="kpi-label">Inactive Customers</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ cutoff.strftime('%Y-%m-%d') if cutoff else 'N/A' }}</div>
+      <div class="kpi-label">Cutoff Date</div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block charts %}
+  {{ super() }}
+{% endblock %}
+
+{% block data %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Customer ID</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for customer_id in inactive_customer_ids or [] %}
+        <tr>
+          <td>{{ customer_id }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

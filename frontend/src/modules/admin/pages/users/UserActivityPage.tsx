@@ -70,7 +70,7 @@ export const UserActivityPage: React.FC = () => {
   const columns: DataTableColumn<UserActivity>[] = [
     {
       key: "success",
-      label: "Status",
+      label: "Statut",
       width: "80px",
       render: (value) =>
         value ? (
@@ -88,7 +88,7 @@ export const UserActivityPage: React.FC = () => {
     },
     {
       key: "resource_type",
-      label: "Resource",
+      label: "Ressource",
       render: (value, row) => (
         <div>
           <p className="font-medium">{value}</p>
@@ -105,12 +105,12 @@ export const UserActivityPage: React.FC = () => {
     },
     {
       key: "ip_address",
-      label: "IP Address",
+      label: "Adresse IP",
       render: (value) => <span className="font-mono text-sm">{value}</span>,
     },
     {
       key: "created_at",
-      label: "Timestamp",
+      label: "Date et heure",
       render: (value) => <span className="text-sm">{formatDate(value)}</span>,
     },
   ];
@@ -119,7 +119,7 @@ export const UserActivityPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        <span className="ml-2 text-gray-500">Loading activity...</span>
+        <span className="ml-2 text-gray-500">Chargement de l'activité…</span>
       </div>
     );
   }
@@ -128,13 +128,13 @@ export const UserActivityPage: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <AlertCircle className="h-12 w-12 text-gray-400 mb-4" />
-        <p className="text-gray-500">User not found</p>
+        <p className="text-gray-500">Utilisateur introuvable</p>
         <Button
           variant="outline"
           onClick={() => navigate("/admin/users")}
           className="mt-4"
         >
-          Back to Users
+          Retour aux utilisateurs
         </Button>
       </div>
     );
@@ -149,13 +149,13 @@ export const UserActivityPage: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
-        title="User Activity Logs"
-        description={`Activity history for ${user.full_name}`}
+        title="Journal d'activité utilisateur"
+        description={`Historique d'activité pour ${user.full_name}`}
         breadcrumbs={[
           { label: "Admin", href: "/admin" },
-          { label: "Users", href: "/admin/users" },
+          { label: "Utilisateurs", href: "/admin/users" },
           { label: user.full_name, href: `/admin/users/${id}` },
-          { label: "Activity" },
+          { label: "Activité" },
         ]}
         actions={
           <div className="flex items-center gap-2">
@@ -164,11 +164,11 @@ export const UserActivityPage: React.FC = () => {
               onClick={() => navigate(`/admin/users/${id}`)}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to User
+              Retour à l'utilisateur
             </Button>
             <Button variant="outline">
               <Download className="h-4 w-4 mr-2" />
-              Export
+              Exporter
             </Button>
           </div>
         }
@@ -182,7 +182,7 @@ export const UserActivityPage: React.FC = () => {
               <ActivityIcon className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Total Activities</p>
+              <p className="text-sm text-gray-500">Total des actions</p>
               <p className="text-2xl font-bold">{totalActivities}</p>
             </div>
           </div>
@@ -194,7 +194,7 @@ export const UserActivityPage: React.FC = () => {
               <CheckCircle className="h-6 w-6 text-green-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Successful</p>
+              <p className="text-sm text-gray-500">Réussies</p>
               <p className="text-2xl font-bold">{successCount}</p>
             </div>
           </div>
@@ -206,7 +206,7 @@ export const UserActivityPage: React.FC = () => {
               <XCircle className="h-6 w-6 text-red-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Failed</p>
+              <p className="text-sm text-gray-500">Échouées</p>
               <p className="text-2xl font-bold">{failedCount}</p>
             </div>
           </div>
@@ -218,7 +218,7 @@ export const UserActivityPage: React.FC = () => {
               <ActivityIcon className="h-6 w-6 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">This Page</p>
+              <p className="text-sm text-gray-500">Cette page</p>
               <p className="text-2xl font-bold">{activities.length}</p>
             </div>
           </div>
@@ -229,9 +229,9 @@ export const UserActivityPage: React.FC = () => {
       <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-lg font-semibold">Activity Logs</h3>
+            <h3 className="text-lg font-semibold">Journal d'activité</h3>
             <p className="text-sm text-gray-500 mt-1">
-              Complete history of user actions and events
+              Historique complet des actions et événements de l'utilisateur
             </p>
           </div>
 
@@ -240,14 +240,14 @@ export const UserActivityPage: React.FC = () => {
             <Select value={actionFilter} onValueChange={setActionFilter}>
               <SelectTrigger className="w-[180px]">
                 <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Filter by action" />
+                <SelectValue placeholder="Filtrer par action" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Actions</SelectItem>
-                <SelectItem value="login">Login Events</SelectItem>
-                <SelectItem value="create">Create Actions</SelectItem>
-                <SelectItem value="update">Update Actions</SelectItem>
-                <SelectItem value="delete">Delete Actions</SelectItem>
+                <SelectItem value="all">Toutes les actions</SelectItem>
+                <SelectItem value="login">Événements de connexion</SelectItem>
+                <SelectItem value="create">Actions de création</SelectItem>
+                <SelectItem value="update">Actions de mise à jour</SelectItem>
+                <SelectItem value="delete">Actions de suppression</SelectItem>
               </SelectContent>
             </Select>
 
@@ -259,10 +259,10 @@ export const UserActivityPage: React.FC = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="10">10 per page</SelectItem>
-                <SelectItem value="20">20 per page</SelectItem>
-                <SelectItem value="50">50 per page</SelectItem>
-                <SelectItem value="100">100 per page</SelectItem>
+                <SelectItem value="10">10 par page</SelectItem>
+                <SelectItem value="20">20 par page</SelectItem>
+                <SelectItem value="50">50 par page</SelectItem>
+                <SelectItem value="100">100 par page</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -272,16 +272,16 @@ export const UserActivityPage: React.FC = () => {
           columns={columns}
           data={activities}
           loading={activityLoading}
-          emptyMessage="No activity logs found"
+          emptyMessage="Aucun journal d'activité trouvé"
         />
 
         {/* Pagination */}
         {totalActivities > pageSize && (
           <div className="flex items-center justify-between mt-6 pt-6 border-t">
             <p className="text-sm text-gray-500">
-              Showing {(page - 1) * pageSize + 1} to{" "}
-              {Math.min(page * pageSize, totalActivities)} of {totalActivities}{" "}
-              activities
+              Affichage de {(page - 1) * pageSize + 1} à{" "}
+              {Math.min(page * pageSize, totalActivities)} sur {totalActivities}{" "}
+              actions
             </p>
             <div className="flex items-center gap-2">
               <Button
@@ -290,7 +290,7 @@ export const UserActivityPage: React.FC = () => {
                 onClick={() => setPage(page - 1)}
                 disabled={page === 1}
               >
-                Previous
+                Précédent
               </Button>
               <div className="flex items-center gap-1">
                 {Array.from(
@@ -325,7 +325,7 @@ export const UserActivityPage: React.FC = () => {
                 onClick={() => setPage(page + 1)}
                 disabled={page >= Math.ceil(totalActivities / pageSize)}
               >
-                Next
+                Suivant
               </Button>
             </div>
           </div>
@@ -337,11 +337,10 @@ export const UserActivityPage: React.FC = () => {
         <div className="flex items-start gap-3">
           <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
           <div className="text-sm text-blue-900">
-            <p className="font-semibold">Activity Log Information</p>
+            <p className="font-semibold">Informations sur le journal d'activité</p>
             <p className="mt-1">
-              Activity logs are retained for 90 days. Successful actions are shown with
-              a green checkmark, while failed actions are shown with a red X. Click on
-              any row to view more details about the activity.
+              Les journaux d'activité sont conservés pendant 90 jours. Les actions réussies sont affichées avec
+              une coche verte, les actions échouées avec un X rouge. Cliquez sur une ligne pour voir plus de détails.
             </p>
           </div>
         </div>

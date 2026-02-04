@@ -338,13 +338,7 @@ async def _run_seeds() -> None:
         except Exception as e:
             print(f"  ⚠️  Production orders: {e}")
 
-    async with AsyncSessionLocal() as db:
-        try:
-            from app.modules.hosting.seed_production_data import seed_production_vps
-            vps_subscription_ids, container_pairs = await seed_production_vps(db)
-            print("  ✅ Production VPS subscriptions")
-        except Exception as e:
-            print(f"  ⚠️  Production VPS: {e}")
+    # VPS subscriptions disabled - no auto-creation (vps_subscription_ids stays [])
 
     async with AsyncSessionLocal() as db:
         try:
@@ -370,10 +364,4 @@ async def _run_seeds() -> None:
         except Exception as e:
             print(f"  ⚠️  Production audit logs: {e}")
 
-    async with AsyncSessionLocal() as db:
-        try:
-            from app.modules.hosting.seed_production_data import seed_container_metrics
-            await seed_container_metrics(db, container_pairs)
-            print("  ✅ Container metrics")
-        except Exception as e:
-            print(f"  ⚠️  Container metrics: {e}")
+    # Container metrics disabled (no VPS seeding)

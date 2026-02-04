@@ -77,17 +77,16 @@ export const GeneralSettingsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">General Settings</h1>
+        <h1 className="text-3xl font-bold">Paramètres généraux</h1>
         <p className="text-slate-600 mt-2">
-          Configure general application settings, company information, and
-          display preferences.
+          Configurer les paramètres généraux de l'application, les informations de l'entreprise et les préférences d'affichage.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Application Settings</CardTitle>
-          <CardDescription>Basic application configuration</CardDescription>
+          <CardTitle>Paramètres de l'application</CardTitle>
+          <CardDescription>Configuration de base de l'application</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {settings?.map((setting) => (
@@ -122,12 +121,12 @@ export const GeneralSettingsPage: React.FC = () => {
           {updateMutation.isPending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
+              Enregistrement…
             </>
           ) : (
             <>
               <Save className="mr-2 h-4 w-4" />
-              Save Changes
+              Enregistrer les modifications
             </>
           )}
         </Button>

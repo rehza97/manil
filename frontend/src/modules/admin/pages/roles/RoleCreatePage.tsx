@@ -57,17 +57,17 @@ export const RoleCreatePage: React.FC = () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.name) {
-      newErrors.name = "Role name is required";
+      newErrors.name = "Le nom du rôle est requis";
     } else if (formData.name.length < 3) {
-      newErrors.name = "Role name must be at least 3 characters";
+      newErrors.name = "Le nom du rôle doit contenir au moins 3 caractères";
     }
 
     if (!formData.description) {
-      newErrors.description = "Description is required";
+      newErrors.description = "La description est requise";
     }
 
     if (formData.permission_ids.length === 0) {
-      newErrors.permissions = "At least one permission must be selected";
+      newErrors.permissions = "Au moins une permission doit être sélectionnée";
     }
 
     setErrors(newErrors);
@@ -86,8 +86,8 @@ export const RoleCreatePage: React.FC = () => {
       const slug = generateSlug(formData.name);
       if (slug.length < 3) {
         toast({
-          title: "Error",
-          description: "Role name must generate a valid slug (at least 3 characters)",
+          title: "Erreur",
+          description: "Le nom du rôle doit générer un identifiant valide (au moins 3 caractères)",
           variant: "destructive",
         });
         return;
@@ -98,13 +98,13 @@ export const RoleCreatePage: React.FC = () => {
         slug,
       });
       toast({
-        title: "Success",
-        description: "Role created successfully",
+        title: "Succès",
+        description: "Rôle créé avec succès",
       });
       navigate("/admin/roles");
     } catch (error: any) {
       // Handle validation errors (422) - extract message from error response
-      let errorMessage = "Failed to create role";
+      let errorMessage = "Échec de la création du rôle";
       
       if (error.response?.data) {
         const errorData = error.response.data;
@@ -116,14 +116,14 @@ export const RoleCreatePage: React.FC = () => {
         } else if (errorData.detail) {
           errorMessage = typeof errorData.detail === "string" 
             ? errorData.detail 
-            : errorData.detail.message || errorData.detail.msg || "Validation error";
+            : errorData.detail.message || errorData.detail.msg || "Erreur de validation";
         } else if (errorData.message) {
           errorMessage = errorData.message;
         }
       }
       
       toast({
-        title: "Error",
+        title: "Erreur",
         description: errorMessage,
         variant: "destructive",
       });
@@ -185,17 +185,17 @@ export const RoleCreatePage: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
-        title="Create Role"
-        description="Create a new role and assign permissions"
+        title="Créer un rôle"
+        description="Créer un nouveau rôle et attribuer des permissions"
         breadcrumbs={[
           { label: "Admin", href: "/admin" },
-          { label: "Roles", href: "/admin/roles" },
-          { label: "Create Role" },
+          { label: "Rôles", href: "/admin/roles" },
+          { label: "Créer un rôle" },
         ]}
         actions={
           <Button variant="outline" onClick={() => navigate("/admin/roles")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Roles
+            Retour aux rôles
           </Button>
         }
       />
@@ -205,10 +205,10 @@ export const RoleCreatePage: React.FC = () => {
         <div className="flex items-start gap-3">
           <Info className="h-5 w-5 text-blue-600 mt-0.5" />
           <div className="text-sm text-blue-900">
-            <p className="font-semibold">Role-Based Access Control</p>
+            <p className="font-semibold">Contrôle d'accès par rôles</p>
             <p className="mt-1">
-              Roles define sets of permissions that determine what actions users can
-              perform. System roles (Admin, Corporate, Client) cannot be modified.
+              Les rôles définissent des ensembles de permissions qui déterminent les actions des utilisateurs.
+              Les rôles système (Admin, Entreprise, Client) ne peuvent pas être modifiés.
             </p>
           </div>
         </div>
@@ -222,18 +222,18 @@ export const RoleCreatePage: React.FC = () => {
             <Card className="p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <Shield className="h-5 w-5" />
-                Basic Information
+                Informations de base
               </h3>
               <div className="space-y-4">
                 {/* Role Name */}
                 <div className="space-y-2">
                   <Label htmlFor="name">
-                    Role Name <span className="text-red-500">*</span>
+                    Nom du rôle <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="name"
                     type="text"
-                    placeholder="e.g., Support Manager"
+                    placeholder="ex. Responsable support"
                     value={formData.name}
                     onChange={(e) => handleChange("name", e.target.value)}
                     className={errors.name ? "border-red-500" : ""}
@@ -250,7 +250,7 @@ export const RoleCreatePage: React.FC = () => {
                   </Label>
                   <Textarea
                     id="description"
-                    placeholder="Describe what this role can do..."
+                    placeholder="Décrivez ce que ce rôle peut faire…"
                     value={formData.description}
                     onChange={(e) => handleChange("description", e.target.value)}
                     className={errors.description ? "border-red-500" : ""}
@@ -271,7 +271,7 @@ export const RoleCreatePage: React.FC = () => {
                   Permissions
                 </h3>
                 <Badge variant="secondary">
-                  {formData.permission_ids.length} selected
+                  {formData.permission_ids.length} sélectionnées
                 </Badge>
               </div>
 
@@ -323,7 +323,7 @@ export const RoleCreatePage: React.FC = () => {
                                   formData.permission_ids.includes(id)
                                 ).length
                               }{" "}
-                              / {perms.length} selected
+                              / {perms.length} sélectionnées
                             </span>
                           </div>
                           <Separator className="mb-3" />
@@ -372,18 +372,18 @@ export const RoleCreatePage: React.FC = () => {
                 onClick={() => navigate("/admin/roles")}
                 disabled={createRole.isPending}
               >
-                Cancel
+                Annuler
               </Button>
               <Button type="submit" disabled={createRole.isPending}>
                 {createRole.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Creating...
+                    Création…
                   </>
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    Create Role
+                    Créer le rôle
                   </>
                 )}
               </Button>
@@ -406,7 +406,7 @@ export const RoleCreatePage: React.FC = () => {
                   <p className="text-sm text-gray-500">Description</p>
                   <p className="text-sm">
                     {formData.description || (
-                      <span className="text-gray-400">Not set</span>
+                      <span className="text-gray-400">Non défini</span>
                     )}
                   </p>
                 </div>

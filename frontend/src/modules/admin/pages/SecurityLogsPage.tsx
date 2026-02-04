@@ -57,13 +57,13 @@ export const SecurityLogsPage: React.FC = () => {
       const res = await adminLogsApi.exportSecurityLogs(format);
       await downloadMutation.mutateAsync(res.file_name);
       toast({
-        title: "Export successful",
-        description: `Security logs exported (${format.toUpperCase()}).`,
+        title: "Export réussi",
+        description: `Journaux de sécurité exportés (${format.toUpperCase()}).`,
       });
     } catch (err) {
       toast({
-        title: "Export failed",
-        description: err instanceof Error ? err.message : "Failed to export security logs",
+        title: "Échec de l'export",
+        description: err instanceof Error ? err.message : "Échec de l'export des journaux de sécurité",
         variant: "destructive",
       });
     }
@@ -135,11 +135,11 @@ export const SecurityLogsPage: React.FC = () => {
         return (
           <Badge className="bg-yellow-100 text-yellow-800">
             <AlertTriangle className="h-3 w-3 mr-1" />
-            Warning
+            Avertissement
           </Badge>
         );
       default:
-        return <Badge variant="outline">{status || "Unknown"}</Badge>;
+        return <Badge variant="outline">{status || "Inconnu"}</Badge>;
     }
   };
 
@@ -172,25 +172,24 @@ export const SecurityLogsPage: React.FC = () => {
       <div>
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <Shield className="h-8 w-8" />
-          Security Logs
+          Journaux de sécurité
         </h1>
         <p className="text-slate-600 mt-2">
-          Monitor security events, login attempts, and authentication
-          activities.
+          Suivre les événements de sécurité, tentatives de connexion et activités d'authentification.
         </p>
       </div>
 
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Filters</CardTitle>
+          <CardTitle>Filtres</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
-                placeholder="Search logs..."
+                placeholder="Rechercher dans les journaux…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -202,7 +201,7 @@ export const SecurityLogsPage: React.FC = () => {
                 <SelectValue placeholder="Action" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Actions</SelectItem>
+                <SelectItem value="all">Toutes les actions</SelectItem>
                 {securityActions.map((action) => (
                   <SelectItem key={action} value={action}>
                     {action.replace(/_/g, " ").toUpperCase()}
@@ -216,11 +215,11 @@ export const SecurityLogsPage: React.FC = () => {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="success">Success</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-                <SelectItem value="error">Error</SelectItem>
-                <SelectItem value="warning">Warning</SelectItem>
+                <SelectItem value="all">Tous les statuts</SelectItem>
+                <SelectItem value="success">Succès</SelectItem>
+                <SelectItem value="failed">Échec</SelectItem>
+                <SelectItem value="error">Erreur</SelectItem>
+                <SelectItem value="warning">Avertissement</SelectItem>
               </SelectContent>
             </Select>
 
@@ -228,12 +227,12 @@ export const SecurityLogsPage: React.FC = () => {
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="w-full" disabled={downloadMutation.isPending}>
                   <Download className="h-4 w-4 mr-2" />
-                  {downloadMutation.isPending ? "Exporting..." : "Export"}
+                  {downloadMutation.isPending ? "Export en cours…" : "Exporter"}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport("csv")}>Export CSV</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport("excel")}>Export Excel</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("csv")}>Exporter CSV</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("excel")}>Exporter Excel</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -244,8 +243,8 @@ export const SecurityLogsPage: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle>
-            Security Events ({filteredLogs.length}{" "}
-            {auditData?.total ? `of ${auditData.total}` : ""})
+            Événements de sécurité ({filteredLogs.length}{" "}
+            {auditData?.total ? `sur ${auditData.total}` : ""})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -256,7 +255,7 @@ export const SecurityLogsPage: React.FC = () => {
           ) : filteredLogs.length === 0 ? (
             <div className="text-center py-12 text-slate-500">
               <Shield className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-              <p>No security logs found</p>
+              <p>Aucun journal de sécurité trouvé</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -271,7 +270,7 @@ export const SecurityLogsPage: React.FC = () => {
                         {getActionBadge(log.action || "")}
                         {getStatusBadge(log.status || "")}
                         <span className="text-sm text-slate-600">
-                          {log.user_email || "System"}
+                          {log.user_email || "Système"}
                         </span>
                       </div>
 
@@ -311,7 +310,7 @@ export const SecurityLogsPage: React.FC = () => {
           {auditData && auditData.total_pages > 1 && (
             <div className="flex items-center justify-between mt-6">
               <p className="text-sm text-slate-600">
-                Page {page} of {auditData.total_pages}
+                Page {page} sur {auditData.total_pages}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -320,7 +319,7 @@ export const SecurityLogsPage: React.FC = () => {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                 >
-                  Previous
+                  Précédent
                 </Button>
                 <Button
                   variant="outline"
@@ -330,7 +329,7 @@ export const SecurityLogsPage: React.FC = () => {
                   }
                   disabled={page === auditData.total_pages}
                 >
-                  Next
+                  Suivant
                 </Button>
               </div>
             </div>

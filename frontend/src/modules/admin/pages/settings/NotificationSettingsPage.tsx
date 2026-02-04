@@ -237,9 +237,9 @@ export const NotificationSettingsPage: React.FC = () => {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label className="font-medium">Email Notifications</Label>
+              <Label className="font-medium">Notifications e-mail</Label>
               <p className="text-sm text-muted-foreground">
-                Send notifications via email
+                Envoyer les notifications par e-mail
               </p>
             </div>
             <Switch
@@ -250,9 +250,9 @@ export const NotificationSettingsPage: React.FC = () => {
           <Separator />
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label className="font-medium">SMS Notifications</Label>
+              <Label className="font-medium">Notifications SMS</Label>
               <p className="text-sm text-muted-foreground">
-                Send notifications via SMS (requires SMS provider configuration)
+                Envoyer les notifications par SMS (nécessite la configuration du fournisseur SMS)
               </p>
             </div>
             <Switch
@@ -263,9 +263,9 @@ export const NotificationSettingsPage: React.FC = () => {
           <Separator />
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label className="font-medium">Push Notifications</Label>
+              <Label className="font-medium">Notifications push</Label>
               <p className="text-sm text-muted-foreground">
-                Send browser/mobile push notifications
+                Envoyer les notifications push navigateur/mobile
               </p>
             </div>
             <Switch
@@ -281,48 +281,48 @@ export const NotificationSettingsPage: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5" />
-            Event Notifications
+            Notifications par événement
           </CardTitle>
           <CardDescription>
-            Choose which events trigger notifications
+            Choisir quels événements déclenchent des notifications
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <EventToggleGroup
-            title="Ticket Events"
+            title="Événements ticket"
             events={ticketEvents}
             setEvents={setTicketEvents}
             labels={{
-              created: "Ticket Created",
-              replied: "New Reply",
-              assigned: "Assigned",
-              status_changed: "Status Changed",
-              closed: "Closed",
+              created: "Ticket créé",
+              replied: "Nouvelle réponse",
+              assigned: "Assigné",
+              status_changed: "Statut modifié",
+              closed: "Fermé",
             }}
           />
           <Separator />
           <EventToggleGroup
-            title="Order Events"
+            title="Événements commande"
             events={orderEvents}
             setEvents={setOrderEvents}
             labels={{
-              created: "Order Created",
-              approved: "Approved",
-              shipped: "Shipped",
-              delivered: "Delivered",
-              cancelled: "Cancelled",
+              created: "Commande créée",
+              approved: "Approuvée",
+              shipped: "Expédiée",
+              delivered: "Livrée",
+              cancelled: "Annulée",
             }}
           />
           <Separator />
           <EventToggleGroup
-            title="Invoice Events"
+            title="Événements facture"
             events={invoiceEvents}
             setEvents={setInvoiceEvents}
             labels={{
-              issued: "Invoice Issued",
-              sent: "Sent to Customer",
-              payment_received: "Payment Received",
-              overdue: "Overdue Alert",
+              issued: "Facture émise",
+              sent: "Envoyée au client",
+              payment_received: "Paiement reçu",
+              overdue: "Alerte impayé",
             }}
           />
         </CardContent>
@@ -333,18 +333,18 @@ export const NotificationSettingsPage: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
-            Quiet Hours
+            Heures calmes
           </CardTitle>
           <CardDescription>
-            Pause non-urgent notifications during specific hours
+            Suspendre les notifications non urgentes pendant certaines plages horaires
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label className="font-medium">Enable Quiet Hours</Label>
+              <Label className="font-medium">Activer les heures calmes</Label>
               <p className="text-sm text-muted-foreground">
-                No notifications will be sent during quiet hours
+                Aucune notification ne sera envoyée pendant les heures calmes
               </p>
             </div>
             <Switch
@@ -357,7 +357,7 @@ export const NotificationSettingsPage: React.FC = () => {
           {quietHours.enabled && (
             <div className="grid grid-cols-2 gap-4 pt-4">
               <div className="space-y-2">
-                <Label>Start Hour (24h)</Label>
+                <Label>Heure de début (24h)</Label>
                 <Input
                   type="number"
                   min={0}
@@ -391,7 +391,7 @@ export const NotificationSettingsPage: React.FC = () => {
                   placeholder="7"
                 />
                 <p className="text-xs text-muted-foreground">
-                  E.g., 7 for 7:00 AM
+                  Ex. 7 pour 7h
                 </p>
               </div>
             </div>
@@ -404,18 +404,18 @@ export const NotificationSettingsPage: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
-            Daily Digest
+            Résumé quotidien
           </CardTitle>
           <CardDescription>
-            Send a summary of notifications once daily instead of individual notifications
+            Envoyer un résumé des notifications une fois par jour au lieu de chaque notification
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label className="font-medium">Enable Daily Digest</Label>
+              <Label className="font-medium">Activer le résumé quotidien</Label>
               <p className="text-sm text-muted-foreground">
-                Batch notifications into a single daily email
+                Regrouper les notifications dans un seul e-mail quotidien
               </p>
             </div>
             <Switch
@@ -425,14 +425,14 @@ export const NotificationSettingsPage: React.FC = () => {
           </div>
           {digestEnabled && (
             <div className="space-y-2 pt-4">
-              <Label>Send Time</Label>
+              <Label>Heure d'envoi</Label>
               <Input
                 type="time"
                 value={digestTime}
                 onChange={(e) => setDigestTime(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Time to send the daily digest email
+                Heure d'envoi de l'e-mail de résumé quotidien
               </p>
             </div>
           )}
@@ -445,12 +445,12 @@ export const NotificationSettingsPage: React.FC = () => {
           {testing ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Testing...
+              Test en cours…
             </>
           ) : (
             <>
               <TestTube className="mr-2 h-4 w-4" />
-              Test Configuration
+              Tester la configuration
             </>
           )}
         </Button>
@@ -462,12 +462,12 @@ export const NotificationSettingsPage: React.FC = () => {
           {updateMutation.isPending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
+              Enregistrement…
             </>
           ) : (
             <>
               <Save className="mr-2 h-4 w-4" />
-              Save Changes
+              Enregistrer les modifications
             </>
           )}
         </Button>

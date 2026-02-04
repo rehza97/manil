@@ -70,7 +70,7 @@ export const SystemOverviewPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Loading system overview...</span>
+        <span className="ml-2">Chargement de l'aperçu système…</span>
       </div>
     );
   }
@@ -80,9 +80,9 @@ export const SystemOverviewPage: React.FC = () => {
       <div className="text-center py-8">
         <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
         <h3 className="text-lg font-medium text-gray-900 mb-2">
-          Error loading system data
+          Erreur lors du chargement des données système
         </h3>
-        <p className="text-gray-500">Please try again later.</p>
+        <p className="text-gray-500">Veuillez réessayer plus tard.</p>
       </div>
     );
   }
@@ -90,9 +90,9 @@ export const SystemOverviewPage: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">System Overview</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Aperçu système</h1>
         <p className="text-gray-600 mt-1">
-          Monitor system health and performance metrics
+          Surveillez la santé du système et les métriques de performance
         </p>
       </div>
 
@@ -101,11 +101,11 @@ export const SystemOverviewPage: React.FC = () => {
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">System Uptime</p>
+              <p className="text-sm text-gray-600">Disponibilité système</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
                 {health?.uptime?.toFixed(1) || 0}%
               </p>
-              <p className="text-xs text-gray-500 mt-1">Last 30 days</p>
+              <p className="text-xs text-gray-500 mt-1">30 derniers jours</p>
             </div>
             <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
               <Activity className="w-6 h-6 text-green-600" />
@@ -116,7 +116,7 @@ export const SystemOverviewPage: React.FC = () => {
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Database Status</p>
+              <p className="text-sm text-gray-600">État de la base de données</p>
               <Badge
                 className={`mt-2 ${
                   health?.database_status === "healthy"
@@ -126,10 +126,10 @@ export const SystemOverviewPage: React.FC = () => {
                     : "bg-red-100 text-red-800"
                 }`}
               >
-                {health?.database_status || "Unknown"}
+                {health?.database_status === "healthy" ? "Opérationnel" : health?.database_status === "degraded" ? "Dégradé" : health?.database_status || "Inconnu"}
               </Badge>
               <p className="text-xs text-gray-500 mt-1">
-                Response: {health?.database_response_time || 0}ms
+                Réponse : {health?.database_response_time || 0} ms
               </p>
             </div>
             <div
@@ -168,7 +168,7 @@ export const SystemOverviewPage: React.FC = () => {
                     )}GB / ${detailedHealth.api_server.memory_total_gb?.toFixed(
                       1
                     )}GB RAM`
-                  : "System load"}
+                  : "Charge système"}
               </p>
             </div>
             <div
@@ -196,7 +196,7 @@ export const SystemOverviewPage: React.FC = () => {
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Disk Usage</p>
+              <p className="text-sm text-gray-600">Utilisation disque</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
                 {detailedHealth?.storage?.usage_percent?.toFixed(1) || 0}%
               </p>
@@ -207,7 +207,7 @@ export const SystemOverviewPage: React.FC = () => {
                     )}GB free of ${detailedHealth.storage.total_gb?.toFixed(
                       1
                     )}GB`
-                  : "Storage capacity"}
+                  : "Capacité de stockage"}
               </p>
             </div>
             <div
@@ -245,7 +245,7 @@ export const SystemOverviewPage: React.FC = () => {
           </p>
           <div className="flex items-center gap-1 mt-2">
             <span className="text-green-600 text-sm">
-              {stats?.active_sessions || 0} active sessions
+              {stats?.active_sessions || 0} sessions actives
             </span>
           </div>
         </Card>
@@ -253,7 +253,7 @@ export const SystemOverviewPage: React.FC = () => {
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">
-              Total Customers
+              Total clients
             </h3>
             <Users className="w-5 h-5 text-gray-400" />
           </div>
@@ -265,7 +265,7 @@ export const SystemOverviewPage: React.FC = () => {
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">
-              Total Orders
+              Total commandes
             </h3>
             <ShoppingCart className="w-5 h-5 text-gray-400" />
           </div>
@@ -289,14 +289,14 @@ export const SystemOverviewPage: React.FC = () => {
           </p>
         </div>
         <div className="mt-4 text-sm text-gray-600">
-          This month's revenue is tracking above average
+          Les revenus du mois sont au-dessus de la moyenne
         </div>
       </Card>
 
       {/* System Health Details */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          System Components Health
+          Santé des composants système
         </h3>
         <div className="space-y-4">
           {detailedHealth?.database && (
@@ -313,21 +313,21 @@ export const SystemOverviewPage: React.FC = () => {
                 ></div>
                 <div>
                   <span className="text-sm font-medium text-gray-900">
-                    Database
+                    Base de données
                   </span>
                   <p className="text-xs text-gray-500">
                     PostgreSQL • {detailedHealth.database.connections || 0}{" "}
-                    active connections
+                    connexions actives
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500">
-                  Uptime: {detailedHealth.database.uptime?.toFixed(1)}%
+                  Disponibilité : {detailedHealth.database.uptime?.toFixed(1)} %
                 </span>
                 <span className="text-sm text-gray-500">•</span>
                 <span className="text-sm text-gray-500">
-                  Response: {detailedHealth.database.response_time?.toFixed(0)}
+                  Réponse : {detailedHealth.database.response_time?.toFixed(0)}
                   ms
                 </span>
               </div>
@@ -347,17 +347,17 @@ export const SystemOverviewPage: React.FC = () => {
                 ></div>
                 <div>
                   <span className="text-sm font-medium text-gray-900">
-                    Redis Cache
+                    Cache Redis
                   </span>
                   <p className="text-xs text-gray-500">
-                    {detailedHealth.redis.memory_usage || "N/A"} • Hit rate:{" "}
+                    {detailedHealth.redis.memory_usage || "N/A"} • Taux de succès :{" "}
                     {detailedHealth.redis.hit_rate?.toFixed(1)}%
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500">
-                  Uptime: {detailedHealth.redis.uptime?.toFixed(1)}%
+                  Disponibilité : {detailedHealth.redis.uptime?.toFixed(1)} %
                 </span>
               </div>
             </div>
@@ -376,7 +376,7 @@ export const SystemOverviewPage: React.FC = () => {
                 ></div>
                 <div>
                   <span className="text-sm font-medium text-gray-900">
-                    API Server
+                    Serveur API
                   </span>
                   <p className="text-xs text-gray-500">
                     FastAPI • CPU:{" "}
@@ -388,11 +388,11 @@ export const SystemOverviewPage: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500">
-                  Uptime: {detailedHealth.api_server.uptime?.toFixed(1)}%
+                  Disponibilité : {detailedHealth.api_server.uptime?.toFixed(1)} %
                 </span>
                 <span className="text-sm text-gray-500">•</span>
                 <span className="text-sm text-gray-500">
-                  Avg Response:{" "}
+                  Réponse moy. :{" "}
                   {detailedHealth.api_server.response_time?.toFixed(0)}ms
                 </span>
               </div>
@@ -414,22 +414,22 @@ export const SystemOverviewPage: React.FC = () => {
                 ></div>
                 <div>
                   <span className="text-sm font-medium text-gray-900">
-                    Storage
+                    Stockage
                   </span>
                   <p className="text-xs text-gray-500">
                     {detailedHealth.storage.available_gb
                       ? `${detailedHealth.storage.available_gb.toFixed(
                           1
-                        )}GB free of ${detailedHealth.storage.total_gb?.toFixed(
+                        )} Go libres sur ${detailedHealth.storage.total_gb?.toFixed(
                           1
-                        )}GB`
-                      : "Disk I/O"}
+                        )} Go`
+                      : "E/S disque"}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500">
-                  Usage: {detailedHealth.storage.usage_percent?.toFixed(1) || 0}
+                  Utilisation : {detailedHealth.storage.usage_percent?.toFixed(1) || 0}
                   %
                 </span>
               </div>
@@ -441,7 +441,7 @@ export const SystemOverviewPage: React.FC = () => {
       {/* Recent Activity */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Recent Activity
+          Activité récente
         </h3>
         <div className="space-y-3">
           {recentActivity && recentActivity.length > 0 ? (
@@ -468,7 +468,7 @@ export const SystemOverviewPage: React.FC = () => {
             ))
           ) : (
             <div className="text-center py-4 text-gray-500">
-              No recent activity
+              Aucune activité récente
             </div>
           )}
         </div>
@@ -477,7 +477,7 @@ export const SystemOverviewPage: React.FC = () => {
       {/* User Statistics by Role */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          User Statistics by Role
+          Statistiques utilisateurs par rôle
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {usersByRole &&
@@ -490,15 +490,15 @@ export const SystemOverviewPage: React.FC = () => {
                   {role === "ADMIN"
                     ? "Admin"
                     : role === "corporate"
-                    ? "Corporate"
+                    ? "Entreprise"
                     : role === "CLIENT"
                     ? "Client"
                     : role}{" "}
-                  Users
+                  utilisateurs
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
                   {(usersByRole as UsersByRole).active_by_role?.[role] || 0}{" "}
-                  active
+                  actifs
                 </div>
               </div>
             ))}

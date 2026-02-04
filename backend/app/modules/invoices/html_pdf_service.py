@@ -27,6 +27,7 @@ except (ImportError, OSError):
     except ImportError:
         PDF_ENGINE = None
 
+from app.config.settings import get_settings
 from app.modules.invoices.models import Invoice, InvoiceItem
 from app.modules.quotes.models import Quote, QuoteItem
 
@@ -251,9 +252,9 @@ class HTMLPDFService:
         paid_amount = float(invoice.paid_amount)
         balance_due = total - paid_amount
 
-        # TAP calculation (0.5% standard rate in Algeria)
-        tap_rate = 0.5
-        tap_amount = (subtotal - discount) * (tap_rate / 100)
+        # TAP from config
+        tap_rate = get_settings().DEFAULT_TAP_RATE
+        tap_amount = (subtotal - discount) * tap_rate
         total_tax = tax_amount + tap_amount
 
         # Calculate days until due
@@ -358,9 +359,9 @@ class HTMLPDFService:
         tax_amount = float(quote.tax_amount)
         total = float(quote.total_amount)
 
-        # TAP calculation (0.5% standard rate in Algeria)
-        tap_rate = 0.5
-        tap_amount = (subtotal - discount) * (tap_rate / 100)
+        # TAP from config
+        tap_rate = get_settings().DEFAULT_TAP_RATE
+        tap_amount = (subtotal - discount) * tap_rate
         total_tax = tax_amount + tap_amount
 
         # Calculate days until expiry

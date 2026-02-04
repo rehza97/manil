@@ -68,7 +68,7 @@ export const SettingField: React.FC<SettingFieldProps> = ({
                 const updated = { ...value, [key]: isNaN(numValue) ? 0 : numValue };
                 handleChange(updated);
               }}
-              placeholder={`Enter ${key}`}
+              placeholder={`Saisir ${key.replace(/_/g, " ")}`}
             />
           </div>
         );
@@ -85,7 +85,7 @@ export const SettingField: React.FC<SettingFieldProps> = ({
                 const updated = { ...value, [key]: e.target.value };
                 handleChange(updated);
               }}
-              placeholder={`Enter ${key}`}
+              placeholder={`Saisir ${key.replace(/_/g, " ")}`}
             />
           </div>
         );

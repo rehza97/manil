@@ -54,15 +54,15 @@ const ProfilePage: React.FC = () => {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">My Profile</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Mon profil</h1>
           <p className="text-muted-foreground mt-1">
-            View and manage your account information
+            Consultez et gérez les informations de votre compte
           </p>
         </div>
         <Button asChild>
           <Link to="/dashboard/profile/edit">
             <Edit className="h-4 w-4 mr-2" />
-            Edit Profile
+            Modifier le profil
           </Link>
         </Button>
       </div>
@@ -108,7 +108,7 @@ const ProfilePage: React.FC = () => {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground flex items-center">
                   <Calendar className="h-4 w-4 mr-2" />
-                  Member Since
+                  Membre depuis
                 </label>
                 <p className="text-base font-medium">
                   {user.created_at
@@ -122,7 +122,7 @@ const ProfilePage: React.FC = () => {
               <div className="space-y-2 pt-4 border-t">
                 <label className="text-sm font-medium text-muted-foreground flex items-center">
                   <Phone className="h-4 w-4 mr-2" />
-                  Phone Number
+                  Numéro de téléphone
                 </label>
                 <p className="text-base font-medium">{user.phone}</p>
               </div>
@@ -155,7 +155,7 @@ const ProfilePage: React.FC = () => {
                 <p className="text-base font-medium">{user.company_name}</p>
                 {user.tax_id && (
                   <p className="text-sm text-muted-foreground">
-                    Tax ID: {user.tax_id}
+                    N° fiscal : {user.tax_id}
                   </p>
                 )}
               </div>
@@ -214,9 +214,9 @@ const ProfilePage: React.FC = () => {
       {customerId && (
         <Card>
           <CardHeader>
-            <CardTitle>Profile Completeness</CardTitle>
+            <CardTitle>Complétude du profil</CardTitle>
             <CardDescription>
-              Track your profile completion progress
+              Suivez l'avancement du remplissage de votre profil
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -230,10 +230,10 @@ const ProfilePage: React.FC = () => {
         <CardHeader>
           <div className="flex items-center space-x-2">
             <FileCheck className="h-5 w-5 text-blue-600" />
-            <CardTitle>KYC Documents</CardTitle>
+            <CardTitle>Documents KYC</CardTitle>
           </div>
           <CardDescription>
-            Upload and manage your Know Your Customer (KYC) verification documents
+            Téléchargez et gérez vos documents de vérification KYC (Know Your Customer)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -245,7 +245,7 @@ const ProfilePage: React.FC = () => {
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Customer profile not found. Please contact support to set up your customer account.
+                Profil client introuvable. Contactez le support pour configurer votre compte client.
               </AlertDescription>
             </Alert>
           ) : (

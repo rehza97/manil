@@ -42,8 +42,8 @@ export const QuoteApprovePage: React.FC = () => {
     onError: (e: unknown) => {
       const err = e as Error;
       toast({
-        title: "Error",
-        description: err?.message ?? "Failed to approve quote",
+        title: "Erreur",
+        description: err?.message ?? "Échec de l'approbation du devis",
         variant: "destructive",
       });
     },
@@ -79,24 +79,24 @@ export const QuoteApprovePage: React.FC = () => {
         onClick={() => navigate(`${basePath}/quotes/${id}`)}
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Quote
+        Retour au devis
       </Button>
 
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Approve Quote</h1>
+        <h1 className="text-3xl font-bold text-slate-900">Approuver le devis</h1>
         <p className="text-slate-600 mt-1">
-          {q?.quote_number ?? q?.quoteNumber ?? id} — confirm approval
+          {q?.quote_number ?? q?.quoteNumber ?? id} — confirmer l&apos;approbation
         </p>
       </div>
 
       <div className="rounded-md border bg-white p-6 space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="notes">Approval notes (optional)</Label>
+          <Label htmlFor="notes">Notes d&apos;approbation (facultatif)</Label>
           <Textarea
             id="notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Add any notes for this approval"
+            placeholder="Ajouter des notes pour cette approbation"
             rows={4}
           />
         </div>
@@ -109,13 +109,13 @@ export const QuoteApprovePage: React.FC = () => {
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
             <CheckCircle className="mr-2 h-4 w-4" />
-            Approve Quote
+            Approuver le devis
           </Button>
           <Button
             variant="outline"
             onClick={() => navigate(`${basePath}/quotes/${id}`)}
           >
-            Cancel
+            Annuler
           </Button>
         </div>
       </div>

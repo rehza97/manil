@@ -75,7 +75,7 @@ const CategoryManagementPage: React.FC = () => {
       handleCloseDialog();
     },
     onError: (error: any) => {
-      alert(error.response?.data?.detail || "Failed to save category");
+      alert(error.response?.data?.detail || "Échec de l'enregistrement de la catégorie");
     },
   });
 
@@ -88,7 +88,7 @@ const CategoryManagementPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ["product-categories"] });
     },
     onError: (error: any) => {
-      alert(error.response?.data?.detail || "Failed to delete category");
+      alert(error.response?.data?.detail || "Échec de la suppression de la catégorie");
     },
   });
 
@@ -130,7 +130,7 @@ const CategoryManagementPage: React.FC = () => {
   };
 
   const handleDelete = (categoryId: string) => {
-    if (confirm("Are you sure you want to delete this category?")) {
+    if (confirm("Voulez-vous vraiment supprimer cette catégorie ?")) {
       deleteMutation.mutate(categoryId);
     }
   };
@@ -149,10 +149,10 @@ const CategoryManagementPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
-            Product Categories
+            Catégories de produits
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Organize your products into categories
+            Organisez vos produits par catégories
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -162,23 +162,23 @@ const CategoryManagementPage: React.FC = () => {
               onClick={() => handleOpenDialog()}
             >
               <Plus className="mr-2 h-4 w-4" />
-              Add Category
+              Ajouter une catégorie
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {editingCategory ? "Edit Category" : "Create Category"}
+                {editingCategory ? "Modifier la catégorie" : "Créer une catégorie"}
               </DialogTitle>
               <DialogDescription>
                 {editingCategory
-                  ? "Update the category information below."
-                  : "Enter the details for the new product category."}
+                  ? "Modifiez les informations de la catégorie ci-dessous."
+                  : "Saisissez les détails de la nouvelle catégorie de produits."}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="name">Category Name *</Label>
+                <Label htmlFor="name">Nom de la catégorie *</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -214,7 +214,7 @@ const CategoryManagementPage: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-between">
-                <Label htmlFor="is_active">Active</Label>
+                <Label htmlFor="is_active">Actif</Label>
                 <Switch
                   id="is_active"
                   checked={formData.is_active}
@@ -230,7 +230,7 @@ const CategoryManagementPage: React.FC = () => {
                   variant="outline"
                   onClick={handleCloseDialog}
                 >
-                  Cancel
+                  Annuler
                 </Button>
                 <Button
                   type="submit"
@@ -238,10 +238,10 @@ const CategoryManagementPage: React.FC = () => {
                   disabled={saveMutation.isPending}
                 >
                   {saveMutation.isPending
-                    ? "Saving..."
+                    ? "Enregistrement…"
                     : editingCategory
-                    ? "Update"
-                    : "Create"}
+                    ? "Mettre à jour"
+                    : "Créer"}
                 </Button>
               </div>
             </form>
@@ -253,17 +253,17 @@ const CategoryManagementPage: React.FC = () => {
       <div className="bg-white rounded-lg border">
         {isLoading ? (
           <div className="p-8 text-center text-gray-500">
-            Loading categories...
+            Chargement des catégories…
           </div>
         ) : categories && categories.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
+                <TableHead>Nom</TableHead>
                 <TableHead>Slug</TableHead>
                 <TableHead>Description</TableHead>
-                <TableHead>Products</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Produits</TableHead>
+                <TableHead>Statut</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -284,12 +284,12 @@ const CategoryManagementPage: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Badge variant="secondary">
-                      {category.product_count || 0} products
+                      {category.product_count || 0} produits
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant={category.is_active ? "default" : "secondary"}>
-                      {category.is_active ? "Active" : "Inactive"}
+                      {category.is_active ? "Actif" : "Inactif"}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
@@ -318,10 +318,10 @@ const CategoryManagementPage: React.FC = () => {
           <div className="p-8 text-center">
             <FolderTree className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">
-              No categories found
+              Aucune catégorie trouvée
             </h3>
             <p className="mt-1 text-sm text-gray-500">
-              Get started by creating a new product category.
+              Créez une nouvelle catégorie de produits pour commencer.
             </p>
             <div className="mt-6">
               <Button
@@ -329,7 +329,7 @@ const CategoryManagementPage: React.FC = () => {
                 onClick={() => handleOpenDialog()}
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Add Category
+                Ajouter une catégorie
               </Button>
             </div>
           </div>

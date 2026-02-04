@@ -145,6 +145,6 @@ class AggregationService:
         result = await self.db.execute(q)
         rows = result.all()
         return [
-            {"agent_id": str(r.assigned_to), "tickets_resolved": r.count}
+            {"agent_id": str(r.assigned_to), "ticket_count": r.count}
             for r in rows
         ]

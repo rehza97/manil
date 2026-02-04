@@ -144,7 +144,7 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
   };
 
   if (isLoading) {
-    return <div className="text-center py-8">Loading ticket details...</div>;
+    return <div className="text-center py-8">Chargement des détails du ticket…</div>;
   }
 
   if (!ticket) {
@@ -167,8 +167,8 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
         status: selectedStatus as TicketStatus,
       });
       toast({
-        title: "Success",
-        description: "Ticket status updated",
+        title: "Succès",
+        description: "Statut du ticket mis à jour",
       });
       onStatusChange?.();
     } catch (error: any) {
@@ -188,8 +188,8 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
         // Check backend - it might accept null/empty to unassign
         await ticketService.assign(ticketId, "");
         toast({
-          title: "Success",
-          description: "Ticket unassigned successfully",
+          title: "Succès",
+          description: "Ticket désassigné avec succès",
         });
         setSelectedAssignee("");
         onStatusChange?.();
@@ -205,8 +205,8 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
 
     if (!selectedAssignee) {
       toast({
-        title: "Error",
-        description: "Please select an agent",
+        title: "Erreur",
+        description: "Veuillez sélectionner un agent",
         variant: "destructive",
       });
       return;
@@ -223,8 +223,8 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
       onStatusChange?.();
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to assign ticket",
+        title: "Erreur",
+        description: error.message || "Échec de l'assignation du ticket",
         variant: "destructive",
       });
     }
@@ -242,8 +242,8 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
 
     // API call would go here
     toast({
-      title: "Success",
-      description: "Reply added successfully",
+      title: "Succès",
+      description: "Réponse ajoutée avec succès",
     });
     setReplyMessage("");
   };

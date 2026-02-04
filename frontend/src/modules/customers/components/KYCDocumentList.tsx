@@ -104,7 +104,7 @@ export function KYCDocumentList({
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Failed to load documents. Please try again.
+              Impossible de charger les documents. Veuillez réessayer.
             </AlertDescription>
           </Alert>
         </CardContent>
@@ -126,7 +126,7 @@ export function KYCDocumentList({
             <div className="text-center py-8">
               <FileText className="mx-auto h-12 w-12 text-gray-400" />
               <p className="mt-2 text-sm text-gray-600">
-                No documents uploaded yet
+                Aucun document téléversé pour l&apos;instant
               </p>
             </div>
           ) : (
@@ -210,8 +210,7 @@ export function KYCDocumentList({
 
           {documents && documents.length > 0 && (
             <div className="mt-4 text-sm text-gray-600">
-              Total: {documents.length} document
-              {documents.length !== 1 ? "s" : ""}
+              Total : {documents.length} document{documents.length !== 1 ? "s" : ""}
             </div>
           )}
         </CardContent>
@@ -223,19 +222,18 @@ export function KYCDocumentList({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Document</AlertDialogTitle>
+            <AlertDialogTitle>Supprimer le document</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this document? This action cannot
-              be undone.
+              Êtes-vous sûr de vouloir supprimer ce document ? Cette action est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-red-600 hover:bg-red-700"
             >
-              Delete
+              Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

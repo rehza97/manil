@@ -61,7 +61,7 @@ export function SystemDNSZoneForm({
           name="zone_name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Zone Name</FormLabel>
+              <FormLabel>Nom de la zone</FormLabel>
               <FormControl>
                 <Input
                   placeholder="example.com"
@@ -70,7 +70,7 @@ export function SystemDNSZoneForm({
                 />
               </FormControl>
               <FormDescription>
-                The domain name for this DNS zone (e.g., example.com)
+                Nom de domaine de cette zone DNS (ex. example.com)
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -83,7 +83,7 @@ export function SystemDNSZoneForm({
           name="zone_type"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Zone Type</FormLabel>
+              <FormLabel>Type de zone</FormLabel>
               <Select
                 onValueChange={(value) => field.onChange(value as DNSZoneType)}
                 value={field.value}
@@ -91,21 +91,20 @@ export function SystemDNSZoneForm({
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select zone type" />
+                    <SelectValue placeholder="Choisir le type de zone" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   <SelectItem value={DNSZoneType.FORWARD}>
-                    Forward Zone
+                    Zone directe
                   </SelectItem>
                   <SelectItem value={DNSZoneType.REVERSE}>
-                    Reverse Zone
+                    Zone inverse
                   </SelectItem>
                 </SelectContent>
               </Select>
               <FormDescription>
-                Forward zones resolve domain names to IPs. Reverse zones resolve
-                IPs to domain names.
+                Les zones directes résolvent les noms de domaine en IP. Les zones inverses résolvent les IP en noms de domaine.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -118,7 +117,7 @@ export function SystemDNSZoneForm({
           name="ttl_default"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Default TTL (seconds)</FormLabel>
+              <FormLabel>TTL par défaut (secondes)</FormLabel>
               <FormControl>
                 <Input
                   type="number"
@@ -131,8 +130,7 @@ export function SystemDNSZoneForm({
                 />
               </FormControl>
               <FormDescription>
-                Time-to-live for DNS records (60-86400 seconds). Default: 3600
-                (1 hour)
+                Durée de vie des enregistrements DNS (60-86400 secondes). Par défaut : 3600 (1 heure)
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -145,17 +143,17 @@ export function SystemDNSZoneForm({
           name="notes"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Notes (optional)</FormLabel>
+              <FormLabel>Notes (optionnel)</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Add any notes about this system zone..."
+                  placeholder="Ajoutez des notes sur cette zone système…"
                   {...field}
                   disabled={isLoading}
                   rows={3}
                 />
               </FormControl>
               <FormDescription>
-                Internal notes for administrators (not visible to customers)
+                Notes internes pour les administrateurs (non visibles par les clients)
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -171,12 +169,12 @@ export function SystemDNSZoneForm({
               onClick={onCancel}
               disabled={isLoading}
             >
-              Cancel
+              Annuler
             </Button>
           )}
           <Button type="submit" disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create System Zone
+            Créer la zone système
           </Button>
         </div>
       </form>

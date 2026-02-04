@@ -66,22 +66,22 @@ export const useApplyDNSTemplate = () => {
       
       if (failureCount === 0) {
         toast({
-          title: "Template Applied",
-          description: `Successfully created ${successCount} DNS records from template.`,
+          title: "Modèle appliqué",
+          description: `${successCount} enregistrement(s) DNS créé(s) à partir du modèle.`,
         });
       } else {
         toast({
-          title: "Partial Success",
-          description: `Created ${successCount} records, ${failureCount} failed.`,
+          title: "Succès partiel",
+          description: `${successCount} enregistrement(s) créé(s), ${failureCount} en échec.`,
         });
       }
     },
     onError: (error: any) => {
       toast({
-        title: "Template Application Failed",
+        title: "Échec de l'application du modèle",
         description:
           error.response?.data?.detail ||
-          "An error occurred while applying the template",
+          "Une erreur s'est produite lors de l'application du modèle",
         variant: "destructive",
       });
     },
@@ -106,16 +106,16 @@ export const useCreateDNSTemplate = () => {
       queryClient.invalidateQueries({ queryKey: ["dns", "templates"] });
       
       toast({
-        title: "Template Created",
-        description: "DNS template has been created successfully.",
+        title: "Modèle créé",
+        description: "Le modèle DNS a été créé avec succès.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Creation Failed",
+        title: "Échec de la création",
         description:
           error.response?.data?.detail ||
-          "An error occurred while creating the template",
+          "Une erreur s'est produite lors de la création du modèle",
         variant: "destructive",
       });
     },
@@ -142,16 +142,16 @@ export const useUpdateDNSTemplate = () => {
       queryClient.invalidateQueries({ queryKey: ["dns", "templates"] });
       
       toast({
-        title: "Template Updated",
-        description: "DNS template has been updated successfully.",
+        title: "Modèle mis à jour",
+        description: "Le modèle DNS a été mis à jour avec succès.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Update Failed",
+        title: "Échec de la mise à jour",
         description:
           error.response?.data?.detail ||
-          "An error occurred while updating the template",
+          "Une erreur s'est produite lors de la mise à jour du modèle",
         variant: "destructive",
       });
     },
@@ -172,16 +172,16 @@ export const useDeleteDNSTemplate = () => {
       queryClient.invalidateQueries({ queryKey: ["dns", "templates"] });
       
       toast({
-        title: "Template Deleted",
-        description: "DNS template has been deleted successfully.",
+        title: "Modèle supprimé",
+        description: "Le modèle DNS a été supprimé avec succès.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Delete Failed",
+        title: "Échec de la suppression",
         description:
           error.response?.data?.detail ||
-          "An error occurred while deleting the template",
+          "Une erreur s'est produite lors de la suppression du modèle",
         variant: "destructive",
       });
     },

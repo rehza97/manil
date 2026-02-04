@@ -47,7 +47,7 @@ async def get_order_pipeline(
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await SalesReportService(db).get_order_pipeline_report(start, end)
-    return await generate_report_response(db, data, "reports/base_report.html", "Order Pipeline", format, "order_pipeline", export_details_key="by_status", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(db, data, "reports/sales/order_pipeline.html", "Order Pipeline", format, "order_pipeline", export_details_key="by_status", generated_by=current_user.id, start_date=start, end_date=end)
 
 
 @router.get("/product-performance")
@@ -59,7 +59,7 @@ async def get_product_performance(
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await SalesReportService(db).get_product_performance_report(start, end)
-    return await generate_report_response(db, data, "reports/base_report.html", "Product Performance", format, "product_performance", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(db, data, "reports/sales/product_performance.html", "Product Performance", format, "product_performance", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
 
 
 async def _customer_patterns_response(
@@ -69,7 +69,7 @@ async def _customer_patterns_response(
     start, end = _parse_dates(start_date, end_date)
     data = await SalesReportService(db).get_customer_purchase_patterns_report(start, end)
     return await generate_report_response(
-        db, data, "reports/base_report.html", "Customer Purchase Patterns",
+        db, data, "reports/sales/customer_purchase_patterns.html", "Customer Purchase Patterns",
         format, "customer_patterns", export_details_key="details",
         generated_by=current_user.id, start_date=start, end_date=end,
     )

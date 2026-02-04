@@ -53,6 +53,16 @@ const statusColors: Record<InvoiceStatus, string> = {
   [InvoiceStatus.CANCELLED]: "bg-slate-100 text-slate-800",
 };
 
+const statusLabels: Record<InvoiceStatus, string> = {
+  [InvoiceStatus.DRAFT]: "Brouillon",
+  [InvoiceStatus.ISSUED]: "Émise",
+  [InvoiceStatus.SENT]: "Envoyée",
+  [InvoiceStatus.PAID]: "Payée",
+  [InvoiceStatus.PARTIALLY_PAID]: "Partiellement payée",
+  [InvoiceStatus.OVERDUE]: "En retard",
+  [InvoiceStatus.CANCELLED]: "Annulée",
+};
+
 const paymentMethodLabels: Record<PaymentMethod, string> = {
   [PaymentMethod.BANK_TRANSFER]: "Virement",
   [PaymentMethod.CHECK]: "Chèque",
@@ -167,7 +177,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
                     statusColors[invoice.status] || "bg-gray-100 text-gray-800"
                   }
                 >
-                  {invoice.status.replace("_", " ")}
+                  {statusLabels[invoice.status] ?? invoice.status.replace("_", " ")}
                 </Badge>
                 {isOverdue && (
                   <Badge className="bg-red-100 text-red-800">En retard</Badge>

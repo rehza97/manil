@@ -103,24 +103,24 @@ export function TemplateSelector({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileCode className="h-5 w-5" />
-            Apply DNS Template
+            Appliquer un modèle DNS
           </DialogTitle>
           <DialogDescription>
-            Choose a template to quickly set up DNS records for {zoneName}
+            Choisissez un modèle pour configurer rapidement les enregistrements DNS pour {zoneName}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Template Selection */}
           <div className="space-y-2">
-            <Label>Select Template</Label>
+            <Label>Choisir un modèle</Label>
             <Select
               value={selectedTemplateId}
               onValueChange={setSelectedTemplateId}
               disabled={isLoading}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Choose a template..." />
+                <SelectValue placeholder="Choisir un modèle…" />
               </SelectTrigger>
               <SelectContent>
                 {templates
@@ -148,7 +148,7 @@ export function TemplateSelector({
               onCheckedChange={(checked) => setReplaceExisting(checked as boolean)}
             />
             <Label htmlFor="replace" className="cursor-pointer text-sm">
-              Replace existing records (caution: this will delete non-system records)
+              Remplacer les enregistrements existants (attention : supprime les enregistrements non-système)
             </Label>
           </div>
 
@@ -158,7 +158,7 @@ export function TemplateSelector({
               <div className="flex items-center gap-2">
                 <Info className="h-4 w-4 text-muted-foreground" />
                 <h4 className="text-sm font-medium">
-                  Preview ({selectedTemplate.record_definitions?.length || 0} records)
+                  Aperçu ({selectedTemplate.record_definitions?.length || 0} enregistrements)
                 </h4>
               </div>
 
@@ -166,11 +166,11 @@ export function TemplateSelector({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
+                      <TableHead>Nom</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead>Value</TableHead>
+                      <TableHead>Valeur</TableHead>
                       <TableHead>TTL</TableHead>
-                      <TableHead>Priority</TableHead>
+                      <TableHead>Priorité</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -186,7 +186,7 @@ export function TemplateSelector({
                           {getPreviewValue(record.record_value)}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {record.ttl || "Default"}
+                          {record.ttl || "Défaut"}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {record.priority || "-"}
@@ -206,7 +206,7 @@ export function TemplateSelector({
                 <Alert>
                   <Info className="h-4 w-4" />
                   <AlertDescription className="text-sm">
-                    Template variables will be substituted:
+                    Les variables du modèle seront remplacées :
                     <ul className="mt-1 list-inside list-disc">
                       <li>
                         <code className="font-mono">{"{ZONE_NAME}"}</code> → {zoneName}
@@ -230,13 +230,13 @@ export function TemplateSelector({
             onClick={() => onOpenChange(false)}
             disabled={applyMutation.isPending}
           >
-            Cancel
+            Annuler
           </Button>
           <Button
             onClick={handleApply}
             disabled={!selectedTemplateId || applyMutation.isPending}
           >
-            {applyMutation.isPending ? "Applying..." : "Apply Template"}
+            {applyMutation.isPending ? "Application…" : "Appliquer le modèle"}
           </Button>
         </DialogFooter>
       </DialogContent>

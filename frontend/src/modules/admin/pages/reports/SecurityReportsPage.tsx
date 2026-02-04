@@ -76,15 +76,15 @@ export const SecurityReportsPage: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Shield className="h-8 w-8" />
-            Security Reports
+            Rapports de sécurité
           </h1>
           <p className="text-slate-600 mt-2">
-            Security events, threat analysis, and authentication activities.
+            Événements de sécurité, analyse des menaces et activités d&apos;authentification.
           </p>
         </div>
         <Alert>
           <AlertDescription>
-            No security report data available for the selected period.
+            Aucune donnée de rapport de sécurité pour la période sélectionnée.
           </AlertDescription>
         </Alert>
       </div>
@@ -99,10 +99,10 @@ export const SecurityReportsPage: React.FC = () => {
       <div>
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <Shield className="h-8 w-8" />
-          Security Reports
+          Rapports de sécurité
         </h1>
         <p className="text-slate-600 mt-2">
-          Security events, threat analysis, and authentication activities.
+          Événements de sécurité, analyse des menaces et activités d&apos;authentification.
         </p>
       </div>
 
@@ -112,7 +112,7 @@ export const SecurityReportsPage: React.FC = () => {
         onFiltersChange={setFilters}
         onExport={handleExport}
         exportLoading={exportMutation.isPending}
-        searchPlaceholder="Search security events..."
+        searchPlaceholder="Rechercher des événements de sécurité..."
       />
 
       {/* Statistics Cards */}
@@ -134,21 +134,21 @@ export const SecurityReportsPage: React.FC = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Failed Logins</CardTitle>
+            <CardTitle className="text-sm font-medium">Échecs de connexion</CardTitle>
             <AlertTriangle className="h-4 w-4 text-red-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
               {reportData.failed_logins || 0}
             </div>
-            <p className="text-xs text-slate-500 mt-1">Failed attempts</p>
+            <p className="text-xs text-slate-500 mt-1">Tentatives échouées</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Successful Logins
+              Connexions réussies
             </CardTitle>
             <Lock className="h-4 w-4 text-green-400" />
           </CardHeader>
@@ -157,7 +157,7 @@ export const SecurityReportsPage: React.FC = () => {
               {reportData.successful_logins || 0}
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Successful authentications
+              Authentifications réussies
             </p>
           </CardContent>
         </Card>
@@ -165,7 +165,7 @@ export const SecurityReportsPage: React.FC = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Security Score
+              Score de sécurité
             </CardTitle>
             <TrendingDown className="h-4 w-4 text-slate-400" />
           </CardHeader>
@@ -180,7 +180,7 @@ export const SecurityReportsPage: React.FC = () => {
                 : "0.0"}
               %
             </div>
-            <p className="text-xs text-slate-500 mt-1">Success rate</p>
+            <p className="text-xs text-slate-500 mt-1">Taux de succès</p>
           </CardContent>
         </Card>
       </div>
@@ -190,9 +190,9 @@ export const SecurityReportsPage: React.FC = () => {
         {/* Security Events by Type */}
         <Card>
           <CardHeader>
-            <CardTitle>Security Events by Type</CardTitle>
+            <CardTitle>Événements de sécurité par type</CardTitle>
             <CardDescription>
-              Distribution of security event types
+              Répartition des types d&apos;événements de sécurité
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -208,7 +208,7 @@ export const SecurityReportsPage: React.FC = () => {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="count" fill="#ef4444" name="Event Count" />
+                <Bar dataKey="count" fill="#ef4444" name="Nombre d'événements" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -232,7 +232,7 @@ export const SecurityReportsPage: React.FC = () => {
                   type="monotone"
                   dataKey="count"
                   stroke="#ef4444"
-                  name="Security Events"
+                  name="Événements de sécurité"
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -266,7 +266,7 @@ export const SecurityReportsPage: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-bold">{ip.count}</p>
-                  <p className="text-xs text-slate-500">events</p>
+                  <p className="text-xs text-slate-500">événements</p>
                 </div>
               </div>
             ))}
@@ -279,8 +279,8 @@ export const SecurityReportsPage: React.FC = () => {
         reportData.suspicious_activities.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Suspicious Activities</CardTitle>
-              <CardDescription>Activities requiring attention</CardDescription>
+              <CardTitle>Activités suspectes</CardTitle>
+              <CardDescription>Activités nécessitant une attention</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -305,7 +305,7 @@ export const SecurityReportsPage: React.FC = () => {
                         </p>
                       </div>
                       <Button variant="outline" size="sm">
-                        Investigate
+                        Examiner
                       </Button>
                     </div>
                   </div>

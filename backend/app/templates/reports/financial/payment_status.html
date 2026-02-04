@@ -1,0 +1,44 @@
+{% extends "reports/base_report.html" %}
+
+{% block summary %}
+  <div class="executive-summary">
+    <div class="kpi-card">
+      <div class="kpi-value">{{ total_amount | format_currency }}</div>
+      <div class="kpi-label">Total Amount</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ by_status | length }}</div>
+      <div class="kpi-label">Status Types</div>
+    </div>
+  </div>
+  {% if by_status is defined and (by_status | length) == 0 %}
+  <p class="meta" style="margin-top: 12px; color: #666;">No invoice data in this period. Ensure seed data has been run and date range includes historical invoices.</p>
+  {% endif %}
+{% endblock %}
+
+{% block charts %}
+  {{ super() }}
+{% endblock %}
+
+{% block data %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Payment Status</th>
+          <th>Count</th>
+          <th>Total Amount (DZD)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in by_status or [] %}
+        <tr>
+          <td>{{ row.status | upper }}</td>
+          <td>{{ row.count }}</td>
+          <td>{{ row.amount | format_currency }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

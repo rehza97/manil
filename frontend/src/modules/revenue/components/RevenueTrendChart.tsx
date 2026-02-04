@@ -31,7 +31,7 @@ interface RevenueTrendChartProps {
 
 export const RevenueTrendChart: React.FC<RevenueTrendChartProps> = ({
   data,
-  title = "Revenue Trends",
+  title = "Tendances du chiffre d'affaires",
   height = 300,
   showRecognized = true,
   showBooked = true,
@@ -58,7 +58,7 @@ export const RevenueTrendChart: React.FC<RevenueTrendChartProps> = ({
                 type="monotone"
                 dataKey="recognized_revenue"
                 stroke="#10B981"
-                name="Recognized Revenue"
+                name="CA reconnu"
                 strokeWidth={2}
               />
             )}
@@ -67,7 +67,7 @@ export const RevenueTrendChart: React.FC<RevenueTrendChartProps> = ({
                 type="monotone"
                 dataKey="booked_revenue"
                 stroke="#3B82F6"
-                name="Booked Revenue"
+                name="CA comptabilisé"
                 strokeWidth={2}
               />
             )}
@@ -85,7 +85,7 @@ export const RevenueTrendChart: React.FC<RevenueTrendChartProps> = ({
                 type="monotone"
                 dataKey="total_revenue"
                 stroke="#F59E0B"
-                name="Total Revenue"
+                name="CA total"
                 strokeWidth={2}
               />
             )}

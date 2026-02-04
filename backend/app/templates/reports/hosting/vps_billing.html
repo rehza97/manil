@@ -1,0 +1,41 @@
+{% extends "reports/base_report.html" %}
+
+{% block summary %}
+  <div class="executive-summary">
+    <div class="kpi-card">
+      <div class="kpi-value">{{ mrr | format_currency }}</div>
+      <div class="kpi-label">Monthly Recurring Revenue (MRR)</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ details | length }}</div>
+      <div class="kpi-label">Active Subscriptions</div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block charts %}
+  {{ super() }}
+{% endblock %}
+
+{% block data %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Subscription ID</th>
+          <th>Plan</th>
+          <th>Monthly Price (DZD)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in details or [] %}
+        <tr>
+          <td>{{ row.subscription_id }}</td>
+          <td>{{ row.plan_name }}</td>
+          <td>{{ row.monthly_price | format_currency }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

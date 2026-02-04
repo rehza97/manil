@@ -509,9 +509,9 @@ export function OrderDetail() {
                               {entry.previous_status && entry.new_status ? (
                                 <>
                                   Statut :{" "}
-                                  <Badge variant="outline">{entry.previous_status}</Badge> →{" "}
+                                  <Badge variant="outline">{STATUS_LABELS[entry.previous_status as OrderStatus]}</Badge> →{" "}
                                   <Badge className={STATUS_COLORS[entry.new_status as OrderStatus]}>
-                                    {entry.new_status}
+                                    {STATUS_LABELS[entry.new_status as OrderStatus]}
                                   </Badge>
                                 </>
                               ) : (

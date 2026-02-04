@@ -84,13 +84,13 @@ export const SMSConfigPage: React.FC = () => {
     try {
       const result = await settingsService.testSMSConfig();
       if (result.success) {
-        toast.success("SMS configuration test successful!");
+        toast.success("Test de la configuration SMS réussi !");
       } else {
-        toast.error(result.message || "SMS test failed");
+        toast.error(result.message || "Échec du test SMS");
       }
     } catch (error: any) {
       toast.error(
-        error?.response?.data?.message || "Failed to test SMS configuration"
+        error?.response?.data?.message || "Échec du test de la configuration SMS"
       );
     } finally {
       setTesting(false);
@@ -111,17 +111,16 @@ export const SMSConfigPage: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <MessageSquare className="h-8 w-8" />
-            SMS Configuration
+            Configuration SMS
           </h1>
           <p className="text-slate-600 mt-2">
-            Configure SMS provider settings and sending limits.
+            Configurer le fournisseur SMS et les limites d'envoi.
           </p>
         </div>
 
         <Alert>
           <AlertDescription>
-            SMS configuration settings are not yet available. This feature will
-            be available in a future update.
+            Les paramètres de configuration SMS ne sont pas encore disponibles. Cette fonctionnalité sera disponible dans une prochaine mise à jour.
           </AlertDescription>
         </Alert>
       </div>
@@ -143,7 +142,7 @@ export const SMSConfigPage: React.FC = () => {
       <Alert className="mb-6">
         <Info className="h-4 w-4" />
         <AlertDescription>
-          <strong>Custom Gateway:</strong> When using the "custom" provider, SMS messages are queued 
+          <strong>Passerelle personnalisée :</strong> Avec le fournisseur « custom », les SMS sont mis en file 
           in the database and sent via the Flutter SMS Gateway app running on a mobile device. 
           The app polls for pending messages and sends them using the device's native SMS capabilities. 
           No external SMS service credentials are required.{" "}
@@ -159,9 +158,9 @@ export const SMSConfigPage: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>SMS Provider Settings</CardTitle>
+          <CardTitle>Paramètres du fournisseur SMS</CardTitle>
           <CardDescription>
-            Configure your SMS service provider (Custom Gateway, Twilio, Infobip)
+            Configurer votre fournisseur de SMS (passerelle personnalisée, Twilio, Infobip)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -180,7 +179,7 @@ export const SMSConfigPage: React.FC = () => {
                   className="text-xs"
                 >
                   <RefreshCw className="h-3 w-3 mr-1" />
-                  Reset
+                  Réinitialiser
                 </Button>
               )}
             </div>
@@ -193,12 +192,12 @@ export const SMSConfigPage: React.FC = () => {
           {testing ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Testing...
+              Test en cours…
             </>
           ) : (
             <>
               <TestTube className="mr-2 h-4 w-4" />
-              Test Configuration
+              Tester la configuration
             </>
           )}
         </Button>
@@ -210,12 +209,12 @@ export const SMSConfigPage: React.FC = () => {
           {updateMutation.isPending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
+              Enregistrement…
             </>
           ) : (
             <>
               <Save className="mr-2 h-4 w-4" />
-              Save Changes
+              Enregistrer les modifications
             </>
           )}
         </Button>

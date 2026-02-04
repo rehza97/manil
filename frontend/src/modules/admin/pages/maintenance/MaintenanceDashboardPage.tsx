@@ -42,7 +42,7 @@ export const MaintenanceDashboardPage: React.FC = () => {
         <Card>
           <CardContent className="pt-6">
             <p className="text-muted-foreground">
-              No maintenance statistics available.
+              Aucune statistique de maintenance disponible.
             </p>
           </CardContent>
         </Card>
@@ -52,29 +52,29 @@ export const MaintenanceDashboardPage: React.FC = () => {
 
   const quickActions = [
     {
-      title: "Backup Management",
-      description: "Create and restore database backups",
+      title: "Gestion des sauvegardes",
+      description: "Créer et restaurer les sauvegardes de la base",
       icon: Database,
       link: "/admin/maintenance/backup",
       count: stats.backup_count,
     },
     {
-      title: "Cache Management",
-      description: "Monitor and clear system cache",
+      title: "Gestion du cache",
+      description: "Surveiller et vider le cache système",
       icon: RefreshCw,
       link: "/admin/maintenance/cache",
-      stats: `${stats.cache_stats.total_keys} keys`,
+      stats: `${stats.cache_stats.total_keys} clés`,
     },
     {
-      title: "Data Cleanup",
-      description: "Remove old and unused data",
+      title: "Nettoyage des données",
+      description: "Supprimer les données anciennes et inutilisées",
       icon: Trash2,
       link: "/admin/maintenance/cleanup",
-      stats: `${stats.cleanup_stats.old_audit_logs} items`,
+      stats: `${stats.cleanup_stats.old_audit_logs} éléments`,
     },
     {
-      title: "Database Migrations",
-      description: "Manage database schema versions",
+      title: "Migrations base de données",
+      description: "Gérer les versions du schéma de la base",
       icon: HardDrive,
       link: "/admin/maintenance/migrations",
       stats: `${stats.migration_count} migrations`,
@@ -84,9 +84,9 @@ export const MaintenanceDashboardPage: React.FC = () => {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">System Maintenance</h1>
+        <h1 className="text-3xl font-bold">Maintenance système</h1>
         <p className="text-muted-foreground mt-2">
-          Overview of system maintenance operations and tools
+          Vue d&apos;ensemble des opérations et outils de maintenance
         </p>
       </div>
 
@@ -94,7 +94,7 @@ export const MaintenanceDashboardPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Backups</CardTitle>
+            <CardTitle className="text-sm font-medium">Sauvegardes</CardTitle>
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -104,14 +104,14 @@ export const MaintenanceDashboardPage: React.FC = () => {
                 ? `Latest: ${new Date(
                     stats.latest_backup
                   ).toLocaleDateString()}`
-                : "No backups"}
+                : "Aucune sauvegarde"}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cache Keys</CardTitle>
+            <CardTitle className="text-sm font-medium">Clés cache</CardTitle>
             <RefreshCw className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -126,7 +126,7 @@ export const MaintenanceDashboardPage: React.FC = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cleanup Items</CardTitle>
+            <CardTitle className="text-sm font-medium">Éléments à nettoyer</CardTitle>
             <Trash2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -135,7 +135,7 @@ export const MaintenanceDashboardPage: React.FC = () => {
                 stats.cleanup_stats.soft_deleted_records}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Items ready for cleanup
+              Éléments prêts pour le nettoyage
             </p>
           </CardContent>
         </Card>
@@ -148,7 +148,7 @@ export const MaintenanceDashboardPage: React.FC = () => {
           <CardContent>
             <div className="text-2xl font-bold">{stats.migration_count}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Current: {stats.current_migration || "N/A"}
+              Actuelle : {stats.current_migration || "N/A"}
             </p>
           </CardContent>
         </Card>
@@ -157,9 +157,9 @@ export const MaintenanceDashboardPage: React.FC = () => {
       {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Maintenance Tools</CardTitle>
+          <CardTitle>Outils de maintenance</CardTitle>
           <CardDescription>
-            Access system maintenance operations and configurations
+            Accéder aux opérations et configurations de maintenance
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -186,7 +186,7 @@ export const MaintenanceDashboardPage: React.FC = () => {
                         <span className="text-sm text-muted-foreground">
                           {action.count !== undefined
                             ? `${action.count} ${
-                                action.count === 1 ? "item" : "items"
+                                action.count === 1 ? "élément" : "éléments"
                               }`
                             : action.stats}
                         </span>
@@ -204,24 +204,24 @@ export const MaintenanceDashboardPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle>Cache Statistics</CardTitle>
-            <CardDescription>Redis cache performance metrics</CardDescription>
+            <CardTitle>Statistiques du cache</CardTitle>
+            <CardDescription>Métriques de performance du cache Redis</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Total Keys</span>
+                <span className="text-sm font-medium">Clés totales</span>
                 <Badge variant="outline">{stats.cache_stats.total_keys}</Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Memory Used</span>
+                <span className="text-sm font-medium">Mémoire utilisée</span>
                 <Badge variant="outline">
                   {stats.cache_stats.memory_used_mb.toFixed(2)} MB
                 </Badge>
               </div>
               {stats.cache_stats.hit_rate !== null && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Hit Rate</span>
+                  <span className="text-sm font-medium">Taux de succès</span>
                   <Badge variant="outline">
                     {stats.cache_stats.hit_rate.toFixed(2)}%
                   </Badge>
@@ -233,27 +233,27 @@ export const MaintenanceDashboardPage: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Cleanup Statistics</CardTitle>
-            <CardDescription>Data ready for cleanup</CardDescription>
+            <CardTitle>Statistiques de nettoyage</CardTitle>
+            <CardDescription>Données prêtes pour le nettoyage</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Old Audit Logs</span>
+                <span className="text-sm font-medium">Anciens journaux d&apos;audit</span>
                 <Badge variant="outline">
                   {stats.cleanup_stats.old_audit_logs}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">
-                  Soft Deleted Records
+                  Enregistrements supprimés (soft)
                 </span>
                 <Badge variant="outline">
                   {stats.cleanup_stats.soft_deleted_records}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Old Backups</span>
+                <span className="text-sm font-medium">Anciennes sauvegardes</span>
                 <Badge variant="outline">
                   {stats.cleanup_stats.old_backups}
                 </Badge>

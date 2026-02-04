@@ -16,21 +16,21 @@ export const InvoiceEditPage: React.FC = () => {
 
   if (!id) {
     return (
-      <div className="text-center py-8 text-red-600">Invalid invoice ID</div>
+      <div className="text-center py-8 text-red-600">ID de facture invalide</div>
     );
   }
 
   if (isLoading) {
     return (
       <div className="text-center py-12">
-        <div className="text-slate-600">Loading invoice...</div>
+        <div className="text-slate-600">Chargement de la facture…</div>
       </div>
     );
   }
 
   if (!invoice) {
     return (
-      <div className="text-center py-8 text-red-600">Invoice not found</div>
+      <div className="text-center py-8 text-red-600">Facture introuvable</div>
     );
   }
 
@@ -50,15 +50,15 @@ export const InvoiceEditPage: React.FC = () => {
       {
         onSuccess: () => {
           toast({
-            title: "Success",
-            description: "Invoice updated successfully",
+            title: "Succès",
+            description: "Facture mise à jour avec succès",
           });
           navigate(`/dashboard/invoices/${id}`);
         },
         onError: (error: any) => {
           toast({
-            title: "Error",
-            description: error.message || "Failed to update invoice",
+            title: "Erreur",
+            description: error.message || "Échec de la mise à jour de la facture",
             variant: "destructive",
           });
         },
@@ -76,14 +76,14 @@ export const InvoiceEditPage: React.FC = () => {
           onClick={() => navigate(`/dashboard/invoices/${id}`)}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Invoice
+          Retour à la facture
         </Button>
       </div>
 
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Edit Invoice</h1>
+        <h1 className="text-3xl font-bold text-slate-900">Modifier la facture</h1>
         <p className="text-slate-600 mt-1">
-          Update invoice details and line items
+          Modifier les détails et les lignes de la facture
         </p>
       </div>
 

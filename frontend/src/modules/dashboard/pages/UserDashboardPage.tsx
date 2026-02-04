@@ -216,7 +216,7 @@ const UserDashboardPage: React.FC = () => {
             <div className="space-y-4">
               {recentOrders.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  No recent orders
+                  Aucune commande récente
                 </p>
               ) : (
                 recentOrders.map((order) => (

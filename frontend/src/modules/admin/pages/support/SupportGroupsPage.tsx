@@ -112,7 +112,7 @@ export const SupportGroupsPage: React.FC = () => {
   };
 
   const handleDelete = async (groupId: string) => {
-    if (window.confirm("Are you sure you want to delete this support group?")) {
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce groupe de support ?")) {
       await deleteMutation.mutateAsync(groupId);
     }
   };
@@ -136,16 +136,16 @@ export const SupportGroupsPage: React.FC = () => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Groups</CardTitle>
+              <CardTitle>Groupes</CardTitle>
               <CardDescription>
                 {filteredGroups.length}{" "}
-                {filteredGroups.length === 1 ? "group" : "groups"}
+                {filteredGroups.length === 1 ? "groupe" : "groupes"}
               </CardDescription>
             </div>
             <div className="relative w-64">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search groups..."
+                placeholder="Rechercher des groupes..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8"
@@ -167,10 +167,10 @@ export const SupportGroupsPage: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
+                  <TableHead>Nom</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead>Members</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Membres</TableHead>
+                  <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -190,7 +190,7 @@ export const SupportGroupsPage: React.FC = () => {
                       <Badge
                         variant={group.is_active ? "default" : "secondary"}
                       >
-                        {group.is_active ? "Active" : "Inactive"}
+                        {group.is_active ? "Actif" : "Inactif"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -227,21 +227,21 @@ export const SupportGroupsPage: React.FC = () => {
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Support Group</DialogTitle>
+            <DialogTitle>Créer un groupe de support</DialogTitle>
             <DialogDescription>
-              Create a new support group for organizing team members.
+              Créer un nouveau groupe de support pour organiser les membres de l&apos;équipe.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">Nom</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                placeholder="e.g., Technical Support"
+                placeholder="ex. Support technique"
               />
             </div>
             <div>
@@ -252,7 +252,7 @@ export const SupportGroupsPage: React.FC = () => {
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                placeholder="Group description..."
+                placeholder="Description du groupe..."
               />
             </div>
             <div className="flex items-center space-x-2">
@@ -263,7 +263,7 @@ export const SupportGroupsPage: React.FC = () => {
                   setFormData({ ...formData, is_active: checked })
                 }
               />
-              <Label htmlFor="is_active">Active</Label>
+              <Label htmlFor="is_active">Actif</Label>
             </div>
           </div>
           <DialogFooter>
@@ -271,7 +271,7 @@ export const SupportGroupsPage: React.FC = () => {
               variant="outline"
               onClick={() => setIsCreateDialogOpen(false)}
             >
-              Cancel
+              Annuler
             </Button>
             <Button
               onClick={handleCreate}
@@ -280,7 +280,7 @@ export const SupportGroupsPage: React.FC = () => {
               {createMutation.isPending && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
-              Create
+              Créer
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -290,14 +290,14 @@ export const SupportGroupsPage: React.FC = () => {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Support Group</DialogTitle>
+            <DialogTitle>Modifier le groupe de support</DialogTitle>
             <DialogDescription>
-              Update support group information.
+              Mettre à jour les informations du groupe de support.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-name">Name</Label>
+              <Label htmlFor="edit-name">Nom</Label>
               <Input
                 id="edit-name"
                 value={formData.name}
@@ -324,7 +324,7 @@ export const SupportGroupsPage: React.FC = () => {
                   setFormData({ ...formData, is_active: checked })
                 }
               />
-              <Label htmlFor="edit-is_active">Active</Label>
+              <Label htmlFor="edit-is_active">Actif</Label>
             </div>
           </div>
           <DialogFooter>
@@ -332,7 +332,7 @@ export const SupportGroupsPage: React.FC = () => {
               variant="outline"
               onClick={() => setIsEditDialogOpen(false)}
             >
-              Cancel
+              Annuler
             </Button>
             <Button
               onClick={handleUpdate}
@@ -341,7 +341,7 @@ export const SupportGroupsPage: React.FC = () => {
               {updateMutation.isPending && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
-              Update
+              Mettre à jour
             </Button>
           </DialogFooter>
         </DialogContent>

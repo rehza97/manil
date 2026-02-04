@@ -142,11 +142,11 @@ export default function DNSZoneDetailPage() {
       <div className="space-y-6">
         <Button variant="ghost" onClick={() => navigate("/admin/dns/zones")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to DNS Zones
+          Retour aux zones DNS
         </Button>
         <Alert variant="destructive">
           <AlertDescription>
-            DNS zone not found. It may have been deleted.
+            Zone DNS introuvable. Elle a peut-être été supprimée.
           </AlertDescription>
         </Alert>
       </div>
@@ -169,12 +169,12 @@ export default function DNSZoneDetailPage() {
             onClick={() => navigate("/admin/dns/zones")}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
+            Retour
           </Button>
           <div>
             <h1 className="text-3xl font-bold font-mono">{zone.zone_name}</h1>
             <p className="text-muted-foreground">
-              DNS Zone Details (Admin View)
+              Détails de la zone DNS (vue admin)
             </p>
           </div>
         </div>
@@ -182,7 +182,7 @@ export default function DNSZoneDetailPage() {
           {zone.status === "SUSPENDED" && (
             <Button variant="outline" onClick={handleActivateZone}>
               <Shield className="mr-2 h-4 w-4" />
-              Activate Zone
+              Activer la zone
             </Button>
           )}
           {zone.status === "ACTIVE" && (
@@ -191,12 +191,12 @@ export default function DNSZoneDetailPage() {
               onClick={() => setShowSuspendDialog(true)}
             >
               <Shield className="mr-2 h-4 w-4" />
-              Suspend Zone
+              Suspendre la zone
             </Button>
           )}
           <Button variant="outline" onClick={() => setShowDeleteDialog(true)}>
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete Zone
+            Supprimer la zone
           </Button>
         </div>
       </div>
@@ -206,9 +206,9 @@ export default function DNSZoneDetailPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Zone Information</CardTitle>
+              <CardTitle>Informations sur la zone</CardTitle>
               <CardDescription>
-                DNS zone configuration and status
+                Configuration et statut de la zone DNS
               </CardDescription>
             </div>
             <DNSStatusBadge status={zone.status} />
@@ -224,22 +224,22 @@ export default function DNSZoneDetailPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">
-                Zone Type
+                Type de zone
               </p>
               <p className="mt-1 text-sm">{zone.zone_type}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">
-                Default TTL
+                TTL par défaut
               </p>
-              <p className="mt-1 text-sm">{zone.ttl_default} seconds</p>
+              <p className="mt-1 text-sm">{zone.ttl_default} secondes</p>
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">
-                Records
+                Enregistrements
               </p>
               <p className="mt-1 text-sm">
-                {zone.record_count || records.length} records
+                {zone.record_count || records.length} enregistrement{(zone.record_count ?? records.length) !== 1 ? "s" : ""}
               </p>
             </div>
           </div>
@@ -250,22 +250,22 @@ export default function DNSZoneDetailPage() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
                   <Package className="h-3 w-3" />
-                  Subscription ID
+                  ID abonnement
                 </p>
                 <p className="mt-1 font-mono text-sm">{zone.subscription_id}</p>
               </div>
             )}
             <div>
               <p className="text-sm font-medium text-muted-foreground">
-                System Managed
+                Géré par le système
               </p>
               <p className="mt-1 text-sm">
-                {zone.is_system_managed ? "Yes" : "No"}
+                {zone.is_system_managed ? "Oui" : "Non"}
               </p>
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">
-                Created
+                Créé le
               </p>
               <p className="mt-1 text-sm">
                 {format(new Date(zone.created_at), "MMM d, yyyy HH:mm")}
@@ -273,7 +273,7 @@ export default function DNSZoneDetailPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">
-                Last Updated
+                Dernière mise à jour
               </p>
               <p className="mt-1 text-sm">
                 {format(new Date(zone.updated_at), "MMM d, yyyy HH:mm")}
@@ -292,9 +292,9 @@ export default function DNSZoneDetailPage() {
           {/* Nameservers */}
           {nameservers.length > 0 && (
             <div className="rounded-lg border bg-muted/50 p-4">
-              <h4 className="mb-2 text-sm font-medium">Nameservers</h4>
+              <h4 className="mb-2 text-sm font-medium">Serveurs de noms</h4>
               <p className="mb-2 text-xs text-muted-foreground">
-                Point your domain to these nameservers at your registrar:
+                Pointez votre domaine vers ces serveurs de noms chez votre bureau d&apos;enregistrement :
               </p>
               <div className="space-y-1">
                 {nameservers.map((ns, index) => (
@@ -311,8 +311,8 @@ export default function DNSZoneDetailPage() {
       {/* Tabs */}
       <Tabs defaultValue="records" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="records">DNS Records</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="records">Enregistrements DNS</TabsTrigger>
+          <TabsTrigger value="settings">Paramètres</TabsTrigger>
         </TabsList>
 
         {/* Records Tab */}
@@ -321,14 +321,14 @@ export default function DNSZoneDetailPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>DNS Records</CardTitle>
+                  <CardTitle>Enregistrements DNS</CardTitle>
                   <CardDescription>
-                    Manage DNS records for {zone.zone_name}
+                    Gérer les enregistrements DNS pour {zone.zone_name}
                   </CardDescription>
                 </div>
                 <Button onClick={() => setShowCreateDialog(true)}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Record
+                  Ajouter un enregistrement
                 </Button>
               </div>
             </CardHeader>
@@ -346,36 +346,36 @@ export default function DNSZoneDetailPage() {
         <TabsContent value="settings" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Zone Settings</CardTitle>
-              <CardDescription>Configure zone-level settings</CardDescription>
+              <CardTitle>Paramètres de la zone</CardTitle>
+              <CardDescription>Configurer les paramètres au niveau de la zone</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <h4 className="mb-2 text-sm font-medium">Default TTL</h4>
+                <h4 className="mb-2 text-sm font-medium">TTL par défaut</h4>
                 <p className="text-sm text-muted-foreground">
-                  New DNS records will use {zone.ttl_default} seconds as the
-                  default time-to-live value unless specified otherwise.
+                  Les nouveaux enregistrements DNS utiliseront {zone.ttl_default} secondes comme
+                  valeur TTL par défaut sauf indication contraire.
                 </p>
               </div>
               <div>
-                <h4 className="mb-2 text-sm font-medium">Zone Status</h4>
+                <h4 className="mb-2 text-sm font-medium">Statut de la zone</h4>
                 <div className="text-sm text-muted-foreground">
-                  This zone is currently <DNSStatusBadge status={zone.status} />
+                  Cette zone est actuellement <DNSStatusBadge status={zone.status} />
                   .
                   {zone.status === "ACTIVE" &&
-                    " All DNS records are being served by our nameservers."}
+                    " Tous les enregistrements DNS sont servis par nos serveurs de noms."}
                   {zone.status === "PENDING" &&
-                    " The zone is being provisioned and will be active shortly."}
+                    " La zone est en cours de provisionnement et sera bientôt active."}
                   {zone.status === "SUSPENDED" &&
-                    " This zone has been suspended and records are not being served."}
+                    " Cette zone a été suspendue et les enregistrements ne sont pas servis."}
                 </div>
               </div>
               <div>
-                <h4 className="mb-2 text-sm font-medium">Zone Type</h4>
+                <h4 className="mb-2 text-sm font-medium">Type de zone</h4>
                 <p className="text-sm text-muted-foreground">
                   {zone.zone_type === "FORWARD"
-                    ? "Forward zone - resolves domain names to IP addresses"
-                    : "Reverse zone - resolves IP addresses to domain names"}
+                    ? "Zone directe — résout les noms de domaine en adresses IP"
+                    : "Zone inverse — résout les adresses IP en noms de domaine"}
                 </p>
               </div>
             </CardContent>
@@ -384,9 +384,9 @@ export default function DNSZoneDetailPage() {
           {/* Danger Zone */}
           <Card className="border-destructive">
             <CardHeader>
-              <CardTitle className="text-destructive">Danger Zone</CardTitle>
+              <CardTitle className="text-destructive">Zone dangereuse</CardTitle>
               <CardDescription>
-                Irreversible and destructive actions
+                Actions irréversibles et destructives
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -394,11 +394,11 @@ export default function DNSZoneDetailPage() {
                 <div className="flex items-center justify-between rounded-lg border border-yellow-500/50 bg-yellow-500/5 p-4">
                   <div>
                     <h4 className="mb-1 text-sm font-medium">
-                      Suspend this zone
+                      Suspendre cette zone
                     </h4>
                     <p className="text-sm text-muted-foreground">
-                      Temporarily suspend DNS resolution for this zone. Records
-                      will not be served.
+                      Suspendre temporairement la résolution DNS pour cette zone. Les
+                      enregistrements ne seront pas servis.
                     </p>
                   </div>
                   <Button
@@ -406,16 +406,16 @@ export default function DNSZoneDetailPage() {
                     onClick={() => setShowSuspendDialog(true)}
                   >
                     <Shield className="mr-2 h-4 w-4" />
-                    Suspend Zone
+                    Suspendre la zone
                   </Button>
                 </div>
               )}
               <div className="flex items-center justify-between rounded-lg border border-destructive/50 bg-destructive/5 p-4">
                 <div>
-                  <h4 className="mb-1 text-sm font-medium">Delete this zone</h4>
+                  <h4 className="mb-1 text-sm font-medium">Supprimer cette zone</h4>
                   <p className="text-sm text-muted-foreground">
-                    This will permanently delete the zone and all its DNS
-                    records.
+                    Cela supprimera définitivement la zone et tous ses
+                    enregistrements DNS.
                   </p>
                 </div>
                 <Button
@@ -423,7 +423,7 @@ export default function DNSZoneDetailPage() {
                   onClick={() => setShowDeleteDialog(true)}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Zone
+                  Supprimer la zone
                 </Button>
               </div>
             </CardContent>
@@ -435,10 +435,10 @@ export default function DNSZoneDetailPage() {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Add DNS Record</DialogTitle>
+            <DialogTitle>Ajouter un enregistrement DNS</DialogTitle>
             <DialogDescription>
-              Create a new DNS record for {zone.zone_name}. Configure the record
-              type, name, and value.
+              Créer un nouvel enregistrement DNS pour {zone.zone_name}. Configurez le type,
+              le nom et la valeur de l&apos;enregistrement.
             </DialogDescription>
           </DialogHeader>
           <DNSRecordForm
@@ -453,19 +453,19 @@ export default function DNSZoneDetailPage() {
       <AlertDialog open={showSuspendDialog} onOpenChange={setShowSuspendDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Suspend DNS Zone?</AlertDialogTitle>
+            <AlertDialogTitle>Suspendre la zone DNS ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to suspend the zone{" "}
-              <span className="font-mono font-semibold">{zone.zone_name}</span>?
-              This will stop DNS resolution for all records in this zone.
+              Êtes-vous sûr de vouloir suspendre la zone{" "}
+              <span className="font-mono font-semibold">{zone.zone_name}</span> ?
+              La résolution DNS sera arrêtée pour tous les enregistrements de cette zone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="suspend-reason">Suspension Reason</Label>
+              <Label htmlFor="suspend-reason">Motif de suspension</Label>
               <Input
                 id="suspend-reason"
-                placeholder="Enter reason for suspension..."
+                placeholder="Saisir le motif de suspension…"
                 value={suspendReason}
                 onChange={(e) => setSuspendReason(e.target.value)}
               />
@@ -479,14 +479,14 @@ export default function DNSZoneDetailPage() {
                 setShowSuspendDialog(false);
               }}
             >
-              Cancel
+              Annuler
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleSuspendZone}
               disabled={suspendZoneMutation.isPending || !suspendReason.trim()}
               className="bg-yellow-600 text-white hover:bg-yellow-700"
             >
-              {suspendZoneMutation.isPending ? "Suspending..." : "Suspend Zone"}
+              {suspendZoneMutation.isPending ? "Suspension…" : "Suspendre la zone"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -496,25 +496,25 @@ export default function DNSZoneDetailPage() {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete DNS Zone?</AlertDialogTitle>
+            <AlertDialogTitle>Supprimer la zone DNS ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the zone{" "}
-              <span className="font-mono font-semibold">{zone.zone_name}</span>?
-              This will permanently delete the zone and all{" "}
-              {zone.record_count || records.length} DNS records. This action
-              cannot be undone.
+              Êtes-vous sûr de vouloir supprimer la zone{" "}
+              <span className="font-mono font-semibold">{zone.zone_name}</span> ?
+              Cela supprimera définitivement la zone et les{" "}
+              {zone.record_count || records.length} enregistrement(s) DNS. Cette action
+              est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteZoneMutation.isPending}>
-              Cancel
+              Annuler
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteZone}
               disabled={deleteZoneMutation.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteZoneMutation.isPending ? "Deleting..." : "Delete Zone"}
+              {deleteZoneMutation.isPending ? "Suppression…" : "Supprimer la zone"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -54,6 +54,19 @@ class RevenueService:
             start_date=start_date, end_date=end_date, customer_id=customer_id
         )
 
+    async def get_recurring_revenue(
+        self,
+        customer_id: Optional[str] = None,
+        as_of_date: Optional[datetime] = None,
+    ) -> Decimal:
+        """
+        MRR from active VPS subscriptions.
+        When as_of_date is provided, returns MRR as of that date; otherwise current MRR.
+        """
+        return await self.repository.get_recurring_revenue(
+            customer_id=customer_id, as_of_date=as_of_date
+        )
+
     async def get_overview(
         self,
         period: str = "month",
@@ -105,9 +118,11 @@ class RevenueService:
 
         # Calculate previous month properly
         if current_month.month == 1:
-            previous_month = current_month.replace(year=current_month.year - 1, month=12, day=1)
+            previous_month = current_month.replace(
+                year=current_month.year - 1, month=12, day=1)
         else:
-            previous_month = current_month.replace(month=current_month.month - 1, day=1)
+            previous_month = current_month.replace(
+                month=current_month.month - 1, day=1)
         previous_month_revenue = await self.repository.get_monthly_revenue(
             month=previous_month,
             customer_id=customer_id
@@ -116,7 +131,8 @@ class RevenueService:
         # Calculate growth percentage
         if previous_month_revenue > 0:
             revenue_growth = float(
-                ((monthly_revenue - previous_month_revenue) / previous_month_revenue) * 100
+                ((monthly_revenue - previous_month_revenue) /
+                 previous_month_revenue) * 100
             )
         elif monthly_revenue > 0:
             revenue_growth = 100.0  # First month with revenue
@@ -135,7 +151,7 @@ class RevenueService:
 
         # Validate metrics
         validation_warnings = self.validate_revenue_metrics(metrics)
-        
+
         # Detect anomalies by comparing with previous month
         previous_metrics = RevenueMetrics(
             total_revenue=previous_month_revenue,
@@ -147,12 +163,13 @@ class RevenueService:
             revenue_growth=0.0,
         )
         anomalies = self.detect_revenue_anomalies(metrics, previous_metrics)
-        
+
         # Log validation warnings and anomalies (anomalies at INFO so they are not treated as errors)
         if validation_warnings or anomalies:
             from app.core.logging import logger
             if validation_warnings:
-                logger.warning(f"Revenue validation warnings: {validation_warnings}")
+                logger.warning(
+                    f"Revenue validation warnings: {validation_warnings}")
             if anomalies:
                 logger.info(f"Revenue anomalies detected: {anomalies}")
 
@@ -204,6 +221,22 @@ class RevenueService:
             data=data_points
         )
 
+    async def get_trends_for_range(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        group_by: str = "day",
+    ) -> List[dict]:
+        """
+        Get revenue trends for a custom date range (for reports).
+        Returns list of dicts with date, recognized_revenue, booked_revenue, recurring_revenue, total_revenue.
+        """
+        return await self.repository.get_revenue_trends(
+            start_date=start_date,
+            end_date=end_date,
+            group_by=group_by
+        )
+
     async def get_by_category(
         self,
         period: str = "month",
@@ -229,7 +262,8 @@ class RevenueService:
 
         categories = [
             CategoryRevenue(
-                category=RevenueCategory(item["category"]) if item["category"] in [e.value for e in RevenueCategory] else RevenueCategory.OTHER,
+                category=RevenueCategory(item["category"]) if item["category"] in [
+                    e.value for e in RevenueCategory] else RevenueCategory.OTHER,
                 revenue=item["revenue"],
                 percentage=item["percentage"],
                 count=item["count"],
@@ -285,6 +319,22 @@ class RevenueService:
             period=period,
             total_revenue=total_revenue,
             customers=customers,
+            limit=limit
+        )
+
+    async def get_by_customer_for_range(
+        self,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        limit: int = 10,
+    ) -> List[dict]:
+        """
+        Get revenue by customer for a custom date range (for reports).
+        Returns list of dicts with customer_id, customer_name, revenue, invoice_count, etc.
+        """
+        return await self.repository.get_revenue_by_customer(
+            start_date=start_date,
+            end_date=end_date,
             limit=limit
         )
 
@@ -361,9 +411,11 @@ class RevenueService:
 
         # Check for unrealistic growth (more than 1000% or less than -100%)
         if metrics.revenue_growth > 1000:
-            warnings.append(f"Unusually high revenue growth: {metrics.revenue_growth:.2f}%")
+            warnings.append(
+                f"Unusually high revenue growth: {metrics.revenue_growth:.2f}%")
         elif metrics.revenue_growth < -100:
-            warnings.append(f"Revenue growth below -100%: {metrics.revenue_growth:.2f}%")
+            warnings.append(
+                f"Revenue growth below -100%: {metrics.revenue_growth:.2f}%")
 
         return warnings
 
@@ -374,23 +426,24 @@ class RevenueService:
     ) -> List[str]:
         """
         Detect revenue anomalies by comparing with historical data.
-        
+
         Args:
             current_metrics: Current period revenue metrics
             historical_metrics: Previous period metrics for comparison
-            
+
         Returns:
             List of detected anomalies
         """
         anomalies = []
-        
+
         if historical_metrics is None:
             return anomalies
-        
+
         # Detect sudden drops (more than 50% decrease)
         if historical_metrics.monthly_revenue > 0:
             drop_percentage = (
-                (float(historical_metrics.monthly_revenue) - float(current_metrics.monthly_revenue))
+                (float(historical_metrics.monthly_revenue) -
+                 float(current_metrics.monthly_revenue))
                 / float(historical_metrics.monthly_revenue)
                 * 100
             )
@@ -399,11 +452,12 @@ class RevenueService:
                     f"Significant revenue drop detected: {drop_percentage:.2f}% decrease "
                     f"from {historical_metrics.monthly_revenue} to {current_metrics.monthly_revenue}"
                 )
-        
+
         # Detect sudden spikes (more than 200% increase)
         if historical_metrics.monthly_revenue > 0:
             increase_percentage = (
-                (float(current_metrics.monthly_revenue) - float(historical_metrics.monthly_revenue))
+                (float(current_metrics.monthly_revenue) -
+                 float(historical_metrics.monthly_revenue))
                 / float(historical_metrics.monthly_revenue)
                 * 100
             )
@@ -412,17 +466,18 @@ class RevenueService:
                     f"Unusual revenue spike detected: {increase_percentage:.2f}% increase "
                     f"from {historical_metrics.monthly_revenue} to {current_metrics.monthly_revenue}"
                 )
-        
+
         # Detect if deferred revenue is unusually high compared to recognized revenue.
         # Only flag when total revenue is above threshold to avoid noise in dev/demo/small data.
         REVENUE_ANOMALY_THRESHOLD = Decimal("1000")
         if current_metrics.total_revenue >= REVENUE_ANOMALY_THRESHOLD:
-            deferred_ratio = float(current_metrics.deferred_revenue) / float(current_metrics.total_revenue)
+            deferred_ratio = float(
+                current_metrics.deferred_revenue) / float(current_metrics.total_revenue)
             if deferred_ratio > 0.5:  # More than 50% deferred
                 anomalies.append(
                     f"High deferred revenue ratio: {deferred_ratio:.2%} of total revenue is deferred"
                 )
-        
+
         return anomalies
 
     def _get_period_start_date(self, period: str, end_date: datetime) -> datetime:
@@ -430,7 +485,7 @@ class RevenueService:
         # Ensure timezone-aware datetime
         if end_date.tzinfo is None:
             end_date = end_date.replace(tzinfo=timezone.utc)
-            
+
         if period == "today":
             return end_date.replace(hour=0, minute=0, second=0, microsecond=0)
         elif period == "week":

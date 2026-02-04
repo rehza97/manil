@@ -15,10 +15,10 @@ export const SystemSettingsPage: React.FC = () => {
       <div>
         <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
           <Settings className="h-8 w-8" />
-          System Settings
+          Paramètres système
         </h1>
         <p className="text-gray-600 mt-1">
-          Configure system-wide settings and preferences across all categories
+          Configurer les paramètres et préférences système pour toutes les catégories
         </p>
       </div>
 

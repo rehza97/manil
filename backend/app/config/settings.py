@@ -130,6 +130,10 @@ class Settings(BaseSettings):
     # - dind: always use Docker-in-Docker inside the VPS (builds happen inside the VPS container)
     VPS_DOCKER_ENGINE_MODE: str = "auto"
 
+    # Tax rates (TVA 19%, TAP 0.5% - Algeria)
+    DEFAULT_TVA_RATE: float = 0.19
+    DEFAULT_TAP_RATE: float = 0.005
+
     # Pagination
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100

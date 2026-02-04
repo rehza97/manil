@@ -1,0 +1,39 @@
+{% extends "reports/base_report.html" %}
+
+{% block summary %}
+  <div class="executive-summary">
+    <div class="kpi-card">
+      <div class="kpi-value">{{ by_action | length }}</div>
+      <div class="kpi-label">Action Types</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ by_action | sum(attribute='count') if by_action else 0 }}</div>
+      <div class="kpi-label">Total Events</div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block charts %}
+  {{ super() }}
+{% endblock %}
+
+{% block data %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Action Type</th>
+          <th>Event Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in by_action or [] %}
+        <tr>
+          <td>{{ row.action }}</td>
+          <td>{{ row.count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

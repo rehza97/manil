@@ -72,12 +72,12 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Invoice #</TableHead>
-            <TableHead>Customer</TableHead>
-            <TableHead>Amount</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Issue Date</TableHead>
-            <TableHead>Due Date</TableHead>
+            <TableHead>N° facture</TableHead>
+            <TableHead>Client</TableHead>
+            <TableHead>Montant</TableHead>
+            <TableHead>Statut</TableHead>
+            <TableHead>Date d'émission</TableHead>
+            <TableHead>Date d'échéance</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -85,7 +85,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
           {invoices.length === 0 ? (
             <TableRow>
               <TableCell colSpan={7} className="text-center py-8 text-slate-500">
-                No invoices found
+                Aucune facture trouvée
               </TableCell>
             </TableRow>
           ) : (
@@ -124,7 +124,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                       isOverdue(invoice) ? "text-red-600 font-medium" : ""
                     }
                   >
-                    {format(new Date(invoice.due_date), "MMM dd, yyyy")}
+                    {format(new Date(invoice.due_date), "dd MMM yyyy")}
                   </span>
                 </TableCell>
                 <TableCell className="text-right">

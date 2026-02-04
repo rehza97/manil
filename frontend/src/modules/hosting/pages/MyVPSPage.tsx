@@ -108,7 +108,7 @@ export const MyVPSPage: React.FC = () => {
             </SelectItem>
             <SelectItem value={SubscriptionStatus.ACTIVE}>Active</SelectItem>
             <SelectItem value={SubscriptionStatus.SUSPENDED}>Suspended</SelectItem>
-            <SelectItem value={SubscriptionStatus.CANCELLED}>Cancelled</SelectItem>
+            <SelectItem value={SubscriptionStatus.CANCELLED}>Annulé</SelectItem>
             <SelectItem value={SubscriptionStatus.TERMINATED}>Terminated</SelectItem>
           </SelectContent>
         </Select>

@@ -36,13 +36,13 @@ export const AuditLogsPage: React.FC = () => {
       const res = await adminLogsApi.exportAuditLogs(format);
       await downloadMutation.mutateAsync(res.file_name);
       toast({
-        title: "Export successful",
-        description: `Audit logs exported (${format.toUpperCase()}).`,
+        title: "Export réussi",
+        description: `Journaux d'audit exportés (${format.toUpperCase()}).`,
       });
     } catch (err) {
       toast({
-        title: "Export failed",
-        description: err instanceof Error ? err.message : "Failed to export audit logs",
+        title: "Échec de l'export",
+        description: err instanceof Error ? err.message : "Échec de l'export des journaux d'audit",
         variant: "destructive",
       });
     }
@@ -75,12 +75,12 @@ export const AuditLogsPage: React.FC = () => {
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="flex items-center gap-2" disabled={downloadMutation.isPending}>
               <Download className="w-4 h-4" />
-              {downloadMutation.isPending ? "Exporting..." : "Export Logs"}
+              {downloadMutation.isPending ? "Export en cours…" : "Exporter les journaux"}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleExport("csv")}>Export CSV</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleExport("excel")}>Export Excel</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExport("csv")}>Exporter CSV</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExport("excel")}>Exporter Excel</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -126,22 +126,22 @@ export const AuditLogsPage: React.FC = () => {
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Timestamp
+                  Date et heure
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
+                  Utilisateur
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Action
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Resource
+                  Ressource
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  IP Address
+                  Adresse IP
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Details
+                  Détails
                 </th>
               </tr>
             </thead>
@@ -152,7 +152,7 @@ export const AuditLogsPage: React.FC = () => {
                     colSpan={6}
                     className="px-6 py-4 text-center text-gray-500"
                   >
-                    Loading audit logs...
+                    Chargement des journaux d'audit…
                   </td>
                 </tr>
               ) : data?.data.length === 0 ? (
@@ -161,7 +161,7 @@ export const AuditLogsPage: React.FC = () => {
                     colSpan={6}
                     className="px-6 py-4 text-center text-gray-500"
                   >
-                    No audit logs found
+                    Aucun journal d'audit trouvé
                   </td>
                 </tr>
               ) : (
@@ -207,8 +207,8 @@ export const AuditLogsPage: React.FC = () => {
         {data && data.total > 50 && (
           <div className="px-6 py-4 border-t flex items-center justify-between">
             <div className="text-sm text-gray-500">
-              Showing {(page - 1) * 50 + 1} to {Math.min(page * 50, data.total)}{" "}
-              of {data.total} logs
+              Affichage de {(page - 1) * 50 + 1} à {Math.min(page * 50, data.total)}{" "}
+              sur {data.total} enregistrements
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -217,10 +217,10 @@ export const AuditLogsPage: React.FC = () => {
                 onClick={() => setPage(page - 1)}
                 disabled={page === 1}
               >
-                Previous
+                Précédent
               </Button>
               <span className="text-sm text-gray-600">
-                Page {page} of {Math.ceil(data.total / 50)}
+                Page {page} sur {Math.ceil(data.total / 50)}
               </span>
               <Button
                 variant="outline"
@@ -228,7 +228,7 @@ export const AuditLogsPage: React.FC = () => {
                 onClick={() => setPage(page + 1)}
                 disabled={page * 50 >= data.total}
               >
-                Next
+                Suivant
               </Button>
             </div>
           </div>

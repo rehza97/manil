@@ -1,0 +1,39 @@
+{% extends "reports/base_report.html" %}
+
+{% block summary %}
+  <div class="executive-summary">
+    <div class="kpi-card">
+      <div class="kpi-value">{{ agents | length }}</div>
+      <div class="kpi-label">Active Agents</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ agents | sum(attribute='ticket_count') if agents else 0 }}</div>
+      <div class="kpi-label">Total Tickets</div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block charts %}
+  {{ super() }}
+{% endblock %}
+
+{% block data %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Agent ID</th>
+          <th>Ticket Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for agent in agents or [] %}
+        <tr>
+          <td>{{ agent.agent_id }}</td>
+          <td>{{ agent.ticket_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

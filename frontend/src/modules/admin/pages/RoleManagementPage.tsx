@@ -133,7 +133,7 @@ export const RoleManagementPage: React.FC = () => {
   };
 
   const handleDeleteRole = async (roleId: string, roleName: string) => {
-    if (window.confirm(`Are you sure you want to delete the role "${roleName}"? This action cannot be undone.`)) {
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer le rôle « ${roleName} » ? Cette action est irréversible.`)) {
       try {
         await deleteRole.mutateAsync(roleId);
       } catch (error) {
@@ -146,7 +146,7 @@ export const RoleManagementPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        <span className="ml-2 text-gray-500">Loading roles...</span>
+        <span className="ml-2 text-gray-500">Chargement des rôles…</span>
       </div>
     );
   }
@@ -157,10 +157,10 @@ export const RoleManagementPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
-            Role & Permissions
+            Rôles et permissions
           </h1>
           <p className="text-gray-600 mt-1">
-            Manage user roles and their associated permissions
+            Gérer les rôles utilisateur et leurs permissions associées
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -170,14 +170,14 @@ export const RoleManagementPage: React.FC = () => {
             onClick={() => setShowMatrix(true)}
           >
             <Table2 className="w-4 h-4" />
-            View Matrix
+            Voir la matrice
           </Button>
           <Button
             className="flex items-center gap-2"
             onClick={() => navigate("/admin/roles/new")}
           >
             <Plus className="w-4 h-4" />
-            Create Role
+            Créer un rôle
           </Button>
         </div>
       </div>
@@ -189,7 +189,7 @@ export const RoleManagementPage: React.FC = () => {
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
-              placeholder="Search roles by name or description..."
+              placeholder="Rechercher par nom ou description…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -198,10 +198,10 @@ export const RoleManagementPage: React.FC = () => {
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
             <SelectTrigger className="w-[200px]">
               <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Filter by category" />
+              <SelectValue placeholder="Filtrer par catégorie" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="all">Toutes les catégories</SelectItem>
               {permissionCategories.map((cat) => (
                 <SelectItem key={cat} value={cat}>
                   {cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -224,12 +224,12 @@ export const RoleManagementPage: React.FC = () => {
                   </h3>
                   {role.is_system && (
                     <Badge className="bg-blue-100 text-blue-800">
-                      System Role
+                      Rôle système
                     </Badge>
                   )}
                   {!role.is_active && (
                     <Badge className="bg-gray-100 text-gray-800">
-                      Inactive
+                      Inactif
                     </Badge>
                   )}
                 </div>
@@ -241,14 +241,14 @@ export const RoleManagementPage: React.FC = () => {
                 {role.parent_role_id && (
                   <div className="mb-2">
                     <Badge variant="outline" className="text-xs">
-                      Child of: {roles.find((r) => r.id === role.parent_role_id)?.name || "Unknown"}
+                      Enfant de : {roles.find((r) => r.id === role.parent_role_id)?.name || "Inconnu"}
                     </Badge>
                   </div>
                 )}
                 {roleHierarchy.childMap.has(role.id) && (
                   <div className="mb-2">
                     <Badge variant="outline" className="text-xs">
-                      Parent to: {roleHierarchy.childMap.get(role.id)!.length} role(s)
+                      Parent de : {roleHierarchy.childMap.get(role.id)!.length} rôle(s)
                     </Badge>
                   </div>
                 )}
@@ -276,7 +276,7 @@ export const RoleManagementPage: React.FC = () => {
                       ))}
                       {role.permissions.length > 10 && (
                         <Badge variant="outline" className="text-xs">
-                          +{role.permissions.length - 10} more
+                          +{role.permissions.length - 10} autres
                         </Badge>
                       )}
                     </div>
@@ -293,7 +293,7 @@ export const RoleManagementPage: React.FC = () => {
                   className="flex items-center gap-1"
                 >
                   <Edit className="w-3 h-3" />
-                  Edit
+                  Modifier
                 </Button>
                 {!role.is_system && (
                   <Button
@@ -304,7 +304,7 @@ export const RoleManagementPage: React.FC = () => {
                     className="flex items-center gap-1 text-red-600 hover:text-red-700"
                   >
                     <Trash2 className="w-3 h-3" />
-                    {deleteRole.isPending ? "Deleting..." : "Delete"}
+                    {deleteRole.isPending ? "Suppression…" : "Supprimer"}
                   </Button>
                 )}
               </div>
@@ -318,12 +318,12 @@ export const RoleManagementPage: React.FC = () => {
         <Card className="p-12 text-center">
           <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            No roles found
+            Aucun rôle trouvé
           </h3>
           <p className="text-gray-500">
             {searchQuery
-              ? "No roles match your search criteria."
-              : "No roles available."}
+              ? "Aucun rôle ne correspond à votre recherche."
+              : "Aucun rôle disponible."}
           </p>
         </Card>
       )}
@@ -332,9 +332,9 @@ export const RoleManagementPage: React.FC = () => {
       <Dialog open={showMatrix} onOpenChange={setShowMatrix}>
         <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Permission Matrix</DialogTitle>
+            <DialogTitle>Matrice des permissions</DialogTitle>
             <DialogDescription>
-              Visual overview of all permissions assigned to each role
+              Aperçu visuel de toutes les permissions attribuées à chaque rôle
             </DialogDescription>
           </DialogHeader>
           <PermissionMatrix onClose={() => setShowMatrix(false)} />

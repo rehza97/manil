@@ -105,14 +105,14 @@ export function VPSControlPanel({
             disabled={!canStart || isLoading}
             variant="default"
             className="flex-1 min-w-[100px]"
-            aria-label="Start container"
+            aria-label="Démarrer le conteneur"
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Play className="h-4 w-4 mr-2" />
             )}
-            Start
+            Démarrer
           </Button>
 
           <Button
@@ -135,14 +135,14 @@ export function VPSControlPanel({
             disabled={!canReboot || isLoading}
             variant="outline"
             className="flex-1 min-w-[100px]"
-            aria-label="Reboot container"
+            aria-label="Redémarrer le conteneur"
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <RotateCw className="h-4 w-4 mr-2" />
             )}
-            Reboot
+            Redémarrer
           </Button>
 
           <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -151,26 +151,26 @@ export function VPSControlPanel({
                 disabled={!canDelete || isLoading}
                 variant="destructive"
                 className="flex-1 min-w-[100px]"
-                aria-label="Delete container"
+                aria-label="Supprimer le conteneur"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
-                Delete
+                Supprimer
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete Container</AlertDialogTitle>
+                <AlertDialogTitle>Supprimer le conteneur</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete this container? This action will:
+                  Êtes-vous sûr de vouloir supprimer ce conteneur ? Cette action va :
                   <ul className="list-disc list-inside mt-2 space-y-1">
-                    <li>Permanently delete the container and all its data</li>
-                    <li>Cancel your subscription immediately</li>
-                    <li>This action cannot be undone</li>
+                    <li>Supprimer définitivement le conteneur et toutes ses données</li>
+                    <li>Résilier votre abonnement immédiatement</li>
+                    <li>Cette action est irréversible</li>
                   </ul>
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel>Annuler</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => {
                     onDelete();
@@ -178,7 +178,7 @@ export function VPSControlPanel({
                   }}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
-                  Delete Container
+                  Supprimer le conteneur
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

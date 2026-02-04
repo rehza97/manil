@@ -28,8 +28,8 @@ import { z } from "zod";
 import { Loader2 } from "lucide-react";
 
 const profileFormSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  phone: z.string().min(7, "Phone must be at least 7 characters"),
+  name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
+  phone: z.string().min(7, "Le téléphone doit contenir au moins 7 caractères"),
   address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),

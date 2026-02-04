@@ -45,18 +45,29 @@ class HostingReportService(BaseReportService):
     ) -> Dict[str, Any]:
         """New subscriptions, cancellations, churn rate."""
         end = end_date or datetime.now(timezone.utc)
-        q_new = select(func.count(VPSSubscription.id)).where(
-            and_(VPSSubscription.created_at <= end,
-                 VPSSubscription.status == SubscriptionStatus.ACTIVE)
-        )
+
+        # Count new subscriptions by start_date (business date), not created_at (DB timestamp)
+        filters_new = [VPSSubscription.status == SubscriptionStatus.ACTIVE]
+        if start_date:
+            filters_new.append(VPSSubscription.start_date >= start_date)
+        filters_new.append(VPSSubscription.start_date <= end)
+        q_new = select(func.count(VPSSubscription.id)).where(and_(*filters_new))
         new = (await self.db.scalar(q_new)) or 0
-        q_cancelled = select(func.count(VPSSubscription.id)).where(
-            and_(VPSSubscription.cancelled_at.isnot(None),
-                 VPSSubscription.cancelled_at <= end)
-        )
+
+        # Count cancelled subscriptions within date range
+        filters_cancelled = [VPSSubscription.cancelled_at.isnot(None)]
+        if start_date:
+            filters_cancelled.append(VPSSubscription.cancelled_at >= start_date)
+        filters_cancelled.append(VPSSubscription.cancelled_at <= end)
+        q_cancelled = select(func.count(VPSSubscription.id)).where(and_(*filters_cancelled))
         cancelled = (await self.db.scalar(q_cancelled)) or 0
-        q_total = select(func.count(VPSSubscription.id)).where(
-            VPSSubscription.created_at <= end)
+
+        # Count total subscriptions by start_date
+        filters_total = []
+        if start_date:
+            filters_total.append(VPSSubscription.start_date >= start_date)
+        filters_total.append(VPSSubscription.start_date <= end)
+        q_total = select(func.count(VPSSubscription.id)).where(and_(*filters_total)) if filters_total else select(func.count(VPSSubscription.id))
         total = (await self.db.scalar(q_total)) or 0
         churn = (cancelled / total * 100) if total else 0
         details = [

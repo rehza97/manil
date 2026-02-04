@@ -103,11 +103,10 @@ export const SecuritySettingsPage: React.FC = () => {
       <div>
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <Shield className="h-8 w-8" />
-          Security Settings
+          Paramètres de sécurité
         </h1>
         <p className="text-slate-600 mt-2">
-          Configure password policies, session management, login security, and
-          2FA requirements.
+          Configurer les politiques de mot de passe, la gestion des sessions, la sécurité de connexion et les exigences 2FA.
         </p>
       </div>
 
@@ -135,7 +134,7 @@ export const SecuritySettingsPage: React.FC = () => {
                     className="text-xs"
                   >
                     <RefreshCw className="h-3 w-3 mr-1" />
-                    Reset
+                    Réinitialiser
                   </Button>
                 )}
               </div>
@@ -147,9 +146,9 @@ export const SecuritySettingsPage: React.FC = () => {
       {sessionSettings.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Session Management</CardTitle>
+            <CardTitle>Gestion des sessions</CardTitle>
             <CardDescription>
-              Configure session timeout and security
+              Configurer le délai d'expiration et la sécurité des sessions
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -168,7 +167,7 @@ export const SecuritySettingsPage: React.FC = () => {
                     className="text-xs"
                   >
                     <RefreshCw className="h-3 w-3 mr-1" />
-                    Reset
+                    Réinitialiser
                   </Button>
                 )}
               </div>
@@ -180,9 +179,9 @@ export const SecuritySettingsPage: React.FC = () => {
       {loginSettings.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Login Security</CardTitle>
+            <CardTitle>Sécurité de connexion</CardTitle>
             <CardDescription>
-              Configure login attempt limits and account lockout
+              Configurer les limites de tentatives de connexion et le verrouillage de compte
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -201,7 +200,7 @@ export const SecuritySettingsPage: React.FC = () => {
                     className="text-xs"
                   >
                     <RefreshCw className="h-3 w-3 mr-1" />
-                    Reset
+                    Réinitialiser
                   </Button>
                 )}
               </div>
@@ -232,7 +231,7 @@ export const SecuritySettingsPage: React.FC = () => {
                     className="text-xs"
                   >
                     <RefreshCw className="h-3 w-3 mr-1" />
-                    Reset
+                    Réinitialiser
                   </Button>
                 )}
               </div>
@@ -244,7 +243,7 @@ export const SecuritySettingsPage: React.FC = () => {
       {otherSettings.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Other Security Settings</CardTitle>
+            <CardTitle>Autres paramètres de sécurité</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {otherSettings.map((setting) => (
@@ -262,7 +261,7 @@ export const SecuritySettingsPage: React.FC = () => {
                     className="text-xs"
                   >
                     <RefreshCw className="h-3 w-3 mr-1" />
-                    Reset
+                    Réinitialiser
                   </Button>
                 )}
               </div>
@@ -280,12 +279,12 @@ export const SecuritySettingsPage: React.FC = () => {
           {updateMutation.isPending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
+              Enregistrement…
             </>
           ) : (
             <>
               <Save className="mr-2 h-4 w-4" />
-              Save Changes
+              Enregistrer les modifications
             </>
           )}
         </Button>

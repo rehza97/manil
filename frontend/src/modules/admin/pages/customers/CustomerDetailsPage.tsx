@@ -46,14 +46,14 @@ export const CustomerDetailsPage: React.FC = () => {
   if (!customer) {
     return (
       <div className="text-center py-12">
-        <p className="text-slate-600">Customer not found</p>
+        <p className="text-slate-600">Client introuvable</p>
         <Button
           variant="outline"
           onClick={() => navigate("/admin/customers")}
           className="mt-4"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Customers
+          Retour aux clients
         </Button>
       </div>
     );
@@ -70,15 +70,15 @@ export const CustomerDetailsPage: React.FC = () => {
             onClick={() => navigate("/admin/customers")}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Customers
+            Retour aux clients
           </Button>
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-2">
               <User className="h-8 w-8" />
-              Customer Details
+              Détails du client
             </h1>
             <p className="text-slate-600 mt-2">
-              View and manage customer information, KYC, and activity.
+              Consulter et gérer les informations du client, le KYC et l&apos;activité.
             </p>
           </div>
         </div>
@@ -88,7 +88,7 @@ export const CustomerDetailsPage: React.FC = () => {
             onClick={() => navigate(`/admin/customers/${id}/edit`)}
           >
             <Edit className="h-4 w-4 mr-2" />
-            Edit
+            Modifier
           </Button>
         </div>
       </div>
@@ -128,15 +128,15 @@ export const CustomerDetailsPage: React.FC = () => {
         <TabsContent value="notes">
           <Card>
             <CardHeader>
-              <CardTitle>Customer Notes</CardTitle>
+              <CardTitle>Notes client</CardTitle>
               <CardDescription>
-                Notes and comments about this customer
+                Notes et commentaires concernant ce client
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-center py-8 text-slate-500">
                 <FileText className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                <p>Customer notes feature will be available soon</p>
+                <p>La fonctionnalité des notes client sera bientôt disponible</p>
               </div>
             </CardContent>
           </Card>

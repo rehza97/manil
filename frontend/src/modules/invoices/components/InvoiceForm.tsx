@@ -230,7 +230,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{invoice ? "Edit Invoice" : "Create Invoice"}</CardTitle>
+        <CardTitle>{invoice ? "Modifier la facture" : "Créer une facture"}</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -248,7 +248,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                   >
                     <FormControl>
                       <SelectTrigger disabled={prefilledFromQuote}>
-                        <SelectValue placeholder="Select customer" />
+                        <SelectValue placeholder="Choisir un client" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -278,7 +278,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
               name="quote_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Quote (Optional - for conversion)</FormLabel>
+                  <FormLabel>Devis (optionnel – pour conversion)</FormLabel>
                   <Select
                     value={field.value || "none"}
                     onValueChange={(value) => field.onChange(value === "none" ? undefined : value)}
@@ -300,7 +300,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                       <SelectItem value="none">Aucun</SelectItem>
                       {quotesData?.data?.filter((q: any) => q.status === "accepted").map((quote: any) => (
                         <SelectItem key={quote.id} value={quote.id}>
-                          {quote.quote_number} - {quote.title || "Untitled"} ({quote.total?.toFixed(2)})
+                          {quote.quote_number} - {quote.title || "Sans titre"} ({quote.total?.toFixed(2)})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -336,7 +336,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea {...field} placeholder="Invoice description" rows={3} />
+                    <Textarea {...field} placeholder="Description de la facture" rows={3} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -354,7 +354,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                   onClick={() => append({ description: "", quantity: 1, unit_price: 0 })}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Item
+                  Ajouter une ligne
                 </Button>
               </div>
 
@@ -503,14 +503,14 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
               <div className="bg-slate-50 p-4 rounded-lg space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Subtotal:</span>
+                  <span className="text-slate-600">Sous-total :</span>
                   <span className="font-medium">
                     {formatCurrency(calculations.subtotal)}
                   </span>
                 </div>
                 {form.watch("discount_amount") > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Discount:</span>
+                    <span className="text-slate-600">Remise :</span>
                     <span className="font-medium text-red-600">
                       -{(form.watch("discount_amount") || 0).toFixed(2)}
                     </span>
@@ -550,7 +550,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
               />
 
               <FormItem>
-                <FormLabel>Payment Terms</FormLabel>
+                <FormLabel>Conditions de paiement</FormLabel>
                 <Select
                   onValueChange={(value) => {
                     const issueDate = form.getValues("issue_date");
@@ -563,7 +563,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                   }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select payment terms" />
+                    <SelectValue placeholder="Choisir les conditions" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="15">Net 15</SelectItem>
@@ -574,7 +574,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-slate-500 mt-1">
-                  Select terms to auto-calculate due date
+                  Choisir pour calculer automatiquement l'échéance
                 </p>
               </FormItem>
             </div>
@@ -584,7 +584,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
               name="due_date"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Due Date</FormLabel>
+                  <FormLabel>Date d'échéance</FormLabel>
                   <FormControl>
                     <Input {...field} type="date" />
                   </FormControl>
@@ -601,7 +601,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                 <FormItem>
                   <FormLabel>Notes</FormLabel>
                   <FormControl>
-                    <Textarea {...field} placeholder="Additional notes" rows={3} />
+                    <Textarea {...field} placeholder="Notes supplémentaires" rows={3} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

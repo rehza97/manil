@@ -82,7 +82,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ onClose }) =
   const handleExport = () => {
     if (!permissions || !roles) return;
 
-    const headers = ["Permission", "Category", ...roles.map((r) => r.name)];
+    const headers = ["Permission", "Catégorie", ...roles.map((r) => r.name)];
     const rows = filteredPermissions.map((permission) => {
       const row = [
         permission.name || permission.slug,
@@ -116,14 +116,14 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ onClose }) =
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Permission Matrix</CardTitle>
+              <CardTitle>Matrice des permissions</CardTitle>
               <CardDescription>
-                Visual overview of permissions assigned to each role
+                Aperçu visuel des permissions attribuées à chaque rôle
               </CardDescription>
             </div>
             {onClose && (
               <Button variant="outline" onClick={onClose}>
-                Close
+                Fermer
               </Button>
             )}
           </div>
@@ -134,7 +134,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ onClose }) =
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
-                placeholder="Search permissions..."
+                placeholder="Rechercher des permissions…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -145,7 +145,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ onClose }) =
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="px-3 py-2 border rounded-md"
             >
-              <option value="all">All Categories</option>
+              <option value="all">Toutes les catégories</option>
               {categories.map((cat) => (
                 <option key={cat} value={cat}>
                   {cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -154,7 +154,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ onClose }) =
             </select>
             <Button variant="outline" onClick={handleExport}>
               <Download className="h-4 w-4 mr-2" />
-              Export CSV
+              Exporter CSV
             </Button>
           </div>
 
@@ -166,7 +166,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ onClose }) =
                   <th className="text-left p-3 font-semibold sticky left-0 bg-white z-10">
                     Permission
                   </th>
-                  <th className="text-left p-3 font-semibold">Category</th>
+                  <th className="text-left p-3 font-semibold">Catégorie</th>
                   {roles.map((role) => (
                     <th
                       key={role.id}
@@ -186,7 +186,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ onClose }) =
                 {filteredPermissions.length === 0 ? (
                   <tr>
                     <td colSpan={roles.length + 2} className="text-center p-8 text-gray-500">
-                      No permissions found
+                      Aucune permission trouvée
                     </td>
                   </tr>
                 ) : (
@@ -254,10 +254,10 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ onClose }) =
           {/* Summary */}
           <div className="flex items-center justify-between pt-4 border-t">
             <div className="text-sm text-gray-600">
-              Showing {filteredPermissions.length} of {permissions?.length || 0} permissions
+              Affichage de {filteredPermissions.length} sur {permissions?.length || 0} permissions
             </div>
             <div className="text-sm text-gray-600">
-              {roles.length} role{roles.length !== 1 ? "s" : ""}
+              {roles.length} rôle{roles.length !== 1 ? "s" : ""}
             </div>
           </div>
         </CardContent>

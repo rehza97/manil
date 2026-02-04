@@ -82,15 +82,15 @@ export const UserReportsPage: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Users className="h-8 w-8" />
-            User Reports
+            Rapports utilisateurs
           </h1>
           <p className="text-slate-600 mt-2">
-            User analytics, registration trends, and engagement metrics.
+            Analytique utilisateurs, tendances d&apos;inscription et indicateurs d&apos;engagement.
           </p>
         </div>
         <Alert>
           <AlertDescription>
-            No user report data available for the selected period.
+            Aucune donnée de rapport utilisateurs pour la période sélectionnée.
           </AlertDescription>
         </Alert>
       </div>
@@ -125,20 +125,20 @@ export const UserReportsPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <CardTitle className="text-sm font-medium">Total utilisateurs</CardTitle>
             <Users className="h-4 w-4 text-slate-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {reportData.total_users || 0}
             </div>
-            <p className="text-xs text-slate-500 mt-1">All registered users</p>
+            <p className="text-xs text-slate-500 mt-1">Tous les utilisateurs inscrits</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <CardTitle className="text-sm font-medium">Utilisateurs actifs</CardTitle>
             <Activity className="h-4 w-4 text-slate-400" />
           </CardHeader>
           <CardContent>
@@ -146,27 +146,27 @@ export const UserReportsPage: React.FC = () => {
               {reportData.active_users || 0}
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Active in last 30 days
+              Actifs dans les 30 derniers jours
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">New Users</CardTitle>
+            <CardTitle className="text-sm font-medium">Nouveaux utilisateurs</CardTitle>
             <UserPlus className="h-4 w-4 text-slate-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {reportData.new_users || 0}
             </div>
-            <p className="text-xs text-slate-500 mt-1">Registered this month</p>
+            <p className="text-xs text-slate-500 mt-1">Inscrits ce mois</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Growth Rate</CardTitle>
+            <CardTitle className="text-sm font-medium">Taux de croissance</CardTitle>
             <TrendingUp className="h-4 w-4 text-slate-400" />
           </CardHeader>
           <CardContent>
@@ -180,7 +180,7 @@ export const UserReportsPage: React.FC = () => {
                 : "0.0"}
               %
             </div>
-            <p className="text-xs text-slate-500 mt-1">Monthly growth</p>
+            <p className="text-xs text-slate-500 mt-1">Croissance mensuelle</p>
           </CardContent>
         </Card>
       </div>
@@ -190,9 +190,9 @@ export const UserReportsPage: React.FC = () => {
         {/* Role Distribution */}
         <Card>
           <CardHeader>
-            <CardTitle>Users by Role</CardTitle>
+            <CardTitle>Utilisateurs par rôle</CardTitle>
             <CardDescription>
-              Distribution of users across roles
+              Répartition des utilisateurs par rôle
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -239,7 +239,7 @@ export const UserReportsPage: React.FC = () => {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="count" fill="#3b82f6" name="User Count" />
+                <Bar dataKey="count" fill="#3b82f6" name="Nombre d'utilisateurs" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -264,7 +264,7 @@ export const UserReportsPage: React.FC = () => {
                 type="monotone"
                 dataKey="count"
                 stroke="#3b82f6"
-                name="New Registrations"
+                name="Nouvelles inscriptions"
               />
             </LineChart>
           </ResponsiveContainer>

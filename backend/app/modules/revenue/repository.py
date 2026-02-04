@@ -33,7 +33,8 @@ class RevenueRepository:
         """
         Get recognized revenue from paid invoices.
 
-        Recognized revenue = sum of paid_amount from invoices with status PAID or PARTIALLY_PAID
+        Recognized revenue = sum of paid_amount from invoices with status PAID or PARTIALLY_PAID.
+        end_date is exclusive (paid_at < end_date).
         """
         conditions = [
             Invoice.deleted_at.is_(None),
@@ -46,7 +47,7 @@ class RevenueRepository:
         if start_date:
             conditions.append(Invoice.paid_at >= start_date)
         if end_date:
-            conditions.append(Invoice.paid_at <= end_date)
+            conditions.append(Invoice.paid_at < end_date)
         if customer_id:
             conditions.append(Invoice.customer_id == customer_id)
 
@@ -63,13 +64,14 @@ class RevenueRepository:
         """
         Get deferred revenue from paid invoices for undelivered orders.
 
-        Deferred revenue = paid invoices where:
-        - Invoice is PAID or PARTIALLY_PAID
-        - Associated order (if exists) is not DELIVERED
-        - Or invoice has no associated order
+        Deferred = paid invoices whose linked order is not DELIVERED (or no order).
+        This is a subset of recognized revenue: "cash received not yet earned."
+        When the order is delivered, the invoice stays in recognized and is no longer
+        in deferred (no double-counting). See modules/revenue/README.md for details.
+        end_date is exclusive (paid_at < end_date).
         """
         from app.modules.quotes.models import Quote
-        
+
         conditions = [
             Invoice.deleted_at.is_(None),
             or_(
@@ -81,7 +83,7 @@ class RevenueRepository:
         if start_date:
             conditions.append(Invoice.paid_at >= start_date)
         if end_date:
-            conditions.append(Invoice.paid_at <= end_date)
+            conditions.append(Invoice.paid_at < end_date)
         if customer_id:
             conditions.append(Invoice.customer_id == customer_id)
 
@@ -102,7 +104,7 @@ class RevenueRepository:
                 )
             )
         )
-        
+
         result = await self.db.scalar(query)
         return Decimal(str(result or 0))
 
@@ -115,7 +117,8 @@ class RevenueRepository:
         """
         Get booked revenue from delivered orders.
 
-        Booked revenue = sum of total_amount from orders with status DELIVERED
+        Booked revenue = sum of total_amount from orders with status DELIVERED.
+        end_date is exclusive (delivered_at < end_date).
         """
         conditions = [
             Order.deleted_at.is_(None),
@@ -125,7 +128,7 @@ class RevenueRepository:
         if start_date:
             conditions.append(Order.delivered_at >= start_date)
         if end_date:
-            conditions.append(Order.delivered_at <= end_date)
+            conditions.append(Order.delivered_at < end_date)
         if customer_id:
             conditions.append(Order.customer_id == customer_id)
 
@@ -136,15 +139,38 @@ class RevenueRepository:
     async def get_recurring_revenue(
         self,
         customer_id: Optional[str] = None,
+        as_of_date: Optional[datetime] = None,
     ) -> Decimal:
         """
         Get monthly recurring revenue (MRR) from active VPS subscriptions.
 
-        MRR = sum of monthly_price from active subscriptions
+        MRR = sum of monthly_price from active subscriptions.
+        When as_of_date is provided, returns MRR for subscriptions active at that date
+        (for historical trends); otherwise returns current MRR.
         """
         conditions = [
             VPSSubscription.status == SubscriptionStatus.ACTIVE
         ]
+
+        if as_of_date is not None:
+            conditions.append(
+                or_(
+                    VPSSubscription.start_date.is_(None),
+                    VPSSubscription.start_date <= as_of_date
+                )
+            )
+            conditions.append(
+                or_(
+                    VPSSubscription.cancelled_at.is_(None),
+                    VPSSubscription.cancelled_at > as_of_date
+                )
+            )
+            conditions.append(
+                or_(
+                    VPSSubscription.terminated_at.is_(None),
+                    VPSSubscription.terminated_at > as_of_date
+                )
+            )
 
         if customer_id:
             conditions.append(VPSSubscription.customer_id == customer_id)
@@ -173,7 +199,8 @@ class RevenueRepository:
         if month is None:
             month = datetime.now(timezone.utc)
 
-        month_start = month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        month_start = month.replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0)
         if month.month == 12:
             month_end = month.replace(year=month.year + 1, month=1, day=1)
         else:
@@ -181,7 +208,7 @@ class RevenueRepository:
 
         return await self.get_recognized_revenue(
             start_date=month_start,
-            end_date=month_end - timedelta(seconds=1),
+            end_date=month_end,
             customer_id=customer_id
         )
 
@@ -208,20 +235,25 @@ class RevenueRepository:
                 date_str = current_date.strftime("%Y-W%W")
             else:  # month
                 if current_date.month == 12:
-                    period_end = current_date.replace(year=current_date.year + 1, month=1, day=1)
+                    period_end = current_date.replace(
+                        year=current_date.year + 1, month=1, day=1)
                 else:
-                    period_end = current_date.replace(month=current_date.month + 1, day=1)
+                    period_end = current_date.replace(
+                        month=current_date.month + 1, day=1)
                 date_str = current_date.strftime("%Y-%m")
 
             recognized = await self.get_recognized_revenue(
                 start_date=current_date,
-                end_date=period_end - timedelta(seconds=1)
+                end_date=period_end
             )
             booked = await self.get_booked_revenue(
                 start_date=current_date,
-                end_date=period_end - timedelta(seconds=1)
+                end_date=period_end
             )
-            recurring = await self.get_recurring_revenue()
+            recurring = await self.get_recurring_revenue(
+                customer_id=None,
+                as_of_date=period_end
+            )
 
             # total_revenue = recognized only (cash received) to avoid double-counting
             # same sale in both recognized and booked; UI can show series separately
@@ -258,13 +290,14 @@ class RevenueRepository:
         if start_date:
             conditions.append(Order.delivered_at >= start_date)
         if end_date:
-            conditions.append(Order.delivered_at <= end_date)
+            conditions.append(Order.delivered_at < end_date)
 
         # Join orders with order items and products to get categories
         query = (
             select(
                 Product.category,
-                func.sum(OrderItem.quantity * OrderItem.unit_price).label("revenue"),
+                func.sum(OrderItem.quantity *
+                         OrderItem.unit_price).label("revenue"),
                 func.count(func.distinct(Order.id)).label("order_count")
             )
             .join(OrderItem, OrderItem.order_id == Order.id)
@@ -317,14 +350,14 @@ class RevenueRepository:
         query = (
             select(
                 Customer.id,
-                Customer.full_name,
+                Customer.name,
                 func.sum(Invoice.paid_amount).label("revenue"),
                 func.count(Invoice.id).label("invoice_count"),
                 func.max(Invoice.paid_at).label("last_transaction_date")
             )
             .join(Customer, Customer.id == Invoice.customer_id)
             .where(and_(*conditions))
-            .group_by(Customer.id, Customer.full_name)
+            .group_by(Customer.id, Customer.name)
             .order_by(func.sum(Invoice.paid_amount).desc())
             .limit(limit)
         )
@@ -335,7 +368,7 @@ class RevenueRepository:
         return [
             {
                 "customer_id": str(row.id),
-                "customer_name": row.full_name or "Unknown",
+                "customer_name": row.name or "Unknown",
                 "revenue": Decimal(str(row.revenue or 0)),
                 "invoice_count": row.invoice_count,
                 "order_count": 0,  # Would need separate query
@@ -362,8 +395,8 @@ class RevenueRepository:
             order_conditions.append(Order.created_at >= start_date)
             invoice_conditions.append(Invoice.created_at >= start_date)
         if end_date:
-            order_conditions.append(Order.created_at <= end_date)
-            invoice_conditions.append(Invoice.created_at <= end_date)
+            order_conditions.append(Order.created_at < end_date)
+            invoice_conditions.append(Invoice.created_at < end_date)
 
         # Total revenue from delivered orders
         orders_query = select(func.sum(Order.total_amount)).where(

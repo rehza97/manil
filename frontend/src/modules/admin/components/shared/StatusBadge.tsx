@@ -26,11 +26,11 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   const getVariantAndIcon = (): { variant: BadgeVariant; icon?: LucideIcon } => {
     const statusLower = status.toLowerCase();
 
-    // Active/Inactive states
-    if (statusLower === "active") {
+    // Active/Inactive states (EN + FR)
+    if (statusLower === "active" || statusLower === "actif") {
       return { variant: "success", icon: CheckCircle };
     }
-    if (statusLower === "inactive" || statusLower === "disabled") {
+    if (statusLower === "inactive" || statusLower === "disabled" || statusLower === "inactif") {
       return { variant: "secondary", icon: XCircle };
     }
 
@@ -53,6 +53,9 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       return { variant: "success", icon: CheckCircle };
     }
     if (statusLower === "failed" || statusLower === "error") {
+      return { variant: "destructive", icon: XCircle };
+    }
+    if (statusLower === "locked" || statusLower === "verrouillé") {
       return { variant: "destructive", icon: XCircle };
     }
     if (statusLower === "warning") {
@@ -100,7 +103,7 @@ export const UserRoleBadge: React.FC<{ role: string }> = ({ role }) => {
 export const UserStatusBadge: React.FC<{ isActive: boolean }> = ({
   isActive,
 }) => {
-  return <StatusBadge status={isActive ? "Active" : "Inactive"} />;
+  return <StatusBadge status={isActive ? "Actif" : "Inactif"} />;
 };
 
 export const AccountLockBadge: React.FC<{ lockedUntil: string | null }> = ({
@@ -123,7 +126,7 @@ export const AccountLockBadge: React.FC<{ lockedUntil: string | null }> = ({
 export const TwoFactorBadge: React.FC<{ enabled: boolean }> = ({ enabled }) => {
   return (
     <StatusBadge
-      status={enabled ? "2FA Enabled" : "2FA Disabled"}
+      status={enabled ? "2FA activée" : "2FA désactivée"}
       variant={enabled ? "success" : "secondary"}
       icon={enabled ? CheckCircle : XCircle}
     />

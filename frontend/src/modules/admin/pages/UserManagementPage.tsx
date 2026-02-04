@@ -109,13 +109,13 @@ export const UserManagementPage: React.FC = () => {
     try {
       await deleteUser.mutateAsync(user.id);
       toast({
-        title: "Success",
-        description: "User has been deleted",
+        title: "Succès",
+        description: "L'utilisateur a été supprimé",
       });
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error?.response?.data?.detail || "Failed to delete user",
+        title: "Erreur",
+        description: error?.response?.data?.detail || "Échec de la suppression de l'utilisateur",
         variant: "destructive",
       });
     }
@@ -125,13 +125,13 @@ export const UserManagementPage: React.FC = () => {
     try {
       await hardDeleteUser.mutateAsync(user.id);
       toast({
-        title: "Success",
-        description: "User has been permanently removed",
+        title: "Succès",
+        description: "L'utilisateur a été définitivement supprimé",
       });
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error?.response?.data?.detail || "Failed to permanently delete user",
+        title: "Erreur",
+        description: error?.response?.data?.detail || "Échec de la suppression définitive de l'utilisateur",
         variant: "destructive",
       });
     }
@@ -142,28 +142,28 @@ export const UserManagementPage: React.FC = () => {
       if (user.is_active) {
         await deactivateUser.mutateAsync(user.id);
         toast({
-          title: "Success",
-          description: "User has been deactivated",
+          title: "Succès",
+          description: "L'utilisateur a été désactivé",
         });
       } else {
         await activateUser.mutateAsync(user.id);
         toast({
-          title: "Success",
-          description: "User has been activated",
+          title: "Succès",
+          description: "L'utilisateur a été activé",
         });
       }
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: "Erreur",
         description:
-          error?.response?.data?.detail || error.message || "Failed to update user status",
+          error?.response?.data?.detail || error.message || "Échec de la mise à jour du statut utilisateur",
         variant: "destructive",
       });
     }
   };
 
   const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return "Never";
+    if (!dateString) return "Jamais";
     return new Date(dateString).toLocaleDateString("fr-DZ", {
       year: "numeric",
       month: "short",
@@ -177,7 +177,7 @@ export const UserManagementPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Loading users...</span>
+        <span className="ml-2">Chargement des utilisateurs…</span>
       </div>
     );
   }
@@ -193,9 +193,9 @@ export const UserManagementPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Gestion des utilisateurs</h1>
           <p className="text-gray-600 mt-1">
-            Manage system users, roles, and permissions
+            Gérer les utilisateurs, rôles et permissions du système
           </p>
         </div>
         <Button
@@ -203,7 +203,7 @@ export const UserManagementPage: React.FC = () => {
           onClick={() => setIsCreateDialogOpen(true)}
         >
           <Plus className="w-4 h-4" />
-          Add User
+          Ajouter un utilisateur
         </Button>
       </div>
 
@@ -213,7 +213,7 @@ export const UserManagementPage: React.FC = () => {
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
-              placeholder="Search users by email or name..."
+              placeholder="Rechercher par e-mail ou nom…"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -231,13 +231,13 @@ export const UserManagementPage: React.FC = () => {
           >
             <SelectTrigger className="w-[140px]">
               <Filter className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder="Statut" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="deleted">Deleted</SelectItem>
-              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="active">Actif</SelectItem>
+              <SelectItem value="inactive">Inactif</SelectItem>
+              <SelectItem value="deleted">Supprimé</SelectItem>
+              <SelectItem value="all">Tous</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -250,16 +250,16 @@ export const UserManagementPage: React.FC = () => {
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
+                  Utilisateur
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Role
+                  Rôle
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  Statut
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Last Activity
+                  Dernière activité
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -274,8 +274,8 @@ export const UserManagementPage: React.FC = () => {
                     className="px-6 py-12 text-center text-gray-500"
                   >
                     {searchQuery
-                      ? "No users found matching your search."
-                      : "No users found."}
+                      ? "Aucun utilisateur ne correspond à votre recherche."
+                      : "Aucun utilisateur trouvé."}
                   </td>
                 </tr>
               ) : (
@@ -315,7 +315,7 @@ export const UserManagementPage: React.FC = () => {
                               : "bg-gray-100 text-gray-800"
                         }
                       >
-                        {user.deleted_at ? "Deleted" : user.is_active ? "Active" : "Inactive"}
+                        {user.deleted_at ? "Supprimé" : user.is_active ? "Actif" : "Inactif"}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -335,7 +335,7 @@ export const UserManagementPage: React.FC = () => {
                           className="flex items-center gap-1"
                         >
                           <UserCheck className="w-3 h-3" />
-                          Edit
+                          Modifier
                         </Button>
                         {user.deleted_at ? (
                           <AlertDialog>
@@ -347,24 +347,24 @@ export const UserManagementPage: React.FC = () => {
                                 disabled={hardDeleteUser.isPending}
                               >
                                 <Trash2 className="w-3 h-3" />
-                                Permanently Delete
+                                Supprimer définitivement
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Permanently Delete User</AlertDialogTitle>
+                                <AlertDialogTitle>Supprimer définitivement l'utilisateur</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  This will permanently remove the user from the database.
-                                  This action cannot be undone.
+                                  L'utilisateur sera définitivement supprimé de la base de données.
+                                  Cette action est irréversible.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogCancel>Annuler</AlertDialogCancel>
                                 <AlertDialogAction
                                   onClick={() => handleHardDeleteUser(user)}
                                   className="bg-red-600 hover:bg-red-700"
                                 >
-                                  Permanently Delete
+                                  Supprimer définitivement
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
@@ -385,7 +385,7 @@ export const UserManagementPage: React.FC = () => {
                               }`}
                             >
                               <UserX className="w-3 h-3" />
-                              {user.is_active ? "Deactivate" : "Activate"}
+                              {user.is_active ? "Désactiver" : "Activer"}
                             </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
@@ -396,25 +396,25 @@ export const UserManagementPage: React.FC = () => {
                                   disabled={deleteUser.isPending}
                                 >
                                   <Trash2 className="w-3 h-3" />
-                                  Delete
+                                  Supprimer
                                 </Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent>
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                  <AlertDialogTitle>Supprimer l'utilisateur</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    This will mark the user as deleted. They will no longer
-                                    be able to log in. Their data will remain for audit
-                                    purposes. You can permanently delete them later.
+                                    L'utilisateur sera marqué comme supprimé et ne pourra plus
+                                    se connecter. Ses données resteront pour l'audit.
+                                    Vous pourrez le supprimer définitivement plus tard.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogCancel>Annuler</AlertDialogCancel>
                                   <AlertDialogAction
                                     onClick={() => handleDeleteUser(user)}
                                     className="bg-orange-600 hover:bg-orange-700"
                                   >
-                                    Delete User
+                                    Supprimer l'utilisateur
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
@@ -434,7 +434,7 @@ export const UserManagementPage: React.FC = () => {
         {usersData && usersData.total > 0 && (
           <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
             <div className="text-sm text-gray-700">
-              Showing {users.length} of {usersData.total} users
+              Affichage de {users.length} sur {usersData.total} utilisateurs
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -443,10 +443,10 @@ export const UserManagementPage: React.FC = () => {
                 disabled={page === 1}
                 onClick={() => setPage(page - 1)}
               >
-                Previous
+                Précédent
               </Button>
               <span className="text-sm text-gray-700">
-                Page {page} of {Math.ceil(usersData.total / usersData.page_size)}
+                Page {page} sur {Math.ceil(usersData.total / usersData.page_size)}
               </span>
               <Button
                 variant="outline"
@@ -454,7 +454,7 @@ export const UserManagementPage: React.FC = () => {
                 disabled={page >= Math.ceil(usersData.total / usersData.page_size)}
                 onClick={() => setPage(page + 1)}
               >
-                Next
+                Suivant
               </Button>
             </div>
           </div>

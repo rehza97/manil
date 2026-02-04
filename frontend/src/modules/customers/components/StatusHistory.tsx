@@ -45,7 +45,7 @@ export function StatusHistory({ customerId }: StatusHistoryProps) {
     return (
       <Card>
         <CardContent className="p-6">
-          <p className="text-sm text-muted-foreground">Failed to load status history</p>
+          <p className="text-sm text-muted-foreground">Impossible de charger l&apos;historique des statuts</p>
         </CardContent>
       </Card>
     );
@@ -55,8 +55,8 @@ export function StatusHistory({ customerId }: StatusHistoryProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Status History</CardTitle>
-          <CardDescription>No status changes recorded</CardDescription>
+          <CardTitle>Historique des statuts</CardTitle>
+          <CardDescription>Aucun changement de statut enregistré</CardDescription>
         </CardHeader>
       </Card>
     );
@@ -65,9 +65,9 @@ export function StatusHistory({ customerId }: StatusHistoryProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Status History</CardTitle>
+        <CardTitle>Historique des statuts</CardTitle>
         <CardDescription>
-          Timeline of customer status changes
+          Chronologie des changements de statut du client
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -94,7 +94,7 @@ export function StatusHistory({ customerId }: StatusHistoryProps) {
                 </div>
                 {entry.reason && (
                   <p className="text-sm text-muted-foreground">
-                    Reason: {entry.reason}
+                    Raison : {entry.reason}
                   </p>
                 )}
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">

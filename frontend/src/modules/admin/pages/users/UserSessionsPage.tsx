@@ -58,13 +58,13 @@ export const UserSessionsPage: React.FC = () => {
     try {
       await revokeSession.mutateAsync({ userId: id!, sessionId });
       toast({
-        title: "Success",
-        description: "Session revoked successfully",
+        title: "Succès",
+        description: "Session révoquée avec succès",
       });
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.response?.data?.detail || "Failed to revoke session",
+        title: "Erreur",
+        description: error.response?.data?.detail || "Échec de la révocation de la session",
         variant: "destructive",
       });
     }
@@ -74,13 +74,13 @@ export const UserSessionsPage: React.FC = () => {
     try {
       await revokeAllSessions.mutateAsync(id!);
       toast({
-        title: "Success",
-        description: "All sessions revoked successfully",
+        title: "Succès",
+        description: "Toutes les sessions ont été révoquées avec succès",
       });
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.response?.data?.detail || "Failed to revoke sessions",
+        title: "Erreur",
+        description: error.response?.data?.detail || "Échec de la révocation des sessions",
         variant: "destructive",
       });
     }
@@ -110,7 +110,7 @@ export const UserSessionsPage: React.FC = () => {
   const columns: DataTableColumn<UserSession>[] = [
     {
       key: "device_type",
-      label: "Device",
+      label: "Appareil",
       render: (value, row) => (
         <div className="flex items-center gap-2">
           {getDeviceIcon(row.device_type)}
@@ -125,7 +125,7 @@ export const UserSessionsPage: React.FC = () => {
     },
     {
       key: "ip_address",
-      label: "IP Address",
+      label: "Adresse IP",
       render: (value, row) => (
         <div className="flex items-start gap-2">
           <Globe className="h-4 w-4 text-gray-400 mt-0.5" />
@@ -153,15 +153,15 @@ export const UserSessionsPage: React.FC = () => {
     },
     {
       key: "last_activity",
-      label: "Last Activity",
+      label: "Dernière activité",
       render: (value) => <span className="text-sm">{formatDate(value)}</span>,
     },
     {
       key: "is_current",
-      label: "Status",
+      label: "Statut",
       render: (value) =>
         value ? (
-          <Badge className="bg-green-100 text-green-800">Current</Badge>
+          <Badge className="bg-green-100 text-green-800">Actuelle</Badge>
         ) : (
           <Badge variant="secondary">Active</Badge>
         ),
@@ -170,7 +170,7 @@ export const UserSessionsPage: React.FC = () => {
 
   const actions: DataTableAction<UserSession>[] = [
     {
-      label: "Revoke Session",
+      label: "Révoquer la session",
       icon: XCircle,
       onClick: (session) => handleRevokeSession(session.id),
       variant: "destructive",
@@ -182,7 +182,7 @@ export const UserSessionsPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        <span className="ml-2 text-gray-500">Loading sessions...</span>
+        <span className="ml-2 text-gray-500">Chargement des sessions…</span>
       </div>
     );
   }
@@ -191,13 +191,13 @@ export const UserSessionsPage: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <AlertCircle className="h-12 w-12 text-gray-400 mb-4" />
-        <p className="text-gray-500">User not found</p>
+        <p className="text-gray-500">Utilisateur introuvable</p>
         <Button
           variant="outline"
           onClick={() => navigate("/admin/users")}
           className="mt-4"
         >
-          Back to Users
+          Retour aux utilisateurs
         </Button>
       </div>
     );
@@ -210,11 +210,11 @@ export const UserSessionsPage: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
-        title="User Sessions"
-        description={`Managing sessions for ${user.full_name}`}
+        title="Sessions utilisateur"
+        description={`Gestion des sessions pour ${user.full_name}`}
         breadcrumbs={[
           { label: "Admin", href: "/admin" },
-          { label: "Users", href: "/admin/users" },
+          { label: "Utilisateurs", href: "/admin/users" },
           { label: user.full_name, href: `/admin/users/${id}` },
           { label: "Sessions" },
         ]}
@@ -225,31 +225,31 @@ export const UserSessionsPage: React.FC = () => {
               onClick={() => navigate(`/admin/users/${id}`)}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to User
+              Retour à l'utilisateur
             </Button>
             {activeSessions > 0 && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive">
                     <XCircle className="h-4 w-4 mr-2" />
-                    Revoke All Sessions
+                    Révoquer toutes les sessions
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Revoke All Sessions</AlertDialogTitle>
+                    <AlertDialogTitle>Révoquer toutes les sessions</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will revoke all active sessions for this user. They will be
-                      logged out from all devices and required to log in again.
+                      Toutes les sessions actives de cet utilisateur seront révoquées. Il sera
+                      déconnecté de tous les appareils et devra se reconnecter.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleRevokeAllSessions}
                       className="bg-red-600 hover:bg-red-700"
                     >
-                      Revoke All
+                      Tout révoquer
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -267,7 +267,7 @@ export const UserSessionsPage: React.FC = () => {
               <Monitor className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Active Sessions</p>
+              <p className="text-sm text-gray-500">Sessions actives</p>
               <p className="text-2xl font-bold">{activeSessions}</p>
             </div>
           </div>
@@ -293,7 +293,7 @@ export const UserSessionsPage: React.FC = () => {
               <Smartphone className="h-6 w-6 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Mobile Sessions</p>
+              <p className="text-sm text-gray-500">Sessions mobile</p>
               <p className="text-2xl font-bold">
                 {sessions.filter((s) => s.device_type === "mobile").length}
               </p>
@@ -305,9 +305,9 @@ export const UserSessionsPage: React.FC = () => {
       {/* Sessions Table */}
       <Card className="p-6">
         <div className="mb-4">
-          <h3 className="text-lg font-semibold">Active Sessions</h3>
+          <h3 className="text-lg font-semibold">Sessions actives</h3>
           <p className="text-sm text-gray-500 mt-1">
-            All currently active sessions for this user
+            Toutes les sessions actuellement actives pour cet utilisateur
           </p>
         </div>
 
@@ -316,7 +316,7 @@ export const UserSessionsPage: React.FC = () => {
           data={sessions}
           actions={actions}
           loading={sessionsLoading}
-          emptyMessage="No active sessions found"
+          emptyMessage="Aucune session active trouvée"
         />
 
         {sessions.length > 0 && (
@@ -324,11 +324,11 @@ export const UserSessionsPage: React.FC = () => {
             <div className="flex items-start gap-3">
               <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
               <div className="text-sm text-blue-900">
-                <p className="font-semibold">Session Management</p>
+                <p className="font-semibold">Gestion des sessions</p>
                 <p className="mt-1">
-                  Current sessions are marked with a green badge and cannot be revoked
-                  from this page. Other sessions can be individually revoked or you can
-                  revoke all sessions at once.
+                  La session actuelle est marquée d'un badge vert et ne peut pas être révoquée
+                  depuis cette page. Les autres sessions peuvent être révoquées individuellement
+                  ou vous pouvez révoquer toutes les sessions en une fois.
                 </p>
               </div>
             </div>

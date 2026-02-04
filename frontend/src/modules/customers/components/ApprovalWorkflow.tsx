@@ -36,10 +36,10 @@ const APPROVAL_STATUS_COLORS = {
 };
 
 const APPROVAL_STATUS_LABELS = {
-  not_required: "Not Required",
-  pending: "Pending Approval",
-  approved: "Approved",
-  rejected: "Rejected",
+  not_required: "Non requis",
+  pending: "En attente d'approbation",
+  approved: "Approuvé",
+  rejected: "Rejeté",
 };
 
 interface ApprovalWorkflowProps {
@@ -85,7 +85,7 @@ export function ApprovalWorkflow({ customerId }: ApprovalWorkflowProps) {
       await submitForApproval.mutateAsync({ id: customerId, notes });
       setNotes("");
     } catch (err: any) {
-      setError(err?.response?.data?.detail || "Failed to submit for approval");
+      setError(err?.response?.data?.detail || "Échec de la soumission pour approbation");
     }
   };
 
@@ -95,7 +95,7 @@ export function ApprovalWorkflow({ customerId }: ApprovalWorkflowProps) {
       await approveCustomer.mutateAsync({ id: customerId, notes });
       setNotes("");
     } catch (err: any) {
-      setError(err?.response?.data?.detail || "Failed to approve customer");
+      setError(err?.response?.data?.detail || "Échec de l'approbation du client");
     }
   };
 
@@ -111,21 +111,21 @@ export function ApprovalWorkflow({ customerId }: ApprovalWorkflowProps) {
       setRejectionReason("");
       setShowRejectDialog(false);
     } catch (err: any) {
-      setError(err?.response?.data?.detail || "Failed to reject customer");
+      setError(err?.response?.data?.detail || "Échec du rejet du client");
     }
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Approval Workflow</CardTitle>
+        <CardTitle>Workflow d&apos;approbation</CardTitle>
         <CardDescription>
-          Manage customer approval process
+          Gérer le processus d&apos;approbation du client
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Approval Status:</span>
+          <span className="text-sm font-medium">Statut d&apos;approbation :</span>
           <Badge className={APPROVAL_STATUS_COLORS[approvalStatus]}>
             {APPROVAL_STATUS_LABELS[approvalStatus]}
           </Badge>
@@ -141,9 +141,9 @@ export function ApprovalWorkflow({ customerId }: ApprovalWorkflowProps) {
         {approvalStatus === "not_required" && (
           <div className="space-y-4">
             <div>
-              <Label>Notes (Optional)</Label>
+              <Label>Notes (optionnel)</Label>
               <Textarea
-                placeholder="Add notes for approval submission..."
+                placeholder="Ajouter des notes pour la soumission..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
@@ -156,7 +156,7 @@ export function ApprovalWorkflow({ customerId }: ApprovalWorkflowProps) {
               {submitForApproval.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Submit for Approval
+              Soumettre pour approbation
             </Button>
           </div>
         )}
@@ -164,9 +164,9 @@ export function ApprovalWorkflow({ customerId }: ApprovalWorkflowProps) {
         {approvalStatus === "pending" && (
           <div className="space-y-4">
             <div>
-              <Label>Approval Notes (Optional)</Label>
+              <Label>Notes d&apos;approbation (optionnel)</Label>
               <Textarea
-                placeholder="Add approval notes..."
+                placeholder="Ajouter des notes d'approbation..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
@@ -200,7 +200,7 @@ export function ApprovalWorkflow({ customerId }: ApprovalWorkflowProps) {
           <Alert>
             <CheckCircle2 className="h-4 w-4" />
             <AlertDescription>
-              Customer has been approved. Status: {customer.status}
+              Le client a été approuvé. Statut : {customer.status}
             </AlertDescription>
           </Alert>
         )}
@@ -209,7 +209,7 @@ export function ApprovalWorkflow({ customerId }: ApprovalWorkflowProps) {
           <Alert variant="destructive">
             <XCircle className="h-4 w-4" />
             <AlertDescription>
-              Customer approval has been rejected. Status: {customer.status}
+              L&apos;approbation du client a été rejetée. Statut : {customer.status}
             </AlertDescription>
           </Alert>
         )}
@@ -217,17 +217,17 @@ export function ApprovalWorkflow({ customerId }: ApprovalWorkflowProps) {
         <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Reject Customer Approval</DialogTitle>
-              <DialogDescription>
-                Please provide a reason for rejecting this customer approval.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="rejection-reason">Rejection Reason *</Label>
-                <Textarea
-                  id="rejection-reason"
-                  placeholder="Enter reason for rejection..."
+            <DialogTitle>Rejeter l&apos;approbation du client</DialogTitle>
+            <DialogDescription>
+              Veuillez indiquer la raison du rejet de cette approbation.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="rejection-reason">Raison du rejet *</Label>
+              <Textarea
+                id="rejection-reason"
+                placeholder="Saisissez la raison du rejet..."
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   rows={4}
@@ -243,7 +243,7 @@ export function ApprovalWorkflow({ customerId }: ApprovalWorkflowProps) {
                   setRejectionReason("");
                 }}
               >
-                Cancel
+                Annuler
               </Button>
               <Button
                 variant="destructive"
@@ -253,7 +253,7 @@ export function ApprovalWorkflow({ customerId }: ApprovalWorkflowProps) {
                 {rejectCustomer.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Reject
+                Rejeter
               </Button>
             </DialogFooter>
           </DialogContent>

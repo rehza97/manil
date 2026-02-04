@@ -50,7 +50,7 @@ export function DataTable<T extends Record<string, any>>({
   selectedRows = new Set(),
   onSelectionChange,
   getRowId = (row) => row.id,
-  emptyMessage = "No data available",
+  emptyMessage = "Aucune donnée disponible",
   className = "",
 }: DataTableProps<T>) {
   const [localSelectedRows, setLocalSelectedRows] = useState<Set<string>>(
@@ -110,7 +110,7 @@ export function DataTable<T extends Record<string, any>>({
                 <Checkbox
                   checked={allSelected}
                   onCheckedChange={handleSelectAll}
-                  aria-label="Select all"
+                  aria-label="Tout sélectionner"
                   className={someSelected ? "data-[state=checked]:bg-gray-400" : ""}
                 />
               </TableHead>
@@ -151,7 +151,7 @@ export function DataTable<T extends Record<string, any>>({
               >
                 <div className="flex items-center justify-center gap-2">
                   <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-                  <span className="text-gray-500">Loading...</span>
+                  <span className="text-gray-500">Chargement…</span>
                 </div>
               </TableCell>
             </TableRow>
@@ -185,7 +185,7 @@ export function DataTable<T extends Record<string, any>>({
                         onCheckedChange={(checked) =>
                           handleSelectRow(rowId, checked as boolean)
                         }
-                        aria-label={`Select row ${rowId}`}
+                        aria-label={`Sélectionner la ligne ${rowId}`}
                       />
                     </TableCell>
                   )}

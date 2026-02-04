@@ -73,7 +73,7 @@ export const TicketListPage: React.FC = () => {
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
-            placeholder="Search tickets by title, description, or ID..."
+            placeholder="Rechercher par titre, description ou ID…"
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -196,8 +196,8 @@ export const TicketListPage: React.FC = () => {
               }
             } catch (error: any) {
               toast({
-                title: "Error",
-                description: error.message || "Bulk action failed",
+                title: "Erreur",
+                description: error.message || "Échec de l'action en masse",
                 variant: "destructive",
               });
             }

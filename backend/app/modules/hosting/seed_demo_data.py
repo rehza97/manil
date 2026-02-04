@@ -621,10 +621,10 @@ async def seed_all_demo_data(db: AsyncSession):
         # 3. Seed products
         products = await seed_demo_products(db, categories)
 
-        # 4. Seed VPS subscriptions
-        subscriptions = await seed_demo_vps_subscriptions(db, users)
+        # 4. VPS subscriptions disabled - no auto-creation
+        subscriptions: list = []
 
-        # 5. Seed DNS zones
+        # 5. Seed DNS zones (skipped when no subscriptions)
         zones = await seed_demo_dns_zones(db, subscriptions)
 
         # 6. Seed DNS templates
@@ -637,7 +637,7 @@ async def seed_all_demo_data(db: AsyncSession):
         print(f"  Users: {len(users)}")
         print(f"  Product Categories: {len(categories)}")
         print(f"  Products: {len(products)}")
-        print(f"  VPS Subscriptions: {len(subscriptions)}")
+        print(f"  VPS Subscriptions: 0 (disabled)")
         print(f"  DNS Zones: {len(zones)}")
         print(f"  DNS Templates: {len(templates)}")
 

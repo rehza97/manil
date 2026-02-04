@@ -1,0 +1,39 @@
+{% extends "reports/base_report.html" %}
+
+{% block summary %}
+  <div class="executive-summary">
+    <div class="kpi-card">
+      <div class="kpi-value">{{ details | length }}</div>
+      <div class="kpi-label">Security Events</div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block charts %}
+  {{ super() }}
+{% endblock %}
+
+{% block data %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Action</th>
+          <th>IP Address</th>
+          <th>Event Count</th>
+          <th>Last Occurrence</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in details or [] %}
+        <tr>
+          <td>{{ row.action }}</td>
+          <td>{{ row.ip_address }}</td>
+          <td>{{ row.count }}</td>
+          <td>{{ row.last_at.strftime('%Y-%m-%d %H:%M') if row.last_at else 'N/A' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

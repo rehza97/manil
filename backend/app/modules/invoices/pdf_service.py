@@ -345,9 +345,10 @@ class InvoicePDFService:
         data.append(['<b>TAX DETAILS:</b>', ''])
         data.append([f'TVA ({tax_rate}%):', f"{tax_amount:,.2f} DZD"])
 
-        # TAP calculation (0.5% of subtotal for demonstration)
-        tap_amount = subtotal * 0.005
-        data.append(['TAP (0.5%):', f"{tap_amount:,.2f} DZD"])
+        # TAP from config
+        tap_rate = get_settings().DEFAULT_TAP_RATE
+        tap_amount = subtotal * tap_rate
+        data.append([f'TAP ({tap_rate * 100}%):', f"{tap_amount:,.2f} DZD"])
 
         # Total tax
         total_tax = tax_amount + tap_amount

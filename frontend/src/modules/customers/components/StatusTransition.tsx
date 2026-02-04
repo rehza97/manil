@@ -30,10 +30,10 @@ const STATUS_COLORS: Record<CustomerStatus, string> = {
 };
 
 const STATUS_LABELS: Record<CustomerStatus, string> = {
-  pending: "Pending",
-  active: "Active",
-  suspended: "Suspended",
-  inactive: "Inactive",
+  pending: "En attente",
+  active: "Actif",
+  suspended: "Suspendu",
+  inactive: "Inactif",
 };
 
 // Valid status transitions
@@ -72,7 +72,7 @@ export function StatusTransition({ customerId }: StatusTransitionProps) {
     return (
       <Alert>
         <AlertCircle className="h-4 w-4" />
-        <AlertDescription>Customer not found</AlertDescription>
+        <AlertDescription>Client introuvable</AlertDescription>
       </Alert>
     );
   }
@@ -111,7 +111,7 @@ export function StatusTransition({ customerId }: StatusTransitionProps) {
       }
       setReason("");
       setSelectedStatus(null);
-      toast.success(`Customer status changed to ${selectedStatus} successfully`);
+      toast.success(`Statut du client mis à jour vers ${STATUS_LABELS[selectedStatus]} avec succès`);
     } catch (err: any) {
       console.error("[StatusTransition.handleStatusChange] Error:", err);
       console.error("[StatusTransition.handleStatusChange] Error response:", err?.response?.data);
@@ -124,14 +124,14 @@ export function StatusTransition({ customerId }: StatusTransitionProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Status Management</CardTitle>
+        <CardTitle>Gestion du statut</CardTitle>
         <CardDescription>
-          Change customer account status with validation
+          Modifier le statut du compte client avec validation
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Current Status:</span>
+          <span className="text-sm font-medium">Statut actuel :</span>
           <Badge className={STATUS_COLORS[currentStatus]}>
             {STATUS_LABELS[currentStatus]}
           </Badge>
@@ -140,7 +140,7 @@ export function StatusTransition({ customerId }: StatusTransitionProps) {
         {allowedTransitions.length > 0 ? (
           <div className="space-y-4">
             <div>
-              <Label>Change Status To</Label>
+              <Label>Changer le statut vers</Label>
               <div className="flex gap-2 mt-2">
                 {allowedTransitions.map((status) => (
                   <Button
@@ -190,7 +190,7 @@ export function StatusTransition({ customerId }: StatusTransitionProps) {
                 {(activateCustomer.isPending || suspendCustomer.isPending) && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Change Status to {STATUS_LABELS[selectedStatus]}
+                Changer le statut vers {STATUS_LABELS[selectedStatus]}
               </Button>
             )}
           </div>
@@ -198,7 +198,7 @@ export function StatusTransition({ customerId }: StatusTransitionProps) {
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              No status transitions available from {STATUS_LABELS[currentStatus]} status
+              Aucun changement de statut possible depuis le statut {STATUS_LABELS[currentStatus]}
             </AlertDescription>
           </Alert>
         )}

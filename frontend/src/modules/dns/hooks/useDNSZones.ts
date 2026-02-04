@@ -73,17 +73,17 @@ export const useCreateDNSZone = () => {
       queryClient.invalidateQueries({ queryKey: ["dns", "statistics"] });
       
       toast({
-        title: "DNS Zone Created",
-        description: "Your DNS zone has been created successfully.",
+        title: "Zone DNS créée",
+        description: "Votre zone DNS a été créée avec succès.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Failed to Create Zone",
+        title: "Échec de la création de la zone",
         description:
           error.response?.data?.detail ||
           error.response?.data?.message ||
-          "An error occurred while creating the DNS zone",
+          "Une erreur s'est produite lors de la création de la zone DNS",
         variant: "destructive",
       });
     },
@@ -111,16 +111,16 @@ export const useUpdateDNSZone = () => {
       queryClient.invalidateQueries({ queryKey: ["dns", "zones"] });
       
       toast({
-        title: "Zone Updated",
-        description: "DNS zone settings have been updated successfully.",
+        title: "Zone mise à jour",
+        description: "Les paramètres de la zone DNS ont été mis à jour avec succès.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Update Failed",
+        title: "Échec de la mise à jour",
         description:
           error.response?.data?.detail ||
-          "An error occurred while updating the zone",
+          "Une erreur s'est produite lors de la mise à jour de la zone",
         variant: "destructive",
       });
     },
@@ -142,16 +142,16 @@ export const useDeleteDNSZone = () => {
       queryClient.invalidateQueries({ queryKey: ["dns", "statistics"] });
       
       toast({
-        title: "Zone Deleted",
-        description: "DNS zone has been deleted successfully.",
+        title: "Zone supprimée",
+        description: "La zone DNS a été supprimée avec succès.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Delete Failed",
+        title: "Échec de la suppression",
         description:
           error.response?.data?.detail ||
-          "An error occurred while deleting the zone",
+          "Une erreur s'est produite lors de la suppression de la zone",
         variant: "destructive",
       });
     },
@@ -235,14 +235,14 @@ export const useSuspendDNSZone = () => {
       queryClient.invalidateQueries({ queryKey: ["dns"] });
       
       toast({
-        title: "Zone Suspended",
-        description: "DNS zone has been suspended successfully.",
+        title: "Zone suspendue",
+        description: "La zone DNS a été suspendue avec succès.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Suspension Failed",
-        description: error.response?.data?.detail || "Failed to suspend zone",
+        title: "Échec de la suspension",
+        description: error.response?.data?.detail || "Échec de la suspension de la zone",
         variant: "destructive",
       });
     },

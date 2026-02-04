@@ -39,7 +39,7 @@ export const SystemHealthPage: React.FC = () => {
     // Database
     if (detailedHealth.database) {
       components.push({
-        name: "Database",
+        name: "Base de données",
         status:
           detailedHealth.database.status === "healthy" ? "healthy" : "error",
         uptime: detailedHealth.database.uptime,
@@ -52,7 +52,7 @@ export const SystemHealthPage: React.FC = () => {
     // Redis
     if (detailedHealth.redis) {
       components.push({
-        name: "Redis Cache",
+        name: "Cache Redis",
         status: detailedHealth.redis.status === "healthy" ? "healthy" : "error",
         uptime: detailedHealth.redis.uptime,
         hit_rate: detailedHealth.redis.hit_rate,
@@ -63,7 +63,7 @@ export const SystemHealthPage: React.FC = () => {
     // API Server
     if (detailedHealth.api_server) {
       components.push({
-        name: "API Server",
+        name: "Serveur API",
         status:
           detailedHealth.api_server.status === "healthy" ? "healthy" : "error",
         uptime: detailedHealth.api_server.uptime,
@@ -76,7 +76,7 @@ export const SystemHealthPage: React.FC = () => {
     // Storage
     if (detailedHealth.storage) {
       components.push({
-        name: "Storage",
+        name: "Stockage",
         status:
           detailedHealth.storage.status === "healthy" ? "healthy" : "error",
         usage_percent: detailedHealth.storage.usage_percent,
@@ -114,17 +114,17 @@ export const SystemHealthPage: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Activity className="h-8 w-8" />
-            System Health
+            Santé du système
           </h1>
           <p className="text-slate-600 mt-2">
-            Real-time monitoring of system components and their health status.
+            Surveillance en temps réel des composants et de leur état.
           </p>
         </div>
         <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
           <RefreshCw
             className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
           />
-          Refresh
+          Actualiser
         </Button>
       </div>
 
@@ -147,14 +147,14 @@ export const SystemHealthPage: React.FC = () => {
             ) : (
               <Activity className="h-5 w-5 text-green-600" />
             )}
-            Overall System Status
+            État global du système
           </CardTitle>
           <CardDescription>
             {allHealthy
-              ? "All systems operational"
+              ? "Tous les systèmes sont opérationnels"
               : hasErrors
-              ? "Some components are experiencing issues"
-              : "Some components require attention"}
+              ? "Certains composants rencontrent des problèmes"
+              : "Certains composants nécessitent une attention"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -177,7 +177,7 @@ export const SystemHealthPage: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium">
-                System Uptime
+                Disponibilité système
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -185,7 +185,7 @@ export const SystemHealthPage: React.FC = () => {
                 {systemHealth.uptime.toFixed(1)}%
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Overall system availability
+                Disponibilité globale du système
               </p>
             </CardContent>
           </Card>
@@ -193,15 +193,15 @@ export const SystemHealthPage: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium">
-                Database Status
+                État de la base de données
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold capitalize">
-                {systemHealth.database_status}
+                {systemHealth.database_status === "healthy" ? "Opérationnel" : systemHealth.database_status === "degraded" ? "Dégradé" : systemHealth.database_status}
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Response time: {systemHealth.database_response_time}ms
+                Temps de réponse : {systemHealth.database_response_time} ms
               </p>
             </CardContent>
           </Card>
@@ -209,7 +209,7 @@ export const SystemHealthPage: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium">
-                Critical Alerts
+                Alertes critiques
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -217,7 +217,7 @@ export const SystemHealthPage: React.FC = () => {
                 {systemHealth.critical_alerts}
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Issues requiring attention
+                Problèmes nécessitant une attention
               </p>
             </CardContent>
           </Card>

@@ -130,8 +130,8 @@ export const VPSPlansAdminPage: React.FC = () => {
     createMutation.mutate(formData, {
       onSuccess: () => {
         toast({
-          title: "Success",
-          description: "VPS plan created successfully",
+          title: "Succès",
+          description: "Plan VPS créé avec succès",
         });
         setCreateDialog(false);
         resetForm();
@@ -139,8 +139,8 @@ export const VPSPlansAdminPage: React.FC = () => {
       onError: (error: any) => {
         toast({
           variant: "destructive",
-          title: "Error",
-          description: error?.response?.data?.detail || "Failed to create plan",
+          title: "Erreur",
+          description: error?.response?.data?.detail || "Échec de la création du plan",
         });
       },
     });
@@ -169,8 +169,8 @@ export const VPSPlansAdminPage: React.FC = () => {
       {
         onSuccess: () => {
           toast({
-            title: "Success",
-            description: "VPS plan updated successfully",
+            title: "Succès",
+            description: "Plan VPS mis à jour avec succès",
           });
           setEditDialog({ open: false, plan: null });
           resetForm();
@@ -178,9 +178,9 @@ export const VPSPlansAdminPage: React.FC = () => {
         onError: (error: any) => {
           toast({
             variant: "destructive",
-            title: "Error",
+            title: "Erreur",
             description:
-              error?.response?.data?.detail || "Failed to update plan",
+              error?.response?.data?.detail || "Échec de la mise à jour du plan",
           });
         },
       }
@@ -193,18 +193,18 @@ export const VPSPlansAdminPage: React.FC = () => {
     deleteMutation.mutate(deleteDialog.plan.id, {
       onSuccess: () => {
         toast({
-          title: "Success",
-          description: "VPS plan deleted successfully",
+          title: "Succès",
+          description: "Plan VPS supprimé avec succès",
         });
         setDeleteDialog({ open: false, plan: null });
       },
       onError: (error: any) => {
         toast({
           variant: "destructive",
-          title: "Error",
+          title: "Erreur",
           description:
             error?.response?.data?.detail ||
-            "Failed to delete plan. It may have active subscriptions.",
+            "Échec de la suppression du plan. Il peut avoir des abonnements actifs.",
         });
       },
     });
@@ -216,18 +216,18 @@ export const VPSPlansAdminPage: React.FC = () => {
     mutation.mutate(plan.id, {
       onSuccess: () => {
         toast({
-          title: "Success",
+          title: "Succès",
           description: `Plan ${
-            plan.is_active ? "deactivated" : "activated"
-          } successfully`,
+            plan.is_active ? "désactivé" : "activé"
+          } avec succès`,
         });
       },
       onError: (error: any) => {
         toast({
           variant: "destructive",
-          title: "Error",
+          title: "Erreur",
           description:
-            error?.response?.data?.detail || "Failed to update plan status",
+            error?.response?.data?.detail || "Échec de la mise à jour du statut du plan",
         });
       },
     });
@@ -282,7 +282,7 @@ export const VPSPlansAdminPage: React.FC = () => {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Failed to load VPS plans. Please try again.
+            Échec du chargement des plans VPS. Veuillez réessayer.
           </AlertDescription>
         </Alert>
       </div>
@@ -295,20 +295,20 @@ export const VPSPlansAdminPage: React.FC = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            VPS Plans Management
+            Gestion des plans VPS
           </h1>
           <p className="text-muted-foreground mt-1">
-            Create and manage VPS hosting plans with pricing and specifications
+            Créer et gérer les plans d&apos;hébergement VPS avec tarifs et spécifications
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
+            Actualiser
           </Button>
           <Button onClick={() => setCreateDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Create Plan
+            Créer un plan
           </Button>
         </div>
       </div>
@@ -328,12 +328,12 @@ export const VPSPlansAdminPage: React.FC = () => {
           }
         >
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Filter by status" />
+            <SelectValue placeholder="Filtrer par statut" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Plans</SelectItem>
-            <SelectItem value="active">Active Only</SelectItem>
-            <SelectItem value="inactive">Inactive Only</SelectItem>
+            <SelectItem value="all">Tous les plans</SelectItem>
+            <SelectItem value="active">Actifs uniquement</SelectItem>
+            <SelectItem value="inactive">Inactifs uniquement</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -401,7 +401,7 @@ export const VPSPlansAdminPage: React.FC = () => {
                         </div>
                         {plan.setup_fee > 0 && (
                           <div className="text-xs text-muted-foreground">
-                            Setup: {formatPrice(plan.setup_fee)}
+                            Installation : {formatPrice(plan.setup_fee)}
                           </div>
                         )}
                       </div>
@@ -410,10 +410,10 @@ export const VPSPlansAdminPage: React.FC = () => {
                       {plan.is_active ? (
                         <Badge variant="default" className="bg-green-500">
                           <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Active
+                          Actif
                         </Badge>
                       ) : (
-                        <Badge variant="secondary">Inactive</Badge>
+                        <Badge variant="secondary">Inactif</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -425,8 +425,8 @@ export const VPSPlansAdminPage: React.FC = () => {
                             onClick={() => handleToggleStatus(plan)}
                             aria-label={
                               plan.is_active
-                                ? "Deactivate plan"
-                                : "Activate plan"
+                                ? "Désactiver le plan"
+                                : "Activer le plan"
                             }
                             type="button"
                           >
@@ -440,7 +440,7 @@ export const VPSPlansAdminPage: React.FC = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => openEditDialog(plan)}
-                            aria-label="Edit plan"
+                            aria-label="Modifier le plan"
                             type="button"
                           >
                             <Pencil className="h-4 w-4" />
@@ -451,7 +451,7 @@ export const VPSPlansAdminPage: React.FC = () => {
                             onClick={() =>
                               setDeleteDialog({ open: true, plan })
                             }
-                            aria-label="Delete plan"
+                            aria-label="Supprimer le plan"
                             type="button"
                           >
                             <Trash2 className="h-4 w-4 text-red-500" />
@@ -492,12 +492,12 @@ export const VPSPlansAdminPage: React.FC = () => {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editDialog.plan ? "Edit VPS Plan" : "Create VPS Plan"}
+              {editDialog.plan ? "Modifier le plan VPS" : "Créer un plan VPS"}
             </DialogTitle>
             <DialogDescription>
               {editDialog.plan
-                ? "Update plan details. Changes only affect new subscriptions."
-                : "Create a new VPS hosting plan with pricing and specifications."}
+                ? "Mettre à jour les détails du plan. Les changements ne concernent que les nouveaux abonnements."
+                : "Créer un nouveau plan d'hébergement VPS avec tarifs et spécifications."}
             </DialogDescription>
           </DialogHeader>
 
@@ -508,14 +508,14 @@ export const VPSPlansAdminPage: React.FC = () => {
               {/* Basic Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Plan Name *</Label>
+                  <Label htmlFor="name">Nom du plan *</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
                     }
-                    placeholder="e.g., Starter VPS"
+                    placeholder="ex. VPS Starter"
                     required
                   />
                 </div>
@@ -527,7 +527,7 @@ export const VPSPlansAdminPage: React.FC = () => {
                     onChange={(e) =>
                       setFormData({ ...formData, slug: e.target.value })
                     }
-                    placeholder="e.g., starter-vps"
+                    placeholder="ex. starter-vps"
                     pattern="[a-z\-]+"
                     required
                   />
@@ -542,7 +542,7 @@ export const VPSPlansAdminPage: React.FC = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, description: e.target.value })
                   }
-                  placeholder="Plan description"
+                  placeholder="Description du plan"
                   rows={2}
                 />
               </div>
@@ -550,7 +550,7 @@ export const VPSPlansAdminPage: React.FC = () => {
               {/* Specifications */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="cpu_cores">CPU Cores *</Label>
+                  <Label htmlFor="cpu_cores">Cœurs CPU *</Label>
                   <Input
                     id="cpu_cores"
                     type="number"
@@ -567,7 +567,7 @@ export const VPSPlansAdminPage: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ram_gb">RAM (GB) *</Label>
+                  <Label htmlFor="ram_gb">RAM (Go) *</Label>
                   <Input
                     id="ram_gb"
                     type="number"
@@ -586,7 +586,7 @@ export const VPSPlansAdminPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="storage_gb">Storage (GB) *</Label>
+                  <Label htmlFor="storage_gb">Stockage (Go) *</Label>
                   <Input
                     id="storage_gb"
                     type="number"
@@ -602,7 +602,7 @@ export const VPSPlansAdminPage: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="bandwidth_tb">Bandwidth (TB) *</Label>
+                  <Label htmlFor="bandwidth_tb">Bande passante (To) *</Label>
                   <Input
                     id="bandwidth_tb"
                     type="number"
@@ -623,7 +623,7 @@ export const VPSPlansAdminPage: React.FC = () => {
               {/* Pricing */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="monthly_price">Monthly Price (DZD) *</Label>
+                  <Label htmlFor="monthly_price">Prix mensuel (DZD) *</Label>
                   <Input
                     id="monthly_price"
                     type="number"
@@ -639,7 +639,7 @@ export const VPSPlansAdminPage: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="setup_fee">Setup Fee (DZD)</Label>
+                  <Label htmlFor="setup_fee">Frais d&apos;installation (DZD)</Label>
                   <Input
                     id="setup_fee"
                     type="number"
@@ -657,14 +657,14 @@ export const VPSPlansAdminPage: React.FC = () => {
 
               {/* Docker Config */}
               <div className="space-y-2">
-                <Label htmlFor="docker_image">Docker Image *</Label>
+                <Label htmlFor="docker_image">Image Docker *</Label>
                 <Input
                   id="docker_image"
                   value={formData.docker_image}
                   onChange={(e) =>
                     setFormData({ ...formData, docker_image: e.target.value })
                   }
-                  placeholder="e.g., ubuntu:22.04"
+                  placeholder="ex. ubuntu:22.04"
                   required
                 />
               </div>
@@ -681,7 +681,7 @@ export const VPSPlansAdminPage: React.FC = () => {
                   className="h-4 w-4 rounded border-gray-300"
                 />
                 <Label htmlFor="is_active" className="cursor-pointer">
-                  Active (available for purchase)
+                  Actif (disponible à l&apos;achat)
                 </Label>
               </div>
             </div>
@@ -696,17 +696,17 @@ export const VPSPlansAdminPage: React.FC = () => {
                   resetForm();
                 }}
               >
-                Cancel
+                Annuler
               </Button>
               <Button
                 type="submit"
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
                 {createMutation.isPending || updateMutation.isPending
-                  ? "Saving..."
+                  ? "Enregistrement…"
                   : editDialog.plan
-                  ? "Update Plan"
-                  : "Create Plan"}
+                  ? "Mettre à jour le plan"
+                  : "Créer le plan"}
               </Button>
             </DialogFooter>
           </form>
@@ -722,11 +722,11 @@ export const VPSPlansAdminPage: React.FC = () => {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete VPS Plan</DialogTitle>
+            <DialogTitle>Supprimer le plan VPS</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &quot;{deleteDialog.plan?.name}
-              &quot;? This action cannot be undone. The plan cannot be deleted
-              if there are active subscriptions.
+              Êtes-vous sûr de vouloir supprimer « {deleteDialog.plan?.name}
+              » ? Cette action est irréversible. Le plan ne peut pas être supprimé
+              s&apos;il a des abonnements actifs.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -734,14 +734,14 @@ export const VPSPlansAdminPage: React.FC = () => {
               variant="outline"
               onClick={() => setDeleteDialog({ open: false, plan: null })}
             >
-              Cancel
+              Annuler
             </Button>
             <Button
               variant="destructive"
               onClick={handleDelete}
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete Plan"}
+              {deleteMutation.isPending ? "Suppression…" : "Supprimer le plan"}
             </Button>
           </DialogFooter>
         </DialogContent>

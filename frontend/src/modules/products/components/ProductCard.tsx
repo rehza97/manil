@@ -35,12 +35,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           )}
           {product.is_featured && (
             <div className="absolute right-2 top-2 rounded-full bg-yellow-400 px-2 py-1 text-xs font-semibold text-gray-800">
-              Featured
+              En vedette
             </div>
           )}
           {product.sale_price && (
             <div className="absolute left-2 top-2 rounded-full bg-red-500 px-2 py-1 text-xs font-semibold text-white">
-              Sale
+              Promo
             </div>
           )}
         </div>
@@ -98,11 +98,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           {/* Billing Cycle */}
           <div className="mt-2">
             <p className="text-xs text-gray-600">
-              Billing: <span className="font-medium capitalize">{product.billing_cycle || "one_time"}</span>
+              Facturation : <span className="font-medium">{product.billing_cycle === "monthly" ? "Mensuel" : product.billing_cycle === "yearly" ? "Annuel" : product.billing_cycle === "usage_based" ? "À l'usage" : "Unique"}</span>
             </p>
             {product.trial_period_days && (
               <p className="text-xs text-gray-600">
-                Trial: <span className="font-medium">{product.trial_period_days} days</span>
+                Essai : <span className="font-medium">{product.trial_period_days} jours</span>
               </p>
             )}
           </div>

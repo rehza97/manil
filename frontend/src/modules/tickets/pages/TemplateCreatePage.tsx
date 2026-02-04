@@ -45,13 +45,13 @@ export const TemplateCreatePage: React.FC = () => {
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
-          <BreadcrumbItem>Create</BreadcrumbItem>
+          <BreadcrumbItem>Créer</BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
 
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Create New Template</h1>
+        <h1 className="text-3xl font-bold">Créer un modèle</h1>
         <p className="text-gray-600 mt-1">
           Create a new response template for quick replies
         </p>

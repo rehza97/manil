@@ -1,0 +1,39 @@
+{% extends "reports/base_report.html" %}
+
+{% block summary %}
+  <div class="executive-summary">
+    <div class="kpi-card">
+      <div class="kpi-value">{{ details | length }}</div>
+      <div class="kpi-label">Products Sold</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ details | sum(attribute='order_count') if details else 0 }}</div>
+      <div class="kpi-label">Total Orders</div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block charts %}
+  {{ super() }}
+{% endblock %}
+
+{% block data %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Product ID</th>
+          <th>Order Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in details or [] %}
+        <tr>
+          <td>{{ row.product_id }}</td>
+          <td>{{ row.order_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

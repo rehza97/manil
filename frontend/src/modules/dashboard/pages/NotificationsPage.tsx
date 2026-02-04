@@ -62,14 +62,14 @@ export const NotificationsPage: React.FC = () => {
     try {
       const result = await markAllReadMutation.mutateAsync();
       toast({
-        title: "Success",
-        description: `${result.marked_count} notification${result.marked_count !== 1 ? "s" : ""} marked as read`,
+        title: "Succès",
+        description: `${result.marked_count} notification${result.marked_count !== 1 ? "s" : ""} marquée(s) comme lue(s)`,
       });
       refetch();
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to mark all as read",
+        title: "Erreur",
+        description: "Impossible de tout marquer comme lu",
         variant: "destructive",
       });
     }
@@ -110,7 +110,7 @@ export const NotificationsPage: React.FC = () => {
         <div className="flex items-center space-x-4">
           <Button variant="ghost" size="sm" onClick={() => navigate(backPath)}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+            Retour
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Notifications</h1>
@@ -131,7 +131,7 @@ export const NotificationsPage: React.FC = () => {
             ) : (
               <CheckCheck className="h-4 w-4 mr-2" />
             )}
-            Mark all as read
+            Tout marquer comme lu
           </Button>
         )}
       </div>
@@ -148,7 +148,7 @@ export const NotificationsPage: React.FC = () => {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Unread</CardDescription>
+            <CardDescription>Non lues</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{unreadCount}</div>
@@ -169,18 +169,18 @@ export const NotificationsPage: React.FC = () => {
       {/* Notifications List */}
       <Card>
         <CardHeader>
-          <CardTitle>Your Notifications</CardTitle>
+          <CardTitle>Vos notifications</CardTitle>
           <CardDescription>
             {activeTab === "unread"
-              ? "Showing only unread notifications"
-              : "Showing all notifications"}
+              ? "Affichage des notifications non lues uniquement"
+              : "Affichage de toutes les notifications"}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "all" | "unread")}>
             <TabsList className="mb-4">
-              <TabsTrigger value="all">All ({notificationsData?.total || 0})</TabsTrigger>
-              <TabsTrigger value="unread">Unread ({unreadCount})</TabsTrigger>
+              <TabsTrigger value="all">Toutes ({notificationsData?.total || 0})</TabsTrigger>
+              <TabsTrigger value="unread">Non lues ({unreadCount})</TabsTrigger>
             </TabsList>
 
             <TabsContent value={activeTab} className="mt-0">
@@ -218,7 +218,7 @@ export const NotificationsPage: React.FC = () => {
                                   </h3>
                                   {isUnread && (
                                     <Badge variant="destructive" className="text-xs">
-                                      New
+                                      Nouveau
                                     </Badge>
                                   )}
                                 </div>
@@ -238,14 +238,14 @@ export const NotificationsPage: React.FC = () => {
                                     size="sm"
                                     onClick={() => handleMarkAsRead(notification.id)}
                                     disabled={markReadMutation.isPending}
-                                    title="Mark as read"
+                                    title="Marquer comme lu"
                                   >
                                     <Check className="h-4 w-4" />
                                   </Button>
                                 )}
                                 {notification.link && (
                                   <Button variant="outline" size="sm" asChild>
-                                    <Link to={normalizeNotificationLink(notification.link, basePath)}>View</Link>
+                                    <Link to={normalizeNotificationLink(notification.link, basePath)}>Voir</Link>
                                   </Button>
                                 )}
                               </div>
@@ -261,8 +261,8 @@ export const NotificationsPage: React.FC = () => {
                   <Bell className="h-12 w-12 mx-auto text-gray-300 mb-4" />
                   <p className="text-gray-500">
                     {activeTab === "unread"
-                      ? "No unread notifications"
-                      : "No notifications yet"}
+                      ? "Aucune notification non lue"
+                      : "Aucune notification pour le moment"}
                   </p>
                 </div>
               )}
@@ -276,10 +276,10 @@ export const NotificationsPage: React.FC = () => {
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1 || isLoading}
                   >
-                    Previous
+                    Précédent
                   </Button>
                   <span className="text-sm text-gray-500">
-                    Page {page} of {totalPages}
+                    Page {page} sur {totalPages}
                   </span>
                   <Button
                     variant="outline"
@@ -287,7 +287,7 @@ export const NotificationsPage: React.FC = () => {
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages || isLoading}
                   >
-                    Next
+                    Suivant
                   </Button>
                 </div>
               )}

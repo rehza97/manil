@@ -59,9 +59,9 @@ const formatBytes = (bytes: number): string => {
 
 export const BackupManagementPage: React.FC = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isRestoreDialogOpen, setIsRestoreDialogOpen] = useState(false);
+  const [isRestaurerDialogOpen, setIsRestaurerDialogOpen] = useState(false);
   const [selectedBackupId, setSelectedBackupId] = useState<string | null>(null);
-  const [restoreConfirm, setRestoreConfirm] = useState(false);
+  const [restoreConfirm, setRestaurerConfirm] = useState(false);
 
   const { data: backups, isLoading } = useBackupHistory();
   const createMutation = useCreateBackup();
@@ -74,15 +74,15 @@ export const BackupManagementPage: React.FC = () => {
     setIsCreateDialogOpen(false);
   };
 
-  const handleRestore = async () => {
+  const handleRestaurer = async () => {
     if (!selectedBackupId || !restoreConfirm) return;
     await restoreMutation.mutateAsync({
       backup_id: selectedBackupId,
       confirm: restoreConfirm,
     });
-    setIsRestoreDialogOpen(false);
+    setIsRestaurerDialogOpen(false);
     setSelectedBackupId(null);
-    setRestoreConfirm(false);
+    setRestaurerConfirm(false);
   };
 
   const handleDownload = async (backupId: string) => {
@@ -90,7 +90,7 @@ export const BackupManagementPage: React.FC = () => {
   };
 
   const handleDelete = async (backupId: string) => {
-    if (window.confirm("Are you sure you want to delete this backup?")) {
+    if (window.confirm("Voulez-vous vraiment supprimer cette sauvegarde ?")) {
       await deleteMutation.mutateAsync(backupId);
     }
   };
@@ -99,31 +99,30 @@ export const BackupManagementPage: React.FC = () => {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Backup Management</h1>
+          <h1 className="text-3xl font-bold">Gestion des sauvegardes</h1>
           <p className="text-muted-foreground mt-2">
-            Create, restore, and manage database backups
+            Créer, restaurer et gérer les sauvegardes de la base de données
           </p>
         </div>
         <Button onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Create Backup
+          Créer une sauvegarde
         </Button>
       </div>
 
       <Alert>
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>
-          Backups are stored locally. Ensure you have sufficient disk space and
-          regularly download backups for off-site storage.
+          Les sauvegardes sont stockées localement. Assurez-vous d&apos;avoir assez d&apos;espace disque et téléchargez régulièrement les sauvegardes pour un stockage externe.
         </AlertDescription>
       </Alert>
 
       <Card>
         <CardHeader>
-          <CardTitle>Backup History</CardTitle>
+          <CardTitle>Historique des sauvegardes</CardTitle>
           <CardDescription>
             {backups?.length || 0}{" "}
-            {backups?.length === 1 ? "backup" : "backups"} available
+            {backups?.length === 1 ? "sauvegarde" : "sauvegardes"} disponible{(backups?.length ?? 0) !== 1 ? "s" : ""}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -134,15 +133,15 @@ export const BackupManagementPage: React.FC = () => {
           ) : !backups || backups.length === 0 ? (
             <div className="text-center py-12">
               <Database className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No backups found.</p>
+              <p className="text-muted-foreground">Aucune sauvegarde trouvée.</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Filename</TableHead>
-                  <TableHead>Size</TableHead>
-                  <TableHead>Created</TableHead>
+                  <TableHead>Nom du fichier</TableHead>
+                  <TableHead>Taille</TableHead>
+                  <TableHead>Créé le</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -171,11 +170,11 @@ export const BackupManagementPage: React.FC = () => {
                           size="sm"
                           onClick={() => {
                             setSelectedBackupId(backup.id);
-                            setIsRestoreDialogOpen(true);
+                            setIsRestaurerDialogOpen(true);
                           }}
                         >
                           <RefreshCw className="h-4 w-4 mr-2" />
-                          Restore
+                          Restaurer
                         </Button>
                         <Button
                           variant="outline"
@@ -195,20 +194,19 @@ export const BackupManagementPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Create Backup Dialog */}
+      {/* Créer une sauvegarde Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Backup</DialogTitle>
+            <DialogTitle>Créer une sauvegarde</DialogTitle>
             <DialogDescription>
-              Create a new database backup. This may take a few minutes.
+              Créer une nouvelle sauvegarde de la base. L'opération peut prendre quelques minutes.
             </DialogDescription>
           </DialogHeader>
           <Alert>
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              The backup process will create a full database dump. Ensure you
-              have sufficient disk space.
+              La sauvegarde créera un dump complet de la base. Assurez-vous d&apos;avoir assez d&apos;espace disque.
             </AlertDescription>
           </Alert>
           <DialogFooter>
@@ -216,33 +214,31 @@ export const BackupManagementPage: React.FC = () => {
               variant="outline"
               onClick={() => setIsCreateDialogOpen(false)}
             >
-              Cancel
+              Annuler
             </Button>
             <Button onClick={handleCreate} disabled={createMutation.isPending}>
               {createMutation.isPending && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
-              Create Backup
+              Créer une sauvegarde
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Restore Backup Dialog */}
-      <Dialog open={isRestoreDialogOpen} onOpenChange={setIsRestoreDialogOpen}>
+      {/* Restaurer Backup Dialog */}
+      <Dialog open={isRestaurerDialogOpen} onOpenChange={setIsRestaurerDialogOpen}>
         <DialogContent className="bg-red-50 border-red-200">
           <DialogHeader>
-            <DialogTitle className="text-red-900">Restore Backup</DialogTitle>
+            <DialogTitle className="text-red-900">Restaurer une sauvegarde</DialogTitle>
             <DialogDescription className="text-red-700">
-              Restore database from backup. This will replace all current data!
+              Restaurer la base à partir d'une sauvegarde. Toutes les données actuelles seront remplacées.
             </DialogDescription>
           </DialogHeader>
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Warning:</strong> This operation is irreversible and will
-              replace all current database data with the backup. Ensure you have
-              a current backup before proceeding.
+              <strong>Attention :</strong> Cette opération est irréversible et remplacera toutes les données actuelles par la sauvegarde. Assurez-vous d'avoir une sauvegarde à jour avant de continuer.
             </AlertDescription>
           </Alert>
           <div className="space-y-4">
@@ -251,11 +247,11 @@ export const BackupManagementPage: React.FC = () => {
                 type="checkbox"
                 id="restore-confirm"
                 checked={restoreConfirm}
-                onChange={(e) => setRestoreConfirm(e.target.checked)}
+                onChange={(e) => setRestaurerConfirm(e.target.checked)}
                 className="rounded"
               />
               <Label htmlFor="restore-confirm">
-                I understand this will replace all current data
+                Je comprends que cela remplacera toutes les données actuelles
               </Label>
             </div>
           </div>
@@ -263,21 +259,21 @@ export const BackupManagementPage: React.FC = () => {
             <Button
               variant="outline"
               onClick={() => {
-                setIsRestoreDialogOpen(false);
-                setRestoreConfirm(false);
+                setIsRestaurerDialogOpen(false);
+                setRestaurerConfirm(false);
               }}
             >
-              Cancel
+              Annuler
             </Button>
             <Button
-              onClick={handleRestore}
+              onClick={handleRestaurer}
               disabled={!restoreConfirm || restoreMutation.isPending}
               variant="destructive"
             >
               {restoreMutation.isPending && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
-              Restore Backup
+              Restaurer la sauvegarde
             </Button>
           </DialogFooter>
         </DialogContent>

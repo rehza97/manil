@@ -151,7 +151,7 @@ export const InvoiceListPage: React.FC = () => {
           <SheetTrigger asChild>
             <Button variant="outline" className="relative">
               <Filter className="h-4 w-4 mr-2" />
-              Filters
+              Filtres
               {hasActiveFilters && (
                 <span className="ml-2 h-5 w-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">
                   {(statusFilter ? 1 : 0) +
@@ -290,7 +290,7 @@ export const InvoiceListPage: React.FC = () => {
           )}
           {overdueOnly && (
             <div className="flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-              Overdue only
+              En retard uniquement
               <button
                 onClick={() => setOverdueOnly(false)}
                 className="ml-1 hover:text-blue-900"

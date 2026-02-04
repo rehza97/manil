@@ -55,7 +55,7 @@ export function BulkImportDialog({
       setParseErrors([]);
       setActiveTab("preview");
     } catch (error: any) {
-      setParseErrors([error.message || "Failed to parse CSV"]);
+      setParseErrors([error.message || "Échec de l'analyse du CSV"]);
     }
   };
 
@@ -113,10 +113,10 @@ mail,A,192.0.2.2,3600,
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
-            Bulk Import DNS Records
+            Import en masse d'enregistrements DNS
           </DialogTitle>
           <DialogDescription>
-            Import multiple DNS records from CSV format
+            Importer plusieurs enregistrements DNS depuis un fichier CSV
           </DialogDescription>
         </DialogHeader>
 
@@ -133,7 +133,7 @@ mail,A,192.0.2.2,3600,
             {/* File Upload */}
             <div>
               <label className="mb-2 block text-sm font-medium">
-                Upload CSV File
+                Téléverser un fichier CSV
               </label>
               <input
                 type="file"
@@ -146,7 +146,7 @@ mail,A,192.0.2.2,3600,
             {/* Manual Entry */}
             <div>
               <label className="mb-2 block text-sm font-medium">
-                Or paste CSV content
+                Ou coller le contenu CSV
               </label>
               <Textarea
                 placeholder={exampleCSV}
@@ -172,7 +172,7 @@ mail,A,192.0.2.2,3600,
               <Alert variant="destructive">
                 <XCircle className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>Parse Errors:</strong>
+                  <strong>Erreurs d'analyse :</strong>
                   <ul className="mt-1 list-inside list-disc">
                     {parseErrors.map((error, index) => (
                       <li key={index}>{error}</li>
@@ -188,8 +188,7 @@ mail,A,192.0.2.2,3600,
             <Alert>
               <CheckCircle2 className="h-4 w-4" />
               <AlertDescription>
-                Parsed {parsedRecords.length} record(s) successfully. Review
-                before importing.
+                {parsedRecords.length} enregistrement(s) analysé(s). Vérifiez avant d'importer.
               </AlertDescription>
             </Alert>
 
@@ -197,12 +196,12 @@ mail,A,192.0.2.2,3600,
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
+                    <TableHead>Nom</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Value</TableHead>
+                    <TableHead>Valeur</TableHead>
                     <TableHead>TTL</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Priorité</TableHead>
+                    <TableHead>Statut</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -218,7 +217,7 @@ mail,A,192.0.2.2,3600,
                         {record.value}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {record.ttl || "Default"}
+                        {record.ttl || "Défaut"}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {record.priority || "-"}
@@ -228,7 +227,7 @@ mail,A,192.0.2.2,3600,
                           <Badge variant="destructive">{record.error}</Badge>
                         ) : (
                           <Badge className="bg-green-100 text-green-800">
-                            Valid
+                            Valide
                           </Badge>
                         )}
                       </TableCell>
@@ -252,11 +251,11 @@ mail,A,192.0.2.2,3600,
             }}
             disabled={bulkCreateMutation.isPending}
           >
-            Cancel
+            Annuler
           </Button>
           {activeTab === "input" ? (
             <Button onClick={handleParse} disabled={!csvContent.trim()}>
-              Parse & Preview
+              Analyser et aperçu
             </Button>
           ) : (
             <Button
@@ -264,8 +263,8 @@ mail,A,192.0.2.2,3600,
               disabled={parsedRecords.length === 0 || bulkCreateMutation.isPending}
             >
               {bulkCreateMutation.isPending
-                ? "Importing..."
-                : `Import ${parsedRecords.length} Record(s)`}
+                ? "Import en cours…"
+                : `Importer ${parsedRecords.length} enregistrement(s)`}
             </Button>
           )}
         </DialogFooter>

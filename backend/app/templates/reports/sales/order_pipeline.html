@@ -1,0 +1,42 @@
+{% extends "reports/base_report.html" %}
+
+{% block summary %}
+  <div class="executive-summary">
+    <div class="kpi-card">
+      <div class="kpi-value">{{ by_status | length }}</div>
+      <div class="kpi-label">Pipeline Stages</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ by_status | sum(attribute='count') }}</div>
+      <div class="kpi-label">Total Orders</div>
+    </div>
+  </div>
+  {% if by_status is defined and (by_status | length) == 0 %}
+  <p class="meta" style="margin-top: 12px; color: #666;">No orders in this period. Ensure seed data has been run and date range includes historical orders.</p>
+  {% endif %}
+{% endblock %}
+
+{% block charts %}
+  {{ super() }}
+{% endblock %}
+
+{% block data %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Order Status</th>
+          <th>Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in by_status or [] %}
+        <tr>
+          <td>{{ row.status }}</td>
+          <td>{{ row.count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

@@ -55,14 +55,14 @@ export const RoleDetailsPage: React.FC = () => {
     try {
       await deleteRole.mutateAsync(id);
       toast({
-        title: "Success",
-        description: "Role deleted successfully",
+        title: "Succès",
+        description: "Rôle supprimé avec succès",
       });
       navigate("/admin/roles");
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.response?.data?.detail || "Failed to delete role",
+        title: "Erreur",
+        description: error.response?.data?.detail || "Échec de la suppression du rôle",
         variant: "destructive",
       });
     } finally {
@@ -91,22 +91,22 @@ export const RoleDetailsPage: React.FC = () => {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Role Not Found"
-          description="The requested role could not be found"
+          title="Rôle introuvable"
+          description="Le rôle demandé est introuvable"
           breadcrumbs={[
             { label: "Admin", href: "/admin" },
-            { label: "Roles", href: "/admin/roles" },
-            { label: "Not Found" },
+            { label: "Rôles", href: "/admin/roles" },
+            { label: "Introuvable" },
           ]}
         />
         <Card className="p-6 text-center">
-          <p className="text-gray-500">Role not found</p>
+          <p className="text-gray-500">Rôle introuvable</p>
           <Button
             variant="outline"
             className="mt-4"
             onClick={() => navigate("/admin/roles")}
           >
-            Back to Roles
+            Retour aux rôles
           </Button>
         </Card>
       </div>
@@ -121,14 +121,14 @@ export const RoleDetailsPage: React.FC = () => {
         description={role.description}
         breadcrumbs={[
           { label: "Admin", href: "/admin" },
-          { label: "Roles", href: "/admin/roles" },
+          { label: "Rôles", href: "/admin/roles" },
           { label: role.name },
         ]}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => navigate("/admin/roles")}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Roles
+              Retour aux rôles
             </Button>
             {!role.is_system_role && (
               <>
@@ -137,14 +137,14 @@ export const RoleDetailsPage: React.FC = () => {
                   onClick={() => navigate(`/admin/roles/${id}/permissions`)}
                 >
                   <Settings className="h-4 w-4 mr-2" />
-                  Manage Permissions
+                  Gérer les permissions
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => navigate(`/admin/roles/${id}/edit`)}
                 >
                   <Edit className="h-4 w-4 mr-2" />
-                  Edit Role
+                  Modifier le rôle
                 </Button>
               </>
             )}
@@ -158,10 +158,10 @@ export const RoleDetailsPage: React.FC = () => {
           <div className="flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
             <div className="text-sm text-yellow-900">
-              <p className="font-semibold">System Role</p>
+              <p className="font-semibold">Rôle système</p>
               <p className="mt-1">
-                This is a system-defined role and cannot be modified or deleted.
-                Permissions are managed by the system.
+                Ce rôle est défini par le système et ne peut pas être modifié ou supprimé.
+                Les permissions sont gérées par le système.
               </p>
             </div>
           </div>
@@ -175,12 +175,12 @@ export const RoleDetailsPage: React.FC = () => {
           <Card className="p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Shield className="h-5 w-5" />
-              Role Information
+              Informations sur le rôle
             </h3>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-gray-500">Role Name</p>
+                  <p className="text-sm text-gray-500">Nom du rôle</p>
                   <p className="font-medium">{role.name}</p>
                 </div>
                 <div>
@@ -189,10 +189,10 @@ export const RoleDetailsPage: React.FC = () => {
                     {role.is_system_role ? (
                       <Badge variant="secondary">
                         <Shield className="h-3 w-3 mr-1" />
-                        System Role
+                        Rôle système
                       </Badge>
                     ) : (
-                      <Badge variant="outline">Custom Role</Badge>
+                      <Badge variant="outline">Rôle personnalisé</Badge>
                     )}
                   </div>
                 </div>
@@ -205,7 +205,7 @@ export const RoleDetailsPage: React.FC = () => {
               <Separator />
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-gray-500">Created</p>
+                  <p className="text-sm text-gray-500">Créé</p>
                   <p className="text-sm">
                     {formatDistanceToNow(new Date(role.created_at), {
                       addSuffix: true,
@@ -213,7 +213,7 @@ export const RoleDetailsPage: React.FC = () => {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Last Updated</p>
+                  <p className="text-sm text-gray-500">Dernière mise à jour</p>
                   <p className="text-sm">
                     {formatDistanceToNow(new Date(role.updated_at), {
                       addSuffix: true,
@@ -273,7 +273,7 @@ export const RoleDetailsPage: React.FC = () => {
               {role.permissions.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   <FileText className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                  <p>No permissions assigned to this role</p>
+                  <p>Aucune permission attribuée à ce rôle</p>
                 </div>
               )}
             </div>
@@ -284,7 +284,7 @@ export const RoleDetailsPage: React.FC = () => {
         <div className="space-y-6">
           {/* Statistics */}
           <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Statistics</h3>
+            <h3 className="text-lg font-semibold mb-4">Statistiques</h3>
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-gray-500 mb-2">Permissions</p>
@@ -297,7 +297,7 @@ export const RoleDetailsPage: React.FC = () => {
               </div>
               <Separator />
               <div>
-                <p className="text-sm text-gray-500 mb-2">Permission Categories</p>
+                <p className="text-sm text-gray-500 mb-2">Catégories de permissions</p>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
                   <span className="text-2xl font-bold">
@@ -307,13 +307,13 @@ export const RoleDetailsPage: React.FC = () => {
               </div>
               <Separator />
               <div>
-                <p className="text-sm text-gray-500 mb-2">Users with this role</p>
+                <p className="text-sm text-gray-500 mb-2">Utilisateurs avec ce rôle</p>
                 <div className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-purple-600" />
                   <span className="text-2xl font-bold">-</span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Requires backend implementation
+                  Nécessite une implémentation backend
                 </p>
               </div>
             </div>
@@ -322,7 +322,7 @@ export const RoleDetailsPage: React.FC = () => {
           {/* Quick Actions */}
           {!role.is_system_role && (
             <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
+              <h3 className="text-lg font-semibold mb-4">Actions rapides</h3>
               <div className="space-y-2">
                 <Button
                   variant="outline"
@@ -330,7 +330,7 @@ export const RoleDetailsPage: React.FC = () => {
                   onClick={() => navigate(`/admin/roles/${id}/edit`)}
                 >
                   <Edit className="h-4 w-4 mr-2" />
-                  Edit Role
+                  Modifier le rôle
                 </Button>
                 <Button
                   variant="outline"
@@ -338,7 +338,7 @@ export const RoleDetailsPage: React.FC = () => {
                   onClick={() => navigate(`/admin/roles/${id}/permissions`)}
                 >
                   <Settings className="h-4 w-4 mr-2" />
-                  Manage Permissions
+                  Gérer les permissions
                 </Button>
                 <Separator className="my-4" />
                 <Button
@@ -347,7 +347,7 @@ export const RoleDetailsPage: React.FC = () => {
                   onClick={() => setShowDeleteDialog(true)}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Role
+                  Supprimer le rôle
                 </Button>
               </div>
             </Card>
@@ -357,20 +357,20 @@ export const RoleDetailsPage: React.FC = () => {
           <Card className="p-6 bg-blue-50 border-blue-200">
             <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
               <Info className="h-4 w-4" />
-              About Roles
+              À propos des rôles
             </h4>
             <ul className="text-sm text-blue-800 space-y-2">
               <li className="flex gap-2">
                 <span>•</span>
-                <span>Roles define sets of permissions for users</span>
+                <span>Les rôles définissent des ensembles de permissions pour les utilisateurs</span>
               </li>
               <li className="flex gap-2">
                 <span>•</span>
-                <span>System roles cannot be modified or deleted</span>
+                <span>Les rôles système ne peuvent pas être modifiés ou supprimés</span>
               </li>
               <li className="flex gap-2">
                 <span>•</span>
-                <span>Custom roles can be created and customized</span>
+                <span>Les rôles personnalisés peuvent être créés et personnalisés</span>
               </li>
             </ul>
           </Card>
@@ -381,15 +381,14 @@ export const RoleDetailsPage: React.FC = () => {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the role "{role.name}". Users assigned
-              to this role will lose their permissions. This action cannot be
-              undone.
+              Le rôle « {role.name} » sera définitivement supprimé. Les utilisateurs
+              ayant ce rôle perdront leurs permissions. Cette action est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-red-600 hover:bg-red-700"
@@ -397,10 +396,10 @@ export const RoleDetailsPage: React.FC = () => {
               {deleteRole.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
+                  Suppression…
                 </>
               ) : (
-                "Delete Role"
+                "Supprimer le rôle"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

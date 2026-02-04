@@ -53,7 +53,7 @@ export const RevenueDashboardPage: React.FC = () => {
   if (overviewLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-slate-600">Loading revenue data...</div>
+        <div className="text-slate-600">Chargement des données de chiffre d&apos;affaires...</div>
       </div>
     );
   }
@@ -65,21 +65,21 @@ export const RevenueDashboardPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Revenue Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Tableau de bord chiffre d&apos;affaires</h1>
           <p className="text-gray-600 mt-1">
-            Comprehensive revenue analytics and reporting
+            Analytique et rapports de chiffre d&apos;affaires
           </p>
         </div>
         <Select value={period} onValueChange={setPeriod}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select period" />
+            <SelectValue placeholder="Sélectionner la période" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="today">Today</SelectItem>
-            <SelectItem value="week">Last 7 Days</SelectItem>
-            <SelectItem value="month">Last 30 Days</SelectItem>
-            <SelectItem value="quarter">Last 90 Days</SelectItem>
-            <SelectItem value="year">Last Year</SelectItem>
+            <SelectItem value="today">Aujourd&apos;hui</SelectItem>
+            <SelectItem value="week">7 derniers jours</SelectItem>
+            <SelectItem value="month">30 derniers jours</SelectItem>
+            <SelectItem value="quarter">90 derniers jours</SelectItem>
+            <SelectItem value="year">Dernière année</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -129,7 +129,7 @@ export const RevenueDashboardPage: React.FC = () => {
       {byCategory && byCategory.categories && byCategory.categories.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Revenue by Category</CardTitle>
+            <CardTitle>Chiffre d'affaires par catégorie</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -151,7 +151,7 @@ export const RevenueDashboardPage: React.FC = () => {
                       {formatRevenue(category.revenue)}
                     </p>
                     <p className="text-sm text-slate-500">
-                      {category.percentage.toFixed(1)}% of total
+                      {category.percentage.toFixed(1)} % du total
                     </p>
                   </div>
                 </div>
@@ -185,7 +185,7 @@ export const RevenueDashboardPage: React.FC = () => {
                         {customer.customer_name}
                       </p>
                       <p className="text-sm text-slate-500">
-                        {customer.order_count} orders • {customer.invoice_count} invoices
+                        {customer.order_count} commande{customer.order_count !== 1 ? "s" : ""} • {customer.invoice_count} facture{customer.invoice_count !== 1 ? "s" : ""}
                       </p>
                     </div>
                   </div>
@@ -210,7 +210,7 @@ export const RevenueDashboardPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">Chiffre d'affaires total</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
@@ -221,7 +221,7 @@ export const RevenueDashboardPage: React.FC = () => {
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Recognized + Booked + Recurring
+              Reconnu + Comptabilisé + Récurrent
             </p>
           </CardContent>
         </Card>
@@ -240,14 +240,14 @@ export const RevenueDashboardPage: React.FC = () => {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Previous Month</CardTitle>
+            <CardTitle className="text-sm font-medium">Mois précédent</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {formatRevenue(Number(metrics?.previous_month_revenue || 0))}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              For comparison
+              Pour comparaison
             </p>
           </CardContent>
         </Card>

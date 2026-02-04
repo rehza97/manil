@@ -57,7 +57,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
         }`}
       >
         <Download className="h-5 w-5 mr-2" />
-        {isLoading ? 'Exporting...' : 'Export'}
+        {isLoading ? "Export en cours..." : "Exporter"}
       </button>
 
       {/* Dropdown Menu */}
@@ -75,19 +75,19 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
               onClick={() => handleExport('csv')}
               className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
             >
-              Export as CSV
+              Exporter en CSV
             </button>
             <button
               onClick={() => handleExport('excel')}
               className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
             >
-              Export as Excel
+              Exporter en Excel
             </button>
             <button
               onClick={() => handleExport('pdf')}
               className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
             >
-              Export as PDF
+              Exporter en PDF
             </button>
           </div>
         </>

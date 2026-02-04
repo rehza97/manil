@@ -56,8 +56,8 @@ export const QuoteConvertPage: React.FC = () => {
         }
       } else {
         toast({
-          title: "Quote converted",
-          description: "Order created from quote successfully.",
+          title: "Devis converti",
+          description: "Commande créée à partir du devis avec succès.",
         });
         const orderId = data?.id ?? data?.order_id;
         if (orderId) {
@@ -69,8 +69,8 @@ export const QuoteConvertPage: React.FC = () => {
     },
     onError: (e: any) => {
       toast({
-        title: "Error",
-        description: e?.message ?? "Failed to convert quote",
+        title: "Erreur",
+        description: e?.message ?? "Échec de la conversion du devis",
         variant: "destructive",
       });
     },
@@ -112,13 +112,13 @@ export const QuoteConvertPage: React.FC = () => {
         onClick={() => navigate(`${basePath}/quotes/${id}`)}
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Quote
+        Retour au devis
       </Button>
 
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Convert Quote</h1>
+        <h1 className="text-3xl font-bold text-slate-900">Convertir le devis</h1>
         <p className="text-slate-600 mt-1">
-          Convert quote {q?.quote_number ?? q?.quoteNumber ?? id} to invoice or order
+          Convertir le devis {q?.quote_number ?? q?.quoteNumber ?? id} en facture ou commande
         </p>
       </div>
 
@@ -138,9 +138,9 @@ export const QuoteConvertPage: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <FileText className="h-5 w-5 text-blue-600" />
                   <div>
-                    <div className="font-semibold">Convert to Invoice</div>
+                    <div className="font-semibold">Convertir en facture</div>
                     <div className="text-sm text-slate-600">
-                      Create an invoice for billing and payment tracking. You can send it to the customer and record payments.
+                      Créer une facture pour la facturation et le suivi des paiements. Vous pouvez l&apos;envoyer au client et enregistrer les paiements.
                     </div>
                   </div>
                 </div>
@@ -152,9 +152,9 @@ export const QuoteConvertPage: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <ShoppingCart className="h-5 w-5 text-green-600" />
                   <div>
-                    <div className="font-semibold">Convert to Order</div>
+                    <div className="font-semibold">Convertir en commande</div>
                     <div className="text-sm text-slate-600">
-                      Create an order for fulfillment and delivery tracking. The order will go through validation workflow.
+                      Créer une commande pour l&apos;exécution et le suivi de la livraison. La commande passera par le workflow de validation.
                     </div>
                   </div>
                 </div>
@@ -187,7 +187,7 @@ export const QuoteConvertPage: React.FC = () => {
               onClick={() => navigate(`${basePath}/quotes/${id}`)}
               disabled={isConverting}
             >
-              Cancel
+              Annuler
             </Button>
           </div>
         </CardContent>

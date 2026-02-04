@@ -173,7 +173,7 @@ export function DNSRecordsTable({ records, zoneId, isLoading }: DNSRecordsTableP
                     {isSystem ? (
                       <div className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
                         <Lock className="h-3 w-3" />
-                        System
+                        Système
                       </div>
                     ) : (
                       <div className="flex items-center justify-end gap-2">
@@ -226,10 +226,9 @@ export function DNSRecordsTable({ records, zoneId, isLoading }: DNSRecordsTableP
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete DNS Record?</AlertDialogTitle>
+            <AlertDialogTitle>Supprimer l'enregistrement DNS ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this DNS record? This action cannot
-              be undone.
+              Êtes-vous sûr de vouloir supprimer cet enregistrement DNS ? Cette action est irréversible.
               {deletingRecord && (
                 <div className="mt-4 rounded-lg bg-muted p-3">
                   <div className="flex items-center gap-2">

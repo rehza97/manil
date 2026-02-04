@@ -54,23 +54,23 @@ export const UserCreatePage: React.FC = () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.email) {
-      newErrors.email = "Email is required";
+      newErrors.email = "L'e-mail est requis";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Invalid email format";
+      newErrors.email = "Format d'e-mail invalide";
     }
 
     if (!formData.full_name) {
-      newErrors.full_name = "Full name is required";
+      newErrors.full_name = "Le nom complet est requis";
     }
 
     if (!formData.password) {
-      newErrors.password = "Password is required";
+      newErrors.password = "Le mot de passe est requis";
     } else if (formData.password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters";
+      newErrors.password = "Le mot de passe doit contenir au moins 8 caractères";
     }
 
     if (!formData.role_id) {
-      newErrors.role_id = "Role is required";
+      newErrors.role_id = "Le rôle est requis";
     }
 
     setErrors(newErrors);
@@ -87,14 +87,14 @@ export const UserCreatePage: React.FC = () => {
     try {
       await createUser.mutateAsync(formData);
       toast({
-        title: "Success",
-        description: "User created successfully",
+        title: "Succès",
+        description: "Utilisateur créé avec succès",
       });
       navigate("/admin/users");
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.response?.data?.detail || "Failed to create user",
+        title: "Erreur",
+        description: error.response?.data?.detail || "Échec de la création de l'utilisateur",
         variant: "destructive",
       });
     }
@@ -111,12 +111,12 @@ export const UserCreatePage: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
-        title="Create User"
-        description="Add a new user to the system"
+        title="Créer un utilisateur"
+        description="Ajouter un nouvel utilisateur au système"
         breadcrumbs={[
           { label: "Admin", href: "/admin" },
-          { label: "Users", href: "/admin/users" },
-          { label: "Create User" },
+          { label: "Utilisateurs", href: "/admin/users" },
+          { label: "Créer un utilisateur" },
         ]}
         actions={
           <Button
@@ -124,7 +124,7 @@ export const UserCreatePage: React.FC = () => {
             onClick={() => navigate("/admin/users")}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Users
+            Retour aux utilisateurs
           </Button>
         }
       />
@@ -135,19 +135,19 @@ export const UserCreatePage: React.FC = () => {
           <div className="space-y-6">
             {/* Basic Information */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
+              <h3 className="text-lg font-semibold mb-4">Informations de base</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Full Name */}
                 <div className="space-y-2">
                   <Label htmlFor="full_name">
-                    Full Name <span className="text-red-500">*</span>
+                    Nom complet <span className="text-red-500">*</span>
                   </Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id="full_name"
                       type="text"
-                      placeholder="John Doe"
+                      placeholder="Jean Dupont"
                       value={formData.full_name}
                       onChange={(e) => handleChange("full_name", e.target.value)}
                       className={`pl-10 ${errors.full_name ? "border-red-500" : ""}`}
@@ -161,14 +161,14 @@ export const UserCreatePage: React.FC = () => {
                 {/* Email */}
                 <div className="space-y-2">
                   <Label htmlFor="email">
-                    Email <span className="text-red-500">*</span>
+                    E-mail <span className="text-red-500">*</span>
                   </Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id="email"
                       type="email"
-                      placeholder="john@example.com"
+                      placeholder="jean@exemple.com"
                       value={formData.email}
                       onChange={(e) => handleChange("email", e.target.value)}
                       className={`pl-10 ${errors.email ? "border-red-500" : ""}`}
@@ -183,19 +183,19 @@ export const UserCreatePage: React.FC = () => {
 
             {/* Authentication */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">Authentication</h3>
+              <h3 className="text-lg font-semibold mb-4">Authentification</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Password */}
                 <div className="space-y-2">
                   <Label htmlFor="password">
-                    Password <span className="text-red-500">*</span>
+                    Mot de passe <span className="text-red-500">*</span>
                   </Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id="password"
                       type="password"
-                      placeholder="Enter password (min. 8 characters)"
+                      placeholder="Saisir le mot de passe (min. 8 caractères)"
                       value={formData.password}
                       onChange={(e) => handleChange("password", e.target.value)}
                       className={`pl-10 ${errors.password ? "border-red-500" : ""}`}
@@ -205,14 +205,14 @@ export const UserCreatePage: React.FC = () => {
                     <p className="text-sm text-red-500">{errors.password}</p>
                   )}
                   <p className="text-sm text-gray-500">
-                    Password must be at least 8 characters long
+                    Le mot de passe doit contenir au moins 8 caractères
                   </p>
                 </div>
 
                 {/* Role */}
                 <div className="space-y-2">
                   <Label htmlFor="role_id">
-                    Role <span className="text-red-500">*</span>
+                    Rôle <span className="text-red-500">*</span>
                   </Label>
                   <div className="relative">
                     <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
@@ -221,7 +221,7 @@ export const UserCreatePage: React.FC = () => {
                       onValueChange={(value) => handleChange("role_id", value)}
                     >
                       <SelectTrigger className={`pl-10 ${errors.role_id ? "border-red-500" : ""}`}>
-                        <SelectValue placeholder="Select role" />
+                        <SelectValue placeholder="Sélectionner un rôle" />
                       </SelectTrigger>
                       <SelectContent>
                         {roles.map((role) => (
@@ -241,12 +241,12 @@ export const UserCreatePage: React.FC = () => {
 
             {/* Account Status */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">Account Status</h3>
+              <h3 className="text-lg font-semibold mb-4">Statut du compte</h3>
               <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div className="space-y-1">
-                  <Label htmlFor="is_active">Active Account</Label>
+                  <Label htmlFor="is_active">Compte actif</Label>
                   <p className="text-sm text-gray-500">
-                    Enable this to allow the user to log in immediately
+                    Activer pour permettre à l'utilisateur de se connecter immédiatement
                   </p>
                 </div>
                 <Switch
@@ -265,7 +265,7 @@ export const UserCreatePage: React.FC = () => {
                 onClick={() => navigate("/admin/users")}
                 disabled={createUser.isPending}
               >
-                Cancel
+                Annuler
               </Button>
               <Button
                 type="submit"
@@ -274,12 +274,12 @@ export const UserCreatePage: React.FC = () => {
                 {createUser.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Creating...
+                    Création…
                   </>
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    Create User
+                    Créer l'utilisateur
                   </>
                 )}
               </Button>

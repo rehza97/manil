@@ -123,7 +123,7 @@ export function DNSZoneForm({ onSubmit, isLoading, onCancel }: DNSZoneFormProps)
           name="ttl_default"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Default TTL (seconds)</FormLabel>
+              <FormLabel>TTL par défaut (secondes)</FormLabel>
               <FormControl>
                 <Input
                   type="number"
@@ -133,7 +133,7 @@ export function DNSZoneForm({ onSubmit, isLoading, onCancel }: DNSZoneFormProps)
                 />
               </FormControl>
               <FormDescription>
-                Time-to-live for DNS records (60-86400 seconds)
+                Durée de vie des enregistrements DNS (60-86400 secondes)
               </FormDescription>
               <FormMessage />
             </FormItem>

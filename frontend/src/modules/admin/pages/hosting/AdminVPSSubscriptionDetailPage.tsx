@@ -49,7 +49,7 @@ export const AdminVPSSubscriptionDetailPage: React.FC = () => {
       <div className="container mx-auto py-6">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Invalid subscription ID</AlertDescription>
+          <AlertDescription>Identifiant d&apos;abonnement invalide</AlertDescription>
         </Alert>
       </div>
     );
@@ -74,12 +74,12 @@ export const AdminVPSSubscriptionDetailPage: React.FC = () => {
           onClick={() => navigate(-1)}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
+          Retour
         </Button>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Failed to load subscription details.
+            Échec du chargement des détails de l&apos;abonnement.
           </AlertDescription>
         </Alert>
       </div>
@@ -101,7 +101,7 @@ export const AdminVPSSubscriptionDetailPage: React.FC = () => {
                   navigate(`${basePath}/hosting/subscriptions`);
               }}
             >
-              VPS Hosting
+              Hébergement VPS
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
@@ -113,7 +113,7 @@ export const AdminVPSSubscriptionDetailPage: React.FC = () => {
                   navigate(`${basePath}/hosting/subscriptions`);
               }}
             >
-              Subscriptions
+              Abonnements
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
@@ -132,7 +132,7 @@ export const AdminVPSSubscriptionDetailPage: React.FC = () => {
         <div className="p-6 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-sm text-slate-600">Subscription</div>
+              <div className="text-sm text-slate-600">Abonnement</div>
               <div className="text-xl font-semibold">{subscription.subscription_number}</div>
             </div>
             <div className="flex items-center gap-2">
@@ -145,7 +145,7 @@ export const AdminVPSSubscriptionDetailPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
-              <div className="text-slate-600">Customer</div>
+              <div className="text-slate-600">Client</div>
               <div className="font-medium">{subscription.customer?.full_name || "N/A"}</div>
               <div className="text-slate-500">{subscription.customer?.email || ""}</div>
             </div>
@@ -154,7 +154,7 @@ export const AdminVPSSubscriptionDetailPage: React.FC = () => {
               <div className="font-medium">{subscription.plan?.name || "N/A"}</div>
             </div>
             <div>
-              <div className="text-slate-600">Connection</div>
+              <div className="text-slate-600">Connexion</div>
               <div className="font-medium">
                 IP: {subscription.container?.ip_address || "N/A"}
               </div>
@@ -168,10 +168,10 @@ export const AdminVPSSubscriptionDetailPage: React.FC = () => {
 
       <Tabs defaultValue="stats" className="w-full">
         <TabsList>
-          <TabsTrigger value="stats">Stats</TabsTrigger>
-          <TabsTrigger value="logs">Live Logs</TabsTrigger>
+          <TabsTrigger value="stats">Statistiques</TabsTrigger>
+          <TabsTrigger value="logs">Logs en direct</TabsTrigger>
           <TabsTrigger value="terminal">Terminal</TabsTrigger>
-          <TabsTrigger value="deploy">Deploy</TabsTrigger>
+          <TabsTrigger value="deploy">Déploiement</TabsTrigger>
         </TabsList>
 
         <TabsContent value="stats" className="mt-4">
@@ -185,7 +185,7 @@ export const AdminVPSSubscriptionDetailPage: React.FC = () => {
         <TabsContent value="logs" className="mt-4">
           <Card>
             <div className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Container Logs (Live)</h3>
+              <h3 className="text-lg font-semibold mb-4">Logs du conteneur (en direct)</h3>
               <LiveContainerLogs
                 streamUrl={`${apiBase}/hosting/admin/subscriptions/${id}/logs/stream`}
                 defaultTail={100}

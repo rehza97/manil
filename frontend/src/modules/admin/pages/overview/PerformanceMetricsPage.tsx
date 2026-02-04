@@ -93,17 +93,17 @@ export const PerformanceMetricsPage: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <TrendingUp className="h-8 w-8" />
-            Performance Metrics
+            Métriques de performance
           </h1>
           <p className="text-slate-600 mt-2">
-            Monitor system performance, response times, and resource usage.
+            Surveillez les performances, temps de réponse et utilisation des ressources.
           </p>
         </div>
         <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
           <RefreshCw
             className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
           />
-          Refresh
+          Actualiser
         </Button>
       </div>
 
@@ -112,7 +112,7 @@ export const PerformanceMetricsPage: React.FC = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Avg Response Time
+              Temps de réponse moyen
             </CardTitle>
             <Zap className="h-4 w-4 text-slate-400" />
           </CardHeader>
@@ -129,7 +129,7 @@ export const PerformanceMetricsPage: React.FC = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">System Uptime</CardTitle>
+            <CardTitle className="text-sm font-medium">Disponibilité système</CardTitle>
             <Activity className="h-4 w-4 text-slate-400" />
           </CardHeader>
           <CardContent>
@@ -137,7 +137,7 @@ export const PerformanceMetricsPage: React.FC = () => {
               {performanceReport?.system_uptime || stats?.system_uptime || 99.9}
               %
             </div>
-            <p className="text-xs text-slate-500 mt-1">Overall availability</p>
+            <p className="text-xs text-slate-500 mt-1">Disponibilité globale</p>
           </CardContent>
         </Card>
 
@@ -151,7 +151,7 @@ export const PerformanceMetricsPage: React.FC = () => {
               {detailedHealth?.api_server?.cpu_usage || 45}%
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Current CPU utilization
+              Utilisation CPU actuelle
             </p>
           </CardContent>
         </Card>
@@ -170,7 +170,7 @@ export const PerformanceMetricsPage: React.FC = () => {
                 12}
               ms
             </div>
-            <p className="text-xs text-slate-500 mt-1">Avg query time</p>
+            <p className="text-xs text-slate-500 mt-1">Temps de requête moyen</p>
           </CardContent>
         </Card>
       </div>
@@ -178,17 +178,17 @@ export const PerformanceMetricsPage: React.FC = () => {
       {/* Performance Charts */}
       <Tabs defaultValue="response-time" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="response-time">Response Time</TabsTrigger>
-          <TabsTrigger value="resource-usage">Resource Usage</TabsTrigger>
-          <TabsTrigger value="api-performance">API Performance</TabsTrigger>
-          <TabsTrigger value="active-vps">Active VPS</TabsTrigger>
+          <TabsTrigger value="response-time">Temps de réponse</TabsTrigger>
+          <TabsTrigger value="resource-usage">Utilisation des ressources</TabsTrigger>
+          <TabsTrigger value="api-performance">Performance API</TabsTrigger>
+          <TabsTrigger value="active-vps">VPS actifs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="response-time">
           <Card>
             <CardHeader>
-              <CardTitle>Response Time Trends</CardTitle>
-              <CardDescription>API response time over time</CardDescription>
+              <CardTitle>Évolution du temps de réponse</CardTitle>
+              <CardDescription>Temps de réponse API dans le temps</CardDescription>
             </CardHeader>
             <CardContent>
               {performanceTrendData.length > 0 ? (
@@ -198,7 +198,7 @@ export const PerformanceMetricsPage: React.FC = () => {
                     <XAxis dataKey="date" />
                     <YAxis
                       label={{
-                        value: "Time (ms)",
+                        value: "Temps (ms)",
                         angle: -90,
                         position: "insideLeft",
                       }}
@@ -216,7 +216,7 @@ export const PerformanceMetricsPage: React.FC = () => {
               ) : (
                 <div className="text-center py-12 text-slate-500">
                   <p>
-                    No performance trend data available for the selected period.
+                    Aucune donnée de tendance de performance pour la période sélectionnée.
                   </p>
                 </div>
               )}
@@ -227,8 +227,8 @@ export const PerformanceMetricsPage: React.FC = () => {
         <TabsContent value="resource-usage">
           <Card>
             <CardHeader>
-              <CardTitle>Resource Usage</CardTitle>
-              <CardDescription>CPU and memory usage over time</CardDescription>
+<CardTitle>Utilisation des ressources</CardTitle>
+            <CardDescription>Utilisation CPU et mémoire dans le temps</CardDescription>
             </CardHeader>
             <CardContent>
               {performanceTrendData.length > 0 ? (
@@ -239,7 +239,7 @@ export const PerformanceMetricsPage: React.FC = () => {
                     <YAxis
                       domain={[0, 100]}
                       label={{
-                        value: "Usage (%)",
+                        value: "Utilisation (%)",
                         angle: -90,
                         position: "insideLeft",
                       }}
@@ -260,14 +260,14 @@ export const PerformanceMetricsPage: React.FC = () => {
                       stackId="2"
                       stroke="#3b82f6"
                       fill="#3b82f6"
-                      name="Memory Usage (%)"
+                      name="Mémoire (%)"
                     />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="text-center py-12 text-slate-500">
                   <p>
-                    No resource usage data available for the selected period.
+                    Aucune donnée d'utilisation des ressources pour la période sélectionnée.
                   </p>
                 </div>
               )}
@@ -295,7 +295,7 @@ export const PerformanceMetricsPage: React.FC = () => {
                     />
                     <YAxis
                       label={{
-                        value: "Time (ms)",
+                        value: "Temps (ms)",
                         angle: -90,
                         position: "insideLeft",
                       }}
@@ -312,8 +312,7 @@ export const PerformanceMetricsPage: React.FC = () => {
               ) : (
                 <div className="text-center py-12 text-slate-500">
                   <p>
-                    API performance data will be available once the backend
-                    endpoint is implemented.
+                    Les données de performance API seront disponibles une fois l'endpoint backend implémenté.
                   </p>
                 </div>
               )}
@@ -330,21 +329,21 @@ export const PerformanceMetricsPage: React.FC = () => {
       {performanceReport?.database_performance && (
         <Card>
           <CardHeader>
-            <CardTitle>Database Performance</CardTitle>
+            <CardTitle>Performance base de données</CardTitle>
             <CardDescription>
-              Database query and connection metrics
+              Métriques des requêtes et connexions
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1">
-                <p className="text-sm text-slate-600">Query Time</p>
+                <p className="text-sm text-slate-600">Temps des requêtes</p>
                 <p className="text-2xl font-bold">
                   {performanceReport.database_performance.query_time}ms
                 </p>
               </div>
               <div className="space-y-1">
-                <p className="text-sm text-slate-600">Connection Pool</p>
+                <p className="text-sm text-slate-600">Pool de connexions</p>
                 <p className="text-2xl font-bold">
                   {performanceReport.database_performance.connection_pool}
                 </p>

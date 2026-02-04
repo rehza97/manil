@@ -112,7 +112,7 @@ export const TicketCategoriesPage: React.FC = () => {
   };
 
   const handleDelete = async (categoryId: string) => {
-    if (window.confirm("Are you sure you want to delete this category?")) {
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer cette catégorie ?")) {
       await deleteMutation.mutateAsync(categoryId);
     }
   };
@@ -136,16 +136,16 @@ export const TicketCategoriesPage: React.FC = () => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Categories</CardTitle>
+              <CardTitle>Catégories</CardTitle>
               <CardDescription>
                 {filteredCategories.length}{" "}
-                {filteredCategories.length === 1 ? "category" : "categories"}
+                {filteredCategories.length === 1 ? "catégorie" : "catégories"}
               </CardDescription>
             </div>
             <div className="relative w-64">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search categories..."
+                placeholder="Rechercher des catégories..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8"
@@ -161,16 +161,16 @@ export const TicketCategoriesPage: React.FC = () => {
           ) : filteredCategories.length === 0 ? (
             <div className="text-center py-12">
               <FolderKanban className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No categories found.</p>
+              <p className="text-muted-foreground">Aucune catégorie trouvée.</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
+                  <TableHead>Nom</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead>Color</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Couleur</TableHead>
+                  <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -200,7 +200,7 @@ export const TicketCategoriesPage: React.FC = () => {
                       <Badge
                         variant={category.is_active ? "default" : "secondary"}
                       >
-                        {category.is_active ? "Active" : "Inactive"}
+                        {category.is_active ? "Actif" : "Inactif"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -215,14 +215,14 @@ export const TicketCategoriesPage: React.FC = () => {
                             onClick={() => handleEdit(category)}
                           >
                             <Edit className="h-4 w-4 mr-2" />
-                            Edit
+                            Modifier
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleDelete(category.id)}
                             className="text-red-600"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
+                            Supprimer
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -239,21 +239,21 @@ export const TicketCategoriesPage: React.FC = () => {
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Ticket Category</DialogTitle>
+            <DialogTitle>Créer une catégorie de ticket</DialogTitle>
             <DialogDescription>
-              Create a new category for organizing tickets.
+              Créer une nouvelle catégorie pour organiser les tickets.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">Nom</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                placeholder="e.g., Technical Issue"
+                placeholder="ex. Problème technique"
               />
             </div>
             <div>
@@ -264,11 +264,11 @@ export const TicketCategoriesPage: React.FC = () => {
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                placeholder="Category description..."
+                placeholder="Description de la catégorie..."
               />
             </div>
             <div>
-              <Label htmlFor="color">Color</Label>
+              <Label htmlFor="color">Couleur</Label>
               <Input
                 id="color"
                 type="color"
@@ -285,7 +285,7 @@ export const TicketCategoriesPage: React.FC = () => {
               variant="outline"
               onClick={() => setIsCreateDialogOpen(false)}
             >
-              Cancel
+              Annuler
             </Button>
             <Button
               onClick={handleCreate}
@@ -294,7 +294,7 @@ export const TicketCategoriesPage: React.FC = () => {
               {createMutation.isPending && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
-              Create
+              Créer
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -304,12 +304,12 @@ export const TicketCategoriesPage: React.FC = () => {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Ticket Category</DialogTitle>
-            <DialogDescription>Update category information.</DialogDescription>
+            <DialogTitle>Modifier la catégorie de ticket</DialogTitle>
+            <DialogDescription>Mettre à jour les informations de la catégorie.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-name">Name</Label>
+              <Label htmlFor="edit-name">Nom</Label>
               <Input
                 id="edit-name"
                 value={formData.name}
@@ -329,7 +329,7 @@ export const TicketCategoriesPage: React.FC = () => {
               />
             </div>
             <div>
-              <Label htmlFor="edit-color">Color</Label>
+              <Label htmlFor="edit-color">Couleur</Label>
               <Input
                 id="edit-color"
                 type="color"
@@ -346,7 +346,7 @@ export const TicketCategoriesPage: React.FC = () => {
               variant="outline"
               onClick={() => setIsEditDialogOpen(false)}
             >
-              Cancel
+              Annuler
             </Button>
             <Button
               onClick={handleUpdate}
@@ -355,7 +355,7 @@ export const TicketCategoriesPage: React.FC = () => {
               {updateMutation.isPending && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
-              Update
+              Mettre à jour
             </Button>
           </DialogFooter>
         </DialogContent>

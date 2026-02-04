@@ -65,17 +65,16 @@ export const DataCleanupPage: React.FC = () => {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Data Cleanup</h1>
+        <h1 className="text-3xl font-bold">Nettoyage des données</h1>
         <p className="text-muted-foreground mt-2">
-          Remove old and unused data to free up storage space
+          Supprimer les données anciennes et inutilisées pour libérer de l&apos;espace
         </p>
       </div>
 
       <Alert>
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>
-          Cleanup operations are irreversible. Always preview before running
-          cleanup.
+          Les opérations de nettoyage sont irréversibles. Toujours prévisualiser avant de lancer le nettoyage.
         </AlertDescription>
       </Alert>
 
@@ -84,7 +83,7 @@ export const DataCleanupPage: React.FC = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Old Audit Logs
+              Anciens journaux d&apos;audit
             </CardTitle>
             <Trash2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -93,14 +92,14 @@ export const DataCleanupPage: React.FC = () => {
               {stats?.old_audit_logs || 0}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Older than 90 days
+              Plus de 90 jours
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Soft Deleted</CardTitle>
+            <CardTitle className="text-sm font-medium">Supprimés (soft)</CardTitle>
             <Trash2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -108,7 +107,7 @@ export const DataCleanupPage: React.FC = () => {
               {stats?.soft_deleted_records || 0}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Older than 30 days
+              Plus de 30 jours
             </p>
           </CardContent>
         </Card>
@@ -116,7 +115,7 @@ export const DataCleanupPage: React.FC = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Orphaned Attachments
+              Pièces jointes orphelines
             </CardTitle>
             <Trash2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -133,7 +132,7 @@ export const DataCleanupPage: React.FC = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Expired Sessions
+              Sessions expirées
             </CardTitle>
             <Trash2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -142,20 +141,20 @@ export const DataCleanupPage: React.FC = () => {
               {stats?.expired_sessions || 0}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Inactive sessions
+              Sessions inactives
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Old Backups</CardTitle>
+            <CardTitle className="text-sm font-medium">Anciennes sauvegardes</CardTitle>
             <Trash2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.old_backups || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Beyond retention
+              Au-delà de la rétention
             </p>
           </CardContent>
         </Card>
@@ -164,9 +163,9 @@ export const DataCleanupPage: React.FC = () => {
       {/* Cleanup Options */}
       <Card>
         <CardHeader>
-          <CardTitle>Cleanup Options</CardTitle>
+          <CardTitle>Options de nettoyage</CardTitle>
           <CardDescription>
-            Select what to clean up and configure retention periods
+            Choisir ce qui doit être nettoyé et configurer les périodes de rétention
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -183,7 +182,7 @@ export const DataCleanupPage: React.FC = () => {
                 }
               />
               <Label htmlFor="cleanup_audit_logs" className="flex-1">
-                Clean up old audit logs
+                Nettoyer les anciens journaux d&apos;audit
               </Label>
               <Input
                 type="number"
@@ -196,7 +195,7 @@ export const DataCleanupPage: React.FC = () => {
                 }
                 className="w-24"
               />
-              <span className="text-sm text-muted-foreground">days</span>
+              <span className="text-sm text-muted-foreground">jours</span>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -211,7 +210,7 @@ export const DataCleanupPage: React.FC = () => {
                 }
               />
               <Label htmlFor="cleanup_soft_deleted" className="flex-1">
-                Clean up soft-deleted records
+                Nettoyer les enregistrements supprimés (soft)
               </Label>
               <Input
                 type="number"
@@ -224,7 +223,7 @@ export const DataCleanupPage: React.FC = () => {
                 }
                 className="w-24"
               />
-              <span className="text-sm text-muted-foreground">days</span>
+              <span className="text-sm text-muted-foreground">jours</span>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -239,7 +238,7 @@ export const DataCleanupPage: React.FC = () => {
                 }
               />
               <Label htmlFor="cleanup_orphaned_attachments" className="flex-1">
-                Clean up orphaned attachments
+                Nettoyer les pièces jointes orphelines
               </Label>
             </div>
 
@@ -255,7 +254,7 @@ export const DataCleanupPage: React.FC = () => {
                 }
               />
               <Label htmlFor="cleanup_expired_sessions" className="flex-1">
-                Clean up expired sessions
+                Nettoyer les sessions expirées
               </Label>
             </div>
 
@@ -271,7 +270,7 @@ export const DataCleanupPage: React.FC = () => {
                 }
               />
               <Label htmlFor="cleanup_old_backups" className="flex-1">
-                Clean up old backups
+                Nettoyer les anciennes sauvegardes
               </Label>
               <Input
                 type="number"
@@ -284,14 +283,14 @@ export const DataCleanupPage: React.FC = () => {
                 }
                 className="w-24"
               />
-              <span className="text-sm text-muted-foreground">days</span>
+              <span className="text-sm text-muted-foreground">jours</span>
             </div>
           </div>
 
           <div className="flex space-x-4">
             <Button variant="outline" onClick={handlePreview}>
               <Eye className="h-4 w-4 mr-2" />
-              Preview Cleanup
+              Aperçu du nettoyage
             </Button>
             <Button
               variant="destructive"
@@ -305,7 +304,7 @@ export const DataCleanupPage: React.FC = () => {
               }
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              Run Cleanup
+              Lancer le nettoyage
             </Button>
           </div>
         </CardContent>
@@ -315,24 +314,24 @@ export const DataCleanupPage: React.FC = () => {
       <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cleanup Preview</DialogTitle>
+            <DialogTitle>Aperçu du nettoyage</DialogTitle>
             <DialogDescription>
-              Preview of items that will be deleted
+              Aperçu des éléments qui seront supprimés
             </DialogDescription>
           </DialogHeader>
           {previewMutation.data ? (
             <div className="space-y-4">
               <div>
-                <Label>Items to Delete</Label>
+                <Label>Éléments à supprimer</Label>
                 <div className="mt-2 space-y-2">
                   <div className="flex justify-between">
-                    <span>Old Audit Logs:</span>
+                    <span>Anciens journaux d&apos;audit :</span>
                     <Badge>
                       {previewMutation.data.items_to_delete.old_audit_logs}
                     </Badge>
                   </div>
                   <div className="flex justify-between">
-                    <span>Soft Deleted Records:</span>
+                    <span>Enregistrements supprimés (soft) :</span>
                     <Badge>
                       {
                         previewMutation.data.items_to_delete
@@ -341,7 +340,7 @@ export const DataCleanupPage: React.FC = () => {
                     </Badge>
                   </div>
                   <div className="flex justify-between">
-                    <span>Orphaned Attachments:</span>
+                    <span>Pièces jointes orphelines :</span>
                     <Badge>
                       {
                         previewMutation.data.items_to_delete
@@ -350,13 +349,13 @@ export const DataCleanupPage: React.FC = () => {
                     </Badge>
                   </div>
                   <div className="flex justify-between">
-                    <span>Expired Sessions:</span>
+                    <span>Sessions expirées :</span>
                     <Badge>
                       {previewMutation.data.items_to_delete.expired_sessions}
                     </Badge>
                   </div>
                   <div className="flex justify-between">
-                    <span>Old Backups:</span>
+                    <span>Anciennes sauvegardes :</span>
                     <Badge>
                       {previewMutation.data.items_to_delete.old_backups}
                     </Badge>
@@ -364,7 +363,7 @@ export const DataCleanupPage: React.FC = () => {
                 </div>
               </div>
               <div>
-                <Label>Estimated Space Freed</Label>
+                <Label>Espace libéré estimé</Label>
                 <div className="text-2xl font-bold mt-2">
                   {previewMutation.data.estimated_space_freed_mb.toFixed(2)} MB
                 </div>
@@ -376,7 +375,7 @@ export const DataCleanupPage: React.FC = () => {
                 <Loader2 className="h-8 w-8 animate-spin" />
               ) : (
                 <p className="text-muted-foreground">
-                  No preview data available
+                  Aucune donnée d&apos;aperçu disponible
                 </p>
               )}
             </div>
@@ -386,7 +385,7 @@ export const DataCleanupPage: React.FC = () => {
               variant="outline"
               onClick={() => setIsPreviewDialogOpen(false)}
             >
-              Close
+              Fermer
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -396,22 +395,20 @@ export const DataCleanupPage: React.FC = () => {
       <Dialog open={isRunDialogOpen} onOpenChange={setIsRunDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Run Cleanup</DialogTitle>
+            <DialogTitle>Lancer le nettoyage</DialogTitle>
             <DialogDescription>
-              This will permanently delete the selected items. This action
-              cannot be undone.
+              Les éléments sélectionnés seront définitivement supprimés. Cette action est irréversible.
             </DialogDescription>
           </DialogHeader>
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Warning:</strong> This operation is irreversible. Make
-              sure you have backups before proceeding.
+              <strong>Attention :</strong> Cette opération est irréversible. Assurez-vous d'avoir des sauvegardes avant de continuer.
             </AlertDescription>
           </Alert>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsRunDialogOpen(false)}>
-              Cancel
+              Annuler
             </Button>
             <Button
               variant="destructive"
@@ -421,7 +418,7 @@ export const DataCleanupPage: React.FC = () => {
               {runMutation.isPending && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
-              Run Cleanup
+              Lancer le nettoyage
             </Button>
           </DialogFooter>
         </DialogContent>

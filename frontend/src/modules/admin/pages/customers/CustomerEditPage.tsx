@@ -16,7 +16,7 @@ export function CustomerEditPage() {
   };
 
   if (!id) {
-    return <div>Customer ID not found</div>;
+    return <div>ID client introuvable</div>;
   }
 
   return (
@@ -24,7 +24,7 @@ export function CustomerEditPage() {
       <div className="mb-6">
         <Button variant="ghost" onClick={() => navigate(`/admin/customers/${id}`)}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Customer Details
+          Retour aux détails du client
         </Button>
       </div>
       <CustomerForm

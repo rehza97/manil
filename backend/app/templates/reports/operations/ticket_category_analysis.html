@@ -1,0 +1,39 @@
+{% extends "reports/base_report.html" %}
+
+{% block summary %}
+  <div class="executive-summary">
+    <div class="kpi-card">
+      <div class="kpi-value">{{ details | length }}</div>
+      <div class="kpi-label">Categories</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ details | sum(attribute='count') if details else 0 }}</div>
+      <div class="kpi-label">Total Tickets</div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block charts %}
+  {{ super() }}
+{% endblock %}
+
+{% block data %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Ticket Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in details or [] %}
+        <tr>
+          <td>{{ row.category_id }}</td>
+          <td>{{ row.count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

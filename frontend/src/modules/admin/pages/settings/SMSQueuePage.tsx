@@ -88,17 +88,17 @@ export const SMSQueuePage: React.FC = () => {
     (error as any)?.response?.data?.detail ||
     (error as any)?.response?.data?.message ||
     (error as any)?.message ||
-    "Failed to load SMS queue.";
+    "Échec du chargement de la file SMS.";
 
   const handleSendSMS = async () => {
     const trimmedPhone = phone.trim();
     const trimmedMessage = message.trim();
     if (!trimmedPhone) {
-      toast.error("Phone number is required.");
+      toast.error("Le numéro de téléphone est requis.");
       return;
     }
     if (!trimmedMessage) {
-      toast.error("Message is required.");
+      toast.error("Le message est requis.");
       return;
     }
     setSending(true);
@@ -131,11 +131,10 @@ export const SMSQueuePage: React.FC = () => {
       <div>
         <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
           <MessageSquare className="h-8 w-8" />
-          SMS Queue
+          File SMS
         </h1>
         <p className="text-gray-600 mt-1">
-          View queued SMS messages to verify the system is creating the queue
-          (pending, sent, failed).
+          Consulter les SMS en file pour vérifier que le système crée bien la file (en attente, envoyé, échec).
         </p>
       </div>
 
@@ -143,10 +142,9 @@ export const SMSQueuePage: React.FC = () => {
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <CardTitle>SMS Messages</CardTitle>
+              <CardTitle>Messages SMS</CardTitle>
               <CardDescription>
-                {total} message(s) shown. Pending = waiting for gateway; Sent =
-                delivered; Failed = delivery error.
+                {total} message(s) affiché(s). En attente = en attente de la passerelle ; Envoyé = livré ; Échec = erreur de livraison.
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -154,16 +152,16 @@ export const SMSQueuePage: React.FC = () => {
                 <DialogTrigger asChild>
                   <Button variant="default" size="sm">
                     <Send className="h-4 w-4 mr-2" />
-                    Send SMS
+                    Envoyer un SMS
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Send SMS</DialogTitle>
+                    <DialogTitle>Envoyer un SMS</DialogTitle>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="sms-phone">Phone number</Label>
+                      <Label htmlFor="sms-phone">Numéro de téléphone</Label>
                       <Input
                         id="sms-phone"
                         placeholder="+213..."
@@ -176,7 +174,7 @@ export const SMSQueuePage: React.FC = () => {
                       <Label htmlFor="sms-message">Message</Label>
                       <Textarea
                         id="sms-message"
-                        placeholder="Enter your message..."
+                        placeholder="Saisissez votre message…"
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
                         rows={4}
@@ -191,7 +189,7 @@ export const SMSQueuePage: React.FC = () => {
                       onClick={() => setSendOpen(false)}
                       disabled={sending}
                     >
-                      Cancel
+                      Annuler
                     </Button>
                     <Button onClick={handleSendSMS} disabled={sending}>
                       {sending ? (
@@ -199,7 +197,7 @@ export const SMSQueuePage: React.FC = () => {
                       ) : (
                         <Send className="h-4 w-4 mr-2" />
                       )}
-                      Send
+                      Envoyer
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -209,13 +207,13 @@ export const SMSQueuePage: React.FC = () => {
                 onValueChange={setStatusFilter}
               >
                 <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Status" />
+                  <SelectValue placeholder="Statut" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="sent">Sent</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
+                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="pending">En attente</SelectItem>
+                  <SelectItem value="sent">Envoyé</SelectItem>
+                  <SelectItem value="failed">Échec</SelectItem>
                 </SelectContent>
               </Select>
               <Button
@@ -239,28 +237,27 @@ export const SMSQueuePage: React.FC = () => {
           ) : isError ? (
             <div className="text-center py-12 text-red-600">
               <XCircle className="h-12 w-12 mx-auto mb-2" />
-              <p className="font-medium">Unable to load SMS queue</p>
+              <p className="font-medium">Impossible de charger la file SMS</p>
               <p className="text-sm mt-1 text-red-600/80">{errorMessage}</p>
             </div>
           ) : items.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <Inbox className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>No SMS messages in queue for this filter.</p>
+              <p>Aucun message SMS en file pour ce filtre.</p>
               <p className="text-sm mt-1">
-                Trigger a ticket reply or notification with SMS enabled to see
-                queue entries.
+                Déclenchez une réponse ticket ou une notification avec SMS activé pour voir les entrées en file.
               </p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Phone</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead>Téléphone</TableHead>
                   <TableHead>Message</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Sent</TableHead>
-                  <TableHead>Device / Error</TableHead>
+                  <TableHead>Créé</TableHead>
+                  <TableHead>Envoyé</TableHead>
+                  <TableHead>Appareil / Erreur</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

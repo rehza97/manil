@@ -69,13 +69,13 @@ export const StorageConfigPage: React.FC = () => {
     try {
       const result = await settingsService.testStorageConfig();
       if (result.success) {
-        toast.success("Storage configuration test successful!");
+        toast.success("Test de la configuration stockage réussi !");
       } else {
-        toast.error(result.message || "Storage test failed");
+        toast.error(result.message || "Échec du test stockage");
       }
     } catch (error: any) {
       toast.error(
-        error?.response?.data?.message || "Failed to test storage configuration"
+        error?.response?.data?.message || "Échec du test de la configuration stockage"
       );
     } finally {
       setTesting(false);
@@ -129,7 +129,7 @@ export const StorageConfigPage: React.FC = () => {
                   className="text-xs"
                 >
                   <RefreshCw className="h-3 w-3 mr-1" />
-                  Reset
+                  Réinitialiser
                 </Button>
               )}
             </div>
@@ -142,12 +142,12 @@ export const StorageConfigPage: React.FC = () => {
           {testing ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Testing...
+              Test en cours…
             </>
           ) : (
             <>
               <TestTube className="mr-2 h-4 w-4" />
-              Test Configuration
+              Tester la configuration
             </>
           )}
         </Button>
@@ -159,12 +159,12 @@ export const StorageConfigPage: React.FC = () => {
           {updateMutation.isPending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
+              Enregistrement…
             </>
           ) : (
             <>
               <Save className="mr-2 h-4 w-4" />
-              Save Changes
+              Enregistrer les modifications
             </>
           )}
         </Button>

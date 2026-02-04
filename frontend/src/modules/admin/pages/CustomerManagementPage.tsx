@@ -68,16 +68,16 @@ export const CustomerManagementPage: React.FC = () => {
       try {
         await activateCustomer.mutateAsync({ id: selectedCustomer.id, reason: reason.trim() });
         toast({
-          title: "Customer Activated",
-          description: `${selectedCustomer.name} has been successfully activated.`,
+          title: "Client activé",
+          description: `${selectedCustomer.name} a été activé avec succès.`,
         });
         setActivateDialogOpen(false);
         setSelectedCustomer(null);
         setReason("");
       } catch (error: any) {
         toast({
-          title: "Activation Failed",
-          description: error?.response?.data?.detail || "Failed to activate customer.",
+          title: "Échec de l'activation",
+          description: error?.response?.data?.detail || "Échec de l'activation du client.",
           variant: "destructive",
         });
       }
@@ -89,16 +89,16 @@ export const CustomerManagementPage: React.FC = () => {
       try {
         await suspendCustomer.mutateAsync({ id: selectedCustomer.id, reason: reason.trim() });
         toast({
-          title: "Customer Suspended",
-          description: `${selectedCustomer.name} has been suspended.`,
+          title: "Client suspendu",
+          description: `${selectedCustomer.name} a été suspendu.`,
         });
         setSuspendDialogOpen(false);
         setSelectedCustomer(null);
         setReason("");
       } catch (error: any) {
         toast({
-          title: "Suspension Failed",
-          description: error?.response?.data?.detail || "Failed to suspend customer.",
+          title: "Échec de la suspension",
+          description: error?.response?.data?.detail || "Échec de la suspension du client.",
           variant: "destructive",
         });
       }
@@ -111,10 +111,10 @@ export const CustomerManagementPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
-            Customer Management
+            Gestion des clients
           </h1>
           <p className="text-gray-600 mt-1">
-            Manage all customers and their accounts
+            Gérer tous les clients et leurs comptes
           </p>
         </div>
         <Button
@@ -122,7 +122,7 @@ export const CustomerManagementPage: React.FC = () => {
           onClick={() => navigate("/admin/customers/create")}
         >
           <Plus className="w-4 h-4" />
-          Add Customer
+          Ajouter un client
         </Button>
       </div>
 
@@ -140,11 +140,11 @@ export const CustomerManagementPage: React.FC = () => {
             />
           </div>
           <Button variant="outline" onClick={handleSearch}>
-            Search
+            Rechercher
           </Button>
           <Button variant="outline" className="flex items-center gap-2">
             <Filter className="w-4 h-4" />
-            Filters
+            Filtres
           </Button>
         </div>
       </Card>
@@ -156,19 +156,19 @@ export const CustomerManagementPage: React.FC = () => {
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Customer
+                  Client
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Company
+                  Entreprise
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  Statut
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  KYC Status
+                  Statut KYC
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created
+                  Créé le
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -191,7 +191,7 @@ export const CustomerManagementPage: React.FC = () => {
                     colSpan={6}
                     className="px-6 py-4 text-center text-gray-500"
                   >
-                    No customers found
+                    Aucun client trouvé
                   </td>
                 </tr>
               ) : (
@@ -239,7 +239,7 @@ export const CustomerManagementPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Badge className="bg-gray-100 text-gray-800">
-                        Not Available
+                        Non disponible
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -277,7 +277,7 @@ export const CustomerManagementPage: React.FC = () => {
                               openActivateDialog(customer.id, customer.name);
                             }
                           }}
-                          title={customer.status === "active" ? "Suspend customer" : "Activate customer"}
+                          title={customer.status === "active" ? "Suspendre le client" : "Activer le client"}
                         >
                           {customer.status === "active" ? (
                             <Ban className="w-4 h-4 text-red-600" />
@@ -298,8 +298,8 @@ export const CustomerManagementPage: React.FC = () => {
         {data && data.total > 20 && (
           <div className="px-6 py-4 border-t flex items-center justify-between">
             <div className="text-sm text-gray-500">
-              Showing {(page - 1) * 20 + 1} to {Math.min(page * 20, data.total)}{" "}
-              of {data.total} customers
+              Affichage de {(page - 1) * 20 + 1} à {Math.min(page * 20, data.total)}{" "}
+              sur {data.total} clients
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -308,7 +308,7 @@ export const CustomerManagementPage: React.FC = () => {
                 onClick={() => setPage(page - 1)}
                 disabled={page === 1}
               >
-                Previous
+                Précédent
               </Button>
               <Button
                 variant="outline"
@@ -316,7 +316,7 @@ export const CustomerManagementPage: React.FC = () => {
                 onClick={() => setPage(page + 1)}
                 disabled={page * 20 >= data.total}
               >
-                Next
+                Suivant
               </Button>
             </div>
           </div>
@@ -327,17 +327,17 @@ export const CustomerManagementPage: React.FC = () => {
       <Dialog open={activateDialogOpen} onOpenChange={(open) => { setActivateDialogOpen(open); if (!open) { setReason(""); setSelectedCustomer(null); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Activate Customer</DialogTitle>
+            <DialogTitle>Activer le client</DialogTitle>
             <DialogDescription>
-              Enter a reason for activating {selectedCustomer?.name}.
+              Saisissez la raison de l&apos;activation de {selectedCustomer?.name}.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="activate-reason">Reason</Label>
+              <Label htmlFor="activate-reason">Raison</Label>
               <Input
                 id="activate-reason"
-                placeholder="Enter reason for activation"
+                placeholder="Raison de l'activation"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
               />
@@ -345,11 +345,11 @@ export const CustomerManagementPage: React.FC = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setActivateDialogOpen(false); setReason(""); setSelectedCustomer(null); }}>
-              Cancel
+              Annuler
             </Button>
             <Button onClick={handleActivate} disabled={!reason.trim() || activateCustomer.isPending}>
               {activateCustomer.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Activate
+              Activer
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -359,17 +359,17 @@ export const CustomerManagementPage: React.FC = () => {
       <Dialog open={suspendDialogOpen} onOpenChange={(open) => { setSuspendDialogOpen(open); if (!open) { setReason(""); setSelectedCustomer(null); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Suspend Customer</DialogTitle>
+            <DialogTitle>Suspendre le client</DialogTitle>
             <DialogDescription>
-              Are you sure you want to suspend {selectedCustomer?.name}? Enter a reason below.
+              Êtes-vous sûr de vouloir suspendre {selectedCustomer?.name} ? Saisissez une raison ci-dessous.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="suspend-reason">Reason</Label>
+              <Label htmlFor="suspend-reason">Raison</Label>
               <Input
                 id="suspend-reason"
-                placeholder="Enter reason for suspension"
+                placeholder="Raison de la suspension"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
               />
@@ -377,11 +377,11 @@ export const CustomerManagementPage: React.FC = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setSuspendDialogOpen(false); setReason(""); setSelectedCustomer(null); }}>
-              Cancel
+              Annuler
             </Button>
             <Button variant="destructive" onClick={handleSuspend} disabled={!reason.trim() || suspendCustomer.isPending}>
               {suspendCustomer.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Suspend
+              Suspendre
             </Button>
           </DialogFooter>
         </DialogContent>

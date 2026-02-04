@@ -23,18 +23,18 @@ export const InvoiceStatisticsPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="text-center py-12">
-        <div className="text-slate-600">Loading statistics...</div>
+        <div className="text-slate-600">Chargement des statistiques…</div>
       </div>
     );
   }
 
   const statusData = stats
     ? [
-        { name: "Draft", value: stats.draft_count || 0 },
-        { name: "Issued", value: stats.issued_count || 0 },
-        { name: "Sent", value: stats.sent_count || 0 },
-        { name: "Paid", value: stats.paid_count || 0 },
-        { name: "Overdue", value: stats.overdue_count || 0 },
+        { name: "Brouillon", value: stats.draft_count || 0 },
+        { name: "Émise", value: stats.issued_count || 0 },
+        { name: "Envoyée", value: stats.sent_count || 0 },
+        { name: "Payée", value: stats.paid_count || 0 },
+        { name: "En retard", value: stats.overdue_count || 0 },
       ]
     : [];
 
@@ -55,7 +55,7 @@ export const InvoiceStatisticsPage: React.FC = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-600">
-              Total Invoices
+              Total factures
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -66,7 +66,7 @@ export const InvoiceStatisticsPage: React.FC = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-600">
-              Total Revenue
+              Chiffre d'affaires total
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -82,7 +82,7 @@ export const InvoiceStatisticsPage: React.FC = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-600">
-              Outstanding Amount
+              Montant restant dû
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -98,7 +98,7 @@ export const InvoiceStatisticsPage: React.FC = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-600">
-              Overdue Amount
+              Montant en retard
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -114,7 +114,7 @@ export const InvoiceStatisticsPage: React.FC = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-600">
-              Paid Percentage
+              Taux de paiement
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -128,7 +128,7 @@ export const InvoiceStatisticsPage: React.FC = () => {
         {/* Status Distribution Pie Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Invoice Status Distribution</CardTitle>
+            <CardTitle>Répartition par statut</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -156,19 +156,19 @@ export const InvoiceStatisticsPage: React.FC = () => {
         {/* Monthly Revenue Trend */}
         <Card>
           <CardHeader>
-            <CardTitle>Monthly Revenue Trend</CardTitle>
+            <CardTitle>Tendance du chiffre d'affaires mensuel</CardTitle>
           </CardHeader>
           <CardContent>
             {trendsLoading ? (
               <div className="flex items-center justify-center h-[300px]">
-                <div className="text-slate-600">Loading revenue trends...</div>
+                <div className="text-slate-600">Chargement des tendances…</div>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart
                   data={
                     revenueTrends?.data?.map((point) => ({
-                      month: new Date(point.date).toLocaleDateString("en-US", {
+                      month: new Date(point.date).toLocaleDateString("fr-FR", {
                         month: "short",
                         year: "numeric",
                       }),
@@ -189,21 +189,21 @@ export const InvoiceStatisticsPage: React.FC = () => {
                     type="monotone"
                     dataKey="recognized"
                     stroke="#10B981"
-                    name="Recognized Revenue"
+                    name="Chiffre d'affaires reconnu"
                     strokeWidth={2}
                   />
                   <Line
                     type="monotone"
                     dataKey="booked"
                     stroke="#3B82F6"
-                    name="Booked Revenue"
+                    name="Chiffre d'affaires comptabilisé"
                     strokeWidth={2}
                   />
                   <Line
                     type="monotone"
                     dataKey="total"
                     stroke="#F59E0B"
-                    name="Total Revenue"
+                    name="Chiffre d'affaires total"
                     strokeWidth={2}
                   />
                 </LineChart>
@@ -215,7 +215,7 @@ export const InvoiceStatisticsPage: React.FC = () => {
         {/* Payment Method Distribution */}
         <Card>
           <CardHeader>
-            <CardTitle>Payment Method Distribution</CardTitle>
+            <CardTitle>Répartition par mode de paiement</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>

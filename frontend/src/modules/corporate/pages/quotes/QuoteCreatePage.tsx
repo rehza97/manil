@@ -71,8 +71,8 @@ export const QuoteCreatePage: React.FC = () => {
     onSuccess: (created: any) => {
       queryClient.invalidateQueries({ queryKey: ["corporate-quotes"] });
       toast({
-        title: "Quote created",
-        description: "The quote has been created successfully.",
+        title: "Devis créé",
+        description: "Le devis a été créé avec succès.",
       });
       if (created?.id) {
         navigate(`${basePath}/quotes/${created.id}`);
@@ -82,8 +82,8 @@ export const QuoteCreatePage: React.FC = () => {
     },
     onError: (err: any) => {
       toast({
-        title: "Error",
-        description: err?.message ?? "Failed to create quote",
+        title: "Erreur",
+        description: err?.message ?? "Échec de la création du devis",
         variant: "destructive",
       });
     },
@@ -109,7 +109,7 @@ export const QuoteCreatePage: React.FC = () => {
     if (!customerId || !title.trim()) {
       toast({
         title: "Validation",
-        description: "Customer and title are required.",
+        description: "Le client et le titre sont obligatoires.",
         variant: "destructive",
       });
       return;
@@ -120,7 +120,7 @@ export const QuoteCreatePage: React.FC = () => {
     if (valid.length === 0) {
       toast({
         title: "Validation",
-        description: "Add at least one line item with name, quantity, and unit price.",
+        description: "Ajoutez au moins une ligne avec nom, quantité et prix unitaire.",
         variant: "destructive",
       });
       return;
@@ -156,26 +156,26 @@ export const QuoteCreatePage: React.FC = () => {
           onClick={() => navigate(`${basePath}/quotes`)}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Quotes
+          Retour aux devis
         </Button>
       </div>
 
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Create Quote</h1>
-        <p className="text-slate-600 mt-1">Create a new quote for a customer</p>
+        <h1 className="text-3xl font-bold text-slate-900">Créer un devis</h1>
+        <p className="text-slate-600 mt-1">Créer un nouveau devis pour un client</p>
       </div>
 
       <form onSubmit={handleSubmit} className="max-w-3xl space-y-6">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="customer">Customer *</Label>
+            <Label htmlFor="customer">Client *</Label>
             <Select
               value={customerId}
               onValueChange={setCustomerId}
               required
             >
               <SelectTrigger id="customer">
-                <SelectValue placeholder="Select customer" />
+                <SelectValue placeholder="Choisir un client" />
               </SelectTrigger>
               <SelectContent>
                 {customers.map((c) => (
@@ -187,12 +187,12 @@ export const QuoteCreatePage: React.FC = () => {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
+            <Label htmlFor="title">Titre *</Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Quote title"
+              placeholder="Titre du devis"
               required
             />
           </div>
@@ -204,14 +204,14 @@ export const QuoteCreatePage: React.FC = () => {
             id="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Optional description"
+            placeholder="Description facultative"
             rows={2}
           />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-2">
-            <Label htmlFor="validFrom">Valid from *</Label>
+            <Label htmlFor="validFrom">Valide du *</Label>
             <Input
               id="validFrom"
               type="date"
@@ -221,7 +221,7 @@ export const QuoteCreatePage: React.FC = () => {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="validUntil">Valid until *</Label>
+            <Label htmlFor="validUntil">Valide jusqu&apos;au *</Label>
             <Input
               id="validUntil"
               type="date"
@@ -231,7 +231,7 @@ export const QuoteCreatePage: React.FC = () => {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="taxRate">Tax rate (%)</Label>
+            <Label htmlFor="taxRate">Taux de TVA (%)</Label>
             <Input
               id="taxRate"
               type="number"
@@ -245,7 +245,7 @@ export const QuoteCreatePage: React.FC = () => {
         </div>
 
         <div className="space-y-2">
-          <Label>Line items *</Label>
+          <Label>Lignes *</Label>
           <div className="space-y-4 rounded-md border p-4">
             {items.map((it, idx) => (
               <div
@@ -253,17 +253,17 @@ export const QuoteCreatePage: React.FC = () => {
                 className="grid gap-4 grid-cols-12 items-end"
               >
                 <div className="col-span-4 space-y-2">
-                  <Label>Item name</Label>
+                  <Label>Nom de l&apos;article</Label>
                   <Input
                     value={it.item_name}
                     onChange={(e) =>
                       updateItem(idx, "item_name", e.target.value)
                     }
-                    placeholder="Name"
+                    placeholder="Nom"
                   />
                 </div>
                 <div className="col-span-2 space-y-2">
-                  <Label>Qty</Label>
+                  <Label>Qté</Label>
                   <Input
                     type="number"
                     min={1}
@@ -274,7 +274,7 @@ export const QuoteCreatePage: React.FC = () => {
                   />
                 </div>
                 <div className="col-span-2 space-y-2">
-                  <Label>Unit price</Label>
+                  <Label>Prix unitaire</Label>
                   <Input
                     type="number"
                     min={0}
@@ -286,7 +286,7 @@ export const QuoteCreatePage: React.FC = () => {
                   />
                 </div>
                 <div className="col-span-2 space-y-2">
-                  <Label>Discount %</Label>
+                  <Label>Remise %</Label>
                   <Input
                     type="number"
                     min={0}
@@ -328,7 +328,7 @@ export const QuoteCreatePage: React.FC = () => {
             id="notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Optional notes"
+            placeholder="Notes facultatives"
             rows={2}
           />
         </div>
@@ -338,14 +338,14 @@ export const QuoteCreatePage: React.FC = () => {
             {createMutation.isPending && (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
-            Create Quote
+            Créer le devis
           </Button>
           <Button
             type="button"
             variant="outline"
             onClick={() => navigate(`${basePath}/quotes`)}
           >
-            Cancel
+            Annuler
           </Button>
         </div>
       </form>

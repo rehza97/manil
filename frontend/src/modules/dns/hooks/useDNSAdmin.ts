@@ -35,7 +35,7 @@ function formatDNSAdminError(error: any): string {
     errorMessage.toLowerCase().includes("connection refused") ||
     errorMessage.toLowerCase().includes("network error")
   ) {
-    return "CoreDNS service is currently unavailable. Please check the service status.";
+    return "Le service CoreDNS est actuellement indisponible. Vérifiez l'état du service.";
   }
 
   // Check for timeout errors
@@ -43,20 +43,20 @@ function formatDNSAdminError(error: any): string {
     errorMessage.toLowerCase().includes("timeout") ||
     errorMessage.toLowerCase().includes("timed out")
   ) {
-    return "Request timed out. Please try again.";
+    return "Délai d'attente dépassé. Veuillez réessayer.";
   }
 
   // Handle by HTTP status code
   if (statusCode === 500) {
-    return "Service unavailable. The CoreDNS service encountered an error.";
+    return "Service indisponible. Le service CoreDNS a rencontré une erreur.";
   }
 
   if (statusCode === 400) {
-    return "Invalid request. Please check your input and try again.";
+    return "Requête invalide. Vérifiez vos données et réessayez.";
   }
 
   if (statusCode === 503) {
-    return "Service unavailable. Please try again later.";
+    return "Service indisponible. Veuillez réessayer plus tard.";
   }
 
   // Fallback: return the error message if it's reasonably user-friendly,
@@ -66,7 +66,7 @@ function formatDNSAdminError(error: any): string {
     return errorMessage;
   }
 
-  return "An unexpected error occurred. Please try again.";
+  return "Une erreur inattendue s'est produite. Veuillez réessayer.";
 }
 
 // ============================================================================
@@ -120,13 +120,13 @@ export const useReloadCoreDNS = () => {
       });
 
       toast({
-        title: "CoreDNS Reloaded",
-        description: "CoreDNS configuration has been reloaded successfully.",
+        title: "CoreDNS rechargé",
+        description: "La configuration CoreDNS a été rechargée avec succès.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Reload Failed",
+        title: "Échec du rechargement",
         description: formatDNSAdminError(error),
         variant: "destructive",
       });
@@ -150,13 +150,13 @@ export const useRegenerateCoreDNSConfig = () => {
       });
 
       toast({
-        title: "Configuration Regenerated",
-        description: "CoreDNS configuration has been regenerated and reloaded.",
+        title: "Configuration régénérée",
+        description: "La configuration CoreDNS a été régénérée et rechargée.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Regeneration Failed",
+        title: "Échec de la régénération",
         description: formatDNSAdminError(error),
         variant: "destructive",
       });
@@ -180,16 +180,16 @@ export const useCreateSystemZone = () => {
       queryClient.invalidateQueries({ queryKey: ["dns", "statistics"] });
 
       toast({
-        title: "System Zone Created",
-        description: "System DNS zone has been created successfully.",
+        title: "Zone système créée",
+        description: "La zone DNS système a été créée avec succès.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Creation Failed",
+        title: "Échec de la création",
         description:
           error.response?.data?.detail ||
-          "An error occurred while creating the system zone",
+          "Une erreur s'est produite lors de la création de la zone système",
         variant: "destructive",
       });
     },

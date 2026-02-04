@@ -63,237 +63,97 @@ interface ReportType {
   apiMethod: string;
 }
 
-// All 28 Reports organized by 7 categories
+// All 28 Reports organized by 7 categories (French labels)
 const REPORT_CATEGORIES: ReportCategory[] = [
   {
     id: "financial",
-    name: "Financial Reports",
-    description: "Invoice aging, payments, revenue, taxes, profit margins",
+    name: "Rapports financiers",
+    description: "Vieillissement factures, paiements, chiffre d'affaires, taxes, marges",
     icon: <DollarSign className="w-5 h-5" />,
     color: "bg-green-100 text-green-800",
     reports: [
-      {
-        id: "invoice-aging",
-        name: "Invoice Aging",
-        description: "Aging buckets (0-30, 31-60, 61-90, 90+ days), outstanding amounts",
-        apiMethod: "getInvoiceAging",
-      },
-      {
-        id: "payment-status",
-        name: "Payment Status",
-        description: "Breakdown by paid/unpaid/overdue, payment method distribution",
-        apiMethod: "getPaymentStatus",
-      },
-      {
-        id: "revenue-recognition",
-        name: "Revenue Recognition",
-        description: "Recognized, booked, deferred, recurring revenue analysis",
-        apiMethod: "getRevenueRecognition",
-      },
-      {
-        id: "tax-summary",
-        name: "Tax Summary",
-        description: "TVA (19%) and TAP (0.5%) calculations for Algerian compliance",
-        apiMethod: "getTaxSummary",
-      },
-      {
-        id: "profit-margin",
-        name: "Profit Margin Analysis",
-        description: "Revenue vs. cost by product category, margin percentages",
-        apiMethod: "getProfitMargin",
-      },
+      { id: "invoice-aging", name: "Vieillissement des factures", description: "Tranches (0-30, 31-60, 61-90, 90+ jours), montants impayés", apiMethod: "getInvoiceAging" },
+      { id: "payment-status", name: "Statut des paiements", description: "Répartition payé/impayé/en retard, modes de paiement", apiMethod: "getPaymentStatus" },
+      { id: "revenue-recognition", name: "Reconnaissance du chiffre d'affaires", description: "Reconnu, comptabilisé, différé, récurrent", apiMethod: "getRevenueRecognition" },
+      { id: "tax-summary", name: "Résumé fiscal", description: "TVA (19 %) et TAP (0,5 %) conformité algérienne", apiMethod: "getTaxSummary" },
+      { id: "profit-margin", name: "Analyse des marges", description: "Chiffre d'affaires vs coûts par catégorie, pourcentages de marge", apiMethod: "getProfitMargin" },
     ],
   },
   {
     id: "sales",
-    name: "Sales Reports",
-    description: "Quote conversion, order pipeline, product performance",
+    name: "Rapports ventes",
+    description: "Conversion devis, pipeline commandes, performance produits",
     icon: <ShoppingCart className="w-5 h-5" />,
     color: "bg-blue-100 text-blue-800",
     reports: [
-      {
-        id: "quote-conversion",
-        name: "Quote Conversion",
-        description: "Quote lifecycle funnel, conversion rates to orders/invoices",
-        apiMethod: "getQuoteConversion",
-      },
-      {
-        id: "order-pipeline",
-        name: "Order Pipeline",
-        description: "Orders by status (10 stages), bottleneck analysis, avg time",
-        apiMethod: "getOrderPipeline",
-      },
-      {
-        id: "product-performance",
-        name: "Product Performance",
-        description: "Top products by revenue/volume, growth trends",
-        apiMethod: "getProductPerformance",
-      },
-      {
-        id: "customer-patterns",
-        name: "Customer Purchase Patterns",
-        description: "Segmentation by frequency/value, seasonality analysis",
-        apiMethod: "getCustomerPatterns",
-      },
+      { id: "quote-conversion", name: "Conversion des devis", description: "Cycle de vie devis, taux de conversion en commandes/factures", apiMethod: "getQuoteConversion" },
+      { id: "order-pipeline", name: "Pipeline des commandes", description: "Commandes par statut (10 étapes), goulots d'étranglement", apiMethod: "getOrderPipeline" },
+      { id: "product-performance", name: "Performance produits", description: "Meilleurs produits par CA/volume, tendances", apiMethod: "getProductPerformance" },
+      { id: "customer-patterns", name: "Achats clients", description: "Segmentation fréquence/valeur, saisonnalité", apiMethod: "getCustomerPatterns" },
     ],
   },
   {
     id: "customers",
-    name: "Customer Intelligence",
-    description: "Lifetime value, segmentation, KYC, churn analysis",
+    name: "Intelligence client",
+    description: "Valeur vie client, segmentation, KYC, analyse attrition",
     icon: <UserCheck className="w-5 h-5" />,
     color: "bg-purple-100 text-purple-800",
     reports: [
-      {
-        id: "lifetime-value",
-        name: "Customer Lifetime Value (CLV)",
-        description: "Total revenue per customer, purchase frequency, ranking",
-        apiMethod: "getCustomerLifetimeValue",
-      },
-      {
-        id: "segmentation",
-        name: "Customer Segmentation",
-        description: "By type, status, revenue tier, engagement level",
-        apiMethod: "getCustomerSegmentation",
-      },
-      {
-        id: "kyc-compliance",
-        name: "KYC Compliance",
-        description: "Verification status, compliance rates, pending verifications",
-        apiMethod: "getKYCCompliance",
-      },
-      {
-        id: "churn-analysis",
-        name: "Churn Analysis",
-        description: "At-risk customers, churn rate, inactive customers (90+ days)",
-        apiMethod: "getChurnAnalysis",
-      },
+      { id: "lifetime-value", name: "Valeur vie client (CLV)", description: "CA total par client, fréquence d'achat, classement", apiMethod: "getCustomerLifetimeValue" },
+      { id: "segmentation", name: "Segmentation clients", description: "Par type, statut, palier de CA, niveau d'engagement", apiMethod: "getCustomerSegmentation" },
+      { id: "kyc-compliance", name: "Conformité KYC", description: "Statut vérification, taux de conformité, en attente", apiMethod: "getKYCCompliance" },
+      { id: "churn-analysis", name: "Analyse d'attrition", description: "Clients à risque, taux d'attrition, inactifs (90+ jours)", apiMethod: "getChurnAnalysis" },
     ],
   },
   {
     id: "operations",
-    name: "Operations Reports",
-    description: "SLA compliance, agent performance, support quality",
+    name: "Rapports opérations",
+    description: "Conformité SLA, performance agents, qualité support",
     icon: <Headphones className="w-5 h-5" />,
     color: "bg-amber-100 text-amber-800",
     reports: [
-      {
-        id: "sla-compliance",
-        name: "SLA Compliance",
-        description: "Response/resolution SLA tracking by priority, breach analysis",
-        apiMethod: "getSLACompliance",
-      },
-      {
-        id: "agent-performance",
-        name: "Agent Performance",
-        description: "Tickets per agent, resolution rates, avg times, workload balance",
-        apiMethod: "getAgentPerformance",
-      },
-      {
-        id: "category-analysis",
-        name: "Ticket Category Analysis",
-        description: "Volume by category, resolution times, peak periods",
-        apiMethod: "getCategoryAnalysis",
-      },
-      {
-        id: "quality-metrics",
-        name: "Support Quality Metrics",
-        description: "First Contact Resolution, reopening rate, escalation rate",
-        apiMethod: "getQualityMetrics",
-      },
+      { id: "sla-compliance", name: "Conformité SLA", description: "Suivi réponse/résolution par priorité, analyse des dépassements", apiMethod: "getSLACompliance" },
+      { id: "agent-performance", name: "Performance des agents", description: "Tickets par agent, taux de résolution, charge", apiMethod: "getAgentPerformance" },
+      { id: "category-analysis", name: "Analyse par catégorie de ticket", description: "Volume par catégorie, délais de résolution, pics", apiMethod: "getCategoryAnalysis" },
+      { id: "quality-metrics", name: "Indicateurs qualité support", description: "Résolution au premier contact, réouverture, escalade", apiMethod: "getQualityMetrics" },
     ],
   },
   {
     id: "hosting",
-    name: "Hosting Reports",
-    description: "VPS utilization, lifecycle, uptime, billing (MRR)",
+    name: "Rapports hébergement",
+    description: "Utilisation VPS, cycle de vie, disponibilité, facturation (MRR)",
     icon: <Server className="w-5 h-5" />,
     color: "bg-indigo-100 text-indigo-800",
     reports: [
-      {
-        id: "vps-utilization",
-        name: "VPS Utilization",
-        description: "Resource allocation by plan, utilization %, revenue by plan",
-        apiMethod: "getVPSUtilization",
-      },
-      {
-        id: "vps-lifecycle",
-        name: "VPS Lifecycle",
-        description: "New subscriptions, cancellations, churn rate, retention",
-        apiMethod: "getVPSLifecycle",
-      },
-      {
-        id: "vps-uptime",
-        name: "VPS Uptime & Performance",
-        description: "Uptime %, performance metrics, SLA compliance",
-        apiMethod: "getVPSUptime",
-      },
-      {
-        id: "vps-billing",
-        name: "VPS Billing (MRR)",
-        description: "Monthly Recurring Revenue, revenue by plan, forecasts",
-        apiMethod: "getVPSBilling",
-      },
+      { id: "vps-utilization", name: "Utilisation VPS", description: "Allocation ressources par offre, % utilisation, CA par offre", apiMethod: "getVPSUtilization" },
+      { id: "vps-lifecycle", name: "Cycle de vie VPS", description: "Nouveaux abonnements, résiliations, attrition, rétention", apiMethod: "getVPSLifecycle" },
+      { id: "vps-uptime", name: "Disponibilité et performance VPS", description: "% disponibilité, métriques, conformité SLA", apiMethod: "getVPSUptime" },
+      { id: "vps-billing", name: "Facturation VPS (MRR)", description: "Chiffre d'affaires récurrent mensuel, prévisions", apiMethod: "getVPSBilling" },
     ],
   },
   {
     id: "audit",
-    name: "Audit & Compliance",
-    description: "User activity, security events, data changes, compliance",
+    name: "Audit et conformité",
+    description: "Activité utilisateurs, événements sécurité, modifications données",
     icon: <Lock className="w-5 h-5" />,
     color: "bg-red-100 text-red-800",
     reports: [
-      {
-        id: "user-activity",
-        name: "User Activity",
-        description: "Logins, actions performed, most active users by role",
-        apiMethod: "getUserActivity",
-      },
-      {
-        id: "security-events",
-        name: "Security Events",
-        description: "Failed logins by IP, suspicious patterns, high-risk actions",
-        apiMethod: "getSecurityEvents",
-      },
-      {
-        id: "data-changes",
-        name: "Data Change Audit",
-        description: "Critical data modifications with who/when/where tracking",
-        apiMethod: "getDataChanges",
-      },
-      {
-        id: "compliance",
-        name: "Regulatory Compliance",
-        description: "Data retention, access reviews, export tracking",
-        apiMethod: "getCompliance",
-      },
+      { id: "user-activity", name: "Activité utilisateurs", description: "Connexions, actions, utilisateurs les plus actifs par rôle", apiMethod: "getUserActivity" },
+      { id: "security-events", name: "Événements de sécurité", description: "Échecs de connexion par IP, motifs suspects, actions à risque", apiMethod: "getSecurityEvents" },
+      { id: "data-changes", name: "Audit des modifications", description: "Modifications critiques avec qui/quand/où", apiMethod: "getDataChanges" },
+      { id: "compliance", name: "Conformité réglementaire", description: "Rétention des données, revues d'accès, exports", apiMethod: "getCompliance" },
     ],
   },
   {
     id: "executive",
-    name: "Executive Reports",
-    description: "KPI dashboard, business health, forecasting",
+    name: "Rapports direction",
+    description: "Tableau de bord KPI, santé activité, prévisions",
     icon: <TrendingUp className="w-5 h-5" />,
     color: "bg-cyan-100 text-cyan-800",
     reports: [
-      {
-        id: "kpi-dashboard",
-        name: "KPI Dashboard",
-        description: "Revenue, customers, orders, tickets, satisfaction scores with trends",
-        apiMethod: "getKPIDashboard",
-      },
-      {
-        id: "business-health",
-        name: "Business Health",
-        description: "6-month revenue trends, pipeline status, receivables, backlog",
-        apiMethod: "getBusinessHealth",
-      },
-      {
-        id: "forecast",
-        name: "Forecasting",
-        description: "3-month revenue projection, churn prediction, capacity planning",
-        apiMethod: "getForecast",
-      },
+      { id: "kpi-dashboard", name: "Tableau de bord KPI", description: "CA, clients, commandes, tickets, satisfaction et tendances", apiMethod: "getKPIDashboard" },
+      { id: "business-health", name: "Santé de l'activité", description: "Tendances CA 6 mois, pipeline, créances, backlog", apiMethod: "getBusinessHealth" },
+      { id: "forecast", name: "Prévisions", description: "Projection CA 3 mois, prédiction attrition, capacité", apiMethod: "getForecast" },
     ],
   },
 ];
@@ -303,7 +163,7 @@ export const ReportsPage: React.FC = () => {
   const [selectedReport, setSelectedReport] = useState<string>("");
   const [period, setPeriod] = useState<string>("month");
   const [dateFrom, setDateFrom] = useState<string>(
-    new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+    new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
   );
   const [dateTo, setDateTo] = useState<string>(
     new Date().toISOString().split("T")[0]
@@ -315,7 +175,7 @@ export const ReportsPage: React.FC = () => {
 
   const handleGenerateReport = async (format: "pdf" | "excel" | "csv") => {
     if (!selectedReport || !selectedCategory) {
-      toast.error("Please select a report");
+      toast.error("Veuillez sélectionner un rapport");
       return;
     }
 
@@ -336,10 +196,10 @@ export const ReportsPage: React.FC = () => {
         params
       );
 
-      toast.success(`${format.toUpperCase()} report generated successfully!`);
+      toast.success(`Rapport ${format.toUpperCase()} généré avec succès.`);
     } catch (error: any) {
       console.error("Report generation failed:", error);
-      toast.error(error?.response?.data?.detail || "Failed to generate report");
+      toast.error(error?.response?.data?.detail || "Échec de la génération du rapport");
     } finally {
       setIsGenerating(false);
     }
@@ -380,15 +240,15 @@ export const ReportsPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
-            Advanced Reports System
+            Système de rapports avancés
           </h1>
           <p className="text-gray-600 mt-1">
-            Comprehensive analytics across all business modules • 28 Professional Reports
+            Analytique complète sur tous les modules • 28 rapports professionnels
           </p>
         </div>
         <Badge variant="outline" className="text-sm px-3 py-1">
           <BarChart3 className="w-4 h-4 mr-1" />
-          7 Categories • 28 Reports
+          7 catégories • 28 rapports
         </Badge>
       </div>
 
@@ -400,7 +260,7 @@ export const ReportsPage: React.FC = () => {
           <Card className="p-4">
             <div className="flex items-center gap-2 mb-4">
               <Filter className="w-4 h-4 text-gray-400" />
-              <h3 className="font-semibold text-gray-900">Select Category</h3>
+              <h3 className="font-semibold text-gray-900">Choisir une catégorie</h3>
             </div>
 
             <div className="space-y-2">
@@ -426,7 +286,7 @@ export const ReportsPage: React.FC = () => {
                         {category.name}
                       </div>
                       <div className="text-xs text-gray-600 mt-0.5">
-                        {category.reports.length} reports
+                        {category.reports.length} rapports
                       </div>
                     </div>
                     {selectedCategory === category.id && (
@@ -479,7 +339,7 @@ export const ReportsPage: React.FC = () => {
             <div className="flex items-center gap-2 mb-6">
               <Calendar className="w-5 h-5 text-gray-400" />
               <h3 className="text-lg font-semibold text-gray-900">
-                Report Parameters
+                Paramètres du rapport
               </h3>
             </div>
 
@@ -487,18 +347,18 @@ export const ReportsPage: React.FC = () => {
               {/* Period Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Period
+                  Période
                 </label>
                 <Select value={period} onValueChange={setPeriod}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select period" />
+                    <SelectValue placeholder="Sélectionner la période" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="today">Today</SelectItem>
-                    <SelectItem value="week">Last 7 Days</SelectItem>
-                    <SelectItem value="month">Last 30 Days</SelectItem>
-                    <SelectItem value="quarter">Last Quarter</SelectItem>
-                    <SelectItem value="year">Last Year</SelectItem>
+                    <SelectItem value="today">Aujourd'hui</SelectItem>
+                    <SelectItem value="week">7 derniers jours</SelectItem>
+                    <SelectItem value="month">30 derniers jours</SelectItem>
+                    <SelectItem value="quarter">Dernier trimestre</SelectItem>
+                    <SelectItem value="year">Dernière année</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -517,7 +377,7 @@ export const ReportsPage: React.FC = () => {
                     className="mr-2"
                   />
                   <label htmlFor="includeCharts" className="text-sm cursor-pointer">
-                    Include Charts & Visualizations
+                    Inclure graphiques et visualisations
                   </label>
                 </div>
               </div>
@@ -525,7 +385,7 @@ export const ReportsPage: React.FC = () => {
               {/* From Date */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  From Date
+                  Date de début
                 </label>
                 <Input
                   type="date"
@@ -559,7 +419,7 @@ export const ReportsPage: React.FC = () => {
                 ) : (
                   <FileText className="w-4 h-4" />
                 )}
-                Generate PDF with Charts
+                Générer PDF avec graphiques
               </Button>
               <Button
                 variant="outline"
@@ -568,7 +428,7 @@ export const ReportsPage: React.FC = () => {
                 className="flex items-center gap-2"
               >
                 <Table className="w-4 h-4" />
-                Excel (Multi-Sheet)
+                Excel (multi-feuilles)
               </Button>
               <Button
                 variant="outline"
@@ -577,7 +437,7 @@ export const ReportsPage: React.FC = () => {
                 className="flex items-center gap-2"
               >
                 <Download className="w-4 h-4" />
-                CSV Export
+                Exporter CSV
               </Button>
             </div>
           </Card>
@@ -604,7 +464,7 @@ export const ReportsPage: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <div className="text-xs font-medium text-gray-600 mb-1">
-                      Category
+                      Catégorie
                     </div>
                     <div className="text-sm font-semibold text-gray-900">
                       {currentCategory.name}
@@ -612,15 +472,15 @@ export const ReportsPage: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-xs font-medium text-gray-600 mb-1">
-                      Date Range
+                      Plage de dates
                     </div>
                     <div className="text-sm font-semibold text-gray-900">
-                      {dateFrom} to {dateTo}
+                      {dateFrom} → {dateTo}
                     </div>
                   </div>
                   <div>
                     <div className="text-xs font-medium text-gray-600 mb-1">
-                      Period
+                      Période
                     </div>
                     <div className="text-sm font-semibold text-gray-900 capitalize">
                       {period}
@@ -628,10 +488,10 @@ export const ReportsPage: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-xs font-medium text-gray-600 mb-1">
-                      Visualizations
+                      Visualisations
                     </div>
                     <div className="text-sm font-semibold text-gray-900">
-                      {includeCharts ? "Enabled" : "Disabled"}
+                      {includeCharts ? "Activé" : "Désactivé"}
                     </div>
                   </div>
                 </div>
@@ -639,7 +499,7 @@ export const ReportsPage: React.FC = () => {
                 <div className="flex items-center gap-2 text-xs text-gray-600">
                   <Clock className="w-3 h-3" />
                   <span>
-                    Report will be generated with current parameters
+                    Le rapport sera généré avec les paramètres actuels
                   </span>
                 </div>
               </div>
@@ -652,25 +512,25 @@ export const ReportsPage: React.FC = () => {
               <div className="text-center py-8">
                 <PieChart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Select a Report to Get Started
+                  Sélectionnez un rapport pour commencer
                 </h3>
                 <p className="text-sm text-gray-600 max-w-md mx-auto">
-                  Choose a category from the left sidebar, then select a specific report
-                  to generate professional PDFs with charts, multi-sheet Excel workbooks,
-                  or CSV exports.
+                  Choisissez une catégorie dans la barre latérale, puis un rapport
+                  pour générer des PDF avec graphiques, des classeurs Excel multi-feuilles
+                  ou des exports CSV.
                 </p>
                 <div className="mt-6 flex items-center justify-center gap-4 text-xs text-gray-500">
                   <div className="flex items-center gap-1">
                     <FileText className="w-4 h-4" />
-                    <span>PDF with Charts</span>
+                    <span>PDF avec graphiques</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Table className="w-4 h-4" />
-                    <span>Multi-Sheet Excel</span>
+                    <span>Excel multi-feuilles</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Download className="w-4 h-4" />
-                    <span>CSV Export</span>
+                    <span>Exporter CSV</span>
                   </div>
                 </div>
               </div>
@@ -684,7 +544,7 @@ export const ReportsPage: React.FC = () => {
         <div className="flex items-center gap-2 mb-4">
           <BarChart3 className="w-5 h-5 text-gray-400" />
           <h3 className="text-lg font-semibold text-gray-900">
-            Report Features
+            Fonctionnalités des rapports
           </h3>
         </div>
 
@@ -693,11 +553,11 @@ export const ReportsPage: React.FC = () => {
             <FileText className="w-5 h-5 text-green-600 mt-0.5" />
             <div>
               <div className="font-medium text-sm text-gray-900 mb-1">
-                Professional PDF Reports
+                Rapports PDF professionnels
               </div>
               <div className="text-xs text-gray-600">
-                HTML-to-PDF conversion with executive summary, KPI cards, charts
-                (bar, pie, line, area), conditional formatting, and multi-page support
+                Conversion HTML-PDF avec résumé, cartes KPI, graphiques (barres, camembert,
+                courbes, aires), mise en forme conditionnelle, multi-pages
               </div>
             </div>
           </div>
@@ -706,11 +566,11 @@ export const ReportsPage: React.FC = () => {
             <Table className="w-5 h-5 text-blue-600 mt-0.5" />
             <div>
               <div className="font-medium text-sm text-gray-900 mb-1">
-                Multi-Sheet Excel Workbooks
+                Classeurs Excel multi-feuilles
               </div>
               <div className="text-xs text-gray-600">
-                Summary sheet, detailed data, embedded charts, raw data, professional
-                formatting, formulas, and conditional formatting
+                Feuille récap, données détaillées, graphiques intégrés, données brutes,
+                mise en forme professionnelle et formules
               </div>
             </div>
           </div>
@@ -719,11 +579,11 @@ export const ReportsPage: React.FC = () => {
             <BarChart3 className="w-5 h-5 text-purple-600 mt-0.5" />
             <div>
               <div className="font-medium text-sm text-gray-900 mb-1">
-                Advanced Analytics
+                Analytique avancée
               </div>
               <div className="text-xs text-gray-600">
-                Cross-module insights, trend analysis, forecasting, customer lifetime
-                value, churn prediction, and SLA compliance tracking
+                Vue cross-modules, tendances, prévisions, valeur vie client,
+                prédiction attrition, suivi conformité SLA
               </div>
             </div>
           </div>

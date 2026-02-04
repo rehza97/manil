@@ -38,7 +38,7 @@ export function SyncLogViewer({ logs, isLoading }: SyncLogViewerProps) {
     return (
       <div className="rounded-lg border border-dashed p-8 text-center">
         <p className="text-sm text-muted-foreground">
-          No sync logs found. Operations will appear here as they occur.
+          Aucun journal de synchronisation. Les opérations apparaîtront ici.
         </p>
       </div>
     );
@@ -63,12 +63,12 @@ export function SyncLogViewer({ logs, isLoading }: SyncLogViewerProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Status</TableHead>
-              <TableHead>Operation</TableHead>
+              <TableHead>Statut</TableHead>
+              <TableHead>Opération</TableHead>
               <TableHead>Zone</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>Timestamp</TableHead>
-              <TableHead>Details</TableHead>
+              <TableHead>Durée</TableHead>
+              <TableHead>Date et heure</TableHead>
+              <TableHead>Détails</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -125,7 +125,7 @@ export function SyncLogViewer({ logs, isLoading }: SyncLogViewerProps) {
                       <span className="font-mono text-sm">{log.zone_id}</span>
                     ) : (
                       <span className="text-sm text-muted-foreground">
-                        All zones
+                        Toutes les zones
                       </span>
                     )}
                   </TableCell>

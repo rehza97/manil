@@ -176,8 +176,8 @@ const SecurityPage: React.FC = () => {
                 <Lock className="h-5 w-5" />
               </div>
               <div className="flex-1">
-                <p className="font-medium">Password</p>
-                <p className="text-sm text-muted-foreground">Last changed recently</p>
+                <p className="font-medium">Mot de passe</p>
+                <p className="text-sm text-muted-foreground">Dernière modification récente</p>
               </div>
               <CheckCircle className="h-5 w-5 text-green-600" />
             </div>
@@ -231,7 +231,7 @@ const SecurityPage: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="newPassword">New Password</Label>
+                <Label htmlFor="newPassword">Nouveau mot de passe</Label>
                 <Input
                   id="newPassword"
                   type="password"

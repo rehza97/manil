@@ -102,7 +102,7 @@ export const NotificationGroupsPage: React.FC = () => {
       const response = await apiClient.get("/api/v1/notifications/groups?page_size=100");
       setGroups(response.data);
     } catch (error: any) {
-      toast.error("Failed to load notification groups", {
+      toast.error("Échec du chargement des groupes de notification", {
         description: error.response?.data?.detail || error.message,
       });
     } finally {
@@ -146,10 +146,10 @@ export const NotificationGroupsPage: React.FC = () => {
 
       if (selectedGroup) {
         await apiClient.put(`/api/v1/notifications/groups/${selectedGroup.id}`, payload);
-        toast.success("Notification group updated");
+        toast.success("Groupe de notification mis à jour");
       } else {
         await apiClient.post("/api/v1/notifications/groups", payload);
-        toast.success("Notification group created");
+        toast.success("Groupe de notification créé");
       }
 
       setIsCreateModalOpen(false);
@@ -164,11 +164,11 @@ export const NotificationGroupsPage: React.FC = () => {
   };
 
   const handleDelete = async (group: NotificationGroup) => {
-    if (!confirm(`Delete notification group "${group.name}"?`)) return;
+    if (!confirm(`Supprimer le groupe de notification « ${group.name} » ?`)) return;
 
     try {
       await apiClient.delete(`/api/v1/notifications/groups/${group.id}`);
-      toast.success("Notification group deleted");
+      toast.success("Groupe de notification supprimé");
       loadGroups();
     } catch (error: any) {
       toast.error("Failed to delete notification group", {
@@ -182,7 +182,7 @@ export const NotificationGroupsPage: React.FC = () => {
       setTestingGroupId(group.id);
       const response = await apiClient.post(`/api/v1/notifications/groups/${group.id}/test`);
       setTestResult(response.data.member_count);
-      toast.success(`Group targets ${response.data.member_count} users`);
+      toast.success(`Le groupe cible ${response.data.member_count} utilisateur(s)`);
     } catch (error: any) {
       toast.error("Failed to test targeting", {
         description: error.response?.data?.detail || error.message,
@@ -214,12 +214,12 @@ export const NotificationGroupsPage: React.FC = () => {
         body: sendFormData.body || null,
         link: sendFormData.link || null,
       });
-      toast.success("Notification sent to group members");
+      toast.success("Notification envoyée aux membres du groupe");
       setIsSendModalOpen(false);
       setSelectedGroup(null);
       setSendFormData({ type: "general", title: "", body: "", link: "" });
     } catch (error: any) {
-      toast.error("Failed to send notification", {
+      toast.error("Échec de l'envoi de la notification", {
         description: error.response?.data?.detail || error.message,
       });
     }
@@ -233,7 +233,7 @@ export const NotificationGroupsPage: React.FC = () => {
       toast.success(`Group ${!group.is_active ? "activated" : "deactivated"}`);
       loadGroups();
     } catch (error: any) {
-      toast.error("Failed to update group", {
+      toast.error("Échec de la mise à jour du groupe", {
         description: error.response?.data?.detail || error.message,
       });
     }
@@ -261,23 +261,23 @@ export const NotificationGroupsPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Notification Groups</h1>
+          <h1 className="text-3xl font-bold">Groupes de notification</h1>
           <p className="text-slate-600 mt-2">
-            Create and manage notification groups for targeting notifications to specific user sets
+            Créer et gérer les groupes de notification pour cibler les notifications vers des ensembles d'utilisateurs
           </p>
         </div>
         <Button onClick={handleCreate}>
           <Plus className="mr-2 h-4 w-4" />
-          Create Group
+          Créer un groupe
         </Button>
       </div>
 
       {groups && (
         <Card>
           <CardHeader>
-            <CardTitle>Groups</CardTitle>
+            <CardTitle>Groupes</CardTitle>
             <CardDescription>
-              {groups.total} notification group{groups.total !== 1 ? "s" : ""}
+              {groups.total} groupe(s) de notification
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -285,9 +285,9 @@ export const NotificationGroupsPage: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Target Type</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>Type de cible</TableHead>
+                    <TableHead>Statut</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -295,7 +295,7 @@ export const NotificationGroupsPage: React.FC = () => {
                   {groups.items.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center text-muted-foreground">
-                        No notification groups found
+                        Aucun groupe de notification trouvé
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -323,9 +323,9 @@ export const NotificationGroupsPage: React.FC = () => {
                               onCheckedChange={() => handleToggleActive(group)}
                             />
                             {group.is_active ? (
-                              <span className="text-sm text-green-600">Active</span>
+                              <span className="text-sm text-green-600">Actif</span>
                             ) : (
-                              <span className="text-sm text-gray-500">Inactive</span>
+                              <span className="text-sm text-gray-500">Inactif</span>
                             )}
                           </div>
                         </TableCell>
@@ -387,20 +387,20 @@ export const NotificationGroupsPage: React.FC = () => {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {selectedGroup ? "Edit Notification Group" : "Create Notification Group"}
+              {selectedGroup ? "Modifier le groupe de notification" : "Créer un groupe de notification"}
             </DialogTitle>
             <DialogDescription>
-              Configure targeting criteria for the notification group
+              Configurer les critères de ciblage du groupe de notification
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name">Nom *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., Corporate Customers"
+                placeholder="ex. Clients entreprise"
               />
             </div>
             <div>
@@ -409,12 +409,12 @@ export const NotificationGroupsPage: React.FC = () => {
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Optional description"
+                placeholder="Description optionnelle"
                 rows={2}
               />
             </div>
             <div>
-              <Label htmlFor="target_type">Target Type *</Label>
+              <Label htmlFor="target_type">Type de cible *</Label>
               <Select
                 value={formData.target_type}
                 onValueChange={(value) => setFormData({ ...formData, target_type: value, target_criteria: {} })}
@@ -434,17 +434,17 @@ export const NotificationGroupsPage: React.FC = () => {
             {/* Dynamic criteria form based on target_type */}
             {formData.target_type === "customer_type" && (
               <div>
-                <Label htmlFor="customer_type">Customer Type *</Label>
+                <Label htmlFor="customer_type">Type de client *</Label>
                 <Select
                   value={formData.target_criteria?.customer_type || ""}
                   onValueChange={(value) => updateCriteria("customer_type", value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select customer type" />
+                    <SelectValue placeholder="Choisir le type de client" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="individual">Individual</SelectItem>
-                    <SelectItem value="corporate">Corporate</SelectItem>
+                    <SelectItem value="individual">Particulier</SelectItem>
+                    <SelectItem value="corporate">Entreprise</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -457,14 +457,14 @@ export const NotificationGroupsPage: React.FC = () => {
                   id="category_id"
                   value={formData.target_criteria?.category_id || ""}
                   onChange={(e) => updateCriteria("category_id", e.target.value)}
-                  placeholder="Enter category ID"
+                  placeholder="Saisir l'ID de la catégorie"
                 />
               </div>
             )}
 
             {formData.target_type === "custom" && (
               <div>
-                <Label htmlFor="custom_criteria">Custom Criteria (JSON) *</Label>
+                <Label htmlFor="custom_criteria">Critères personnalisés (JSON) *</Label>
                 <Textarea
                   id="custom_criteria"
                   value={JSON.stringify(formData.target_criteria, null, 2)}
@@ -480,7 +480,7 @@ export const NotificationGroupsPage: React.FC = () => {
                   rows={4}
                 />
                 <p className="text-sm text-muted-foreground mt-1">
-                  Enter valid JSON criteria (e.g., {"{"}"role": "admin"{"}"})
+                  Saisir des critères JSON valides (ex. {"{"}"role": "admin"{"}"})
                 </p>
               </div>
             )}
@@ -499,9 +499,9 @@ export const NotificationGroupsPage: React.FC = () => {
               setIsEditModalOpen(false);
               setSelectedGroup(null);
             }}>
-              Cancel
+              Annuler
             </Button>
-            <Button onClick={handleSave}>Save</Button>
+            <Button onClick={handleSave}>Enregistrer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -510,9 +510,9 @@ export const NotificationGroupsPage: React.FC = () => {
       <Dialog open={isSendModalOpen} onOpenChange={setIsSendModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Send Notification to Group</DialogTitle>
+            <DialogTitle>Envoyer une notification au groupe</DialogTitle>
             <DialogDescription>
-              Send a notification to all members of "{selectedGroup?.name}"
+              Envoyer une notification à tous les membres de « {selectedGroup?.name} »
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -522,7 +522,7 @@ export const NotificationGroupsPage: React.FC = () => {
                 id="send_type"
                 value={sendFormData.type}
                 onChange={(e) => setSendFormData({ ...sendFormData, type: e.target.value })}
-                placeholder="e.g., general, ticket_update"
+                placeholder="ex. general, ticket_update"
               />
             </div>
             <div>
@@ -531,7 +531,7 @@ export const NotificationGroupsPage: React.FC = () => {
                 id="send_title"
                 value={sendFormData.title}
                 onChange={(e) => setSendFormData({ ...sendFormData, title: e.target.value })}
-                placeholder="Notification title"
+                placeholder="Titre de la notification"
               />
             </div>
             <div>
@@ -540,7 +540,7 @@ export const NotificationGroupsPage: React.FC = () => {
                 id="send_body"
                 value={sendFormData.body}
                 onChange={(e) => setSendFormData({ ...sendFormData, body: e.target.value })}
-                placeholder="Notification body"
+                placeholder="Contenu de la notification"
                 rows={3}
               />
             </div>
@@ -556,10 +556,10 @@ export const NotificationGroupsPage: React.FC = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsSendModalOpen(false)}>
-              Cancel
+              Annuler
             </Button>
             <Button onClick={handleSendNotification} disabled={!sendFormData.title}>
-              Send Notification
+              Envoyer la notification
             </Button>
           </DialogFooter>
         </DialogContent>

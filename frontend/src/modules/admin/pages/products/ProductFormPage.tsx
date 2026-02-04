@@ -115,7 +115,7 @@ const ProductFormPage: React.FC = () => {
       navigate("/admin/products");
     },
     onError: (error: any) => {
-      alert(error.response?.data?.detail || "Failed to save product");
+      alert(error.response?.data?.detail || "Échec de l'enregistrement du produit");
     },
   });
 
@@ -153,10 +153,10 @@ const ProductFormPage: React.FC = () => {
         </Button>
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
-            {isEdit ? "Edit Product" : "Create Product"}
+            {isEdit ? "Modifier le produit" : "Créer un produit"}
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            {isEdit ? "Update product details" : "Add a new product to your catalog"}
+            {isEdit ? "Mettre à jour les détails du produit" : "Ajouter un nouveau produit à votre catalogue"}
           </p>
         </div>
       </div>
@@ -166,10 +166,10 @@ const ProductFormPage: React.FC = () => {
         <div className="bg-white rounded-lg border p-6 space-y-6">
           {/* Basic Information */}
           <div>
-            <h2 className="text-lg font-semibold mb-4">Basic Information</h2>
+            <h2 className="text-lg font-semibold mb-4">Informations de base</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <Label htmlFor="name">Product Name *</Label>
+                <Label htmlFor="name">Nom du produit *</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -190,12 +190,12 @@ const ProductFormPage: React.FC = () => {
               </div>
 
               <div className="md:col-span-2">
-                <Label htmlFor="short_description">Short Description</Label>
+                <Label htmlFor="short_description">Description courte</Label>
                 <Input
                   id="short_description"
                   value={formData.short_description}
                   onChange={(e) => handleChange("short_description", e.target.value)}
-                  placeholder="Brief product description"
+                  placeholder="Brève description du produit"
                 />
               </div>
 
@@ -206,18 +206,18 @@ const ProductFormPage: React.FC = () => {
                   value={formData.description}
                   onChange={(e) => handleChange("description", e.target.value)}
                   rows={5}
-                  placeholder="Detailed product description"
+                  placeholder="Description détaillée du produit"
                 />
               </div>
 
               <div>
-                <Label htmlFor="category_id">Category *</Label>
+                <Label htmlFor="category_id">Catégorie *</Label>
                 <Select
                   value={formData.category_id}
                   onValueChange={(value) => handleChange("category_id", value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
+                    <SelectValue placeholder="Choisir une catégorie" />
                   </SelectTrigger>
                   <SelectContent>
                     {categories?.map((category) => (
@@ -243,52 +243,52 @@ const ProductFormPage: React.FC = () => {
 
           {/* Service Configuration */}
           <div>
-            <h2 className="text-lg font-semibold mb-4">Service Configuration</h2>
+            <h2 className="text-lg font-semibold mb-4">Configuration du service</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="service_type">Service Type *</Label>
+                <Label htmlFor="service_type">Type de service *</Label>
                 <Select
                   value={formData.service_type}
                   onValueChange={(value) => handleChange("service_type", value as ServiceType)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select service type" />
+                    <SelectValue placeholder="Choisir le type de service" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="general">General</SelectItem>
+                    <SelectItem value="general">Général</SelectItem>
                     <SelectItem value="dns">DNS</SelectItem>
-                    <SelectItem value="ssl">SSL Certificate</SelectItem>
-                    <SelectItem value="email">Email Hosting</SelectItem>
-                    <SelectItem value="backup">Backup Service</SelectItem>
-                    <SelectItem value="monitoring">Monitoring</SelectItem>
-                    <SelectItem value="domain">Domain Registration</SelectItem>
-                    <SelectItem value="hosting">Hosting</SelectItem>
-                    <SelectItem value="storage">Storage</SelectItem>
+                    <SelectItem value="ssl">Certificat SSL</SelectItem>
+                    <SelectItem value="email">Hébergement e-mail</SelectItem>
+                    <SelectItem value="backup">Service de sauvegarde</SelectItem>
+                    <SelectItem value="monitoring">Surveillance</SelectItem>
+                    <SelectItem value="domain">Enregistrement de domaine</SelectItem>
+                    <SelectItem value="hosting">Hébergement</SelectItem>
+                    <SelectItem value="storage">Stockage</SelectItem>
                     <SelectItem value="cdn">CDN</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
-                <Label htmlFor="billing_cycle">Billing Cycle *</Label>
+                <Label htmlFor="billing_cycle">Cycle de facturation *</Label>
                 <Select
                   value={formData.billing_cycle}
                   onValueChange={(value) => handleChange("billing_cycle", value as BillingCycle)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select billing cycle" />
+                    <SelectValue placeholder="Choisir le cycle" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="one_time">One Time</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="yearly">Yearly</SelectItem>
-                    <SelectItem value="usage_based">Usage Based</SelectItem>
+                    <SelectItem value="one_time">Unique</SelectItem>
+                    <SelectItem value="monthly">Mensuel</SelectItem>
+                    <SelectItem value="yearly">Annuel</SelectItem>
+                    <SelectItem value="usage_based">À l'usage</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
-                <Label htmlFor="provisioning_type">Provisioning Type</Label>
+                <Label htmlFor="provisioning_type">Type de provisionnement</Label>
                 <Select
                   value={formData.provisioning_type || undefined}
                   onValueChange={(value) =>
@@ -296,18 +296,18 @@ const ProductFormPage: React.FC = () => {
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select provisioning type" />
+                    <SelectValue placeholder="Choisir le type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="automatic">Automatic</SelectItem>
-                    <SelectItem value="manual">Manual</SelectItem>
+                    <SelectItem value="automatic">Automatique</SelectItem>
+                    <SelectItem value="manual">Manuel</SelectItem>
                     <SelectItem value="api">API</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
-                <Label htmlFor="trial_period_days">Trial Period (days)</Label>
+                <Label htmlFor="trial_period_days">Période d'essai (jours)</Label>
                 <Input
                   id="trial_period_days"
                   type="number"
@@ -319,7 +319,7 @@ const ProductFormPage: React.FC = () => {
                       e.target.value ? parseInt(e.target.value) : undefined
                     )
                   }
-                  placeholder="e.g., 14"
+                  placeholder="ex. 14"
                 />
               </div>
 
@@ -334,8 +334,8 @@ const ProductFormPage: React.FC = () => {
             <div className="mt-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label htmlFor="is_recurring">Recurring Service</Label>
-                  <p className="text-xs text-gray-500">Service auto-renews</p>
+                  <Label htmlFor="is_recurring">Service récurrent</Label>
+                  <p className="text-xs text-gray-500">Le service se renouvelle automatiquement</p>
                 </div>
                 <Switch
                   id="is_recurring"
@@ -346,8 +346,8 @@ const ProductFormPage: React.FC = () => {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <Label htmlFor="auto_renew">Auto Renew</Label>
-                  <p className="text-xs text-gray-500">Enable auto-renewal by default</p>
+                  <Label htmlFor="auto_renew">Renouvellement auto</Label>
+                  <p className="text-xs text-gray-500">Activer le renouvellement automatique par défaut</p>
                 </div>
                 <Switch
                   id="auto_renew"
@@ -360,10 +360,10 @@ const ProductFormPage: React.FC = () => {
 
           {/* Pricing */}
           <div>
-            <h2 className="text-lg font-semibold mb-4">Pricing</h2>
+            <h2 className="text-lg font-semibold mb-4">Tarification</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="regular_price">Regular Price *</Label>
+                <Label htmlFor="regular_price">Prix normal *</Label>
                 <Input
                   id="regular_price"
                   type="number"
@@ -375,7 +375,7 @@ const ProductFormPage: React.FC = () => {
               </div>
 
               <div>
-                <Label htmlFor="sale_price">Sale Price</Label>
+                <Label htmlFor="sale_price">Prix promo</Label>
                 <Input
                   id="sale_price"
                   type="number"
@@ -391,10 +391,10 @@ const ProductFormPage: React.FC = () => {
 
           {/* Settings */}
           <div>
-            <h2 className="text-lg font-semibold mb-4">Settings</h2>
+            <h2 className="text-lg font-semibold mb-4">Paramètres</h2>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label htmlFor="is_active">Active</Label>
+                <Label htmlFor="is_active">Actif</Label>
                 <Switch
                   id="is_active"
                   checked={formData.is_active}
@@ -403,7 +403,7 @@ const ProductFormPage: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-between">
-                <Label htmlFor="is_visible">Visible in Catalog</Label>
+                <Label htmlFor="is_visible">Visible dans le catalogue</Label>
                 <Switch
                   id="is_visible"
                   checked={formData.is_visible}
@@ -412,7 +412,7 @@ const ProductFormPage: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-between">
-                <Label htmlFor="is_featured">Featured Product</Label>
+                <Label htmlFor="is_featured">Produit en vedette</Label>
                 <Switch
                   id="is_featured"
                   checked={formData.is_featured}
@@ -430,7 +430,7 @@ const ProductFormPage: React.FC = () => {
             variant="outline"
             onClick={() => navigate("/admin/products")}
           >
-            Cancel
+            Annuler
           </Button>
           <Button
             type="submit"
@@ -438,7 +438,7 @@ const ProductFormPage: React.FC = () => {
             disabled={mutation.isPending}
           >
             <Save className="mr-2 h-4 w-4" />
-            {mutation.isPending ? "Saving..." : isEdit ? "Update Product" : "Create Product"}
+            {mutation.isPending ? "Enregistrement…" : isEdit ? "Mettre à jour le produit" : "Créer le produit"}
           </Button>
         </div>
       </form>

@@ -1,7 +1,7 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { invoicesApi } from "@/shared/api";
+import { invoicesApi, handleApiError } from "@/shared/api";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { ArrowLeft, Send, Loader2 } from "lucide-react";
@@ -30,7 +30,7 @@ export const InvoiceSendPage: React.FC = () => {
       navigate(id ? `${BASE}/${id}` : BASE);
     },
     onError: (e: unknown) => {
-      toast({ title: "Error", description: (e as Error)?.message ?? "Failed to send", variant: "destructive" });
+      toast({ title: "Error", description: handleApiError(e), variant: "destructive" });
     },
   });
 

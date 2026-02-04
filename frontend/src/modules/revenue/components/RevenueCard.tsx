@@ -54,7 +54,7 @@ export const RevenueCard: React.FC<RevenueCardProps> = ({
                 growth >= 0 ? "text-green-600" : "text-red-600"
               }`}
             >
-              {formatRevenueGrowth(growth)} from last period
+              {formatRevenueGrowth(growth)} par rapport à la période précédente
             </p>
           </div>
         )}
@@ -63,7 +63,7 @@ export const RevenueCard: React.FC<RevenueCardProps> = ({
         )}
         {type && (
           <Badge variant="outline" className="mt-2">
-            {type.charAt(0).toUpperCase() + type.slice(1)} Revenue
+            {type === "recognized" ? "Reconnu" : type === "booked" ? "Comptabilisé" : type === "recurring" ? "Récurrent" : type.charAt(0).toUpperCase() + type.slice(1)} CA
           </Badge>
         )}
       </CardContent>

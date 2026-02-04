@@ -133,13 +133,13 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
         variant: "default" | "secondary" | "destructive" | "outline";
       }
     > = {
-      PENDING: { label: "Pending", variant: "outline" },
-      DOWNLOADING_IMAGE: { label: "Downloading", variant: "secondary" },
-      PROVISIONING: { label: "Provisioning", variant: "secondary" },
-      ACTIVE: { label: "Active", variant: "default" },
-      SUSPENDED: { label: "Suspended", variant: "destructive" },
-      CANCELLED: { label: "Cancelled", variant: "outline" },
-      TERMINATED: { label: "Terminated", variant: "destructive" },
+      PENDING: { label: "En attente", variant: "outline" },
+      DOWNLOADING_IMAGE: { label: "Téléchargement", variant: "secondary" },
+      PROVISIONING: { label: "Provisionnement", variant: "secondary" },
+      ACTIVE: { label: "Actif", variant: "default" },
+      SUSPENDED: { label: "Suspendu", variant: "destructive" },
+      CANCELLED: { label: "Annulé", variant: "outline" },
+      TERMINATED: { label: "Résilié", variant: "destructive" },
     };
 
     const config = statusConfig[status] || {
@@ -181,14 +181,14 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
       await downloadMutation.mutateAsync(exportResponse.file_name);
       const ext = format === "excel" ? "xlsx" : "csv";
       toast({
-        title: "Export successful",
-        description: `VPS subscriptions exported (${ext.toUpperCase()}).`,
+        title: "Export réussi",
+        description: `Abonnements VPS exportés (${ext.toUpperCase()}).`,
       });
     } catch (error) {
       console.error("Export failed:", error);
       toast({
-        title: "Export failed",
-        description: error instanceof Error ? error.message : "Failed to export VPS subscriptions",
+        title: "Échec de l'export",
+        description: error instanceof Error ? error.message : "Échec de l'export des abonnements VPS",
         variant: "destructive",
       });
     }
@@ -200,10 +200,10 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">
-            All VPS Subscriptions
+            Tous les abonnements VPS
           </h1>
           <p className="text-slate-600 mt-1">
-            Manage all VPS hosting subscriptions across all customers
+            Gérer tous les abonnements VPS pour tous les clients
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -212,7 +212,7 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
             size="icon"
             onClick={handleRefresh}
             disabled={isLoading || overviewLoading}
-            title="Refresh data"
+            title="Actualiser les données"
           >
             <RefreshCw
               className={`h-4 w-4 ${isLoading || overviewLoading ? "animate-spin" : ""}`}
@@ -227,16 +227,16 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
               >
                 <Download className="w-4 h-4" />
                 {exportMutation.isPending || downloadMutation.isPending
-                  ? "Exporting..."
-                  : "Export"}
+                  ? "Export en cours…"
+                  : "Exporter"}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => handleExportVPS("csv")}>
-                Export CSV
+                Exporter en CSV
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleExportVPS("excel")}>
-                Export Excel
+                Exporter en Excel
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -245,7 +245,7 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
             onClick={() => setCreateOpen(true)}
           >
             <Plus className="w-4 h-4" />
-            Create Subscription
+            Créer un abonnement
           </Button>
         </div>
       </div>
@@ -257,8 +257,8 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
           <AlertDescription>
             {(error as { response?: { status?: number } })?.response?.status ===
             403
-              ? "You don't have permission to view VPS subscriptions. Please contact your administrator."
-              : "Failed to load subscriptions. Please try again."}
+              ? "Vous n'avez pas la permission de voir les abonnements VPS. Contactez votre administrateur."
+              : "Échec du chargement des abonnements. Veuillez réessayer."}
           </AlertDescription>
         </Alert>
       )}
@@ -282,7 +282,7 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Active Subscriptions
+                Abonnements actifs
               </CardTitle>
               <Server className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -291,8 +291,8 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
                 {overview.total_subscriptions || 0}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {subscriptionsData?.total || 0} of{" "}
-                {subscriptionsData?.total || 0} total
+                {subscriptionsData?.total || 0} sur{" "}
+                {subscriptionsData?.total || 0} au total
               </p>
             </CardContent>
           </Card>
@@ -309,7 +309,7 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
                 {formatDZD(Number(overview.total_monthly_revenue || 0))}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Recurring monthly
+                Récurrent mensuel
               </p>
             </CardContent>
           </Card>
@@ -317,7 +317,7 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Avg CPU Usage
+                Utilisation CPU moy.
               </CardTitle>
               <Cpu className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -334,7 +334,7 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Avg Memory Usage
+                Utilisation mémoire moy.
               </CardTitle>
               <MemoryStick className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -357,7 +357,7 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
-                placeholder="Search by subscription number, customer name, email, or plan..."
+                placeholder="Rechercher par n° abonnement, client, e-mail ou plan…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -371,17 +371,17 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
               }}
             >
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="All Statuses" />
+                <SelectValue placeholder="Tous les statuts" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="PENDING">Pending</SelectItem>
-                <SelectItem value="DOWNLOADING_IMAGE">Downloading</SelectItem>
-                <SelectItem value="PROVISIONING">Provisioning</SelectItem>
-                <SelectItem value="ACTIVE">Active</SelectItem>
-                <SelectItem value="SUSPENDED">Suspended</SelectItem>
-                <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                <SelectItem value="TERMINATED">Terminated</SelectItem>
+                <SelectItem value="all">Tous les statuts</SelectItem>
+                <SelectItem value="PENDING">En attente</SelectItem>
+                <SelectItem value="DOWNLOADING_IMAGE">Téléchargement</SelectItem>
+                <SelectItem value="PROVISIONING">Provisionnement</SelectItem>
+                <SelectItem value="ACTIVE">Actif</SelectItem>
+                <SelectItem value="SUSPENDED">Suspendu</SelectItem>
+                <SelectItem value="CANCELLED">Annulé</SelectItem>
+                <SelectItem value="TERMINATED">Résilié</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -391,7 +391,7 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
       {/* Subscriptions Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Subscriptions</CardTitle>
+          <CardTitle>Abonnements</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -402,19 +402,19 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
             </div>
           ) : filteredSubscriptions.length === 0 ? (
             <div className="text-center py-8 text-slate-600">
-              No subscriptions found
+              Aucun abonnement trouvé
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Subscription #</TableHead>
-                    <TableHead>Customer</TableHead>
+                    <TableHead>N° abonnement</TableHead>
+                    <TableHead>Client</TableHead>
                     <TableHead>Plan</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Monthly Price</TableHead>
-                    <TableHead>Created</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Prix mensuel</TableHead>
+                    <TableHead>Créé le</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -460,10 +460,10 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
                                   `${ADMIN_VPS_BASE}/subscriptions/${subscription.id}`
                                 )
                               }
-                              title="View details"
+                              title="Voir les détails"
                             >
                               <Eye className="w-4 h-4 mr-1" />
-                              View
+                              Voir
                             </Button>
                             <Button
                               variant="ghost"
@@ -473,10 +473,10 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
                                   `${ADMIN_VPS_BASE}/subscriptions/${subscription.id}`
                                 )
                               }
-                              title="Edit / Manage"
+                              title="Modifier / Gérer"
                             >
                               <Pencil className="w-4 h-4 mr-1" />
-                              Edit
+                              Modifier
                             </Button>
                             <SubscriptionActionsMenu
                               subscription={subscription as import("@/modules/hosting/types").VPSSubscription}
@@ -505,8 +505,8 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
           {subscriptionsData && subscriptionsData.total_pages > 1 && (
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-muted-foreground">
-                Page {subscriptionsData.page} of {subscriptionsData.total_pages}{" "}
-                ({subscriptionsData.total} total)
+                Page {subscriptionsData.page} sur {subscriptionsData.total_pages}{" "}
+                ({subscriptionsData.total} au total)
               </div>
               <div className="flex gap-2">
                 <Button
@@ -515,7 +515,7 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                 >
-                  Previous
+                  Précédent
                 </Button>
                 <Button
                   variant="outline"
@@ -527,7 +527,7 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
                   }
                   disabled={page === subscriptionsData.total_pages}
                 >
-                  Next
+                  Suivant
                 </Button>
               </div>
             </div>

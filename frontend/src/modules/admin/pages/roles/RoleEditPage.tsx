@@ -46,8 +46,8 @@ export const RoleEditPage: React.FC = () => {
   React.useEffect(() => {
     if (!id) {
       toast({
-        title: "Error",
-        description: "Role ID is missing",
+        title: "Erreur",
+        description: "L'identifiant du rôle est manquant",
         variant: "destructive",
       });
       navigate("/admin/roles");
@@ -82,17 +82,17 @@ export const RoleEditPage: React.FC = () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.name) {
-      newErrors.name = "Role name is required";
+      newErrors.name = "Le nom du rôle est requis";
     } else if (formData.name.length < 3) {
-      newErrors.name = "Role name must be at least 3 characters";
+      newErrors.name = "Le nom du rôle doit contenir au moins 3 caractères";
     }
 
     if (!formData.description) {
-      newErrors.description = "Description is required";
+      newErrors.description = "La description est requise";
     }
 
     if (formData.permission_ids.length === 0) {
-      newErrors.permissions = "At least one permission must be selected";
+      newErrors.permissions = "Au moins une permission doit être sélectionnée";
     }
 
     setErrors(newErrors);
@@ -128,13 +128,13 @@ export const RoleEditPage: React.FC = () => {
       }
 
       toast({
-        title: "Success",
-        description: "Role updated successfully",
+        title: "Succès",
+        description: "Rôle mis à jour avec succès",
       });
       navigate(`/admin/roles/${id}`);
     } catch (error: any) {
       // Handle validation errors (422) - extract message from error response
-      let errorMessage = "Failed to update role";
+      let errorMessage = "Échec de la mise à jour du rôle";
       
       if (error.response?.data) {
         const errorData = error.response.data;
@@ -153,7 +153,7 @@ export const RoleEditPage: React.FC = () => {
       }
       
       toast({
-        title: "Error",
+        title: "Erreur",
         description: errorMessage,
         variant: "destructive",
       });
@@ -223,22 +223,22 @@ export const RoleEditPage: React.FC = () => {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Role Not Found"
-          description="The requested role could not be found"
+          title="Rôle introuvable"
+          description="Le rôle demandé est introuvable"
           breadcrumbs={[
             { label: "Admin", href: "/admin" },
-            { label: "Roles", href: "/admin/roles" },
-            { label: "Not Found" },
+            { label: "Rôles", href: "/admin/roles" },
+            { label: "Introuvable" },
           ]}
         />
         <Card className="p-6 text-center">
-          <p className="text-gray-500">Role not found</p>
+          <p className="text-gray-500">Rôle introuvable</p>
           <Button
             variant="outline"
             className="mt-4"
             onClick={() => navigate("/admin/roles")}
           >
-            Back to Roles
+            Retour aux rôles
           </Button>
         </Card>
       </div>
@@ -249,20 +249,20 @@ export const RoleEditPage: React.FC = () => {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Cannot Edit System Role"
-          description="System roles cannot be modified"
+          title="Impossible de modifier le rôle système"
+          description="Les rôles système ne peuvent pas être modifiés"
           breadcrumbs={[
             { label: "Admin", href: "/admin" },
-            { label: "Roles", href: "/admin/roles" },
+            { label: "Rôles", href: "/admin/roles" },
             { label: role.name, href: `/admin/roles/${id}` },
-            { label: "Edit" },
+            { label: "Modifier" },
           ]}
         />
         <Card className="p-6 bg-yellow-50 border-yellow-200">
           <div className="flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
             <div className="text-sm text-yellow-900">
-              <p className="font-semibold">System Role Protection</p>
+              <p className="font-semibold">Protection des rôles système</p>
               <p className="mt-1">
                 System-defined roles (Admin, Corporate, Client) cannot be
                 modified to maintain system security and integrity. You can view
@@ -288,18 +288,18 @@ export const RoleEditPage: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
-        title={`Edit Role: ${role.name}`}
-        description="Update role information and permissions"
+        title={`Modifier le rôle : ${role.name}`}
+        description="Mettre à jour les informations et permissions du rôle"
         breadcrumbs={[
           { label: "Admin", href: "/admin" },
-          { label: "Roles", href: "/admin/roles" },
+          { label: "Rôles", href: "/admin/roles" },
           { label: role.name, href: `/admin/roles/${id}` },
-          { label: "Edit" },
+          { label: "Modifier" },
         ]}
         actions={
           <Button variant="outline" onClick={() => navigate(`/admin/roles/${id}`)}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Role Details
+            Retour aux détails du rôle
           </Button>
         }
       />
@@ -309,7 +309,7 @@ export const RoleEditPage: React.FC = () => {
         <div className="flex items-start gap-3">
           <Info className="h-5 w-5 text-blue-600 mt-0.5" />
           <div className="text-sm text-blue-900">
-            <p className="font-semibold">Updating Role Permissions</p>
+            <p className="font-semibold">Mise à jour des permissions du rôle</p>
             <p className="mt-1">
               Changes to role permissions will be immediately applied to all users
               assigned to this role. Ensure you review the permissions carefully
@@ -338,7 +338,7 @@ export const RoleEditPage: React.FC = () => {
                   <Input
                     id="name"
                     type="text"
-                    placeholder="e.g., Support Manager"
+                    placeholder="ex. Responsable support"
                     value={formData.name}
                     onChange={(e) => handleChange("name", e.target.value)}
                     className={errors.name ? "border-red-500" : ""}
@@ -355,7 +355,7 @@ export const RoleEditPage: React.FC = () => {
                   </Label>
                   <Textarea
                     id="description"
-                    placeholder="Describe what this role can do..."
+                    placeholder="Décrivez ce que ce rôle peut faire…"
                     value={formData.description}
                     onChange={(e) => handleChange("description", e.target.value)}
                     className={errors.description ? "border-red-500" : ""}
@@ -492,10 +492,10 @@ export const RoleEditPage: React.FC = () => {
           {/* Summary Sidebar */}
           <div className="space-y-6">
             <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Summary</h3>
+              <h3 className="text-lg font-semibold mb-4">Résumé</h3>
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm text-gray-500">Role Name</p>
+                  <p className="text-sm text-gray-500">Nom du rôle</p>
                   <p className="font-medium">
                     {formData.name || <span className="text-gray-400">Not set</span>}
                   </p>
@@ -512,7 +512,7 @@ export const RoleEditPage: React.FC = () => {
                 <Separator />
                 <div>
                   <p className="text-sm text-gray-500 mb-2">
-                    Selected Permissions
+                    Permissions sélectionnées
                   </p>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-green-600" />
@@ -522,13 +522,13 @@ export const RoleEditPage: React.FC = () => {
                   </div>
                   {formData.permission_ids.length > 0 && (
                     <p className="text-xs text-gray-500 mt-1">
-                      Permissions assigned
+                      Permissions attribuées
                     </p>
                   )}
                 </div>
                 <Separator />
                 <div>
-                  <p className="text-sm text-gray-500">Original Permissions</p>
+                  <p className="text-sm text-gray-500">Permissions d'origine</p>
                   <p className="text-sm text-gray-600">
                     {role.permissions.length} permissions
                   </p>

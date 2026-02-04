@@ -91,7 +91,7 @@ const AdminDashboardPage: React.FC = () => {
   // Map system health from detailed health data
   const systemHealth = detailedHealth ? [
     {
-      component: "Database",
+      component: "Base de données",
       status: detailedHealth.database?.status === "healthy" ? "healthy" : "warning",
       uptime: detailedHealth.database?.uptime 
         ? `${detailedHealth.database.uptime.toFixed(1)}%`
@@ -101,7 +101,7 @@ const AdminDashboardPage: React.FC = () => {
         : "N/A",
     },
     {
-      component: "API Server",
+      component: "Serveur API",
       status: (detailedHealth.api_server?.cpu_usage || 0) > 80 ? "warning" : "healthy",
       uptime: detailedHealth.api_server?.uptime
         ? `${detailedHealth.api_server.uptime.toFixed(1)}%`
@@ -119,7 +119,7 @@ const AdminDashboardPage: React.FC = () => {
       responseTime: "N/A",
     },
     {
-      component: "Storage",
+      component: "Stockage",
       status: (detailedHealth.storage?.usage_percent || 0) > 80 ? "warning" : "healthy",
       uptime: formatUptimePercent(health?.uptime),
       responseTime: "N/A",
@@ -154,7 +154,7 @@ const AdminDashboardPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Loading dashboard...</span>
+        <span className="ml-2">Chargement du tableau de bord…</span>
       </div>
     );
   }
@@ -164,10 +164,10 @@ const AdminDashboardPage: React.FC = () => {
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-lg p-6 text-white">
         <h1 className="text-2xl font-bold mb-2">
-          System Administration Dashboard
+          Tableau de bord d'administration
         </h1>
         <p className="text-red-100">
-          Monitor system health, manage users, and oversee platform operations.
+          Surveillez la santé du système, gérez les utilisateurs et supervisez les opérations de la plateforme.
         </p>
       </div>
 
@@ -175,34 +175,34 @@ const AdminDashboardPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <CardTitle className="text-sm font-medium">Total utilisateurs</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.total_users || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {stats?.active_sessions || 0} active sessions
+              {stats?.active_sessions || 0} sessions actives
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">System Uptime</CardTitle>
+            <CardTitle className="text-sm font-medium">Disponibilité système</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {health?.uptime ? formatUptime(health.uptime) : "N/A"}
             </div>
-            <p className="text-xs text-muted-foreground">System uptime</p>
+            <p className="text-xs text-muted-foreground">Disponibilité du système</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Critical Alerts
+              Alertes critiques
             </CardTitle>
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -211,14 +211,14 @@ const AdminDashboardPage: React.FC = () => {
               {health?.critical_alerts || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              All systems operational
+              Tous les systèmes opérationnels
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">System Load</CardTitle>
+            <CardTitle className="text-sm font-medium">Charge système</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -227,7 +227,7 @@ const AdminDashboardPage: React.FC = () => {
                 ? `${Math.round(detailedHealth.api_server.cpu_usage)}%`
                 : "0%"}
             </div>
-            <p className="text-xs text-muted-foreground">CPU usage</p>
+            <p className="text-xs text-muted-foreground">Utilisation CPU</p>
           </CardContent>
         </Card>
       </div>
@@ -237,34 +237,34 @@ const AdminDashboardPage: React.FC = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Total Customers
+              Total clients
             </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.total_customers || 0}</div>
-            <p className="text-xs text-muted-foreground">Total customers</p>
+            <p className="text-xs text-muted-foreground">Total clients</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">Total commandes</CardTitle>
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.total_orders || 0}</div>
-            <p className="text-xs text-muted-foreground">All time orders</p>
+            <p className="text-xs text-muted-foreground">Commandes toutes périodes</p>
           </CardContent>
         </Card>
 
         <RevenueCard
-          title="Monthly Revenue"
+          title="Revenus mensuels"
           value={Number(revenueOverview?.metrics.monthly_revenue || stats?.monthly_revenue || 0)}
           growth={revenueOverview?.metrics.revenue_growth || stats?.revenue_growth}
           subtitle={revenueOverview?.metrics.revenue_growth !== undefined 
-            ? "Recognized revenue (paid invoices)"
-            : "From system stats"}
+            ? "Revenus constatés (factures payées)"
+            : "D'après les statistiques système"}
           icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
         />
       </div>
@@ -275,15 +275,15 @@ const AdminDashboardPage: React.FC = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>System Health</CardTitle>
+                <CardTitle>Santé du système</CardTitle>
                 <CardDescription>
-                  Real-time system component status
+                  État des composants en temps réel
                 </CardDescription>
               </div>
               <Button asChild size="sm" variant="outline">
                 <Link to="/admin/overview">
                   <Activity className="h-4 w-4 mr-2" />
-                  Detailed View
+                  Voir en détail
                 </Link>
               </Button>
             </div>
@@ -305,11 +305,11 @@ const AdminDashboardPage: React.FC = () => {
                             : "destructive"
                         }
                       >
-                        {component.status}
+                        {component.status === "healthy" ? "Opérationnel" : "Avertissement"}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Uptime: {component.uptime} • Response:{" "}
+                      Disponibilité : {component.uptime} • Réponse :{" "}
                       {component.responseTime}
                     </p>
                   </div>
@@ -323,7 +323,7 @@ const AdminDashboardPage: React.FC = () => {
                 </div>
               )) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  No system health data available
+                  Aucune donnée de santé système disponible
                 </div>
               )}
             </div>
@@ -335,15 +335,15 @@ const AdminDashboardPage: React.FC = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Recent Activity</CardTitle>
+                <CardTitle>Activité récente</CardTitle>
                 <CardDescription>
-                  Latest system and user activities
+                  Dernières activités système et utilisateurs
                 </CardDescription>
               </div>
               <Button asChild size="sm" variant="outline">
                 <Link to="/admin/logs">
                   <Database className="h-4 w-4 mr-2" />
-                  View All Logs
+                  Voir tous les journaux
                 </Link>
               </Button>
             </div>
@@ -378,7 +378,7 @@ const AdminDashboardPage: React.FC = () => {
                 </div>
               )) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  No recent activity
+                  Aucune activité récente
                 </div>
               )}
             </div>
@@ -392,15 +392,15 @@ const AdminDashboardPage: React.FC = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Business KPIs</CardTitle>
+                <CardTitle>Indicateurs clés</CardTitle>
                 <CardDescription>
-                  Key metrics from reports (customers, tickets, revenue)
+                  Métriques des rapports (clients, tickets, revenus)
                 </CardDescription>
               </div>
               <Button asChild variant="outline" size="sm">
                 <Link to="/admin/reports">
                   <BarChart3 className="h-4 w-4 mr-2" />
-                  View Reports
+                  Voir les rapports
                 </Link>
               </Button>
             </div>
@@ -412,7 +412,7 @@ const AdminDashboardPage: React.FC = () => {
                   {reportsDashboard.metrics.total_customers ?? 0}
                 </div>
                 <div className="text-sm font-medium text-slate-900 mt-1">
-                  Total Customers
+                  Total clients
                 </div>
               </div>
               <div className="text-center p-4 border rounded-lg">
@@ -420,7 +420,7 @@ const AdminDashboardPage: React.FC = () => {
                   {reportsDashboard.metrics.open_tickets ?? 0}
                 </div>
                 <div className="text-sm font-medium text-slate-900 mt-1">
-                  Open Tickets
+                  Tickets ouverts
                 </div>
               </div>
               <div className="text-center p-4 border rounded-lg">
@@ -435,10 +435,10 @@ const AdminDashboardPage: React.FC = () => {
                   )}
                 </div>
                 <div className="text-sm font-medium text-slate-900 mt-1">
-                  Total Revenue (Booked)
+                  Revenus totaux (constatés)
                 </div>
                 <div className="text-xs text-slate-500 mt-1">
-                  From delivered orders
+                  Commandes livrées
                 </div>
               </div>
             </div>
@@ -449,9 +449,9 @@ const AdminDashboardPage: React.FC = () => {
       {/* User Statistics */}
       <Card>
         <CardHeader>
-          <CardTitle>User Statistics by Role</CardTitle>
+          <CardTitle>Statistiques utilisateurs par rôle</CardTitle>
           <CardDescription>
-            Overview of user distribution and activity
+            Répartition des utilisateurs et activité par rôle
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -465,15 +465,15 @@ const AdminDashboardPage: React.FC = () => {
                   {stat.count}
                 </div>
                 <div className="text-sm font-medium text-slate-900 mt-1">
-                  {stat.role} Users
+                  Utilisateurs {stat.role}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {stat.active} active
+                  {stat.active} actifs
                 </div>
               </div>
             )) : (
               <div className="col-span-3 text-center py-8 text-muted-foreground">
-                No user statistics available
+                Aucune statistique utilisateur disponible
               </div>
             )}
           </div>
@@ -483,8 +483,8 @@ const AdminDashboardPage: React.FC = () => {
       {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Administrative Actions</CardTitle>
-          <CardDescription>Common system administration tasks</CardDescription>
+          <CardTitle>Actions d'administration</CardTitle>
+          <CardDescription>Tâches courantes d'administration système</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -492,9 +492,9 @@ const AdminDashboardPage: React.FC = () => {
               <Link to="/admin/users">
                 <Users className="h-5 w-5 mr-2" />
                 <div className="text-left">
-                  <div className="font-medium">Manage Users</div>
+                  <div className="font-medium">Gérer les utilisateurs</div>
                   <div className="text-sm text-muted-foreground">
-                    User accounts and roles
+                    Comptes utilisateurs et rôles
                   </div>
                 </div>
               </Link>
@@ -504,9 +504,9 @@ const AdminDashboardPage: React.FC = () => {
               <Link to="/admin/roles">
                 <Key className="h-5 w-5 mr-2" />
                 <div className="text-left">
-                  <div className="font-medium">Role Management</div>
+                  <div className="font-medium">Gestion des rôles</div>
                   <div className="text-sm text-muted-foreground">
-                    Permissions and access
+                    Permissions et accès
                   </div>
                 </div>
               </Link>
@@ -516,9 +516,9 @@ const AdminDashboardPage: React.FC = () => {
               <Link to="/admin/settings">
                 <Settings className="h-5 w-5 mr-2" />
                 <div className="text-left">
-                  <div className="font-medium">System Settings</div>
+                  <div className="font-medium">Paramètres système</div>
                   <div className="text-sm text-muted-foreground">
-                    Platform configuration
+                    Configuration de la plateforme
                   </div>
                 </div>
               </Link>
@@ -528,9 +528,9 @@ const AdminDashboardPage: React.FC = () => {
               <Link to="/admin/reports">
                 <BarChart3 className="h-5 w-5 mr-2" />
                 <div className="text-left">
-                  <div className="font-medium">System Reports</div>
+                  <div className="font-medium">Rapports système</div>
                   <div className="text-sm text-muted-foreground">
-                    Analytics and insights
+                    Analyses et indicateurs
                   </div>
                 </div>
               </Link>

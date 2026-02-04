@@ -56,7 +56,7 @@ export const QuoteDetailPage: React.FC = () => {
       a.download = `quote-${(quote as any)?.quote_number ?? id}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-      toast({ title: "Download started", description: "Quote PDF downloaded." });
+      toast({ title: "Téléchargement démarré", description: "PDF du devis téléchargé." });
     } catch (e: unknown) {
       const err = e as Error;
       toast({ title: "Error", description: err?.message ?? "Failed to download PDF", variant: "destructive" });
@@ -71,8 +71,8 @@ export const QuoteDetailPage: React.FC = () => {
   if (!id) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" onClick={() => navigate(`${basePath}/quotes`)}><ArrowLeft className="mr-2 h-4 w-4" />Back to Quotes</Button>
-        <p className="text-slate-600">Missing quote ID.</p>
+        <Button variant="ghost" onClick={() => navigate(`${basePath}/quotes`)}><ArrowLeft className="mr-2 h-4 w-4" />Retour aux devis</Button>
+        <p className="text-slate-600">Identifiant du devis manquant.</p>
       </div>
     );
   }
@@ -94,14 +94,14 @@ export const QuoteDetailPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={() => navigate(`${basePath}/quotes`)}><ArrowLeft className="mr-2 h-4 w-4" />Back to Quotes</Button>
+        <Button variant="ghost" size="sm" onClick={() => navigate(`${basePath}/quotes`)}><ArrowLeft className="mr-2 h-4 w-4" />Retour aux devis</Button>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleDownloadPdf}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
-          {canApprove && <Button size="sm" onClick={() => navigate(`${basePath}/quotes/${id}/approve`)}><CheckCircle className="mr-2 h-4 w-4" />Approve</Button>}
+          <Button variant="outline" size="sm" onClick={handleDownloadPdf}><Download className="mr-2 h-4 w-4" />Télécharger le PDF</Button>
+          {canApprove && <Button size="sm" onClick={() => navigate(`${basePath}/quotes/${id}/approve`)}><CheckCircle className="mr-2 h-4 w-4" />Approuver</Button>}
           {canConvert && (
             <Button size="sm" onClick={() => navigate(`${basePath}/quotes/${id}/convert`)}>
               <FileText className="mr-2 h-4 w-4" />
-              Convert Quote
+              Convertir le devis
             </Button>
           )}
         </div>
@@ -115,19 +115,19 @@ export const QuoteDetailPage: React.FC = () => {
       </div>
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle>Details</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Détails</CardTitle></CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p><span className="font-medium">Customer:</span> {q.customer?.name ?? q.customer_id ?? "-"}</p>
-            {q.title && <p><span className="font-medium">Title:</span> {q.title}</p>}
-            {q.description && <p><span className="font-medium">Description:</span> {q.description}</p>}
-            <p><span className="font-medium">Subtotal:</span> {formatCurrency(q.subtotal_amount ?? q.subtotalAmount ?? 0, q.currency)}</p>
-            <p><span className="font-medium">Tax:</span> {formatCurrency(q.tax_amount ?? q.taxAmount ?? 0, q.currency)}</p>
-            <p><span className="font-medium">Total:</span> {formatCurrency(q.total_amount ?? q.totalAmount ?? 0, q.currency)}</p>
+            <p><span className="font-medium">Client :</span> {q.customer?.name ?? q.customer_id ?? "-"}</p>
+            {q.title && <p><span className="font-medium">Titre :</span> {q.title}</p>}
+            {q.description && <p><span className="font-medium">Description :</span> {q.description}</p>}
+            <p><span className="font-medium">Sous-total :</span> {formatCurrency(q.subtotal_amount ?? q.subtotalAmount ?? 0, q.currency)}</p>
+            <p><span className="font-medium">TVA :</span> {formatCurrency(q.tax_amount ?? q.taxAmount ?? 0, q.currency)}</p>
+            <p><span className="font-medium">Total :</span> {formatCurrency(q.total_amount ?? q.totalAmount ?? 0, q.currency)}</p>
           </CardContent>
         </Card>
         {timelineList.length > 0 && (
           <Card>
-            <CardHeader><CardTitle>Timeline</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Chronologie</CardTitle></CardHeader>
             <CardContent>
               <ul className="space-y-2 text-sm">
                 {timelineList.slice(0, 10).map((ev: any) => (
@@ -142,16 +142,16 @@ export const QuoteDetailPage: React.FC = () => {
         )}
       </div>
       <Card>
-        <CardHeader><CardTitle>Line items</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Lignes</CardTitle></CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead>Qty</TableHead>
-                <TableHead>Unit price</TableHead>
-                <TableHead>Discount %</TableHead>
-                <TableHead className="text-right">Line total</TableHead>
+                <TableHead>Article</TableHead>
+                <TableHead>Qté</TableHead>
+                <TableHead>Prix unitaire</TableHead>
+                <TableHead>Remise %</TableHead>
+                <TableHead className="text-right">Total ligne</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

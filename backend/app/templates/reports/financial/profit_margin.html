@@ -1,0 +1,36 @@
+{% extends "reports/base_report.html" %}
+
+{% block summary %}
+  <div class="executive-summary">
+    <div class="kpi-card">
+      <div class="kpi-value">{{ total_revenue | format_currency }}</div>
+      <div class="kpi-label">Total Revenue</div>
+    </div>
+  </div>
+  {% if total_revenue is defined and total_revenue == 0 %}
+  <p class="meta" style="margin-top: 12px; color: #666;">No revenue data in this period. Ensure seed data has been run and date range includes historical orders/invoices.</p>
+  {% endif %}
+{% endblock %}
+
+{% block charts %}
+  {{ super() }}
+{% endblock %}
+
+{% block data %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>Value (DZD)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Total Revenue</td>
+          <td>{{ total_revenue | format_currency }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

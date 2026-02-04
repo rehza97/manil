@@ -67,15 +67,15 @@ export const VPSMonitoringPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">VPS Monitoring</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Surveillance VPS</h1>
           <p className="text-slate-600 mt-1">
-            System-wide monitoring and alerts for all VPS instances
+            Surveillance et alertes système pour toutes les instances VPS
           </p>
         </div>
         {overview && (
           <Badge variant="outline" className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
-            Last updated: {format(new Date(), "HH:mm:ss")}
+            Dernière mise à jour : {format(new Date(), "HH:mm:ss")}
           </Badge>
         )}
       </div>
@@ -86,8 +86,8 @@ export const VPSMonitoringPage: React.FC = () => {
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
             {(overviewError as any)?.response?.status === 403
-              ? "You don't have permission to view VPS monitoring data. Please contact your administrator."
-              : "Failed to load monitoring data. Please try again."}
+              ? "Vous n'avez pas la permission de voir les données de surveillance VPS. Contactez votre administrateur."
+              : "Échec du chargement des données de surveillance. Veuillez réessayer."}
           </AlertDescription>
         </Alert>
       )}
@@ -120,7 +120,7 @@ export const VPSMonitoringPage: React.FC = () => {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Containers</CardTitle>
+              <CardTitle className="text-sm font-medium">Conteneurs actifs</CardTitle>
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -130,7 +130,7 @@ export const VPSMonitoringPage: React.FC = () => {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
+              <CardTitle className="text-sm font-medium">Revenus mensuels</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -142,7 +142,7 @@ export const VPSMonitoringPage: React.FC = () => {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg CPU Usage</CardTitle>
+              <CardTitle className="text-sm font-medium">Utilisation CPU moy.</CardTitle>
               <Cpu className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -157,7 +157,7 @@ export const VPSMonitoringPage: React.FC = () => {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Memory Usage</CardTitle>
+              <CardTitle className="text-sm font-medium">Utilisation mémoire moy.</CardTitle>
               <MemoryStick className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -176,18 +176,18 @@ export const VPSMonitoringPage: React.FC = () => {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Active Alerts</CardTitle>
+            <CardTitle>Alertes actives</CardTitle>
             <Select
               value={severityFilter || "all"}
               onValueChange={(value) => setSeverityFilter(value === "all" ? "" : value)}
             >
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="All Severities" />
+                <SelectValue placeholder="Toutes les sévérités" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Severities</SelectItem>
-                <SelectItem value="HIGH">High</SelectItem>
-                <SelectItem value="CRITICAL">Critical</SelectItem>
+                <SelectItem value="all">Toutes les sévérités</SelectItem>
+                <SelectItem value="HIGH">Élevée</SelectItem>
+                <SelectItem value="CRITICAL">Critique</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -201,19 +201,19 @@ export const VPSMonitoringPage: React.FC = () => {
             </div>
           ) : filteredAlerts.length === 0 ? (
             <div className="text-center py-8 text-slate-600">
-              No active alerts
+              Aucune alerte active
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Subscription</TableHead>
-                    <TableHead>Alert Type</TableHead>
-                    <TableHead>Severity</TableHead>
+                    <TableHead>Abonnement</TableHead>
+                    <TableHead>Type d&apos;alerte</TableHead>
+                    <TableHead>Sévérité</TableHead>
                     <TableHead>Message</TableHead>
-                    <TableHead>Current Value</TableHead>
-                    <TableHead>Threshold</TableHead>
+                    <TableHead>Valeur actuelle</TableHead>
+                    <TableHead>Seuil</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

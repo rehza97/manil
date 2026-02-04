@@ -74,9 +74,9 @@ export const MigrationsPage: React.FC = () => {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Database Migrations</h1>
+          <h1 className="text-3xl font-bold">Migrations base de données</h1>
           <p className="text-muted-foreground mt-2">
-            Manage database schema versions and migrations
+            Gérer les versions du schéma et les migrations
           </p>
         </div>
         <div className="flex space-x-2">
@@ -85,11 +85,11 @@ export const MigrationsPage: React.FC = () => {
             onClick={() => setIsDowngradeDialogOpen(true)}
           >
             <ArrowDown className="h-4 w-4 mr-2" />
-            Downgrade
+            Revenir en arrière
           </Button>
           <Button onClick={() => setIsUpgradeDialogOpen(true)}>
             <ArrowUp className="h-4 w-4 mr-2" />
-            Upgrade
+            Mettre à jour
           </Button>
         </div>
       </div>
@@ -97,16 +97,15 @@ export const MigrationsPage: React.FC = () => {
       <Alert>
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>
-          Migration operations modify the database schema. Always backup your
-          database before running migrations, especially downgrades.
+          Les migrations modifient le schéma de la base. Sauvegardez toujours votre base avant d'exécuter des migrations, surtout un retour en arrière.
         </AlertDescription>
       </Alert>
 
       {/* Current Migration */}
       <Card>
         <CardHeader>
-          <CardTitle>Current Migration</CardTitle>
-          <CardDescription>Active database schema version</CardDescription>
+<CardTitle>Migration actuelle</CardTitle>
+        <CardDescription>Version active du schéma de la base</CardDescription>
         </CardHeader>
         <CardContent>
           {currentVersion ? (
@@ -117,7 +116,7 @@ export const MigrationsPage: React.FC = () => {
             </div>
           ) : (
             <p className="text-muted-foreground">
-              No migration information available
+              Aucune information de migration disponible
             </p>
           )}
         </CardContent>
@@ -126,10 +125,10 @@ export const MigrationsPage: React.FC = () => {
       {/* Migration History */}
       <Card>
         <CardHeader>
-          <CardTitle>Migration History</CardTitle>
-          <CardDescription>
+<CardTitle>Historique des migrations</CardTitle>
+        <CardDescription>
             {migrations?.length || 0}{" "}
-            {migrations?.length === 1 ? "migration" : "migrations"} available
+            {migrations?.length === 1 ? "migration" : "migrations"} disponible{(migrations?.length ?? 0) !== 1 ? "s" : ""}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -139,16 +138,16 @@ export const MigrationsPage: React.FC = () => {
             </div>
           ) : !migrations || migrations.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-muted-foreground">No migrations found.</p>
+              <p className="text-muted-foreground">Aucune migration trouvée.</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Revision</TableHead>
-                  <TableHead>Down Revision</TableHead>
+                  <TableHead>Révision</TableHead>
+                  <TableHead>Révision précédente</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Statut</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -163,9 +162,9 @@ export const MigrationsPage: React.FC = () => {
                     <TableCell>{migration.doc || "-"}</TableCell>
                     <TableCell>
                       {migration.is_current ? (
-                        <Badge variant="default">Current</Badge>
+                        <Badge variant="default">Actuelle</Badge>
                       ) : (
-                        <Badge variant="secondary">Pending</Badge>
+                        <Badge variant="secondary">En attente</Badge>
                       )}
                     </TableCell>
                   </TableRow>
@@ -180,32 +179,31 @@ export const MigrationsPage: React.FC = () => {
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Upgrade Migrations</DialogTitle>
+            <DialogTitle>Mettre à jour les migrations</DialogTitle>
             <DialogDescription>
-              Run pending migrations to upgrade the database schema.
+              Exécuter les migrations en attente pour mettre à jour le schéma de la base.
             </DialogDescription>
           </DialogHeader>
           <Alert>
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              This will apply all pending migrations. Leave revision empty to
-              upgrade to the latest version.
+              Toutes les migrations en attente seront appliquées. Laisser la révision vide pour passer à la dernière version.
             </AlertDescription>
           </Alert>
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium">
-                Target Revision (optional)
+                Révision cible (facultatif)
               </label>
               <input
                 type="text"
                 value={targetRevision}
                 onChange={(e) => setTargetRevision(e.target.value)}
-                placeholder="Leave empty for latest"
+                placeholder="Laisser vide pour la dernière version"
                 className="mt-1 w-full px-3 py-2 border rounded-md"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Leave empty to upgrade to the latest version (head)
+                Laisser vide pour passer à la dernière version (head)
               </p>
             </div>
           </div>
@@ -217,7 +215,7 @@ export const MigrationsPage: React.FC = () => {
                 setTargetRevision("");
               }}
             >
-              Cancel
+              Annuler
             </Button>
             <Button
               onClick={handleUpgrade}
@@ -226,34 +224,33 @@ export const MigrationsPage: React.FC = () => {
               {upgradeMutation.isPending && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
-              Upgrade
+              Mettre à jour
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Downgrade Dialog */}
+      {/* Revenir en arrière Dialog */}
       <Dialog
         open={isDowngradeDialogOpen}
         onOpenChange={setIsDowngradeDialogOpen}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Downgrade Migrations</DialogTitle>
+            <DialogTitle>Revenir à une migration antérieure</DialogTitle>
             <DialogDescription>
-              Rollback migrations to a previous schema version.
+              Revenir à une version antérieure du schéma.
             </DialogDescription>
           </DialogHeader>
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Warning:</strong> Downgrading migrations can cause data
-              loss. Always backup your database before downgrading.
+              <strong>Attention :</strong> Revenir à une migration antérieure peut entraîner une perte de données. Sauvegardez toujours votre base avant de revenir en arrière.
             </AlertDescription>
           </Alert>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Target Revision</label>
+              <label className="text-sm font-medium">Révision cible</label>
               <input
                 type="text"
                 value={targetRevision}
@@ -263,7 +260,7 @@ export const MigrationsPage: React.FC = () => {
                 required
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Enter the revision ID to downgrade to
+                Saisir l'ID de révision à laquelle revenir
               </p>
             </div>
           </div>
@@ -275,7 +272,7 @@ export const MigrationsPage: React.FC = () => {
                 setTargetRevision("");
               }}
             >
-              Cancel
+              Annuler
             </Button>
             <Button
               variant="destructive"
@@ -285,7 +282,7 @@ export const MigrationsPage: React.FC = () => {
               {downgradeMutation.isPending && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
-              Downgrade
+              Revenir en arrière
             </Button>
           </DialogFooter>
         </DialogContent>

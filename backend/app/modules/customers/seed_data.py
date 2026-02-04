@@ -17,7 +17,10 @@ from app.modules.auth.models import User
 from app.modules.customers.models import Customer
 from app.modules.customers.schemas import CustomerStatus, CustomerType, ApprovalStatus
 from app.modules.settings.utils import get_role_id_by_slug
-from app.core.seed_utils import random_algerian_phone, random_dz_email, date_months_ago
+from app.core.seed_utils import (
+    random_algerian_phone, random_dz_email, date_months_ago,
+    random_address, random_postal_code, random_tax_id
+)
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +104,7 @@ async def seed_production_customers(db: AsyncSession) -> list[str]:
         if existing:
             ids_created.append(existing)
             continue
+        city = CITIES[i % len(CITIES)]
         c = Customer(
             name=name,
             email=email,
@@ -108,15 +112,17 @@ async def seed_production_customers(db: AsyncSession) -> list[str]:
             customer_type=types_[i],
             status=statuses[i],
             approval_status=approvals[i],
-            city=CITIES[i % len(CITIES)],
+            address=random_address(city),
+            city=city,
             state="Algeria",
             country="Algeria",
+            postal_code=random_postal_code(),
             created_by=user_id,
             updated_by=user_id,
         )
         if types_[i] == CustomerType.CORPORATE:
             c.company_name = f"Corp {name.split()[0]}"
-            c.tax_id = f"NIF-{100000 + i}"
+            c.tax_id = random_tax_id()
         db.add(c)
         await db.flush()
         ids_created.append(c.id)

@@ -10,6 +10,7 @@ from typing import Optional, Dict, Any, List
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config.settings import get_settings
 from app.modules.invoices.models import Invoice, InvoiceStatus, InvoiceItem
 from app.modules.revenue.service import RevenueService
 from .aggregation_service import AggregationService
@@ -53,9 +54,10 @@ class FinancialReportService(BaseReportService):
             and_(Invoice.deleted_at.is_(None), Invoice.issue_date <= end)
         ).group_by(Invoice.status)
         rows = (await self.db.execute(q)).all()
-        status_str = lambda x: x.value if hasattr(x, "value") else str(x)
+        def status_str(x): return x.value if hasattr(x, "value") else str(x)
         by_status = [
-            {"status": status_str(r[0]), "count": r[1], "amount": float(r[2] or 0)}
+            {"status": status_str(r[0]), "count": r[1],
+             "amount": float(r[2] or 0)}
             for r in rows
         ]
         total = sum(r["amount"] for r in by_status)
@@ -99,8 +101,9 @@ class FinancialReportService(BaseReportService):
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
     ) -> Dict[str, Any]:
-        """TVA 19% and TAP 0.5% totals from invoices."""
+        """TVA and TAP totals from invoices (rates from config)."""
         end = end_date or datetime.now(timezone.utc)
+        settings = get_settings()
         q = select(
             func.sum(Invoice.tax_amount).label("tax_total"),
             func.sum(Invoice.subtotal_amount).label("subtotal"),
@@ -108,8 +111,8 @@ class FinancialReportService(BaseReportService):
         row = (await self.db.execute(q)).one()
         tax_total = float(row.tax_total or 0)
         subtotal = float(row.subtotal or 0)
-        tva = round(subtotal * 0.19, 2)
-        tap = round(subtotal * 0.005, 2)
+        tva = round(subtotal * settings.DEFAULT_TVA_RATE, 2)
+        tap = round(subtotal * settings.DEFAULT_TAP_RATE, 2)
         return {
             "tva_total": float(tva),
             "tap_total": float(tap),
@@ -117,8 +120,10 @@ class FinancialReportService(BaseReportService):
             "subtotal": subtotal,
             "details": [
                 {"Item": "Subtotal", "Amount": subtotal},
-                {"Item": "TVA (19%)", "Amount": tva},
-                {"Item": "TAP (0.5%)", "Amount": tap},
+                {"Item": f"TVA ({int(settings.DEFAULT_TVA_RATE * 100)}%)",
+                 "Amount": tva},
+                {"Item": f"TAP ({settings.DEFAULT_TAP_RATE * 100}%)",
+                 "Amount": tap},
                 {"Item": "Tax total", "Amount": tax_total},
             ],
         }

@@ -75,10 +75,10 @@ export const truncateText = (text: string, maxLength: number): string => {
  * @returns {string} Formatted file size
  */
 export const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return "0 Bytes";
+  if (bytes === 0) return "0 Octet";
 
   const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+  const sizes = ["Octets", "Ko", "Mo", "Go", "To"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
@@ -107,17 +107,17 @@ export const formatDateSafe = (
   formatString: string = "MMM dd, yyyy"
 ): string => {
   if (!dateString) {
-    return "N/A";
+    return "N/D";
   }
 
   try {
     const date = typeof dateString === "string" ? parseISO(dateString) : dateString;
     if (!date || isNaN(date.getTime())) {
-      return "N/A";
+      return "N/D";
     }
     return format(date, formatString);
   } catch (error) {
     console.warn("Invalid date value:", dateString, error);
-    return "N/A";
+    return "N/D";
   }
 };

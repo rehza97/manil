@@ -104,7 +104,7 @@ const LoginHistoryPage: React.FC = () => {
     if (userAgent.includes("Firefox")) return "Firefox";
     if (userAgent.includes("Safari")) return "Safari";
     if (userAgent.includes("Edge")) return "Edge";
-    return "Unknown Browser";
+    return "Navigateur inconnu";
   };
 
   const successfulLogins = loginHistory.filter((login) => login.success).length;
@@ -139,14 +139,14 @@ const LoginHistoryPage: React.FC = () => {
           onClick={() => navigate("/dashboard/security")}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Security
+          Retour à la sécurité
         </Button>
       </div>
 
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Login History</h1>
+        <h1 className="text-3xl font-bold text-slate-900">Historique de connexion</h1>
         <p className="text-muted-foreground mt-1">
-          View your recent login attempts and active sessions
+          Consultez vos tentatives de connexion récentes et sessions actives
         </p>
       </div>
 
@@ -154,19 +154,19 @@ const LoginHistoryPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Logins</CardTitle>
+            <CardTitle className="text-sm font-medium">Total connexions</CardTitle>
             <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{loginHistory.length}</div>
-            <p className="text-xs text-muted-foreground">Last 30 days</p>
+            <p className="text-xs text-muted-foreground">30 derniers jours</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Successful Logins
+              Connexions réussies
             </CardTitle>
             <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
@@ -180,7 +180,7 @@ const LoginHistoryPage: React.FC = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Failed Attempts</CardTitle>
+            <CardTitle className="text-sm font-medium">Tentatives échouées</CardTitle>
             <XCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
@@ -188,7 +188,7 @@ const LoginHistoryPage: React.FC = () => {
               {failedLogins}
             </div>
             <p className="text-xs text-muted-foreground">
-              {failedLogins > 0 ? "Needs attention" : "No issues"}
+              {failedLogins > 0 ? "À surveiller" : "Aucun problème"}
             </p>
           </CardContent>
         </Card>
@@ -197,27 +197,27 @@ const LoginHistoryPage: React.FC = () => {
       {/* Login History Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Login Activity</CardTitle>
+          <CardTitle>Activité de connexion récente</CardTitle>
           <CardDescription>
-            Your login attempts from the last 30 days
+            Vos tentatives de connexion des 30 derniers jours
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Status</TableHead>
-                <TableHead>Date & Time</TableHead>
-                <TableHead>Device</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>IP Address</TableHead>
+                <TableHead>Statut</TableHead>
+                <TableHead>Date et heure</TableHead>
+                <TableHead>Appareil</TableHead>
+                <TableHead>Lieu</TableHead>
+                <TableHead>Adresse IP</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loginHistory.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    No login history found
+                    Aucun historique de connexion
                   </TableCell>
                 </TableRow>
               ) : (
@@ -227,12 +227,12 @@ const LoginHistoryPage: React.FC = () => {
                     {login.success ? (
                       <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
                         <CheckCircle className="h-3 w-3 mr-1" />
-                        Success
+                        Réussi
                       </Badge>
                     ) : (
                       <Badge variant="destructive">
                         <XCircle className="h-3 w-3 mr-1" />
-                        Failed
+                        Échoué
                       </Badge>
                     )}
                   </TableCell>

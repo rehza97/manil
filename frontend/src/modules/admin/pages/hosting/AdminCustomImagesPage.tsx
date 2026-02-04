@@ -107,7 +107,7 @@ export const AdminCustomImagesPage: React.FC = () => {
   };
 
   const handleDelete = (imageId: string) => {
-    if (window.confirm("Delete this custom Docker image? This action cannot be undone.")) {
+    if (window.confirm("Supprimer cette image Docker personnalisée ? Cette action est irréversible.")) {
       deleteMutation.mutate(imageId);
     }
   };
@@ -121,14 +121,14 @@ export const AdminCustomImagesPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Custom Docker Images</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Images Docker personnalisées</h1>
           <p className="text-slate-600 mt-1">
-            Manage all custom Docker images across all customers
+            Gérer toutes les images Docker personnalisées pour tous les clients
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()}>
           <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
+          Actualiser
         </Button>
       </div>
 
@@ -137,7 +137,7 @@ export const AdminCustomImagesPage: React.FC = () => {
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {pendingImages.length} image{pendingImages.length > 1 ? "s" : ""} pending approval
+            {pendingImages.length} image{pendingImages.length > 1 ? "s" : ""} en attente d&apos;approbation
           </AlertDescription>
         </Alert>
       )}
@@ -152,17 +152,17 @@ export const AdminCustomImagesPage: React.FC = () => {
           }}
         >
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Filter by status" />
+            <SelectValue placeholder="Filtrer par statut" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value={ImageBuildStatus.PENDING}>Pending</SelectItem>
-            <SelectItem value={ImageBuildStatus.VALIDATING}>Validating</SelectItem>
-            <SelectItem value={ImageBuildStatus.BUILDING}>Building</SelectItem>
-            <SelectItem value={ImageBuildStatus.SCANNING}>Scanning</SelectItem>
-            <SelectItem value={ImageBuildStatus.COMPLETED}>Completed</SelectItem>
-            <SelectItem value={ImageBuildStatus.FAILED}>Failed</SelectItem>
-            <SelectItem value={ImageBuildStatus.REJECTED}>Rejected</SelectItem>
+            <SelectItem value="all">Tous les statuts</SelectItem>
+            <SelectItem value={ImageBuildStatus.PENDING}>En attente</SelectItem>
+            <SelectItem value={ImageBuildStatus.VALIDATING}>Validation</SelectItem>
+            <SelectItem value={ImageBuildStatus.BUILDING}>Construction</SelectItem>
+            <SelectItem value={ImageBuildStatus.SCANNING}>Analyse</SelectItem>
+            <SelectItem value={ImageBuildStatus.COMPLETED}>Terminé</SelectItem>
+            <SelectItem value={ImageBuildStatus.FAILED}>Échoué</SelectItem>
+            <SelectItem value={ImageBuildStatus.REJECTED}>Refusé</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -174,7 +174,7 @@ export const AdminCustomImagesPage: React.FC = () => {
           <AlertDescription>
             {error instanceof Error
               ? error.message
-              : "Failed to load custom images"}
+              : "Échec du chargement des images personnalisées"}
           </AlertDescription>
         </Alert>
       )}
@@ -193,7 +193,7 @@ export const AdminCustomImagesPage: React.FC = () => {
         <>
           {images.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-muted-foreground">No custom images found</p>
+              <p className="text-muted-foreground">Aucune image personnalisée trouvée</p>
             </div>
           ) : (
             <>
@@ -240,8 +240,8 @@ export const AdminCustomImagesPage: React.FC = () => {
               {pagination && pagination.total_pages > 1 && (
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-muted-foreground">
-                    Showing {((pagination.page - 1) * pagination.page_size) + 1} to{" "}
-                    {Math.min(pagination.page * pagination.page_size, pagination.total)} of{" "}
+                    Affichage de {((pagination.page - 1) * pagination.page_size) + 1} à{" "}
+                    {Math.min(pagination.page * pagination.page_size, pagination.total)} sur{" "}
                     {pagination.total} images
                   </div>
                   <div className="flex gap-2">
@@ -251,7 +251,7 @@ export const AdminCustomImagesPage: React.FC = () => {
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={pagination.page === 1}
                     >
-                      Previous
+                      Précédent
                     </Button>
                     <Button
                       variant="outline"
@@ -259,7 +259,7 @@ export const AdminCustomImagesPage: React.FC = () => {
                       onClick={() => setPage((p) => Math.min(pagination.total_pages, p + 1))}
                       disabled={pagination.page === pagination.total_pages}
                     >
-                      Next
+                      Suivant
                     </Button>
                   </div>
                 </div>
@@ -279,25 +279,25 @@ export const AdminCustomImagesPage: React.FC = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {approvalDialog.approved ? "Approve" : "Reject"} Custom Image
+              {approvalDialog.approved ? "Approuver" : "Refuser"} l&apos;image personnalisée
             </DialogTitle>
             <DialogDescription>
               {approvalDialog.approved
-                ? `Approve the image "${approvalDialog.imageName}"?`
-                : `Reject the image "${approvalDialog.imageName}"?`}
+                ? `Approuver l'image « ${approvalDialog.imageName } » ?`
+                : `Refuser l'image « ${approvalDialog.imageName } » ?`}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="reason">
-                Reason {approvalDialog.approved ? "(optional)" : "(required)"}
+                Motif {approvalDialog.approved ? "(facultatif)" : "(obligatoire)"}
               </Label>
               <Textarea
                 id="reason"
                 placeholder={
                   approvalDialog.approved
-                    ? "Optional reason for approval..."
-                    : "Reason for rejection..."
+                    ? "Motif d'approbation facultatif…"
+                    : "Motif du refus…"
                 }
                 value={approvalReason}
                 onChange={(e) => setApprovalReason(e.target.value)}
@@ -313,7 +313,7 @@ export const AdminCustomImagesPage: React.FC = () => {
                 setApprovalReason("");
               }}
             >
-              Cancel
+              Annuler
             </Button>
             <Button
               variant={approvalDialog.approved ? "default" : "destructive"}
@@ -321,10 +321,10 @@ export const AdminCustomImagesPage: React.FC = () => {
               disabled={approveMutation.isPending || (!approvalDialog.approved && !approvalReason.trim())}
             >
               {approveMutation.isPending
-                ? "Processing..."
+                ? "Traitement…"
                 : approvalDialog.approved
-                ? "Approve"
-                : "Reject"}
+                ? "Approuver"
+                : "Refuser"}
             </Button>
           </DialogFooter>
         </DialogContent>

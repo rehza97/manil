@@ -44,7 +44,7 @@ export const UserDetailsPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        <span className="ml-2 text-gray-500">Loading user details...</span>
+        <span className="ml-2 text-gray-500">Chargement des détails utilisateur…</span>
       </div>
     );
   }
@@ -59,7 +59,7 @@ export const UserDetailsPage: React.FC = () => {
           onClick={() => navigate("/admin/users")}
           className="mt-4"
         >
-          Back to Users
+          Retour aux utilisateurs
         </Button>
       </div>
     );
@@ -68,7 +68,7 @@ export const UserDetailsPage: React.FC = () => {
   const isLocked = user.locked_until && new Date(user.locked_until) > new Date();
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return "Never";
+    if (!dateString) return "Jamais";
     return new Date(dateString).toLocaleDateString("fr-DZ", {
       year: "numeric",
       month: "short",
@@ -120,13 +120,13 @@ export const UserDetailsPage: React.FC = () => {
           <div className="flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
             <div>
-              <h4 className="font-semibold text-red-900">Account Locked</h4>
+              <h4 className="font-semibold text-red-900">Compte verrouillé</h4>
               <p className="text-sm text-red-700 mt-1">
-                This account is locked due to multiple failed login attempts.
-                Lock expires on {formatDate(user.locked_until)}.
+                Ce compte est verrouillé en raison de plusieurs tentatives de connexion échouées.
+                Le verrou expire le {formatDate(user.locked_until)}.
               </p>
               <p className="text-sm text-red-700 mt-1">
-                Failed login attempts: {user.failed_login_attempts}
+                Tentatives de connexion échouées : {user.failed_login_attempts}
               </p>
             </div>
           </div>
@@ -151,7 +151,7 @@ export const UserDetailsPage: React.FC = () => {
               <div className="flex items-start gap-3">
                 <Shield className="h-5 w-5 text-gray-400 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm text-gray-500">Role</p>
+                  <p className="text-sm text-gray-500">Rôle</p>
                   <p className="font-medium capitalize">{user.role?.name ?? user.role?.slug ?? "-"}</p>
                 </div>
               </div>
@@ -170,12 +170,12 @@ export const UserDetailsPage: React.FC = () => {
 
           {/* Account Activity */}
           <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Account Activity</h3>
+            <h3 className="text-lg font-semibold mb-4">Activité du compte</h3>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <LogIn className="h-5 w-5 text-gray-400 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm text-gray-500">Last Login</p>
+                  <p className="text-sm text-gray-500">Dernière connexion</p>
                   <p className="font-medium">{formatDate(user.last_login_at)}</p>
                 </div>
               </div>
@@ -191,7 +191,7 @@ export const UserDetailsPage: React.FC = () => {
               <div className="flex items-start gap-3">
                 <Clock className="h-5 w-5 text-gray-400 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm text-gray-500">Last Updated</p>
+                  <p className="text-sm text-gray-500">Dernière mise à jour</p>
                   <p className="font-medium">{formatDate(user.updated_at)}</p>
                 </div>
               </div>
@@ -240,7 +240,7 @@ export const UserDetailsPage: React.FC = () => {
               </div>
             ) : (
               <p className="text-sm text-gray-500 text-center py-8">
-                No recent activity
+                Aucune activité récente
               </p>
             )}
           </Card>
@@ -290,10 +290,10 @@ export const UserDetailsPage: React.FC = () => {
           {/* Statistics */}
           {stats && (
             <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Statistics</h3>
+              <h3 className="text-lg font-semibold mb-4">Statistiques</h3>
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm text-gray-500">Total Logins</p>
+                  <p className="text-sm text-gray-500">Total des connexions</p>
                   <p className="text-2xl font-bold">{stats.total_logins}</p>
                 </div>
                 <Separator />
@@ -305,7 +305,7 @@ export const UserDetailsPage: React.FC = () => {
                 </div>
                 <Separator />
                 <div>
-                  <p className="text-sm text-gray-500">Active Sessions</p>
+                  <p className="text-sm text-gray-500">Sessions actives</p>
                   <p className="text-2xl font-bold">{stats.active_sessions}</p>
                 </div>
                 <Separator />
@@ -315,9 +315,9 @@ export const UserDetailsPage: React.FC = () => {
                 </div>
                 <Separator />
                 <div>
-                  <p className="text-sm text-gray-500">Account Age</p>
+                  <p className="text-sm text-gray-500">Âge du compte</p>
                   <p className="text-2xl font-bold">
-                    {stats.account_age_days} days
+                    {stats.account_age_days} jours
                   </p>
                 </div>
               </div>

@@ -67,13 +67,13 @@ export function PendingRequestCard({
               {request.subscription_number}
             </CardTitle>
             <CardDescription>
-              Requested{" "}
+              Demandé{" "}
               {formatDistanceToNow(new Date(request.created_at), {
                 addSuffix: true,
               })}
             </CardDescription>
           </div>
-          <Badge variant="secondary">Pending</Badge>
+          <Badge variant="secondary">En attente</Badge>
         </div>
       </CardHeader>
 
@@ -82,14 +82,14 @@ export function PendingRequestCard({
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm">
             <User className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">Customer:</span>
+            <span className="font-medium">Client :</span>
             <span>
-              {customer?.full_name || "Unknown"} ({customer?.email || "N/A"})
+              {customer?.full_name || "Inconnu"} ({customer?.email || "N/A"})
             </span>
           </div>
           <div className="flex items-center gap-2 text-sm">
             <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">Requested:</span>
+            <span className="font-medium">Demandé le :</span>
             <span>{new Date(request.created_at).toLocaleDateString()}</span>
           </div>
         </div>
@@ -99,12 +99,12 @@ export function PendingRequestCard({
           <div className="font-medium">{plan.name}</div>
           <div className="text-sm text-muted-foreground">{planSpecs}</div>
           <div className="text-sm">
-            <span className="font-medium">Monthly Price: </span>
+            <span className="font-medium">Prix mensuel : </span>
             <span>{formatDZD(plan.monthly_price)}</span>
             {plan.setup_fee > 0 && (
               <span className="text-muted-foreground">
                 {" "}
-                + {formatDZD(plan.setup_fee)} setup fee
+                + {formatDZD(plan.setup_fee)} frais d&apos;installation
               </span>
             )}
           </div>
@@ -116,10 +116,10 @@ export function PendingRequestCard({
             onClick={onApprove}
             className="flex-1"
             variant="default"
-            aria-label="Approve request"
+            aria-label="Approuver la demande"
           >
             <CheckCircle2 className="h-4 w-4 mr-2" />
-            Approve
+            Approuver
           </Button>
 
           <AlertDialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
@@ -127,10 +127,10 @@ export function PendingRequestCard({
               <Button
                 variant="destructive"
                 className="flex-1"
-                aria-label="Reject request"
+                aria-label="Refuser la demande"
               >
                 <X className="h-4 w-4 mr-2" />
-                Reject
+                Refuser
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -143,10 +143,10 @@ export function PendingRequestCard({
               </AlertDialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="reject-reason">Rejection Reason</Label>
+                  <Label htmlFor="reject-reason">Motif du refus</Label>
                   <Textarea
                     id="reject-reason"
-                    placeholder="Enter reason for rejection..."
+                    placeholder="Saisir le motif du refus…"
                     value={rejectReason}
                     onChange={(e) => setRejectReason(e.target.value)}
                     rows={4}
@@ -155,14 +155,14 @@ export function PendingRequestCard({
               </div>
               <AlertDialogFooter>
                 <AlertDialogCancel onClick={() => setRejectReason("")}>
-                  Cancel
+                  Annuler
                 </AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleReject}
                   disabled={!rejectReason.trim()}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
-                  Reject Request
+                  Refuser la demande
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

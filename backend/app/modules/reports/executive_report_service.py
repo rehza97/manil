@@ -2,7 +2,7 @@
 Executive Report Service
 
 Three reports: KPI dashboard, business health, forecast (linear trend on revenue).
-Uses RevenueRepository as single source for revenue metrics.
+Uses RevenueService as single source for revenue metrics.
 """
 
 from datetime import datetime, timezone, timedelta
@@ -10,7 +10,7 @@ from typing import Optional, Dict, Any, List
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.revenue.repository import RevenueRepository
+from app.modules.revenue.service import RevenueService
 from .dashboard_service import DashboardService
 from .base_report_service import BaseReportService
 
@@ -21,7 +21,7 @@ class ExecutiveReportService(BaseReportService):
     def __init__(self, db: AsyncSession):
         self.db = db
         self.dashboard = DashboardService(db)
-        self.revenue_repo = RevenueRepository(db)
+        self.revenue_service = RevenueService(db)
 
     async def get_kpi_dashboard_report(
         self,
@@ -67,7 +67,7 @@ class ExecutiveReportService(BaseReportService):
         """Simple linear trend on historical booked revenue for next N months."""
         end = end_date or datetime.now(timezone.utc)
         start = start_date or (end - timedelta(days=180))
-        trend_data = await self.revenue_repo.get_revenue_trends(
+        trend_data = await self.revenue_service.get_trends_for_range(
             start_date=start, end_date=end, group_by="day"
         )
         totals = [float(item["booked_revenue"]) for item in trend_data]

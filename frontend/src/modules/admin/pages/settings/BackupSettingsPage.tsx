@@ -78,17 +78,17 @@ export const BackupSettingsPage: React.FC = () => {
       <div>
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <Database className="h-8 w-8" />
-          Backup Settings
+          Paramètres de sauvegarde
         </h1>
         <p className="text-slate-600 mt-2">
-          Configure backup schedule, retention policies, and storage location.
+          Configurer la planification des sauvegardes, les politiques de rétention et l'emplacement de stockage.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Backup Configuration</CardTitle>
-          <CardDescription>Configure automated backup settings</CardDescription>
+          <CardTitle>Configuration des sauvegardes</CardTitle>
+          <CardDescription>Configurer les paramètres de sauvegarde automatique</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {settings?.map((setting) => (
@@ -106,7 +106,7 @@ export const BackupSettingsPage: React.FC = () => {
                   className="text-xs"
                 >
                   <RefreshCw className="h-3 w-3 mr-1" />
-                  Reset
+                  Réinitialiser
                 </Button>
               )}
             </div>
@@ -123,12 +123,12 @@ export const BackupSettingsPage: React.FC = () => {
           {updateMutation.isPending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
+              Enregistrement…
             </>
           ) : (
             <>
               <Save className="mr-2 h-4 w-4" />
-              Save Changes
+              Enregistrer les modifications
             </>
           )}
         </Button>

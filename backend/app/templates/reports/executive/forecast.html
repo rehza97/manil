@@ -1,0 +1,39 @@
+{% extends "reports/base_report.html" %}
+
+{% block summary %}
+  <div class="executive-summary">
+    <div class="kpi-card">
+      <div class="kpi-value">{{ historical_avg | format_currency }}</div>
+      <div class="kpi-label">Historical Average</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ forecast_monthly | length }}</div>
+      <div class="kpi-label">Forecast Months</div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block charts %}
+  {{ super() }}
+{% endblock %}
+
+{% block data %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th>Forecasted Revenue (DZD)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in forecast_monthly or [] %}
+        <tr>
+          <td>{{ row.month }}</td>
+          <td>{{ row.forecast | format_currency }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

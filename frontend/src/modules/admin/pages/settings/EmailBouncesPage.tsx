@@ -87,7 +87,7 @@ export const EmailBouncesPage: React.FC = () => {
       );
       setBounces(response.data);
     } catch (error: any) {
-      toast.error("Failed to load bounces", {
+      toast.error("Échec du chargement des rebonds", {
         description: error.response?.data?.detail || error.message,
       });
     } finally {
@@ -111,14 +111,14 @@ export const EmailBouncesPage: React.FC = () => {
       loadBounces();
       loadStats();
     } catch (error: any) {
-      toast.error("Failed to mark email as valid", {
+      toast.error("Échec du marquage de l'e-mail comme valide", {
         description: error.response?.data?.detail || error.message,
       });
     }
   };
 
   const handleDelete = async (bounceId: string, email: string) => {
-    if (!confirm(`Delete bounce record for ${email}?`)) return;
+    if (!confirm(`Supprimer l'enregistrement de rebond pour ${email} ?`)) return;
 
     try {
       await apiClient.delete(`/api/v1/notifications/bounces/${bounceId}`);
@@ -126,7 +126,7 @@ export const EmailBouncesPage: React.FC = () => {
       loadBounces();
       loadStats();
     } catch (error: any) {
-      toast.error("Failed to delete bounce", {
+      toast.error("Échec de la suppression du rebond", {
         description: error.response?.data?.detail || error.message,
       });
     }
@@ -152,7 +152,7 @@ export const EmailBouncesPage: React.FC = () => {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription>Permanent</CardDescription>
+              <CardDescription>Permanents</CardDescription>
               <CardTitle className="text-2xl">{stats.permanent}</CardTitle>
             </CardHeader>
           </Card>
@@ -164,7 +164,7 @@ export const EmailBouncesPage: React.FC = () => {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription>Invalid Emails</CardDescription>
+              <CardDescription>E-mails invalides</CardDescription>
               <CardTitle className="text-2xl">{stats.invalid_count}</CardTitle>
             </CardHeader>
           </Card>
@@ -173,42 +173,42 @@ export const EmailBouncesPage: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Email Bounces</CardTitle>
+          <CardTitle>Rebonds e-mail</CardTitle>
           <CardDescription>
-            Manage bounced email addresses and view bounce statistics
+            Gérer les adresses e-mail en rebond et consulter les statistiques
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-4 items-end">
             <div className="w-[200px]">
-              <label className="text-sm font-medium mb-2 block">Bounce Type</label>
+              <label className="text-sm font-medium mb-2 block">Type de rebond</label>
               <Select
                 value={filters.bounce_type}
                 onValueChange={(value) => setFilters({ ...filters, bounce_type: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="All types" />
+                  <SelectValue placeholder="Tous les types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All types</SelectItem>
+                  <SelectItem value="all">Tous les types</SelectItem>
                   <SelectItem value="permanent">Permanent</SelectItem>
-                  <SelectItem value="temporary">Temporary</SelectItem>
+                  <SelectItem value="temporary">Temporaire</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="w-[200px]">
-              <label className="text-sm font-medium mb-2 block">Status</label>
+              <label className="text-sm font-medium mb-2 block">Statut</label>
               <Select
                 value={filters.is_invalid}
                 onValueChange={(value) => setFilters({ ...filters, is_invalid: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
+                  <SelectValue placeholder="Tous les statuts" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="true">Invalid</SelectItem>
-                  <SelectItem value="false">Valid</SelectItem>
+                  <SelectItem value="all">Tous les statuts</SelectItem>
+                  <SelectItem value="true">Invalide</SelectItem>
+                  <SelectItem value="false">Valide</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -219,12 +219,12 @@ export const EmailBouncesPage: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Email</TableHead>
+                    <TableHead>E-mail</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Reason</TableHead>
+                    <TableHead>Raison</TableHead>
                     <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Retries</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Nouveaux essais</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -232,7 +232,7 @@ export const EmailBouncesPage: React.FC = () => {
                   {bounces.items.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center text-muted-foreground">
-                        No bounce records found
+                        Aucun enregistrement de rebond trouvé
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -256,9 +256,9 @@ export const EmailBouncesPage: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           {bounce.is_invalid ? (
-                            <Badge variant="destructive">Invalid</Badge>
+                            <Badge variant="destructive">Invalide</Badge>
                           ) : (
-                            <Badge variant="outline">Valid</Badge>
+                            <Badge variant="outline">Valide</Badge>
                           )}
                         </TableCell>
                         <TableCell>{bounce.retry_count}</TableCell>

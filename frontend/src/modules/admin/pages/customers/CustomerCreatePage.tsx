@@ -19,7 +19,7 @@ export function CustomerCreatePage() {
       <div className="mb-6">
         <Button variant="ghost" onClick={() => navigate("/admin/customers")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Customers
+          Retour aux clients
         </Button>
       </div>
       <CustomerForm onSuccess={handleSuccess} onCancel={handleCancel} />

@@ -47,7 +47,7 @@ async def get_agent_performance(
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await OperationsReportService(db).get_agent_performance_report(agent_id, start, end)
-    return await generate_report_response(db, data, "reports/base_report.html", "Agent Performance", format, "agent_performance", export_details_key="agents", generated_by=current_user.id)
+    return await generate_report_response(db, data, "reports/operations/agent_performance.html", "Agent Performance", format, "agent_performance", export_details_key="agents", generated_by=current_user.id)
 
 
 @router.get("/ticket-category-analysis")
@@ -59,7 +59,7 @@ async def get_ticket_category_analysis(
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await OperationsReportService(db).get_ticket_category_analysis_report(start, end)
-    return await generate_report_response(db, data, "reports/base_report.html", "Ticket Category Analysis", format, "category_analysis", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(db, data, "reports/operations/ticket_category_analysis.html", "Ticket Category Analysis", format, "category_analysis", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
 
 
 @router.get("/quality-metrics")
@@ -71,4 +71,4 @@ async def get_quality_metrics(
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await OperationsReportService(db).get_quality_metrics_report(start, end)
-    return await generate_report_response(db, data, "reports/base_report.html", "Support Quality Metrics", format, "quality_metrics", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(db, data, "reports/operations/quality_metrics.html", "Support Quality Metrics", format, "quality_metrics", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)

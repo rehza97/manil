@@ -65,13 +65,13 @@ export const RolePermissionsPage: React.FC = () => {
     try {
       await roleService.updateRolePermissions(id, selectedPermissions);
       toast({
-        title: "Success",
-        description: "Role permissions updated successfully",
+        title: "Succès",
+        description: "Permissions du rôle mises à jour avec succès",
       });
       navigate(`/admin/roles/${id}`);
     } catch (error: any) {
       // Handle validation errors (422) - extract message from error response
-      let errorMessage = "Failed to update permissions";
+      let errorMessage = "Échec de la mise à jour des permissions";
       
       if (error.response?.data) {
         const errorData = error.response.data;
@@ -90,7 +90,7 @@ export const RolePermissionsPage: React.FC = () => {
       }
       
       toast({
-        title: "Error",
+        title: "Erreur",
         description: errorMessage,
         variant: "destructive",
       });
@@ -152,22 +152,22 @@ export const RolePermissionsPage: React.FC = () => {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Role Not Found"
-          description="The requested role could not be found"
+          title="Rôle introuvable"
+          description="Le rôle demandé est introuvable"
           breadcrumbs={[
             { label: "Admin", href: "/admin" },
-            { label: "Roles", href: "/admin/roles" },
-            { label: "Not Found" },
+            { label: "Rôles", href: "/admin/roles" },
+            { label: "Introuvable" },
           ]}
         />
         <Card className="p-6 text-center">
-          <p className="text-gray-500">Role not found</p>
+          <p className="text-gray-500">Rôle introuvable</p>
           <Button
             variant="outline"
             className="mt-4"
             onClick={() => navigate("/admin/roles")}
           >
-            Back to Roles
+            Retour aux rôles
           </Button>
         </Card>
       </div>
@@ -178,11 +178,11 @@ export const RolePermissionsPage: React.FC = () => {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Cannot Edit System Role"
-          description="System roles cannot be modified"
+          title="Impossible de modifier le rôle système"
+          description="Les rôles système ne peuvent pas être modifiés"
           breadcrumbs={[
             { label: "Admin", href: "/admin" },
-            { label: "Roles", href: "/admin/roles" },
+            { label: "Rôles", href: "/admin/roles" },
             { label: role.name, href: `/admin/roles/${id}` },
             { label: "Permissions" },
           ]}
@@ -192,12 +192,12 @@ export const RolePermissionsPage: React.FC = () => {
             <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
             <div>
               <p className="font-semibold text-yellow-900">
-                System Role Protection
+                Protection des rôles système
               </p>
               <p className="mt-1 text-sm text-yellow-800">
-                This is a system-defined role and its permissions cannot be
-                modified. System roles are managed by the application to ensure
-                proper access control.
+                Ce rôle est défini par le système et ses permissions ne peuvent pas
+                être modifiées. Les rôles système sont gérés par l'application pour
+                assurer un contrôle d'accès approprié.
               </p>
               <Button
                 variant="outline"
@@ -205,7 +205,7 @@ export const RolePermissionsPage: React.FC = () => {
                 onClick={() => navigate(`/admin/roles/${id}`)}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Role Details
+                Retour aux détails du rôle
               </Button>
             </div>
           </div>
@@ -219,7 +219,7 @@ export const RolePermissionsPage: React.FC = () => {
       {/* Header */}
       <PageHeader
         title={`Manage Permissions: ${role.name}`}
-        description="Select permissions for this role"
+        description="Sélectionner les permissions pour ce rôle"
         breadcrumbs={[
           { label: "Admin", href: "/admin" },
           { label: "Roles", href: "/admin/roles" },
@@ -245,7 +245,7 @@ export const RolePermissionsPage: React.FC = () => {
             <p className="font-semibold">Permission Management</p>
             <p className="mt-1">
               Select the permissions you want to assign to this role. Users with
-              this role will be able to perform the selected actions.
+              ce rôle pourra effectuer les actions sélectionnées.
             </p>
           </div>
         </div>
@@ -263,7 +263,7 @@ export const RolePermissionsPage: React.FC = () => {
                   Permissions
                 </h3>
                 <Badge variant="secondary">
-                  {selectedPermissions.length} selected
+                  {selectedPermissions.length} sélectionnées
                 </Badge>
               </div>
 
@@ -311,7 +311,7 @@ export const RolePermissionsPage: React.FC = () => {
                                   selectedPermissions.includes(id)
                                 ).length
                               }{" "}
-                              / {perms.length} selected
+                              / {perms.length} sélectionnées
                             </span>
                           </div>
                           <Separator className="mb-3" />
@@ -360,7 +360,7 @@ export const RolePermissionsPage: React.FC = () => {
                 onClick={() => navigate(`/admin/roles/${id}`)}
                 disabled={isUpdating}
               >
-                Cancel
+                Annuler
               </Button>
               <Button
                 type="submit"
@@ -369,12 +369,12 @@ export const RolePermissionsPage: React.FC = () => {
                 {isUpdating ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
+                    Enregistrement…
                   </>
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    Save Changes
+                    Enregistrer les modifications
                   </>
                 )}
               </Button>
@@ -387,7 +387,7 @@ export const RolePermissionsPage: React.FC = () => {
               <h3 className="text-lg font-semibold mb-4">Summary</h3>
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm text-gray-500">Role Name</p>
+                  <p className="text-sm text-gray-500">Nom du rôle</p>
                   <p className="font-medium">{role.name}</p>
                 </div>
                 <Separator />
@@ -398,7 +398,7 @@ export const RolePermissionsPage: React.FC = () => {
                 <Separator />
                 <div>
                   <p className="text-sm text-gray-500 mb-2">
-                    Selected Permissions
+                    Permissions sélectionnées
                   </p>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-green-600" />
@@ -408,7 +408,7 @@ export const RolePermissionsPage: React.FC = () => {
                   </div>
                   {selectedPermissions.length > 0 && (
                     <p className="text-xs text-gray-500 mt-1">
-                      Permissions assigned
+                      Permissions attribuées
                     </p>
                   )}
                 </div>

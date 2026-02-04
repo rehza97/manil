@@ -53,8 +53,8 @@ export const OrderReportsPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Order Reports</h1>
-          <p className="text-gray-600 mt-1">Order analytics and revenue metrics</p>
+          <h1 className="text-3xl font-bold text-gray-900">Rapports commandes</h1>
+          <p className="text-gray-600 mt-1">Analyses des commandes et indicateurs de chiffre d'affaires</p>
         </div>
         <ExportButton reportType="orders" filters={{ date_range: dateRange }} />
       </div>
@@ -67,28 +67,28 @@ export const OrderReportsPage: React.FC = () => {
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Total Orders"
+          title="Total commandes"
           value={valueMetrics?.total_orders || 0}
           icon={<ShoppingCart className="h-6 w-6" />}
           color="blue"
           loading={valueLoading}
         />
         <RevenueCard
-          title="Total Revenue"
+          title="Chiffre d'affaires total"
           value={Number(valueMetrics?.total_value || 0)}
           type={RevenueType.BOOKED}
-          subtitle="From order values"
+          subtitle="Valeur des commandes"
           icon={<DollarSign className="h-6 w-6" />}
         />
         <StatCard
-          title="Avg Order Value"
+          title="Panier moyen"
           value={formatRevenue(valueMetrics?.avg_order_value || 0)}
           icon={<BarChart3 className="h-6 w-6" />}
           color="purple"
           loading={valueLoading}
         />
         <StatCard
-          title="Max Order Value"
+          title="Montant max commande"
           value={formatRevenue(valueMetrics?.max_order_value || 0)}
           icon={<TrendingUp className="h-6 w-6" />}
           color="yellow"
@@ -102,7 +102,7 @@ export const OrderReportsPage: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           {statusLoading ? (
             <div className="flex items-center justify-center h-[300px]">
-              <div className="text-gray-500">Loading...</div>
+              <div className="text-gray-500">Chargement…</div>
             </div>
           ) : statusData && statusData.length > 0 ? (
             <PieChart
@@ -111,12 +111,12 @@ export const OrderReportsPage: React.FC = () => {
                 value: item.count,
                 percentage: item.percentage,
               }))}
-              title="Orders by Status"
+              title="Commandes par statut"
               height={300}
             />
           ) : (
             <div className="flex items-center justify-center h-[300px] text-gray-500">
-              No data available
+              Aucune donnée disponible
             </div>
           )}
         </div>
@@ -125,7 +125,7 @@ export const OrderReportsPage: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           {monthlyLoading ? (
             <div className="flex items-center justify-center h-[300px]">
-              <div className="text-gray-500">Loading...</div>
+              <div className="text-gray-500">Chargement…</div>
             </div>
           ) : monthlyData && monthlyData.length > 0 ? (
             <BarChart
@@ -133,13 +133,13 @@ export const OrderReportsPage: React.FC = () => {
                 name: item.month,
                 value: item.order_count,
               }))}
-              title="Monthly Order Volume"
+              title="Volume mensuel des commandes"
               color="#3B82F6"
               height={300}
             />
           ) : (
             <div className="flex items-center justify-center h-[300px] text-gray-500">
-              No data available
+              Aucune donnée disponible
             </div>
           )}
         </div>
@@ -148,7 +148,7 @@ export const OrderReportsPage: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 lg:col-span-2">
           {monthlyLoading ? (
             <div className="flex items-center justify-center h-[300px]">
-              <div className="text-gray-500">Loading...</div>
+              <div className="text-gray-500">Chargement…</div>
             </div>
           ) : monthlyData && monthlyData.length > 0 ? (
             <LineChart
@@ -158,20 +158,20 @@ export const OrderReportsPage: React.FC = () => {
                 'Avg Order Value': item.avg_order_value,
               }))}
               lines={[
-                { dataKey: 'Revenue', name: 'Revenue', color: '#10B981' },
+                { dataKey: 'Revenue', name: 'Chiffre d\'affaires', color: '#10B981' },
                 {
                   dataKey: 'Avg Order Value',
-                  name: 'Avg Order Value',
+                  name: 'Panier moyen',
                   color: '#8B5CF6',
                 },
               ]}
-              title="Monthly Revenue Trends"
+              title="Tendances du chiffre d'affaires mensuel"
               height={300}
               formatter={(value: number) => formatRevenue(value)}
             />
           ) : (
             <div className="flex items-center justify-center h-[300px] text-gray-500">
-              No data available
+              Aucune donnée disponible
             </div>
           )}
         </div>
@@ -179,25 +179,25 @@ export const OrderReportsPage: React.FC = () => {
 
       {/* Top Products */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold mb-4">Top Performing Products</h3>
+        <h3 className="text-lg font-semibold mb-4">Produits les plus performants</h3>
         {productLoading ? (
-          <div className="text-gray-500">Loading...</div>
+          <div className="text-gray-500">Chargement…</div>
         ) : productData && productData.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Product
+                    Produit
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Orders
+                    Commandes
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Quantity Sold
+                    Quantité vendue
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Revenue
+                    Chiffre d'affaires
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Performance
@@ -251,15 +251,15 @@ export const OrderReportsPage: React.FC = () => {
             </table>
           </div>
         ) : (
-          <div className="text-gray-500 text-center py-8">No product data available</div>
+          <div className="text-gray-500 text-center py-8">Aucune donnée produit disponible</div>
         )}
       </div>
 
       {/* Order Status Details */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold mb-4">Order Status Details</h3>
+        <h3 className="text-lg font-semibold mb-4">Détail des statuts de commande</h3>
         {statusLoading ? (
-          <div className="text-gray-500">Loading...</div>
+          <div className="text-gray-500">Chargement…</div>
         ) : statusData && statusData.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {statusData.map((item) => (
@@ -283,7 +283,7 @@ export const OrderReportsPage: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className="text-gray-500 text-center py-8">No data available</div>
+          <div className="text-gray-500 text-center py-8">Aucune donnée disponible</div>
         )}
       </div>
     </div>

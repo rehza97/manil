@@ -227,11 +227,11 @@ export function DNSRecordForm({
           name="ttl"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>TTL (optional)</FormLabel>
+              <FormLabel>TTL (optionnel)</FormLabel>
               <FormControl>
                 <Input
                   type="number"
-                  placeholder="Uses zone default if not specified"
+                  placeholder="Valeur par défaut de la zone si non spécifié"
                   {...field}
                   onChange={(e) =>
                     field.onChange(e.target.value ? parseInt(e.target.value) : undefined)
@@ -240,7 +240,7 @@ export function DNSRecordForm({
                 />
               </FormControl>
               <FormDescription>
-                Time-to-live in seconds (60-86400). Leave empty to use zone default.
+                Durée de vie en secondes (60-86400). Laisser vide pour utiliser la valeur par défaut de la zone.
               </FormDescription>
               <FormMessage />
             </FormItem>

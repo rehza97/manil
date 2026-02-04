@@ -100,13 +100,13 @@ export type CreateZoneFormData = z.infer<typeof createZoneSchema>;
 export const updateZoneSchema = z.object({
   ttl_default: z
     .number()
-    .min(60, "TTL must be at least 60 seconds")
-    .max(86400, "TTL must not exceed 86400 seconds")
+    .min(60, "Le TTL doit être d'au moins 60 secondes")
+    .max(86400, "Le TTL ne doit pas dépasser 86400 secondes")
     .optional(),
   
   notes: z
     .string()
-    .max(1000, "Notes must be less than 1000 characters")
+    .max(1000, "Les notes doivent faire moins de 1000 caractères")
     .optional(),
 });
 
@@ -118,9 +118,9 @@ export type UpdateZoneFormData = z.infer<typeof updateZoneSchema>;
 export const createSystemZoneSchema = z.object({
   zone_name: z
     .string()
-    .min(1, "Zone name is required")
-    .max(255, "Zone name must be less than 255 characters")
-    .regex(domainRegex, "Invalid domain format"),
+    .min(1, "Le nom de la zone est requis")
+    .max(255, "Le nom doit faire moins de 255 caractères")
+    .regex(domainRegex, "Format de domaine invalide"),
   
   zone_type: z
     .nativeEnum(DNSZoneType)
@@ -274,7 +274,7 @@ export type UpdateRecordFormData = z.infer<typeof updateRecordSchema>;
  * Bulk Record Import Schema (CSV format)
  */
 export const bulkRecordImportSchema = z.object({
-  records: z.array(createRecordSchema).min(1, "At least one record is required"),
+  records: z.array(createRecordSchema).min(1, "Au moins un enregistrement est requis"),
 });
 
 export type BulkRecordImportFormData = z.infer<typeof bulkRecordImportSchema>;
@@ -287,7 +287,7 @@ export type BulkRecordImportFormData = z.infer<typeof bulkRecordImportSchema>;
  * Apply Template Schema
  */
 export const applyTemplateSchema = z.object({
-  template_id: z.string().min(1, "Template is required"),
+  template_id: z.string().min(1, "Le modèle est requis"),
   replace_existing: z.boolean().default(false),
   variables: z.record(z.string()).optional(),
 });
@@ -298,7 +298,7 @@ export type ApplyTemplateFormData = z.infer<typeof applyTemplateSchema>;
  * Create Template Schema (Admin)
  */
 export const createTemplateSchema = z.object({
-  name: z.string().min(1, "Template name is required").max(100),
+  name: z.string().min(1, "Le nom du modèle est requis").max(100),
   description: z.string().max(500).optional(),
   record_definitions: z.array(
     z.object({
@@ -308,7 +308,7 @@ export const createTemplateSchema = z.object({
       ttl: z.number().min(60).max(86400).optional(),
       priority: z.number().min(0).max(65535).optional(),
     })
-  ).min(1, "At least one record definition is required"),
+  ).min(1, "Au moins une définition d'enregistrement est requise"),
 });
 
 export type CreateTemplateFormData = z.infer<typeof createTemplateSchema>;

@@ -20,11 +20,11 @@ interface SettingsPanelProps {
 }
 
 const SETTINGS_CATEGORIES = [
-  { id: "general", label: "General", icon: Settings },
-  { id: "email", label: "Email", icon: Mail },
+  { id: "general", label: "Général", icon: Settings },
+  { id: "email", label: "E-mail", icon: Mail },
   { id: "notifications", label: "Notifications", icon: Bell },
-  { id: "security", label: "Security", icon: Shield },
-  { id: "backup", label: "Backup", icon: Database },
+  { id: "security", label: "Sécurité", icon: Shield },
+  { id: "backup", label: "Sauvegarde", icon: Database },
   { id: "api", label: "API", icon: Globe },
 ] as const;
 
@@ -79,24 +79,24 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onSave }) => {
       }));
 
     if (updates.length === 0) {
-      toast.info("No changes to save");
+      toast.info("Aucune modification à enregistrer");
       return;
     }
 
     try {
       await updateMutation.mutateAsync(updates);
-      toast.success(`${updates.length} setting(s) saved successfully`);
+      toast.success(`${updates.length} paramètre(s) enregistré(s) avec succès`);
       setHasChanges((prev) => ({ ...prev, [activeCategory]: false }));
       onSave?.();
     } catch (error: any) {
-      toast.error(error?.response?.data?.detail || "Failed to save settings");
+      toast.error(error?.response?.data?.detail || "Échec de l'enregistrement des paramètres");
     }
   };
 
   const handleReset = async (key: string) => {
     try {
       await resetMutation.mutateAsync(key);
-      toast.success("Setting reset to default");
+      toast.success("Paramètre réinitialisé par défaut");
       // Reload settings for this category
       if (settings) {
         const settingsArray = Array.isArray(settings) ? settings : [];
@@ -107,7 +107,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onSave }) => {
         setFormData((prev) => ({ ...prev, [activeCategory]: categoryData }));
       }
     } catch (error: any) {
-      toast.error(error?.response?.data?.detail || "Failed to reset setting");
+      toast.error(error?.response?.data?.detail || "Échec de la réinitialisation du paramètre");
     }
   };
 
@@ -120,7 +120,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onSave }) => {
 
     try {
       await Promise.all(settingsArray.map((setting) => resetMutation.mutateAsync(setting.key)));
-      toast.success("All settings reset to defaults");
+      toast.success("Tous les paramètres ont été réinitialisés");
       // Reload settings
       const categoryData: Record<string, any> = {};
       settingsArray.forEach((setting) => {
@@ -129,7 +129,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onSave }) => {
       setFormData((prev) => ({ ...prev, [activeCategory]: categoryData }));
       setHasChanges((prev) => ({ ...prev, [activeCategory]: false }));
     } catch (error: any) {
-      toast.error("Failed to reset some settings");
+      toast.error("Échec de la réinitialisation de certains paramètres");
     }
   };
 
@@ -164,15 +164,15 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onSave }) => {
                   <div>
                     <CardTitle className="flex items-center gap-2">
                       {React.createElement(category.icon, { className: "h-5 w-5" })}
-                      {category.label} Settings
+                      Paramètres {category.label}
                     </CardTitle>
                     <CardDescription>
-                      Configure {category.label.toLowerCase()} settings and preferences
+                      Configurer les paramètres et préférences {category.label.toLowerCase()}
                     </CardDescription>
                   </div>
                   {hasChanges[category.id] && (
                     <Badge variant="outline" className="bg-yellow-50 text-yellow-800">
-                      Unsaved changes
+                      Modifications non enregistrées
                     </Badge>
                   )}
                 </div>
@@ -195,7 +195,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onSave }) => {
                               </Badge>
                             ) : (
                               <Badge variant="outline" className="text-xs bg-gray-50">
-                                Private
+                                Privé
                               </Badge>
                             )}
                           </div>
@@ -208,7 +208,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onSave }) => {
                               disabled={resetMutation.isPending}
                             >
                               <RefreshCw className="h-3 w-3 mr-1" />
-                              Reset
+                              Réinitialiser
                             </Button>
                           )}
                         </div>
@@ -217,7 +217,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onSave }) => {
                   </>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
-                    No settings found for this category
+                    Aucun paramètre pour cette catégorie
                   </div>
                 )}
               </CardContent>
@@ -232,12 +232,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onSave }) => {
                 {resetMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Resetting...
+                    Réinitialisation…
                   </>
                 ) : (
                   <>
                     <RefreshCw className="mr-2 h-4 w-4" />
-                    Reset All
+                    Tout réinitialiser
                   </>
                 )}
               </Button>
@@ -249,12 +249,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onSave }) => {
                 {updateMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    Enregistrement…
                   </>
                 ) : (
                   <>
                     <Save className="mr-2 h-4 w-4" />
-                    Save Changes
+                    Enregistrer les modifications
                   </>
                 )}
               </Button>

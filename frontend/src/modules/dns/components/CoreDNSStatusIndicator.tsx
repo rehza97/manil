@@ -24,14 +24,14 @@ export function CoreDNSStatusIndicator({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Server className="h-5 w-5" />
-            CoreDNS Status
+            État CoreDNS
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
             <span className="text-sm text-muted-foreground">
-              Checking server status...
+              Vérification du serveur…
             </span>
           </div>
         </CardContent>
@@ -68,7 +68,7 @@ export function CoreDNSStatusIndicator({
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Server className="h-5 w-5" />
-            CoreDNS Status
+            État CoreDNS
           </CardTitle>
           <Badge
             className={
@@ -80,12 +80,12 @@ export function CoreDNSStatusIndicator({
             {isHealthy ? (
               <>
                 <CheckCircle2 className="mr-1 h-3 w-3" />
-                Healthy
+                Opérationnel
               </>
             ) : (
               <>
                 <XCircle className="mr-1 h-3 w-3" />
-                Unhealthy
+                Défaillant
               </>
             )}
           </Badge>
@@ -98,23 +98,23 @@ export function CoreDNSStatusIndicator({
             <p className="font-mono font-medium">{status.version || "N/A"}</p>
           </div>
           <div>
-            <p className="text-muted-foreground">Uptime</p>
+            <p className="text-muted-foreground">Disponibilité</p>
             <p className="font-medium">
               {status.uptime || "N/A"}
             </p>
           </div>
           <div>
-            <p className="text-muted-foreground">Zones Loaded</p>
+            <p className="text-muted-foreground">Zones chargées</p>
             <p className="font-medium">{status.zones_loaded}</p>
           </div>
           <div>
-            <p className="text-muted-foreground">Total Records</p>
+            <p className="text-muted-foreground">Enregistrements totaux</p>
             <p className="font-medium">{status.records_total}</p>
           </div>
         </div>
         {status.last_reload && (
           <div className="rounded-lg bg-muted p-3 text-sm">
-            <p className="text-muted-foreground">Last Reload</p>
+            <p className="text-muted-foreground">Dernier rechargement</p>
             <p className="font-medium">
               {(() => {
                 try {

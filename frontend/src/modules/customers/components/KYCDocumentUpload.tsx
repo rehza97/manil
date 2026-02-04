@@ -48,17 +48,17 @@ const uploadFormSchema = z.object({
   documentType: z.nativeEnum(KYCDocumentType),
   documentNumber: z.string().optional(),
   expiresAt: z.string().optional(),
-  notes: z.string().max(500, "Notes must be max 500 characters").optional(),
+  notes: z.string().max(500, "Les notes doivent contenir au maximum 500 caractères").optional(),
   file: z
     .custom<FileList>()
-    .refine((files) => files?.length === 1, "Please select a file")
+    .refine((files) => files?.length === 1, "Veuillez sélectionner un fichier")
     .refine(
       (files) => files?.[0]?.size <= MAX_FILE_SIZE,
-      "File size must be less than 10MB"
+      "La taille du fichier doit être inférieure à 10 Mo"
     )
     .refine(
       (files) => ACCEPTED_FILE_TYPES.includes(files?.[0]?.type),
-      "Only PDF, JPG, and PNG files are accepted"
+      "Seuls les fichiers PDF, JPG et PNG sont acceptés"
     ),
 });
 
@@ -135,9 +135,9 @@ export function KYCDocumentUpload({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Upload KYC Document</CardTitle>
+        <CardTitle>Téléverser un document KYC</CardTitle>
         <CardDescription>
-          Upload identification or verification documents for customer review
+          Téléverser des pièces d&apos;identité ou de vérification pour examen
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -157,11 +157,11 @@ export function KYCDocumentUpload({
               name="documentType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Document Type *</FormLabel>
+                  <FormLabel>Type de document *</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select document type" />
+                        <SelectValue placeholder="Sélectionner le type de document" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -175,7 +175,7 @@ export function KYCDocumentUpload({
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Choose the type of document you are uploading
+                    Choisissez le type de document que vous téléversez
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -187,7 +187,7 @@ export function KYCDocumentUpload({
               name="file"
               render={({ field: { onChange, value, ...field } }) => (
                 <FormItem>
-                  <FormLabel>Document File *</FormLabel>
+                  <FormLabel>Fichier du document *</FormLabel>
                   <FormControl>
                     <div className="flex items-center gap-3">
                       <Input
@@ -226,17 +226,17 @@ export function KYCDocumentUpload({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Document Number{" "}
+                      N° du document{" "}
                       {requiresDocumentNumber && "*"}
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="e.g., A1234567"
+                        placeholder="ex. A1234567"
                         {...field}
                       />
                     </FormControl>
                     <FormDescription>
-                      The identification number on the document
+                      Le numéro d&apos;identification figurant sur le document
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -250,12 +250,12 @@ export function KYCDocumentUpload({
                 name="expiresAt"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Expiry Date</FormLabel>
+                    <FormLabel>Date d&apos;expiration</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
                     <FormDescription>
-                      When this document expires (if applicable)
+                      Date d&apos;expiration du document (le cas échéant)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -278,7 +278,7 @@ export function KYCDocumentUpload({
                     />
                   </FormControl>
                   <FormDescription>
-                    Add any relevant notes or context
+                    Ajoutez toute note ou contexte pertinent
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -288,7 +288,7 @@ export function KYCDocumentUpload({
             <div className="flex justify-end gap-3">
               {onCancel && (
                 <Button type="button" variant="outline" onClick={onCancel}>
-                  Cancel
+                  Annuler
                 </Button>
               )}
               <Button
@@ -298,12 +298,12 @@ export function KYCDocumentUpload({
                 {uploadDocument.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Uploading...
+                    Téléversement...
                   </>
                 ) : (
                   <>
                     <Upload className="mr-2 h-4 w-4" />
-                    Upload Document
+                    Téléverser le document
                   </>
                 )}
               </Button>

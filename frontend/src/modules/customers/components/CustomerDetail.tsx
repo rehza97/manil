@@ -64,6 +64,13 @@ export function CustomerDetail({
   const [activateError, setActivateError] = useState<string | null>(null);
   const [suspendError, setSuspendError] = useState<string | null>(null);
 
+  const STATUS_LABELS: Record<CustomerStatus, string> = {
+    [CustomerStatus.ACTIVE]: "Actif",
+    [CustomerStatus.PENDING]: "En attente",
+    [CustomerStatus.SUSPENDED]: "Suspendu",
+    [CustomerStatus.INACTIVE]: "Inactif",
+  };
+
   const getStatusBadge = (status: CustomerStatus) => {
     const variants = {
       [CustomerStatus.ACTIVE]: "default",
@@ -74,7 +81,7 @@ export function CustomerDetail({
 
     return (
       <Badge variant={variants[status]} className="ml-2">
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {STATUS_LABELS[status] ?? status}
       </Badge>
     );
   };
@@ -86,12 +93,12 @@ export function CustomerDetail({
     }
     const date = new Date(dateString);
     if (isNaN(date.getTime())) {
-      return "Invalid date";
+      return "Date invalide";
     }
     try {
       return format(date, "PPP");
     } catch (error) {
-      return "Invalid date";
+      return "Date invalide";
     }
   };
 
@@ -114,13 +121,13 @@ export function CustomerDetail({
         setActivateDialogOpen(false);
         setReason("");
         setActivateError(null);
-        toast.success("Customer activated successfully");
+        toast.success("Client activé avec succès");
       } catch (error: any) {
         console.error("[CustomerDetail.handleActivate] Error:", error);
         console.error("[CustomerDetail.handleActivate] Error response:", error?.response?.data);
         console.error("[CustomerDetail.handleActivate] Error status:", error?.response?.status);
         
-        const errorMessage = error?.response?.data?.detail || "Failed to activate customer";
+        const errorMessage = error?.response?.data?.detail || "Impossible d'activer le client";
         setActivateError(errorMessage);
         toast.error(errorMessage);
       }
@@ -136,7 +143,7 @@ export function CustomerDetail({
         setSuspendDialogOpen(false);
         setReason("");
         setSuspendError(null);
-        toast.success("Customer suspended successfully");
+        toast.success("Client suspendu avec succès");
       } catch (error: any) {
         const errorMessage = error?.response?.data?.detail || "Failed to suspend customer";
         setSuspendError(errorMessage);
@@ -165,8 +172,8 @@ export function CustomerDetail({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Error</CardTitle>
-          <CardDescription>Failed to load customer details</CardDescription>
+          <CardTitle>Erreur</CardTitle>
+          <CardDescription>Impossible de charger les détails du client</CardDescription>
         </CardHeader>
       </Card>
     );
@@ -185,30 +192,30 @@ export function CustomerDetail({
               </div>
               <CardDescription className="mt-2">
                 {customer.customerType === CustomerType.corporate
-                  ? "Corporate Customer"
-                  : "Individual Customer"}
+                  ? "Client professionnel"
+                  : "Client particulier"}
               </CardDescription>
             </div>
             <div className="flex gap-2">
               {customer.status !== CustomerStatus.ACTIVE && (
                 <Button onClick={() => setActivateDialogOpen(true)} variant="outline">
-                  Activate
+                  Activer
                 </Button>
               )}
               {customer.status === CustomerStatus.ACTIVE && (
                 <Button onClick={() => setSuspendDialogOpen(true)} variant="outline">
-                  Suspend
+                  Suspendre
                 </Button>
               )}
               {onEdit && (
                 <Button onClick={onEdit} variant="outline">
                   <Edit className="mr-2 h-4 w-4" />
-                  Edit
+                  Modifier
                 </Button>
               )}
               <Button onClick={() => setDeleteDialogOpen(true)} variant="destructive">
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete
+                Supprimer
               </Button>
             </div>
           </div>
@@ -219,13 +226,13 @@ export function CustomerDetail({
         {/* Contact Information */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Contact Information</CardTitle>
+            <CardTitle className="text-lg">Coordonnées</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">
               <Mail className="h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="text-sm font-medium">Email</p>
+                <p className="text-sm font-medium">E-mail</p>
                 <p className="text-sm text-muted-foreground">
                   {customer.email}
                 </p>
@@ -235,7 +242,7 @@ export function CustomerDetail({
             <div className="flex items-center gap-3">
               <Phone className="h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="text-sm font-medium">Phone</p>
+                <p className="text-sm font-medium">Téléphone</p>
                 <p className="text-sm text-muted-foreground">
                   {customer.phone}
                 </p>
@@ -248,13 +255,13 @@ export function CustomerDetail({
         {customer.customerType === CustomerType.corporate && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Corporate Information</CardTitle>
+              <CardTitle className="text-lg">Informations entreprise</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3">
                 <Building2 className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium">Company Name</p>
+                  <p className="text-sm font-medium">Nom de l&apos;entreprise</p>
                   <p className="text-sm text-muted-foreground">
                     {customer.companyName || "N/A"}
                   </p>
@@ -266,7 +273,7 @@ export function CustomerDetail({
                   <div className="flex items-center gap-3">
                     <User className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm font-medium">Tax ID / NIF</p>
+                      <p className="text-sm font-medium">N° TVA / SIRET</p>
                       <p className="text-sm text-muted-foreground">
                         {customer.taxId}
                       </p>
@@ -318,14 +325,14 @@ export function CustomerDetail({
           className={!customer.address && !customer.city ? "" : "md:col-span-2"}
         >
           <CardHeader>
-            <CardTitle className="text-lg">Account Information</CardTitle>
+            <CardTitle className="text-lg">Informations du compte</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="flex items-center gap-3">
                 <Calendar className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium">Created</p>
+                  <p className="text-sm font-medium">Créé le</p>
                   <p className="text-sm text-muted-foreground">
                     {formatDate(customer.createdAt)}
                   </p>
@@ -334,7 +341,7 @@ export function CustomerDetail({
               <div className="flex items-center gap-3">
                 <Calendar className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium">Last Updated</p>
+                  <p className="text-sm font-medium">Dernière mise à jour</p>
                   <p className="text-sm text-muted-foreground">
                     {formatDate(customer.updatedAt)}
                   </p>
@@ -343,7 +350,7 @@ export function CustomerDetail({
             </div>
             <Separator />
             <div>
-              <p className="text-sm font-medium mb-1">Customer ID</p>
+              <p className="text-sm font-medium mb-1">ID client</p>
               <p className="text-sm text-muted-foreground font-mono">
                 {customer.id}
               </p>
@@ -362,17 +369,17 @@ export function CustomerDetail({
       }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Activate Customer</DialogTitle>
+            <DialogTitle>Activer le client</DialogTitle>
             <DialogDescription>
-              Enter a reason for activating this customer account.
+              Saisissez la raison de l&apos;activation de ce compte client.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="activate-reason">Reason</Label>
+              <Label htmlFor="activate-reason">Raison</Label>
               <Input
                 id="activate-reason"
-                placeholder="Enter reason for activation"
+                placeholder="Raison de l'activation"
                 value={reason}
                 onChange={(e) => {
                   setReason(e.target.value);
@@ -410,17 +417,17 @@ export function CustomerDetail({
       }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Suspend Customer</DialogTitle>
+            <DialogTitle>Suspendre le client</DialogTitle>
             <DialogDescription>
-              Are you sure you want to suspend this customer? Enter a reason below.
+              Êtes-vous sûr de vouloir suspendre ce client ? Saisissez une raison ci-dessous.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="suspend-reason">Reason</Label>
+              <Label htmlFor="suspend-reason">Raison</Label>
               <Input
                 id="suspend-reason"
-                placeholder="Enter reason for suspension"
+                placeholder="Raison de la suspension"
                 value={reason}
                 onChange={(e) => {
                   setReason(e.target.value);
@@ -452,18 +459,18 @@ export function CustomerDetail({
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Customer</DialogTitle>
+            <DialogTitle>Supprimer le client</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete customer "{customer.name}"? This action cannot be undone.
+              Êtes-vous sûr de vouloir supprimer le client « {customer.name} » ? Cette action est irréversible.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              Cancel
+              Annuler
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={deleteCustomer.isPending}>
               {deleteCustomer.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete
+              Supprimer
             </Button>
           </DialogFooter>
         </DialogContent>

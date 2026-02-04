@@ -79,13 +79,13 @@ export const TemplateEditPage: React.FC = () => {
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
-          <BreadcrumbItem>Edit</BreadcrumbItem>
+          <BreadcrumbItem>Modifier</BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
 
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Edit Template</h1>
+        <h1 className="text-3xl font-bold">Modifier le modèle</h1>
         <p className="text-gray-600 mt-1">
           Update the template "{template.title}"
         </p>

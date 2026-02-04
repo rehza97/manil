@@ -85,7 +85,7 @@ async def get_payment_status(
             [r["amount"] for r in data["by_status"]], [r["status"] for r in data["by_status"]])
         if chart_b64 is not None:
             charts.append({"title": "Payment Status", "image_base64": chart_b64})
-    return await generate_report_response(db, data, "reports/base_report.html", "Payment Status", format, "payment_status", charts=charts, export_details_key="by_status", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(db, data, "reports/financial/payment_status.html", "Payment Status", format, "payment_status", charts=charts, export_details_key="by_status", generated_by=current_user.id, start_date=start, end_date=end)
 
 
 @router.get("/revenue-recognition")
@@ -97,7 +97,7 @@ async def get_revenue_recognition(
     start, end = _period_to_dates(period)
     data = await FinancialReportService(db).get_revenue_recognition_report(period=period)
     return await generate_report_response(
-        db, data, "reports/base_report.html", "Revenue Recognition", format, "revenue_recognition",
+        db, data, "reports/financial/revenue_recognition.html", "Revenue Recognition", format, "revenue_recognition",
         export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end,
     )
 
@@ -111,7 +111,7 @@ async def get_tax_summary(
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await FinancialReportService(db).get_tax_summary_report(start, end)
-    return await generate_report_response(db, data, "reports/base_report.html", "Tax Summary", format, "tax_summary", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(db, data, "reports/financial/tax_summary.html", "Tax Summary", format, "tax_summary", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
 
 
 @router.get("/profit-margin")
@@ -123,4 +123,4 @@ async def get_profit_margin(
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await FinancialReportService(db).get_profit_margin_report(start, end)
-    return await generate_report_response(db, data, "reports/base_report.html", "Profit Margin", format, "profit_margin", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(db, data, "reports/financial/profit_margin.html", "Profit Margin", format, "profit_margin", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)

@@ -47,7 +47,7 @@ async def get_vps_lifecycle(
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await HostingReportService(db).get_vps_lifecycle_report(start, end)
-    return await generate_report_response(db, data, "reports/base_report.html", "VPS Lifecycle", format, "vps_lifecycle", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(db, data, "reports/hosting/vps_lifecycle.html", "VPS Lifecycle", format, "vps_lifecycle", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
 
 
 @router.get("/vps-uptime")
@@ -59,7 +59,7 @@ async def get_vps_uptime(
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await HostingReportService(db).get_vps_uptime_report(start, end)
-    return await generate_report_response(db, data, "reports/base_report.html", "VPS Uptime", format, "vps_uptime", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(db, data, "reports/hosting/vps_uptime.html", "VPS Uptime", format, "vps_uptime", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
 
 
 @router.get("/vps-billing")
@@ -71,4 +71,4 @@ async def get_vps_billing(
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await HostingReportService(db).get_vps_billing_report(start, end)
-    return await generate_report_response(db, data, "reports/base_report.html", "VPS Billing (MRR)", format, "vps_billing", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(db, data, "reports/hosting/vps_billing.html", "VPS Billing (MRR)", format, "vps_billing", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)

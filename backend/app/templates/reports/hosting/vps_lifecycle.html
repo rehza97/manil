@@ -1,0 +1,57 @@
+{% extends "reports/base_report.html" %}
+
+{% block summary %}
+  <div class="executive-summary">
+    <div class="kpi-card">
+      <div class="kpi-value">{{ new_subscriptions }}</div>
+      <div class="kpi-label">New Subscriptions</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ cancelled }}</div>
+      <div class="kpi-label">Cancelled</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ total }}</div>
+      <div class="kpi-label">Total</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ churn_rate | format_percentage }}</div>
+      <div class="kpi-label">Churn Rate</div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block charts %}
+  {{ super() }}
+{% endblock %}
+
+{% block data %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>New Subscriptions</td>
+          <td>{{ new_subscriptions }}</td>
+        </tr>
+        <tr>
+          <td>Cancelled</td>
+          <td>{{ cancelled }}</td>
+        </tr>
+        <tr>
+          <td>Total</td>
+          <td>{{ total }}</td>
+        </tr>
+        <tr>
+          <td>Churn Rate</td>
+          <td>{{ churn_rate | format_percentage }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

@@ -42,7 +42,7 @@ import {
 } from "lucide-react";
 
 const verificationSchema = z.object({
-  notes: z.string().max(500, "Notes must be max 500 characters").optional(),
+  notes: z.string().max(500, "Les notes doivent contenir au maximum 500 caractères").optional(),
   rejectionReason: z.string().optional(),
 });
 
@@ -129,9 +129,9 @@ export function KYCDocumentVerification({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Verify KYC Document</DialogTitle>
+          <DialogTitle>Vérifier le document KYC</DialogTitle>
           <DialogDescription>
-            Review and verify or reject this customer document
+            Examiner et approuver ou rejeter ce document client
           </DialogDescription>
         </DialogHeader>
 
@@ -140,7 +140,7 @@ export function KYCDocumentVerification({
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Failed to verify document. Please try again.
+                Échec de la vérification du document. Veuillez réessayer.
               </AlertDescription>
             </Alert>
           )}
@@ -152,13 +152,13 @@ export function KYCDocumentVerification({
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-gray-600">Document Type</p>
+                  <p className="text-sm text-gray-600">Type de document</p>
                   <p className="font-medium">
                     {KYC_DOCUMENT_TYPE_LABELS[document.documentType]}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Current Status</p>
+                  <p className="text-sm text-gray-600">Statut actuel</p>
                   <KYCStatusBadge status={document.status} />
                 </div>
               </div>
@@ -174,7 +174,7 @@ export function KYCDocumentVerification({
                 <div>
                   <p className="text-sm text-gray-600 flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
-                    Uploaded
+                    Téléversé le
                   </p>
                   <p className="font-medium">
                     {format(new Date(document.createdAt), "MMM dd, yyyy HH:mm")}
@@ -196,7 +196,7 @@ export function KYCDocumentVerification({
               <div>
                 <p className="text-sm text-gray-600 flex items-center gap-1">
                   <FileText className="h-3 w-3" />
-                  File
+                  Fichier
                 </p>
                 <p className="font-medium">
                   {document.fileName} ({(document.fileSize / 1024).toFixed(2)}{" "}
@@ -220,10 +220,10 @@ export function KYCDocumentVerification({
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Verification Notes (Optional)</FormLabel>
+                    <FormLabel>Notes de vérification (optionnel)</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Add any notes about this verification..."
+                        placeholder="Ajouter des notes sur cette vérification..."
                         className="resize-none"
                         rows={3}
                         {...field}
@@ -243,11 +243,11 @@ export function KYCDocumentVerification({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Rejection Reason (Required if rejecting)
+                      Raison du rejet (obligatoire en cas de rejet)
                     </FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Explain why this document is being rejected..."
+                        placeholder="Expliquez pourquoi ce document est rejeté..."
                         className="resize-none"
                         rows={3}
                         {...field}
@@ -263,7 +263,7 @@ export function KYCDocumentVerification({
 
               <div className="flex justify-end gap-3">
                 <Button type="button" variant="outline" onClick={onClose}>
-                  Cancel
+                  Annuler
                 </Button>
                 <Button
                   type="button"
@@ -277,7 +277,7 @@ export function KYCDocumentVerification({
                   ) : (
                     <XCircle className="mr-2 h-4 w-4" />
                   )}
-                  Reject Document
+                  Rejeter le document
                 </Button>
                 <Button
                   type="button"
@@ -290,7 +290,7 @@ export function KYCDocumentVerification({
                   ) : (
                     <CheckCircle2 className="mr-2 h-4 w-4" />
                   )}
-                  Approve Document
+                  Approuver le document
                 </Button>
               </div>
             </form>

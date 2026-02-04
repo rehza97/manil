@@ -70,11 +70,11 @@ export const NotificationSettingsPage: React.FC = () => {
     mutationFn: (prefs: NotificationPrefs) => api.updateNotificationSettings(prefs),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
-      toast({ title: "Settings Saved", description: "Your notification preferences have been updated." });
+      toast({ title: "Paramètres enregistrés", description: "Vos préférences de notification ont été mises à jour." });
     },
     onError: (e) => {
-      const msg = e instanceof Error ? e.message : "Failed to save.";
-      toast({ title: "Error", description: msg, variant: "destructive" });
+      const msg = e instanceof Error ? e.message : "Échec de l'enregistrement.";
+      toast({ title: "Erreur", description: msg, variant: "destructive" });
     },
   });
 
@@ -115,7 +115,7 @@ export const NotificationSettingsPage: React.FC = () => {
         </p>
         {(errorMessage || saveMutation.isError) && (
           <p className="mt-2 text-sm text-destructive" role="alert">
-            {errorMessage ?? (saveMutation.error instanceof Error ? saveMutation.error.message : "Failed to save.")}
+            {errorMessage ?? (saveMutation.error instanceof Error ? saveMutation.error.message : "Échec de l'enregistrement.")}
           </p>
         )}
       </div>

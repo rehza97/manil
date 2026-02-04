@@ -30,14 +30,14 @@ import { Plus, Search, Eye, CheckCircle, FileText, Loader2 } from "lucide-react"
 import { format } from "date-fns";
 
 const STATUS_OPTIONS = [
-  { value: "__all__", label: "All statuses" },
-  { value: "draft", label: "Draft" },
-  { value: "pending_approval", label: "Pending approval" },
-  { value: "approved", label: "Approved" },
-  { value: "sent", label: "Sent" },
-  { value: "accepted", label: "Accepted" },
-  { value: "declined", label: "Declined" },
-  { value: "expired", label: "Expired" },
+  { value: "__all__", label: "Tous les statuts" },
+  { value: "draft", label: "Brouillon" },
+  { value: "pending_approval", label: "En attente d'approbation" },
+  { value: "approved", label: "Approuvé" },
+  { value: "sent", label: "Envoyé" },
+  { value: "accepted", label: "Accepté" },
+  { value: "declined", label: "Refusé" },
+  { value: "expired", label: "Expiré" },
 ];
 
 const statusColors: Record<string, string> = {
@@ -87,14 +87,14 @@ export const QuoteListPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Quotes</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Devis</h1>
           <p className="mt-1 text-sm text-slate-600">
-            Manage quotes, approve, and convert to orders
+            Gérer les devis, approuver et convertir en commandes
           </p>
         </div>
         <Button onClick={() => navigate(`${basePath}/quotes/new`)}>
           <Plus className="mr-2 h-4 w-4" />
-          New Quote
+          Nouveau devis
         </Button>
       </div>
 
@@ -102,7 +102,7 @@ export const QuoteListPage: React.FC = () => {
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
-            placeholder="Search by quote number..."
+            placeholder="Rechercher par n° de devis…"
             className="pl-10"
             disabled
           />
@@ -115,7 +115,7 @@ export const QuoteListPage: React.FC = () => {
           }}
         >
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Status" />
+            <SelectValue placeholder="Statut" />
           </SelectTrigger>
           <SelectContent>
             {STATUS_OPTIONS.map((o) => (
@@ -134,11 +134,11 @@ export const QuoteListPage: React.FC = () => {
           </div>
         ) : error ? (
           <div className="py-16 text-center text-sm text-red-600">
-            Failed to load quotes. Please try again.
+            Échec du chargement des devis. Veuillez réessayer.
           </div>
         ) : quotes.length === 0 ? (
           <div className="py-16 text-center text-slate-600">
-            No quotes found. Create your first quote.
+            Aucun devis trouvé. Créez votre premier devis.
           </div>
         ) : (
           <Table>
@@ -192,7 +192,7 @@ export const QuoteListPage: React.FC = () => {
                         onClick={() => navigate(`${basePath}/quotes/${q.id}`)}
                       >
                         <Eye className="h-4 w-4 mr-1" />
-                        View
+                        Voir
                       </Button>
                       {(q.status === "pending_approval" ||
                         q.status === "pending approval") && (
@@ -216,7 +216,7 @@ export const QuoteListPage: React.FC = () => {
                           }
                         >
                           <FileText className="h-4 w-4 mr-1" />
-                          Convert
+                          Convertir
                         </Button>
                       )}
                     </div>
@@ -240,7 +240,7 @@ export const QuoteListPage: React.FC = () => {
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
             >
-              Previous
+              Précédent
             </Button>
             <Button
               variant="outline"
@@ -248,7 +248,7 @@ export const QuoteListPage: React.FC = () => {
               disabled={page >= totalPages}
               onClick={() => setPage((p) => p + 1)}
             >
-              Next
+              Suivant
             </Button>
           </div>
         </div>

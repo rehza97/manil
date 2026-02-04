@@ -132,9 +132,9 @@ export const PaymentRecordingForm: React.FC<PaymentRecordingFormProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Record Payment</DialogTitle>
+          <DialogTitle>Enregistrer un paiement</DialogTitle>
           <DialogDescription>
-            Record a payment for this invoice. Maximum amount: {formatCurrency(maxAmount)}
+            Enregistrer un paiement pour cette facture. Montant maximum : {formatCurrency(maxAmount)}
           </DialogDescription>
         </DialogHeader>
 
@@ -145,7 +145,7 @@ export const PaymentRecordingForm: React.FC<PaymentRecordingFormProps> = ({
               name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Payment Amount</FormLabel>
+                  <FormLabel>Montant du paiement</FormLabel>
                   <FormControl>
                     <Input
                       {...field}

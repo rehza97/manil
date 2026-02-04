@@ -191,7 +191,7 @@ export const TicketsPage: React.FC = () => {
                     colSpan={7}
                     className="px-6 py-4 text-center text-red-500"
                   >
-                    Error loading tickets. Please try again.
+                    Erreur lors du chargement des tickets. Veuillez réessayer.
                   </td>
                 </tr>
               ) : filteredTickets.length === 0 ? (

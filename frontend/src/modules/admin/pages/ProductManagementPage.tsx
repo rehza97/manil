@@ -117,7 +117,7 @@ export const ProductManagementPage: React.FC = () => {
   };
 
   const handleDelete = async (productId: string) => {
-    if (confirm("Are you sure you want to delete this product?")) {
+    if (confirm("Voulez-vous vraiment supprimer ce produit ?")) {
       try {
         await deleteMutation.mutateAsync(productId);
       } catch (error) {
@@ -141,7 +141,7 @@ export const ProductManagementPage: React.FC = () => {
             }}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
           >
-            {showForm ? "Cancel" : "Add New Product"}
+            {showForm ? "Annuler" : "Ajouter un produit"}
           </button>
         </div>
 
@@ -150,7 +150,7 @@ export const ProductManagementPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-4 mb-4">
             <input
               type="text"
-              placeholder="Search products..."
+              placeholder="Rechercher des produits..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg"
@@ -160,10 +160,10 @@ export const ProductManagementPage: React.FC = () => {
               onChange={(e) => setFilterCategory(e.target.value || null)}
               className="px-4 py-2 border border-gray-300 rounded-lg"
             >
-              <option value="">All Categories</option>
+              <option value="">Toutes les catégories</option>
               {/* Categories would be loaded from API */}
-              <option value="electronics">Electronics</option>
-              <option value="software">Software</option>
+              <option value="electronics">Électronique</option>
+              <option value="software">Logiciels</option>
             </select>
           </div>
         </div>
@@ -172,13 +172,13 @@ export const ProductManagementPage: React.FC = () => {
         {showForm && (
           <div className="bg-white rounded-lg shadow p-6 mb-8">
             <h2 className="text-xl font-semibold mb-4">
-              {editingProductId ? "Edit Product" : "Create New Product"}
+              {editingProductId ? "Modifier le produit" : "Créer un produit"}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    Product Name
+                    Nom du produit
                   </label>
                   <input
                     type="text"
@@ -193,7 +193,7 @@ export const ProductManagementPage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    Category
+                    Catégorie
                   </label>
                   <select
                     required
@@ -203,9 +203,9 @@ export const ProductManagementPage: React.FC = () => {
                     }
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                   >
-                    <option value="">Select Category</option>
-                    <option value="cat1">Electronics</option>
-                    <option value="cat2">Software</option>
+                    <option value="">Choisir une catégorie</option>
+                    <option value="cat1">Électronique</option>
+                    <option value="cat2">Logiciels</option>
                   </select>
                 </div>
 
@@ -245,7 +245,7 @@ export const ProductManagementPage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    Sale Price
+                    Prix promo
                   </label>
                   <input
                     type="number"
@@ -267,11 +267,11 @@ export const ProductManagementPage: React.FC = () => {
 
               {/* Service Configuration */}
               <div className="mt-4">
-                <h3 className="text-lg font-semibold mb-4">Service Configuration</h3>
+                <h3 className="text-lg font-semibold mb-4">Configuration du service</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
-                      Service Type
+                      Type de service
                     </label>
                     <select
                       value={formData.service_type || "general"}
@@ -283,22 +283,22 @@ export const ProductManagementPage: React.FC = () => {
                       }
                       className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                     >
-                      <option value="general">General</option>
+                      <option value="general">Général</option>
                       <option value="dns">DNS</option>
-                      <option value="ssl">SSL Certificate</option>
-                      <option value="email">Email Hosting</option>
-                      <option value="backup">Backup Service</option>
-                      <option value="monitoring">Monitoring</option>
-                      <option value="domain">Domain Registration</option>
-                      <option value="hosting">Hosting</option>
-                      <option value="storage">Storage</option>
+                      <option value="ssl">Certificat SSL</option>
+                      <option value="email">Hébergement e-mail</option>
+                      <option value="backup">Service de sauvegarde</option>
+                      <option value="monitoring">Surveillance</option>
+                      <option value="domain">Enregistrement de domaine</option>
+                      <option value="hosting">Hébergement</option>
+                      <option value="storage">Stockage</option>
                       <option value="cdn">CDN</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
-                      Billing Cycle
+                      Cycle de facturation
                     </label>
                     <select
                       value={formData.billing_cycle || "one_time"}
@@ -310,16 +310,16 @@ export const ProductManagementPage: React.FC = () => {
                       }
                       className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                     >
-                      <option value="one_time">One Time</option>
-                      <option value="monthly">Monthly</option>
-                      <option value="yearly">Yearly</option>
-                      <option value="usage_based">Usage Based</option>
+                      <option value="one_time">Unique</option>
+                      <option value="monthly">Mensuel</option>
+                      <option value="yearly">Annuel</option>
+                      <option value="usage_based">À l'usage</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
-                      Provisioning Type
+                      Type de provisionnement
                     </label>
                     <select
                       value={formData.provisioning_type || ""}
@@ -333,16 +333,16 @@ export const ProductManagementPage: React.FC = () => {
                       }
                       className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                     >
-                      <option value="">None</option>
-                      <option value="automatic">Automatic</option>
-                      <option value="manual">Manual</option>
+                      <option value="">Aucun</option>
+                      <option value="automatic">Automatique</option>
+                      <option value="manual">Manuel</option>
                       <option value="api">API</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
-                      Trial Period (days)
+                      Période d'essai (jours)
                     </label>
                     <input
                       type="number"
@@ -357,7 +357,7 @@ export const ProductManagementPage: React.FC = () => {
                         })
                       }
                       className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="e.g., 14"
+                      placeholder="ex. 14"
                     />
                   </div>
 
@@ -374,7 +374,7 @@ export const ProductManagementPage: React.FC = () => {
                 <div className="mt-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <label className="block text-sm font-medium text-gray-700">
-                      Recurring Service
+                      Service récurrent
                     </label>
                     <input
                       type="checkbox"
@@ -410,7 +410,7 @@ export const ProductManagementPage: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Short Description
+                  Description courte
                 </label>
                 <input
                   type="text"
@@ -445,8 +445,8 @@ export const ProductManagementPage: React.FC = () => {
                 className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
                 {createMutation.isPending || updateMutation.isPending
-                  ? "Saving..."
-                  : "Save Product"}
+                  ? "Enregistrement…"
+                  : "Enregistrer le produit"}
               </button>
             </form>
           </div>
@@ -455,31 +455,31 @@ export const ProductManagementPage: React.FC = () => {
         {/* Products Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           {isLoading ? (
-            <div className="p-6 text-center">Loading...</div>
+            <div className="p-6 text-center">Chargement…</div>
           ) : productsData?.data.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">No products found</div>
+            <div className="p-6 text-center text-gray-500">Aucun produit trouvé</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                   <tr>
                     <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">
-                      Product Name
+                      Nom du produit
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">
                       SKU
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">
-                      Regular Price
+                      Prix normal
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">
-                      Sale Price
+                      Prix promo
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">
                       Service
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">
-                      Status
+                      Statut
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">
                       Actions
@@ -529,7 +529,7 @@ export const ProductManagementPage: React.FC = () => {
                                 : "bg-red-100 text-red-800"
                             }`}
                           >
-                            {product.is_visible ? "Visible" : "Hidden"}
+                            {product.is_visible ? "Visible" : "Masqué"}
                           </button>
                           <button
                             onClick={() =>
@@ -544,7 +544,7 @@ export const ProductManagementPage: React.FC = () => {
                                 : "bg-gray-100 text-gray-800"
                             }`}
                           >
-                            {product.is_featured ? "Featured" : "Regular"}
+                            {product.is_featured ? "En vedette" : "Standard"}
                           </button>
                         </div>
                       </td>
@@ -573,13 +573,13 @@ export const ProductManagementPage: React.FC = () => {
                             }}
                             className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
                           >
-                            Edit
+                            Modifier
                           </button>
                           <button
                             onClick={() => handleDelete(product.id)}
                             className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700"
                           >
-                            Delete
+                            Supprimer
                           </button>
                         </div>
                       </td>
@@ -599,10 +599,10 @@ export const ProductManagementPage: React.FC = () => {
               disabled={page === 1}
               className="px-4 py-2 border rounded-lg disabled:opacity-50"
             >
-              Previous
+              Précédent
             </button>
             <span className="px-4 py-2">
-              Page {page} of {productsData.total_pages}
+              Page {page} sur {productsData.total_pages}
             </span>
             <button
               onClick={() =>
@@ -611,7 +611,7 @@ export const ProductManagementPage: React.FC = () => {
               disabled={page === productsData.total_pages}
               className="px-4 py-2 border rounded-lg disabled:opacity-50"
             >
-              Next
+              Suivant
             </button>
           </div>
         )}

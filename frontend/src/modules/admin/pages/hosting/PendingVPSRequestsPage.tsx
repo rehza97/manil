@@ -154,9 +154,9 @@ export const PendingVPSRequestsPage: React.FC = () => {
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Pending VPS Requests</h1>
+        <h1 className="text-3xl font-bold text-slate-900">Demandes VPS en attente</h1>
         <p className="text-slate-600 mt-1">
-          Review and approve or reject VPS hosting requests
+          Examiner et approuver ou refuser les demandes d&apos;hébergement VPS
         </p>
       </div>
 
@@ -167,8 +167,8 @@ export const PendingVPSRequestsPage: React.FC = () => {
           <AlertDescription className="flex items-center justify-between">
             <span>
               {(error as any)?.response?.status === 403
-                ? "You don't have permission to view pending VPS requests. Please contact your administrator."
-                : "Failed to load pending requests. Please try again."}
+                ? "Vous n'avez pas la permission de voir les demandes VPS en attente. Contactez votre administrateur."
+                : "Échec du chargement des demandes. Veuillez réessayer."}
             </span>
             {(error as any)?.response?.status !== 403 && (
               <Button
@@ -207,10 +207,10 @@ export const PendingVPSRequestsPage: React.FC = () => {
         <Card className="p-12 text-center">
           <Clock className="h-12 w-12 text-slate-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-slate-900 mb-2">
-            No pending requests
+            Aucune demande en attente
           </h3>
           <p className="text-slate-600">
-            All VPS requests have been processed.
+            Toutes les demandes VPS ont été traitées.
           </p>
         </Card>
       )}
@@ -223,11 +223,11 @@ export const PendingVPSRequestsPage: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Subscription Number</TableHead>
-                    <TableHead>Customer</TableHead>
+                    <TableHead>N° abonnement</TableHead>
+                    <TableHead>Client</TableHead>
                     <TableHead>Plan</TableHead>
-                    <TableHead>Specs</TableHead>
-                    <TableHead>Requested Date</TableHead>
+                    <TableHead>Spécifications</TableHead>
+                    <TableHead>Date de demande</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -269,7 +269,7 @@ export const PendingVPSRequestsPage: React.FC = () => {
                               disabled={approveRequest.isPending}
                             >
                               <CheckCircle2 className="h-4 w-4 mr-2" />
-                              Approve
+                              Approuver
                             </Button>
                             <Button
                               size="sm"
@@ -278,7 +278,7 @@ export const PendingVPSRequestsPage: React.FC = () => {
                               disabled={rejectRequest.isPending}
                             >
                               <X className="h-4 w-4 mr-2" />
-                              Reject
+                              Refuser
                             </Button>
                           </div>
                         </TableCell>
@@ -294,9 +294,9 @@ export const PendingVPSRequestsPage: React.FC = () => {
           {pagination && pagination.total_pages > 1 && (
             <div className="flex items-center justify-between">
               <div className="text-sm text-slate-600">
-                Showing {(page - 1) * pageSize + 1} to{" "}
-                {Math.min(page * pageSize, pagination.total)} of{" "}
-                {pagination.total} requests
+                Affichage de {(page - 1) * pageSize + 1} à{" "}
+                {Math.min(page * pageSize, pagination.total)} sur{" "}
+                {pagination.total} demandes
               </div>
               <div className="flex items-center gap-2">
                 <select
@@ -307,9 +307,9 @@ export const PendingVPSRequestsPage: React.FC = () => {
                   }}
                   className="px-3 py-1 border rounded-md text-sm"
                 >
-                  <option value={10}>10 per page</option>
-                  <option value={20}>20 per page</option>
-                  <option value={50}>50 per page</option>
+                  <option value={10}>10 par page</option>
+                  <option value={20}>20 par page</option>
+                  <option value={50}>50 par page</option>
                 </select>
                 <Button
                   variant="outline"
@@ -317,10 +317,10 @@ export const PendingVPSRequestsPage: React.FC = () => {
                   onClick={() => setPage(Math.max(1, page - 1))}
                   disabled={page === 1}
                 >
-                  Previous
+                  Précédent
                 </Button>
                 <span className="text-sm text-slate-600">
-                  Page {page} of {pagination.total_pages}
+                  Page {page} sur {pagination.total_pages}
                 </span>
                 <Button
                   variant="outline"
@@ -330,7 +330,7 @@ export const PendingVPSRequestsPage: React.FC = () => {
                   }
                   disabled={page === pagination.total_pages}
                 >
-                  Next
+                  Suivant
                 </Button>
               </div>
             </div>
@@ -342,29 +342,29 @@ export const PendingVPSRequestsPage: React.FC = () => {
       <AlertDialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Approve VPS Request</AlertDialogTitle>
+            <AlertDialogTitle>Approuver la demande VPS</AlertDialogTitle>
             <AlertDialogDescription>
               {selectedRequest && (
                 <>
-                  You are about to approve the VPS request for{" "}
+                  Vous êtes sur le point d&apos;approuver la demande VPS pour{" "}
                   <strong>{selectedRequest.subscription_number}</strong>.
                   <br />
                   <br />
-                  This will trigger automated provisioning. The VPS will be ready
-                  in approximately 60 seconds after approval.
+                  Cela déclenchera le provisionnement automatique. Le VPS sera prêt
+                  environ 60 secondes après l&apos;approbation.
                 </>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={approveRequest.isPending}>
-              Cancel
+              Annuler
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmApprove}
               disabled={approveRequest.isPending}
             >
-              {approveRequest.isPending ? "Approving..." : "Confirm Approval"}
+              {approveRequest.isPending ? "Approbation…" : "Confirmer l'approbation"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -382,16 +382,16 @@ export const PendingVPSRequestsPage: React.FC = () => {
 
           <div className="space-y-3">
             <div className="text-sm text-slate-600">
-              Status: {downloadStatus || "QUEUED"} — {downloadProgress}%
+              Statut : {downloadStatus || "EN FILE"} — {downloadProgress} %
             </div>
             <pre className="bg-slate-900 text-slate-100 p-4 rounded-md overflow-x-auto text-sm max-h-[300px] overflow-y-auto">
-              {downloadLogs || "Waiting for download logs…"}
+              {downloadLogs || "En attente des logs de téléchargement…"}
             </pre>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDownloadDialog(false)}>
-              Close
+              Fermer
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -401,23 +401,23 @@ export const PendingVPSRequestsPage: React.FC = () => {
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reject VPS Request</DialogTitle>
+            <DialogTitle>Refuser la demande VPS</DialogTitle>
             <DialogDescription>
               {selectedRequest && (
                 <>
-                  Reject VPS request for{" "}
+                  Refuser la demande VPS pour{" "}
                   <strong>{selectedRequest.subscription_number}</strong>.
-                  Please provide a reason for rejection.
+                  Veuillez indiquer un motif de refus.
                 </>
               )}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="rejectReason">Rejection Reason</Label>
+              <Label htmlFor="rejectReason">Motif du refus</Label>
               <Textarea
                 id="rejectReason"
-                placeholder="Enter reason for rejection..."
+                placeholder="Saisir le motif du refus…"
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 rows={4}
@@ -430,14 +430,14 @@ export const PendingVPSRequestsPage: React.FC = () => {
               onClick={() => setShowRejectDialog(false)}
               disabled={rejectRequest.isPending}
             >
-              Cancel
+              Annuler
             </Button>
             <Button
               variant="destructive"
               onClick={handleConfirmReject}
               disabled={!rejectReason.trim() || rejectRequest.isPending}
             >
-              {rejectRequest.isPending ? "Rejecting..." : "Reject Request"}
+              {rejectRequest.isPending ? "Refus…" : "Refuser la demande"}
             </Button>
           </DialogFooter>
         </DialogContent>

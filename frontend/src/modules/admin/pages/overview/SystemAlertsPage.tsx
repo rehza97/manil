@@ -74,11 +74,11 @@ export const SystemAlertsPage: React.FC = () => {
       queryClient.invalidateQueries({
         queryKey: ["admin", "system", "alerts"],
       });
-      toast.success("Alert resolved successfully");
+      toast.success("Alerte résolue avec succès");
       refetch();
     },
     onError: () => {
-      toast.error("Failed to resolve alert");
+      toast.error("Échec de la résolution de l'alerte");
     },
   });
 
@@ -88,11 +88,11 @@ export const SystemAlertsPage: React.FC = () => {
       queryClient.invalidateQueries({
         queryKey: ["admin", "system", "alerts"],
       });
-      toast.success("Alert acknowledged successfully");
+      toast.success("Alerte prise en compte");
       refetch();
     },
     onError: () => {
-      toast.error("Failed to acknowledge alert");
+      toast.error("Échec de la prise en compte de l'alerte");
     },
   });
 
@@ -119,14 +119,14 @@ export const SystemAlertsPage: React.FC = () => {
         return (
           <Badge className="bg-red-100 text-red-800">
             <XCircle className="h-3 w-3 mr-1" />
-            Critical
+            Critique
           </Badge>
         );
       case "warning":
         return (
           <Badge className="bg-yellow-100 text-yellow-800">
             <AlertTriangle className="h-3 w-3 mr-1" />
-            Warning
+            Avertissement
           </Badge>
         );
       case "info":
@@ -147,15 +147,15 @@ export const SystemAlertsPage: React.FC = () => {
         return (
           <Badge className="bg-green-100 text-green-800">
             <CheckCircle className="h-3 w-3 mr-1" />
-            Resolved
+            Résolu
           </Badge>
         );
       case "acknowledged":
         return (
-          <Badge className="bg-blue-100 text-blue-800">Acknowledged</Badge>
+          <Badge className="bg-blue-100 text-blue-800">Pris en compte</Badge>
         );
       case "active":
-        return <Badge className="bg-orange-100 text-orange-800">Active</Badge>;
+        return <Badge className="bg-orange-100 text-orange-800">Actif</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -176,30 +176,30 @@ export const SystemAlertsPage: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <AlertTriangle className="h-8 w-8" />
-            System Alerts
+            Alertes système
           </h1>
           <p className="text-slate-600 mt-2">
-            Monitor and manage system alerts and notifications.
+            Surveillez et gérez les alertes et notifications système.
           </p>
         </div>
         <Button variant="outline" onClick={handleRefresh} disabled={isLoading}>
           <RefreshCw
             className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
           />
-          Refresh
+          Actualiser
         </Button>
       </div>
 
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Filters</CardTitle>
+          <CardTitle>Filtres</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
               <Input
-                placeholder="Search alerts..."
+                placeholder="Rechercher des alertes…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -207,25 +207,25 @@ export const SystemAlertsPage: React.FC = () => {
 
             <Select value={severityFilter} onValueChange={setSeverityFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="Severity" />
+                <SelectValue placeholder="Gravité" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Severities</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
-                <SelectItem value="warning">Warning</SelectItem>
+                <SelectItem value="all">Toutes les gravités</SelectItem>
+                <SelectItem value="critical">Critique</SelectItem>
+                <SelectItem value="warning">Avertissement</SelectItem>
                 <SelectItem value="info">Info</SelectItem>
               </SelectContent>
             </Select>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="Status" />
+                <SelectValue placeholder="Statut" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="acknowledged">Acknowledged</SelectItem>
-                <SelectItem value="resolved">Resolved</SelectItem>
+                <SelectItem value="all">Tous les statuts</SelectItem>
+                <SelectItem value="active">Actif</SelectItem>
+                <SelectItem value="acknowledged">Pris en compte</SelectItem>
+                <SelectItem value="resolved">Résolu</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -250,7 +250,7 @@ export const SystemAlertsPage: React.FC = () => {
           ) : filteredAlerts.length === 0 ? (
             <div className="text-center py-12 text-slate-500">
               <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-              <p>No alerts found matching your filters</p>
+              <p>Aucune alerte ne correspond à vos filtres</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -280,7 +280,7 @@ export const SystemAlertsPage: React.FC = () => {
                         <span>{format(new Date(alert.timestamp), "PPp")}</span>
                         {alert.resolved_at && (
                           <span>
-                            Resolved:{" "}
+                            Résolu :{" "}
                             {format(new Date(alert.resolved_at), "PPp")}
                           </span>
                         )}

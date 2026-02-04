@@ -89,7 +89,7 @@ export const EmailSendHistoryPage: React.FC = () => {
       );
       setHistory(response.data);
     } catch (error: any) {
-      toast.error("Failed to load send history", {
+      toast.error("Échec du chargement de l'historique d'envoi", {
         description: error.response?.data?.detail || error.message,
       });
     } finally {
@@ -122,7 +122,7 @@ export const EmailSendHistoryPage: React.FC = () => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Email Send History</CardTitle>
+          <CardTitle>Historique d'envoi d'e-mails</CardTitle>
           <CardDescription>
             View and filter email send history and delivery status
           </CardDescription>
@@ -132,7 +132,7 @@ export const EmailSendHistoryPage: React.FC = () => {
             <div className="flex-1">
               <label className="text-sm font-medium mb-2 block">Recipient Email</label>
               <Input
-                placeholder="Filter by email..."
+                placeholder="Filtrer par e-mail…"
                 value={filters.recipient_email}
                 onChange={(e) =>
                   setFilters({ ...filters, recipient_email: e.target.value, page: 1 })
@@ -174,10 +174,10 @@ export const EmailSendHistoryPage: React.FC = () => {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
+<SelectValue placeholder="Tous les statuts" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les statuts</SelectItem>
                   <SelectItem value="sent">Sent</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="failed">Failed</SelectItem>
@@ -242,17 +242,17 @@ export const EmailSendHistoryPage: React.FC = () => {
                     disabled={filters.page === 1}
                     onClick={() => setFilters({ ...filters, page: filters.page - 1 })}
                   >
-                    Previous
+                    Précédent
                   </Button>
                   <span className="text-sm text-muted-foreground">
-                    Page {filters.page} of {history.total_pages}
+                    Page {filters.page} sur {history.total_pages}
                   </span>
                   <Button
                     variant="outline"
                     disabled={filters.page >= history.total_pages}
                     onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
                   >
-                    Next
+                    Suivant
                   </Button>
                 </div>
               )}

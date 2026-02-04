@@ -45,7 +45,7 @@ async def get_business_health(
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await ExecutiveReportService(db).get_business_health_report(start, end)
-    return await generate_report_response(db, data, "reports/base_report.html", "Business Health", format, "business_health", export_details_key="revenue_trend", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(db, data, "reports/executive/business_health.html", "Business Health", format, "business_health", export_details_key="revenue_trend", generated_by=current_user.id, start_date=start, end_date=end)
 
 
 @router.get("/forecast")
@@ -57,4 +57,4 @@ async def get_forecast(
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await ExecutiveReportService(db).get_forecast_report(months=months, start_date=start, end_date=end)
-    return await generate_report_response(db, data, "reports/base_report.html", "Forecast", format, "forecast", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(db, data, "reports/executive/forecast.html", "Forecast", format, "forecast", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)

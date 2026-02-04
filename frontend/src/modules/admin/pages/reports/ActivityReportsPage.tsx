@@ -69,15 +69,15 @@ export const ActivityReportsPage: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Activity className="h-8 w-8" />
-            Activity Reports
+            Rapports d&apos;activité
           </h1>
           <p className="text-slate-600 mt-2">
-            System-wide activity analysis and usage patterns.
+            Analyse d&apos;activité système et tendances d&apos;utilisation.
           </p>
         </div>
         <Alert>
           <AlertDescription>
-            No activity report data available for the selected period.
+            Aucune donnée de rapport d&apos;activité pour la période sélectionnée.
           </AlertDescription>
         </Alert>
       </div>
@@ -113,7 +113,7 @@ export const ActivityReportsPage: React.FC = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Total Activities
+              Total des activités
             </CardTitle>
             <Activity className="h-4 w-4 text-slate-400" />
           </CardHeader>
@@ -121,14 +121,14 @@ export const ActivityReportsPage: React.FC = () => {
             <div className="text-2xl font-bold">
               {reportData.total_activities || 0}
             </div>
-            <p className="text-xs text-slate-500 mt-1">All system activities</p>
+            <p className="text-xs text-slate-500 mt-1">Toutes les activités système</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Activity Types
+              Types d&apos;activité
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-slate-400" />
           </CardHeader>
@@ -137,27 +137,27 @@ export const ActivityReportsPage: React.FC = () => {
               {(reportData.activities_by_type || []).length}
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Different action types
+              Types d&apos;action distincts
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <CardTitle className="text-sm font-medium">Utilisateurs actifs</CardTitle>
             <Users className="h-4 w-4 text-slate-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {(reportData.activities_by_user || []).length}
             </div>
-            <p className="text-xs text-slate-500 mt-1">Users with activity</p>
+            <p className="text-xs text-slate-500 mt-1">Utilisateurs avec activité</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Top Resources</CardTitle>
+            <CardTitle className="text-sm font-medium">Ressources les plus consultées</CardTitle>
             <Clock className="h-4 w-4 text-slate-400" />
           </CardHeader>
           <CardContent>
@@ -165,7 +165,7 @@ export const ActivityReportsPage: React.FC = () => {
               {(reportData.top_resources || []).length}
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Most accessed resources
+              Ressources les plus accédées
             </p>
           </CardContent>
         </Card>
@@ -176,8 +176,8 @@ export const ActivityReportsPage: React.FC = () => {
         {/* Activity by Type */}
         <Card>
           <CardHeader>
-            <CardTitle>Activities by Type</CardTitle>
-            <CardDescription>Distribution of action types</CardDescription>
+            <CardTitle>Activités par type</CardTitle>
+            <CardDescription>Répartition des types d&apos;action</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -196,8 +196,8 @@ export const ActivityReportsPage: React.FC = () => {
         {/* Top Resources */}
         <Card>
           <CardHeader>
-            <CardTitle>Top Resources</CardTitle>
-            <CardDescription>Most accessed resources</CardDescription>
+            <CardTitle>Ressources les plus consultées</CardTitle>
+            <CardDescription>Ressources les plus accédées</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -207,7 +207,7 @@ export const ActivityReportsPage: React.FC = () => {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="count" fill="#10b981" name="Access Count" />
+                <Bar dataKey="count" fill="#10b981" name="Nombre d'accès" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -232,7 +232,7 @@ export const ActivityReportsPage: React.FC = () => {
                 type="monotone"
                 dataKey="count"
                 stroke="#3b82f6"
-                name="Activity Count"
+                name="Nombre d'activités"
               />
             </LineChart>
           </ResponsiveContainer>
@@ -242,8 +242,8 @@ export const ActivityReportsPage: React.FC = () => {
       {/* Top Users by Activity */}
       <Card>
         <CardHeader>
-          <CardTitle>Top Users by Activity</CardTitle>
-          <CardDescription>Most active users in the system</CardDescription>
+            <CardTitle>Utilisateurs les plus actifs</CardTitle>
+            <CardDescription>Utilisateurs les plus actifs du système</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -266,7 +266,7 @@ export const ActivityReportsPage: React.FC = () => {
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-bold">{user.count}</p>
-                    <p className="text-xs text-slate-500">activities</p>
+                    <p className="text-xs text-slate-500">activités</p>
                   </div>
                 </div>
               )

@@ -42,13 +42,13 @@ export const ActivityLogsPage: React.FC = () => {
       const res = await adminLogsApi.exportAuditLogs(format);
       await downloadMutation.mutateAsync(res.file_name);
       toast({
-        title: "Export successful",
-        description: `Activity logs exported (${format.toUpperCase()}).`,
+        title: "Export réussi",
+        description: `Journaux d'activité exportés (${format.toUpperCase()}).`,
       });
     } catch (err) {
       toast({
-        title: "Export failed",
-        description: err instanceof Error ? err.message : "Failed to export activity logs",
+        title: "Échec de l'export",
+        description: err instanceof Error ? err.message : "Échec de l'export des journaux d'activité",
         variant: "destructive",
       });
     }
@@ -76,9 +76,9 @@ export const ActivityLogsPage: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     return status === "success" ? (
-      <Badge className="bg-green-100 text-green-800">Success</Badge>
+      <Badge className="bg-green-100 text-green-800">Succès</Badge>
     ) : (
-      <Badge className="bg-red-100 text-red-800">Failed</Badge>
+      <Badge className="bg-red-100 text-red-800">Échec</Badge>
     );
   };
 
@@ -91,7 +91,7 @@ export const ActivityLogsPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Loading activity logs...</span>
+        <span className="ml-2">Chargement des journaux d'activité…</span>
       </div>
     );
   }
@@ -101,9 +101,9 @@ export const ActivityLogsPage: React.FC = () => {
       <div className="text-center py-8">
         <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
         <h3 className="text-lg font-medium text-gray-900 mb-2">
-          Error loading activity logs
+          Erreur lors du chargement des journaux d'activité
         </h3>
-        <p className="text-gray-500">Please try again later.</p>
+        <p className="text-gray-500">Veuillez réessayer plus tard.</p>
       </div>
     );
   }
@@ -113,21 +113,21 @@ export const ActivityLogsPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Activity Logs</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Journaux d'activité</h1>
           <p className="text-gray-600 mt-1">
-            Monitor user login history and security events
+            Suivre l'historique de connexion et les événements de sécurité
           </p>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="flex items-center gap-2" disabled={downloadMutation.isPending}>
               <Download className="w-4 h-4" />
-              {downloadMutation.isPending ? "Exporting..." : "Export Logs"}
+              {downloadMutation.isPending ? "Export en cours…" : "Exporter les journaux"}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleExport("csv")}>Export CSV</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleExport("excel")}>Export Excel</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExport("csv")}>Exporter CSV</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExport("excel")}>Exporter Excel</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -138,7 +138,7 @@ export const ActivityLogsPage: React.FC = () => {
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
-              placeholder="Search by user, IP address..."
+              placeholder="Rechercher par utilisateur, adresse IP…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && handleSearch()}
@@ -146,19 +146,19 @@ export const ActivityLogsPage: React.FC = () => {
             />
           </div>
           <Button variant="outline" onClick={handleSearch}>
-            Search
+            Rechercher
           </Button>
           <select className="px-3 py-2 border rounded-md">
-            <option value="">All Actions</option>
-            <option value="login">Login</option>
-            <option value="logout">Logout</option>
-            <option value="failed_login">Failed Login</option>
+            <option value="">Toutes les actions</option>
+            <option value="login">Connexion</option>
+            <option value="logout">Déconnexion</option>
+            <option value="failed_login">Échec de connexion</option>
           </select>
           <select className="px-3 py-2 border rounded-md">
-            <option value="">Last 7 days</option>
-            <option value="today">Today</option>
-            <option value="30days">Last 30 days</option>
-            <option value="90days">Last 90 days</option>
+            <option value="">7 derniers jours</option>
+            <option value="today">Aujourd'hui</option>
+            <option value="30days">30 derniers jours</option>
+            <option value="90days">90 derniers jours</option>
           </select>
         </div>
       </Card>
@@ -170,22 +170,22 @@ export const ActivityLogsPage: React.FC = () => {
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Timestamp
+                  Date et heure
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
+                  Utilisateur
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Action
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  Statut
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  IP Address
+                  Adresse IP
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Device
+                  Appareil
                 </th>
               </tr>
             </thead>
@@ -196,7 +196,7 @@ export const ActivityLogsPage: React.FC = () => {
                     colSpan={6}
                     className="px-6 py-4 text-center text-gray-500"
                   >
-                    No activity logs found
+                    Aucun journal d'activité trouvé
                   </td>
                 </tr>
               ) : (
@@ -247,7 +247,7 @@ export const ActivityLogsPage: React.FC = () => {
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Logins</p>
+              <p className="text-sm text-gray-600">Total des connexions</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
                 {stats?.total_logins || 0}
               </p>
@@ -271,7 +271,7 @@ export const ActivityLogsPage: React.FC = () => {
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Active Sessions</p>
+              <p className="text-sm text-gray-600">Sessions actives</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
                 {stats?.active_sessions || 0}
               </p>
@@ -283,7 +283,7 @@ export const ActivityLogsPage: React.FC = () => {
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Unique IPs</p>
+              <p className="text-sm text-gray-600">IP uniques</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
                 {stats?.unique_ips || 0}
               </p>

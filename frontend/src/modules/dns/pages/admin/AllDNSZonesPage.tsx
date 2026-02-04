@@ -85,7 +85,7 @@ export default function AllDNSZonesPage() {
   };
 
   const handleSuspend = (zoneId: string) => {
-    const reason = prompt("Enter suspension reason:");
+    const reason = prompt("Motif de suspension :");
     if (reason) {
       suspendMutation.mutate({ zoneId, reason });
     }
@@ -95,7 +95,7 @@ export default function AllDNSZonesPage() {
     try {
       // Use existing zones data from the query (already loaded)
       if (zones.length === 0) {
-        alert("No zones to export. Please ensure zones are loaded.");
+        alert("Aucune zone à exporter. Vérifiez que les zones sont chargées.");
         return;
       }
       
@@ -103,7 +103,7 @@ export default function AllDNSZonesPage() {
       exportZonesToCSV(zones);
     } catch (error) {
       console.error("Export failed:", error);
-      alert("Failed to export zones. Please try again.");
+      alert("Échec de l'export des zones. Veuillez réessayer.");
     }
   };
 
@@ -120,19 +120,19 @@ export default function AllDNSZonesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">All DNS Zones</h1>
+          <h1 className="text-3xl font-bold">Toutes les zones DNS</h1>
           <p className="text-muted-foreground">
-            System-wide DNS zone management and monitoring
+            Gestion et surveillance des zones DNS à l&apos;échelle du système
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleExportAll}>
             <Download className="mr-2 h-4 w-4" />
-            Export All
+            Tout exporter
           </Button>
           <Button onClick={() => setShowCreateSystemDialog(true)}>
             <Shield className="mr-2 h-4 w-4" />
-            Create System Zone
+            Créer une zone système
           </Button>
         </div>
       </div>
@@ -140,14 +140,14 @@ export default function AllDNSZonesPage() {
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Filters</CardTitle>
+          <CardTitle>Filtres</CardTitle>
         </CardHeader>
         <CardContent className="flex gap-4">
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by zone name or customer..."
+                placeholder="Rechercher par nom de zone ou client…"
                 className="pl-8"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -161,13 +161,13 @@ export default function AllDNSZonesPage() {
             }
           >
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Filter by status" />
+              <SelectValue placeholder="Filtrer par statut" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value={DNSZoneStatus.ACTIVE}>Active</SelectItem>
-              <SelectItem value={DNSZoneStatus.PENDING}>Pending</SelectItem>
-              <SelectItem value={DNSZoneStatus.SUSPENDED}>Suspended</SelectItem>
+              <SelectItem value="all">Tous les statuts</SelectItem>
+              <SelectItem value={DNSZoneStatus.ACTIVE}>Actif</SelectItem>
+              <SelectItem value={DNSZoneStatus.PENDING}>En attente</SelectItem>
+              <SelectItem value={DNSZoneStatus.SUSPENDED}>Suspendu</SelectItem>
             </SelectContent>
           </Select>
         </CardContent>
@@ -177,7 +177,7 @@ export default function AllDNSZonesPage() {
       {error && (
         <Alert variant="destructive">
           <AlertDescription>
-            Failed to load DNS zones. Please try again later.
+            Échec du chargement des zones DNS. Veuillez réessayer plus tard.
           </AlertDescription>
         </Alert>
       )}
@@ -185,8 +185,8 @@ export default function AllDNSZonesPage() {
       {/* Zones Table */}
       <Card>
         <CardHeader>
-          <CardTitle>DNS Zones ({totalCount})</CardTitle>
-          <CardDescription>All DNS zones across the system</CardDescription>
+          <CardTitle>Zones DNS ({totalCount})</CardTitle>
+          <CardDescription>Toutes les zones DNS du système</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -200,11 +200,11 @@ export default function AllDNSZonesPage() {
             </div>
           ) : zones.length === 0 ? (
             <div className="rounded-lg border border-dashed p-12 text-center">
-              <h3 className="mb-2 text-lg font-semibold">No DNS zones found</h3>
+              <h3 className="mb-2 text-lg font-semibold">Aucune zone DNS trouvée</h3>
               <p className="mb-4 text-sm text-muted-foreground">
                 {searchQuery || statusFilter !== "all"
-                  ? "Try adjusting your filters"
-                  : "No DNS zones have been created yet"}
+                  ? "Essayez d&apos;ajuster vos filtres"
+                  : "Aucune zone DNS n&apos;a encore été créée"}
               </p>
             </div>
           ) : (
@@ -212,12 +212,12 @@ export default function AllDNSZonesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Zone Name</TableHead>
+                    <TableHead>Nom de zone</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Records</TableHead>
-                    <TableHead>Created</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Enregistrements</TableHead>
+                    <TableHead>Créé le</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -231,11 +231,11 @@ export default function AllDNSZonesPage() {
                         {zone.zone_type === DNSZoneType.SYSTEM ? (
                           <span className="flex items-center gap-1 text-sm text-muted-foreground">
                             <Shield className="h-3 w-3" />
-                            System
+                            Système
                           </span>
                         ) : (
                           <span className="text-sm text-muted-foreground">
-                            Customer
+                            Client
                           </span>
                         )}
                       </TableCell>
@@ -264,14 +264,14 @@ export default function AllDNSZonesPage() {
                                 navigate(`/admin/dns/zones/${zone.id}`)
                               }
                             >
-                              View Details
+                              Voir les détails
                             </DropdownMenuItem>
                             {(zone.status === DNSZoneStatus.PENDING ||
                               zone.status === DNSZoneStatus.SUSPENDED) && (
                               <DropdownMenuItem
                                 onClick={() => handleActivate(zone.id)}
                               >
-                                Activate Zone
+                                Activer la zone
                               </DropdownMenuItem>
                             )}
                             {zone.status === DNSZoneStatus.ACTIVE && (
@@ -279,7 +279,7 @@ export default function AllDNSZonesPage() {
                                 onClick={() => handleSuspend(zone.id)}
                                 className="text-destructive"
                               >
-                                Suspend Zone
+                                Suspendre la zone
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
@@ -301,10 +301,10 @@ export default function AllDNSZonesPage() {
       >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Create System DNS Zone</DialogTitle>
+            <DialogTitle>Créer une zone DNS système</DialogTitle>
             <DialogDescription>
-              Create a system DNS zone that is not linked to any VPS
-              subscription. System zones are managed by administrators only.
+              Créer une zone DNS système non liée à un abonnement VPS.
+              Les zones système sont gérées uniquement par les administrateurs.
             </DialogDescription>
           </DialogHeader>
           <SystemDNSZoneForm

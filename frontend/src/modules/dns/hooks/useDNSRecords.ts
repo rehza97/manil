@@ -74,16 +74,16 @@ export const useCreateDNSRecord = () => {
       queryClient.invalidateQueries({ queryKey: ["dns", "statistics"] });
       
       toast({
-        title: "Record Created",
-        description: "DNS record has been created successfully.",
+        title: "Enregistrement créé",
+        description: "L'enregistrement DNS a été créé avec succès.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Failed to Create Record",
+        title: "Échec de la création de l'enregistrement",
         description:
           error.response?.data?.detail ||
-          "An error occurred while creating the DNS record",
+          "Une erreur s'est produite lors de la création de l'enregistrement DNS",
         variant: "destructive",
       });
     },
@@ -117,23 +117,23 @@ export const useBulkCreateDNSRecords = () => {
       
       if (failureCount === 0) {
         toast({
-          title: "Records Created",
-          description: `Successfully created ${successCount} DNS records.`,
+          title: "Enregistrements créés",
+          description: `${successCount} enregistrement(s) DNS créé(s) avec succès.`,
         });
       } else {
         toast({
-          title: "Partial Success",
-          description: `Created ${successCount} records, ${failureCount} failed.`,
+          title: "Succès partiel",
+          description: `${successCount} enregistrement(s) créé(s), ${failureCount} en échec.`,
           variant: "default",
         });
       }
     },
     onError: (error: any) => {
       toast({
-        title: "Bulk Creation Failed",
+        title: "Échec de la création en masse",
         description:
           error.response?.data?.detail ||
-          "An error occurred while creating records",
+          "Une erreur s'est produite lors de la création des enregistrements",
         variant: "destructive",
       });
     },
@@ -162,16 +162,16 @@ export const useUpdateDNSRecord = () => {
       queryClient.invalidateQueries({ queryKey: ["dns", "records", "detail", record.id] });
       
       toast({
-        title: "Record Updated",
-        description: "DNS record has been updated successfully.",
+        title: "Enregistrement mis à jour",
+        description: "L'enregistrement DNS a été mis à jour avec succès.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Update Failed",
+        title: "Échec de la mise à jour",
         description:
           error.response?.data?.detail ||
-          "An error occurred while updating the record",
+          "Une erreur s'est produite lors de la mise à jour de l'enregistrement",
         variant: "destructive",
       });
     },
@@ -195,16 +195,16 @@ export const useDeleteDNSRecord = () => {
       queryClient.invalidateQueries({ queryKey: ["dns", "statistics"] });
       
       toast({
-        title: "Record Deleted",
-        description: "DNS record has been deleted successfully.",
+        title: "Enregistrement supprimé",
+        description: "L'enregistrement DNS a été supprimé avec succès.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Delete Failed",
+        title: "Échec de la suppression",
         description:
           error.response?.data?.detail ||
-          "An error occurred while deleting the record",
+          "Une erreur s'est produite lors de la suppression de l'enregistrement",
         variant: "destructive",
       });
     },

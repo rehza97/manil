@@ -52,7 +52,7 @@ export const UserRolesPage: React.FC = () => {
     if (selectedRoleId === user?.role_id) {
       toast({
         title: "Info",
-        description: "No changes to save",
+        description: "Aucune modification à enregistrer",
         variant: "default",
       });
       return;
@@ -67,14 +67,14 @@ export const UserRolesPage: React.FC = () => {
       });
 
       toast({
-        title: "Success",
-        description: "User role updated successfully",
+        title: "Succès",
+        description: "Rôle utilisateur mis à jour avec succès",
       });
       navigate(`/admin/users/${id}`);
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.response?.data?.detail || "Failed to update user role",
+        title: "Erreur",
+        description: error.response?.data?.detail || "Échec de la mise à jour du rôle utilisateur",
         variant: "destructive",
       });
     }
@@ -84,7 +84,7 @@ export const UserRolesPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        <span className="ml-2 text-gray-500">Loading roles...</span>
+        <span className="ml-2 text-gray-500">Chargement des rôles…</span>
       </div>
     );
   }
@@ -93,22 +93,22 @@ export const UserRolesPage: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <AlertCircle className="h-12 w-12 text-gray-400 mb-4" />
-        <p className="text-gray-500">User not found</p>
+        <p className="text-gray-500">Utilisateur introuvable</p>
         <Button
           variant="outline"
           onClick={() => navigate("/admin/users")}
           className="mt-4"
         >
-          Back to Users
+          Retour aux utilisateurs
         </Button>
       </div>
     );
   }
 
   const roleDescriptions = {
-    admin: "Full system access with all permissions. Can manage users, roles, settings, and all system features.",
-    corporate: "Corporate account management with customer oversight. Can manage customers, tickets, products, orders, invoices, and quotes.",
-    client: "Client portal access for service management. Can view services, create tickets, manage orders, and view invoices.",
+    admin: "Accès complet au système avec toutes les permissions. Peut gérer les utilisateurs, rôles, paramètres et toutes les fonctionnalités.",
+    corporate: "Gestion des comptes entreprise avec supervision des clients. Peut gérer les clients, tickets, produits, commandes, factures et devis.",
+    client: "Accès au portail client pour la gestion des services. Peut consulter les services, créer des tickets, gérer les commandes et voir les factures.",
   };
 
   const rolePermissionCount = {
@@ -121,13 +121,13 @@ export const UserRolesPage: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
-        title="Manage User Roles"
-        description={`Assign roles and permissions to ${user.full_name}`}
+        title="Gérer les rôles utilisateur"
+        description={`Attribuer les rôles et permissions à ${user.full_name}`}
         breadcrumbs={[
           { label: "Admin", href: "/admin" },
-          { label: "Users", href: "/admin/users" },
+          { label: "Utilisateurs", href: "/admin/users" },
           { label: user.full_name, href: `/admin/users/${id}` },
-          { label: "Roles" },
+          { label: "Rôles" },
         ]}
         actions={
           <Button
@@ -135,7 +135,7 @@ export const UserRolesPage: React.FC = () => {
             onClick={() => navigate(`/admin/users/${id}`)}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to User
+            Retour à l'utilisateur
           </Button>
         }
       />
@@ -145,10 +145,10 @@ export const UserRolesPage: React.FC = () => {
         <div className="flex items-start gap-3">
           <Info className="h-5 w-5 text-blue-600 mt-0.5" />
           <div className="text-sm text-blue-900">
-            <p className="font-semibold">Role-Based Access Control</p>
+            <p className="font-semibold">Contrôle d'accès par rôles</p>
             <p className="mt-1">
-              Roles determine what actions a user can perform in the system. Each role
-              has a specific set of permissions that control access to features and data.
+              Les rôles déterminent les actions qu'un utilisateur peut effectuer dans le système. Chaque rôle
+              dispose d'un ensemble de permissions qui contrôlent l'accès aux fonctionnalités et aux données.
             </p>
           </div>
         </div>
@@ -162,7 +162,7 @@ export const UserRolesPage: React.FC = () => {
               <div className="space-y-6">
                 {/* Current Role */}
                 <div>
-                  <h3 className="text-lg font-semibold mb-4">Current Role</h3>
+                  <h3 className="text-lg font-semibold mb-4">Rôle actuel</h3>
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-center gap-3">
                       <Shield className="h-8 w-8 text-gray-600" />
@@ -178,11 +178,11 @@ export const UserRolesPage: React.FC = () => {
 
                 {/* New Role Selection */}
                 <div>
-                  <h3 className="text-lg font-semibold mb-4">Assign New Role</h3>
+                  <h3 className="text-lg font-semibold mb-4">Attribuer un nouveau rôle</h3>
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="role_id">
-                        Select Role <span className="text-red-500">*</span>
+                        Sélectionner un rôle <span className="text-red-500">*</span>
                       </Label>
                       <div className="relative">
                         <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
@@ -191,7 +191,7 @@ export const UserRolesPage: React.FC = () => {
                           onValueChange={setSelectedRoleId}
                         >
                           <SelectTrigger className="pl-10">
-                            <SelectValue placeholder="Select role" />
+                            <SelectValue placeholder="Sélectionner un rôle" />
                           </SelectTrigger>
                           <SelectContent>
                             {roles.map((role) => (
@@ -213,13 +213,13 @@ export const UserRolesPage: React.FC = () => {
                             <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
                             <div>
                               <p className="font-semibold text-blue-900 capitalize">
-                                {selRole.name} Role
+                                Rôle {selRole.name}
                               </p>
                               <p className="text-sm text-blue-800 mt-1">
                                 {roleDescriptions[selRole.slug]}
                               </p>
                               <p className="text-xs text-blue-700 mt-2">
-                                {rolePermissionCount[selRole.slug]} permissions included
+                                {rolePermissionCount[selRole.slug]} permissions incluses
                               </p>
                             </div>
                           </div>
@@ -237,7 +237,7 @@ export const UserRolesPage: React.FC = () => {
                     onClick={() => navigate(`/admin/users/${id}`)}
                     disabled={assignRoles.isPending}
                   >
-                    Cancel
+                    Annuler
                   </Button>
                   <Button
                     type="submit"
@@ -246,12 +246,12 @@ export const UserRolesPage: React.FC = () => {
                     {assignRoles.isPending ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Saving...
+                        Enregistrement…
                       </>
                     ) : (
                       <>
                         <Save className="h-4 w-4 mr-2" />
-                        Save Changes
+                        Enregistrer les modifications
                       </>
                     )}
                   </Button>
@@ -264,14 +264,14 @@ export const UserRolesPage: React.FC = () => {
         {/* Role Information Sidebar */}
         <div className="space-y-6">
           <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Available Roles</h3>
+            <h3 className="text-lg font-semibold mb-4">Rôles disponibles</h3>
             <div className="space-y-4">
               {/* Admin Role */}
               <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                 <div className="flex items-start gap-3">
                   <Shield className="h-5 w-5 text-red-600 mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-semibold text-gray-900">Administrator</p>
+                    <p className="font-semibold text-gray-900">Administrateur</p>
                     <p className="text-xs text-gray-600 mt-1">
                       {rolePermissionCount.admin} permissions
                     </p>
@@ -284,7 +284,7 @@ export const UserRolesPage: React.FC = () => {
                 <div className="flex items-start gap-3">
                   <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-semibold text-gray-900">Corporate</p>
+                    <p className="font-semibold text-gray-900">Entreprise</p>
                     <p className="text-xs text-gray-600 mt-1">
                       {rolePermissionCount.corporate} permissions
                     </p>
@@ -308,20 +308,20 @@ export const UserRolesPage: React.FC = () => {
           </Card>
 
           <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Permission Categories</h3>
+            <h3 className="text-lg font-semibold mb-4">Catégories de permissions</h3>
             <div className="space-y-2 text-sm">
-              <p className="text-gray-600">Roles include permissions for:</p>
+              <p className="text-gray-600">Les rôles incluent des permissions pour :</p>
               <ul className="space-y-1 ml-4">
-                <li className="text-gray-700">• Customers</li>
-                <li className="text-gray-700">• KYC Management</li>
+                <li className="text-gray-700">• Clients</li>
+                <li className="text-gray-700">• Gestion KYC</li>
                 <li className="text-gray-700">• Tickets</li>
-                <li className="text-gray-700">• Products</li>
-                <li className="text-gray-700">• Orders</li>
-                <li className="text-gray-700">• Invoices</li>
-                <li className="text-gray-700">• Quotes</li>
-                <li className="text-gray-700">• Reports</li>
-                <li className="text-gray-700">• Settings</li>
-                <li className="text-gray-700">• Users & Roles (Admin only)</li>
+                <li className="text-gray-700">• Produits</li>
+                <li className="text-gray-700">• Commandes</li>
+                <li className="text-gray-700">• Factures</li>
+                <li className="text-gray-700">• Devis</li>
+                <li className="text-gray-700">• Rapports</li>
+                <li className="text-gray-700">• Paramètres</li>
+                <li className="text-gray-700">• Utilisateurs et rôles (admin uniquement)</li>
               </ul>
             </div>
           </Card>

@@ -1242,7 +1242,7 @@ async def get_monitoring_overview(
     # Total monthly revenue using RevenueService for consistency
     from app.modules.revenue.service import RevenueService
     revenue_service = RevenueService(db)
-    recurring_revenue = await revenue_service.repository.get_recurring_revenue()
+    recurring_revenue = await revenue_service.get_recurring_revenue()
     total_monthly_revenue = recurring_revenue
 
     # Average resource usage (from recent metrics)
@@ -1319,7 +1319,8 @@ async def get_monitoring_current_stats(
         limit=50,
         status=SubscriptionStatus.ACTIVE,
     )
-    subs_with_container = [s for s in active_subs if getattr(s, "container", None) is not None]
+    subs_with_container = [s for s in active_subs if getattr(
+        s, "container", None) is not None]
     if not subs_with_container:
         return []
 
@@ -1345,16 +1346,20 @@ async def get_monitoring_current_stats(
             subscription_id=sub.id,
             subscription_number=sub.subscription_number,
             hostname=hostname,
-            cpu_usage_percent=round(curr.get("cpu_usage_percent"), 2) if curr.get("cpu_usage_percent") is not None else None,
-            memory_usage_percent=round(curr.get("memory_usage_percent"), 2) if curr.get("memory_usage_percent") is not None else None,
-            storage_usage_percent=round(curr.get("storage_usage_percent"), 2) if curr.get("storage_usage_percent") is not None else None,
+            cpu_usage_percent=round(curr.get("cpu_usage_percent"), 2) if curr.get(
+                "cpu_usage_percent") is not None else None,
+            memory_usage_percent=round(curr.get("memory_usage_percent"), 2) if curr.get(
+                "memory_usage_percent") is not None else None,
+            storage_usage_percent=round(curr.get("storage_usage_percent"), 2) if curr.get(
+                "storage_usage_percent") is not None else None,
         )
 
     results = await asyncio.gather(*[one_stats(s) for s in subs_with_container], return_exceptions=True)
     out = []
     for i, r in enumerate(results):
         if isinstance(r, Exception):
-            logger.warning("current-stats exception for sub %s: %s", subs_with_container[i].id, r)
+            logger.warning("current-stats exception for sub %s: %s",
+                           subs_with_container[i].id, r)
             sub = subs_with_container[i]
             out.append(
                 PerVPSCurrentStatsSchema(

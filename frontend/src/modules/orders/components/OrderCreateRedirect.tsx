@@ -39,7 +39,7 @@ export function OrderCreateRedirect() {
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-        <p className="text-slate-600">Redirecting...</p>
+        <p className="text-slate-600">Redirection en cours…</p>
       </div>
     </div>
   );

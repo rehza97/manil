@@ -74,7 +74,7 @@ const ProductListPage: React.FC = () => {
   });
 
   const handleDelete = async (productId: string) => {
-    if (!confirm("Are you sure you want to delete this product?")) return;
+    if (!confirm("Voulez-vous vraiment supprimer ce produit ?")) return;
 
     try {
       await apiClient.delete(`/products/${productId}`);
@@ -82,7 +82,7 @@ const ProductListPage: React.FC = () => {
       window.location.reload();
     } catch (error) {
       console.error("Error deleting product:", error);
-      alert("Failed to delete product");
+      alert("Échec de la suppression du produit");
     }
   };
 
@@ -92,16 +92,16 @@ const ProductListPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
-            Product Management
+            Gestion des produits
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Manage your digital services catalog and pricing
+            Gérez votre catalogue de services numériques et les tarifs
           </p>
         </div>
         <Link to="/admin/products/new">
           <Button className="bg-green-600 hover:bg-green-700">
             <Plus className="mr-2 h-4 w-4" />
-            Add Product
+            Ajouter un produit
           </Button>
         </Link>
       </div>
@@ -114,7 +114,7 @@ const ProductListPage: React.FC = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 type="text"
-                placeholder="Search products..."
+                placeholder="Rechercher des produits..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-10"
@@ -124,24 +124,24 @@ const ProductListPage: React.FC = () => {
 
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger>
-              <SelectValue placeholder="Sort by" />
+              <SelectValue placeholder="Trier par" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="name">Name</SelectItem>
-              <SelectItem value="price">Price</SelectItem>
-              <SelectItem value="created_at">Date Created</SelectItem>
-              <SelectItem value="rating">Rating</SelectItem>
-              <SelectItem value="view_count">Views</SelectItem>
+              <SelectItem value="name">Nom</SelectItem>
+              <SelectItem value="price">Prix</SelectItem>
+              <SelectItem value="created_at">Date de création</SelectItem>
+              <SelectItem value="rating">Note</SelectItem>
+              <SelectItem value="view_count">Vues</SelectItem>
             </SelectContent>
           </Select>
 
           <Select value={sortOrder} onValueChange={setSortOrder}>
             <SelectTrigger>
-              <SelectValue placeholder="Order" />
+              <SelectValue placeholder="Ordre" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="asc">Ascending</SelectItem>
-              <SelectItem value="desc">Descending</SelectItem>
+              <SelectItem value="asc">Croissant</SelectItem>
+              <SelectItem value="desc">Décroissant</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -150,22 +150,22 @@ const ProductListPage: React.FC = () => {
       {/* Products Table */}
       <div className="bg-white rounded-lg border">
         {isLoading ? (
-          <div className="p-8 text-center text-gray-500">Loading products...</div>
+          <div className="p-8 text-center text-gray-500">Chargement des produits…</div>
         ) : error ? (
           <div className="p-8 text-center text-red-500">
-            Error loading products. Please try again.
+            Erreur lors du chargement des produits. Veuillez réessayer.
           </div>
         ) : data && data.data.length > 0 ? (
           <>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Product</TableHead>
+                  <TableHead>Produit</TableHead>
                   <TableHead>SKU</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Price</TableHead>
+                  <TableHead>Catégorie</TableHead>
+                  <TableHead>Prix</TableHead>
                   <TableHead>Stock</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -179,7 +179,7 @@ const ProductListPage: React.FC = () => {
                           <div className="font-medium">{product.name}</div>
                           {product.is_featured && (
                             <Badge variant="secondary" className="mt-1">
-                              Featured
+                              En vedette
                             </Badge>
                           )}
                         </div>
@@ -188,7 +188,7 @@ const ProductListPage: React.FC = () => {
                     <TableCell className="font-mono text-sm">
                       {product.sku}
                     </TableCell>
-                    <TableCell>{product.category?.name || "Uncategorized"}</TableCell>
+                    <TableCell>{product.category?.name || "Sans catégorie"}</TableCell>
                     <TableCell>
                       <div>
                         {product.sale_price ? (
@@ -215,14 +215,14 @@ const ProductListPage: React.FC = () => {
                         <div className="text-xs text-gray-500">
                           {product.billing_cycle || "one_time"}
                           {product.is_recurring && (
-                            <span className="ml-1 text-blue-600">• Recurring</span>
+                            <span className="ml-1 text-blue-600">• Récurrent</span>
                           )}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant={product.is_active ? "default" : "secondary"}>
-                        {product.is_active ? "Active" : "Inactive"}
+                        {product.is_active ? "Actif" : "Inactif"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -254,8 +254,8 @@ const ProductListPage: React.FC = () => {
             {/* Pagination */}
             <div className="flex items-center justify-between px-4 py-3 border-t">
               <div className="text-sm text-gray-500">
-                Showing {(page - 1) * pageSize + 1} to{" "}
-                {Math.min(page * pageSize, data.total)} of {data.total} products
+                Affichage de {(page - 1) * pageSize + 1} à{" "}
+                {Math.min(page * pageSize, data.total)} sur {data.total} produits
               </div>
               <div className="flex gap-2">
                 <Button
@@ -264,7 +264,7 @@ const ProductListPage: React.FC = () => {
                   onClick={() => setPage(page - 1)}
                   disabled={page === 1}
                 >
-                  Previous
+                  Précédent
                 </Button>
                 <Button
                   variant="outline"
@@ -272,7 +272,7 @@ const ProductListPage: React.FC = () => {
                   onClick={() => setPage(page + 1)}
                   disabled={page >= data.total_pages}
                 >
-                  Next
+                  Suivant
                 </Button>
               </div>
             </div>
@@ -281,16 +281,16 @@ const ProductListPage: React.FC = () => {
           <div className="p-8 text-center">
             <Package className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">
-              No products found
+              Aucun produit trouvé
             </h3>
             <p className="mt-1 text-sm text-gray-500">
-              Get started by creating a new product.
+              Commencez par créer un nouveau produit.
             </p>
             <div className="mt-6">
               <Link to="/admin/products/new">
                 <Button className="bg-green-600 hover:bg-green-700">
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Product
+                  Ajouter un produit
                 </Button>
               </Link>
             </div>

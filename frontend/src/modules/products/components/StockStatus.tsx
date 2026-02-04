@@ -27,7 +27,7 @@ export const StockStatus: React.FC<StockStatusProps> = ({
       <div className="inline-flex items-center gap-2 rounded-full bg-yellow-100 px-3 py-1">
         <span className="h-2 w-2 rounded-full bg-yellow-600"></span>
         <span className="text-xs font-semibold text-yellow-700">
-          Low Stock ({quantity} left)
+          Stock faible ({quantity} restant(s))
         </span>
       </div>
     );

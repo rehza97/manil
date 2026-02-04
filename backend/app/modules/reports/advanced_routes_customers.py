@@ -47,7 +47,7 @@ async def get_segmentation(
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await CustomerIntelligenceService(db).get_segmentation_report(start, end)
-    return await generate_report_response(db, data, "reports/base_report.html", "Customer Segmentation", format, "segmentation", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(db, data, "reports/customers/segmentation.html", "Customer Segmentation", format, "segmentation", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
 
 
 @router.get("/kyc-compliance")
@@ -59,7 +59,7 @@ async def get_kyc_compliance(
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await CustomerIntelligenceService(db).get_kyc_compliance_report(start, end)
-    return await generate_report_response(db, data, "reports/base_report.html", "KYC Compliance", format, "kyc_compliance", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(db, data, "reports/customers/kyc_compliance.html", "KYC Compliance", format, "kyc_compliance", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
 
 
 @router.get("/churn-analysis")
@@ -71,4 +71,4 @@ async def get_churn_analysis(
 ):
     start, end = _parse_dates(start_date, end_date)
     data = await CustomerIntelligenceService(db).get_churn_analysis_report(start, end)
-    return await generate_report_response(db, data, "reports/base_report.html", "Churn Analysis", format, "churn_analysis", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)
+    return await generate_report_response(db, data, "reports/customers/churn_analysis.html", "Churn Analysis", format, "churn_analysis", export_details_key="details", generated_by=current_user.id, start_date=start, end_date=end)

@@ -54,7 +54,7 @@ export const EmailTemplatesPage: React.FC = () => {
         setSelectedTemplate(response.data.templates[0]);
       }
     } catch (error: any) {
-      toast.error("Failed to load templates", {
+      toast.error("Échec du chargement des modèles", {
         description: error.response?.data?.detail || error.message,
       });
     } finally {
@@ -73,7 +73,7 @@ export const EmailTemplatesPage: React.FC = () => {
       });
       setPreview(response.data);
     } catch (error: any) {
-      toast.error("Failed to preview template", {
+      toast.error("Échec de l'aperçu du modèle", {
         description: error.response?.data?.detail || error.message,
       });
     } finally {
@@ -102,7 +102,7 @@ export const EmailTemplatesPage: React.FC = () => {
           <div className="flex gap-4">
             <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
               <SelectTrigger className="w-[300px]">
-                <SelectValue placeholder="Select a template" />
+                <SelectValue placeholder="Choisir un modèle" />
               </SelectTrigger>
               <SelectContent>
                 {templates.map((template) => (
@@ -114,7 +114,7 @@ export const EmailTemplatesPage: React.FC = () => {
             </Select>
             <Button onClick={handlePreview} disabled={!selectedTemplate || previewLoading}>
               <Eye className="mr-2 h-4 w-4" />
-              {previewLoading ? "Loading..." : "Preview"}
+              {previewLoading ? "Chargement…" : "Aperçu"}
             </Button>
           </div>
 
@@ -133,17 +133,17 @@ export const EmailTemplatesPage: React.FC = () => {
                   size="sm"
                   onClick={() => setShowText(true)}
                 >
-                  Text
+                  Texte
                 </Button>
               </div>
 
               {preview.is_valid ? (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Preview</CardTitle>
+                    <CardTitle className="text-lg">Aperçu</CardTitle>
                     {preview.variables && preview.variables.length > 0 && (
                       <CardDescription>
-                        Variables: {preview.variables.join(", ")}
+                        Variables : {preview.variables.join(", ")}
                       </CardDescription>
                     )}
                   </CardHeader>
@@ -163,7 +163,7 @@ export const EmailTemplatesPage: React.FC = () => {
               ) : (
                 <Card className="border-destructive">
                   <CardContent className="pt-6">
-                    <p className="text-destructive">Template Error: {preview.error}</p>
+                    <p className="text-destructive">Erreur du modèle : {preview.error}</p>
                   </CardContent>
                 </Card>
               )}

@@ -58,13 +58,13 @@ export const SystemLogsPage: React.FC = () => {
       const res = await adminLogsApi.exportSystemLogs(format);
       await downloadMutation.mutateAsync(res.file_name);
       toast({
-        title: "Export successful",
-        description: `System logs exported (${format.toUpperCase()}).`,
+        title: "Export réussi",
+        description: `Journaux système exportés (${format.toUpperCase()}).`,
       });
     } catch (err) {
       toast({
-        title: "Export failed",
-        description: err instanceof Error ? err.message : "Failed to export system logs",
+        title: "Échec de l'export",
+        description: err instanceof Error ? err.message : "Échec de l'export des journaux système",
         variant: "destructive",
       });
     }
@@ -102,14 +102,14 @@ export const SystemLogsPage: React.FC = () => {
         return (
           <Badge className="bg-red-100 text-red-800">
             <AlertCircle className="h-3 w-3 mr-1" />
-            Error
+            Erreur
           </Badge>
         );
       case "warning":
         return (
           <Badge className="bg-yellow-100 text-yellow-800">
             <AlertTriangle className="h-3 w-3 mr-1" />
-            Warning
+            Avertissement
           </Badge>
         );
       case "info":
@@ -120,7 +120,7 @@ export const SystemLogsPage: React.FC = () => {
           </Badge>
         );
       default:
-        return <Badge variant="outline">{level || "Unknown"}</Badge>;
+        return <Badge variant="outline">{level || "Inconnu"}</Badge>;
     }
   };
 
@@ -128,7 +128,7 @@ export const SystemLogsPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        <span className="ml-2 text-slate-600">Loading system logs...</span>
+        <span className="ml-2 text-slate-600">Chargement des journaux système…</span>
       </div>
     );
   }
@@ -140,22 +140,22 @@ export const SystemLogsPage: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <FileText className="h-8 w-8" />
-            System Logs
+            Journaux système
           </h1>
           <p className="text-slate-600 mt-2">
-            View system-level application logs and error logs.
+            Consulter les journaux applicatifs et d'erreur au niveau système.
           </p>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" disabled={downloadMutation.isPending}>
               <Download className="h-4 w-4 mr-2" />
-              {downloadMutation.isPending ? "Exporting..." : "Export Logs"}
+              {downloadMutation.isPending ? "Export en cours…" : "Exporter les journaux"}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleExport("csv")}>Export CSV</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleExport("excel")}>Export Excel</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExport("csv")}>Exporter CSV</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExport("excel")}>Exporter Excel</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -165,8 +165,8 @@ export const SystemLogsPage: React.FC = () => {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Failed to load system logs. Please try again later.
-            {error instanceof Error && ` Error: ${error.message}`}
+            Échec du chargement des journaux système. Veuillez réessayer plus tard.
+            {error instanceof Error && ` Erreur : ${error.message}`}
           </AlertDescription>
         </Alert>
       )}
@@ -174,14 +174,14 @@ export const SystemLogsPage: React.FC = () => {
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Filters</CardTitle>
+          <CardTitle>Filtres</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
-                placeholder="Search logs..."
+                placeholder="Rechercher dans les journaux…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -190,12 +190,12 @@ export const SystemLogsPage: React.FC = () => {
 
             <Select value={levelFilter} onValueChange={setLevelFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="Log Level" />
+                <SelectValue placeholder="Niveau" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Levels</SelectItem>
-                <SelectItem value="error">Error</SelectItem>
-                <SelectItem value="warning">Warning</SelectItem>
+                <SelectItem value="all">Tous les niveaux</SelectItem>
+                <SelectItem value="error">Erreur</SelectItem>
+                <SelectItem value="warning">Avertissement</SelectItem>
                 <SelectItem value="info">Info</SelectItem>
                 <SelectItem value="debug">Debug</SelectItem>
               </SelectContent>
@@ -203,15 +203,15 @@ export const SystemLogsPage: React.FC = () => {
 
             <Select value={componentFilter} onValueChange={setComponentFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="Component" />
+                <SelectValue placeholder="Composant" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Components</SelectItem>
-                <SelectItem value="api">API Server</SelectItem>
-                <SelectItem value="database">Database</SelectItem>
+                <SelectItem value="all">Tous les composants</SelectItem>
+                <SelectItem value="api">Serveur API</SelectItem>
+                <SelectItem value="database">Base de données</SelectItem>
                 <SelectItem value="cache">Cache</SelectItem>
-                <SelectItem value="email">Email Service</SelectItem>
-                <SelectItem value="system">System</SelectItem>
+                <SelectItem value="email">Service e-mail</SelectItem>
+                <SelectItem value="system">Système</SelectItem>
               </SelectContent>
             </Select>
 
@@ -226,7 +226,7 @@ export const SystemLogsPage: React.FC = () => {
               }}
             >
               <Filter className="h-4 w-4 mr-2" />
-              Clear Filters
+              Effacer les filtres
             </Button>
           </div>
         </CardContent>
@@ -245,15 +245,15 @@ export const SystemLogsPage: React.FC = () => {
           {!error && logs.length === 0 ? (
             <div className="text-center py-12 text-slate-500">
               <FileText className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-              <p>No system logs found for the selected period.</p>
+              <p>Aucun journal système pour la période sélectionnée.</p>
               <p className="text-sm mt-2">
-                System logs will appear here as events occur.
+                Les journaux système s'afficheront ici au fur et à mesure des événements.
               </p>
             </div>
           ) : filteredLogs.length === 0 ? (
             <div className="text-center py-12 text-slate-500">
               <FileText className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-              <p>No logs found matching your filters</p>
+              <p>Aucun journal ne correspond à vos filtres</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -278,12 +278,12 @@ export const SystemLogsPage: React.FC = () => {
                         </span>
                       </div>
                       <p className="text-slate-900 break-words text-sm font-mono">
-                        {log.message || log.content || "No message"}
+                        {log.message || log.content || "Aucun message"}
                       </p>
                       {log.stack_trace && (
                         <details className="mt-2">
                           <summary className="text-xs text-slate-500 cursor-pointer hover:text-slate-700">
-                            View Stack Trace
+                            Voir la pile d'appels
                           </summary>
                           <pre className="mt-2 text-xs bg-slate-100 p-3 rounded overflow-x-auto border border-slate-200">
                             {log.stack_trace}
@@ -301,8 +301,8 @@ export const SystemLogsPage: React.FC = () => {
           {logsData && logsData.total > 0 && (
             <div className="flex items-center justify-between mt-6 pt-4 border-t">
               <p className="text-sm text-slate-600">
-                Showing {filteredLogs.length} of {logsData.total} logs
-                {logsData.total > filteredLogs.length && ` (Page ${page} of ${Math.ceil(logsData.total / 50)})`}
+                Affichage de {filteredLogs.length} sur {logsData.total} journaux
+                {logsData.total > filteredLogs.length && ` (Page ${page} sur ${Math.ceil(logsData.total / 50)})`}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -314,7 +314,7 @@ export const SystemLogsPage: React.FC = () => {
                   }}
                   disabled={page === 1}
                 >
-                  Previous
+                  Précédent
                 </Button>
                 <Button
                   variant="outline"
@@ -325,7 +325,7 @@ export const SystemLogsPage: React.FC = () => {
                   }}
                   disabled={page >= Math.ceil(logsData.total / 50)}
                 >
-                  Next
+                  Suivant
                 </Button>
               </div>
             </div>

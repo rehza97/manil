@@ -1,0 +1,50 @@
+{% extends "reports/base_report.html" %}
+
+{% block summary %}
+  <div class="executive-summary">
+    <div class="kpi-card">
+      <div class="kpi-value">{{ recognized_revenue | format_currency }}</div>
+      <div class="kpi-label">Recognized</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ booked_revenue | format_currency }}</div>
+      <div class="kpi-label">Booked</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ deferred_revenue | format_currency }}</div>
+      <div class="kpi-label">Deferred</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ recurring_revenue | format_currency }}</div>
+      <div class="kpi-label">Recurring</div>
+    </div>
+  </div>
+  {% if recognized_revenue is defined and recognized_revenue == 0 %}
+  <p class="meta" style="margin-top: 12px; color: #666;">No revenue data in this period. Ensure seed data has been run and date range includes historical data.</p>
+  {% endif %}
+{% endblock %}
+
+{% block charts %}
+  {{ super() }}
+{% endblock %}
+
+{% block data %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Revenue Type</th>
+          <th>Amount (DZD)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in details or [] %}
+        <tr>
+          <td>{{ item.Metric }}</td>
+          <td>{{ item.Value | format_currency }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

@@ -25,7 +25,8 @@ STATUS_DIST = [
     (OrderStatus.REQUEST, 5), (OrderStatus.PENDING_COMMERCIAL, 4),
     (OrderStatus.COMMERCIAL_APPROVED, 3), (OrderStatus.PENDING_TECHNICAL, 4),
     (OrderStatus.TECHNICAL_APPROVED, 3), (OrderStatus.VALIDATED, 5),
-    (OrderStatus.IN_PROGRESS, 4), (OrderStatus.DELIVERED, 20), (OrderStatus.CANCELLED, 2),
+    (OrderStatus.IN_PROGRESS, 4), (OrderStatus.DELIVERED,
+                                   20), (OrderStatus.CANCELLED, 2),
 ]
 
 
@@ -45,7 +46,8 @@ async def seed_production_orders(db: AsyncSession) -> list[str]:
     """
     r = await db.execute(select(func.count(Order.id)).where(Order.deleted_at.is_(None)))
     if r.scalar() >= ORDER_COUNT_TARGET:
-        q = select(Order.id).where(Order.status == OrderStatus.DELIVERED, Order.deleted_at.is_(None)).limit(DELIVERED_COUNT)
+        q = select(Order.id).where(Order.status == OrderStatus.DELIVERED,
+                                   Order.deleted_at.is_(None)).limit(DELIVERED_COUNT)
         r2 = await db.execute(q)
         return [str(row[0]) for row in r2.fetchall()]
 
@@ -75,7 +77,7 @@ async def seed_production_orders(db: AsyncSession) -> list[str]:
         status = statuses[i]
         created_at = random_date_in_range(start, end)
         subtotal = float(random_amount(3000, 200000))
-        tax_amount = round(subtotal * 0.19, 2)
+        tax_amount = round(subtotal * get_settings().DEFAULT_TVA_RATE, 2)
         discount_amount = 0.0 if random.random() > 0.3 else float(random_amount(100, 5000))
         total_amount = round(subtotal + tax_amount - discount_amount, 2)
         order = Order(

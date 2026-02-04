@@ -70,9 +70,9 @@ export default function DNSMonitoringPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">DNS Monitoring</h1>
+          <h1 className="text-3xl font-bold">Surveillance DNS</h1>
           <p className="text-muted-foreground">
-            CoreDNS health status and sync operations
+            État de santé CoreDNS et opérations de synchronisation
           </p>
         </div>
         <div className="flex gap-2">
@@ -82,7 +82,7 @@ export default function DNSMonitoringPage() {
             disabled={reloadMutation.isPending}
           >
             <RefreshCw className="mr-2 h-4 w-4" />
-            Reload CoreDNS
+            Recharger CoreDNS
           </Button>
           <Button
             variant="outline"
@@ -90,7 +90,7 @@ export default function DNSMonitoringPage() {
             disabled={regenerateMutation.isPending}
           >
             <Settings className="mr-2 h-4 w-4" />
-            Regenerate Config
+            Régénérer la config
           </Button>
         </div>
       </div>
@@ -101,7 +101,7 @@ export default function DNSMonitoringPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Zones
+                Zones total
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -111,7 +111,7 @@ export default function DNSMonitoringPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Active Zones
+                Zones actives
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -121,7 +121,7 @@ export default function DNSMonitoringPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Records
+                Enregistrements total
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -131,7 +131,7 @@ export default function DNSMonitoringPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                System Records
+                Enregistrements système
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -152,9 +152,9 @@ export default function DNSMonitoringPage() {
           <div className="flex items-center gap-2">
             <Database className="h-5 w-5" />
             <div>
-              <CardTitle>Recent Sync Operations</CardTitle>
+              <CardTitle>Opérations de synchronisation récentes</CardTitle>
               <CardDescription>
-                Latest DNS synchronization operations and their status
+                Dernières opérations de synchronisation DNS et leur statut
               </CardDescription>
             </div>
           </div>
@@ -168,22 +168,21 @@ export default function DNSMonitoringPage() {
       <AlertDialog open={showReloadDialog} onOpenChange={setShowReloadDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reload CoreDNS Configuration?</AlertDialogTitle>
+            <AlertDialogTitle>Recharger la configuration CoreDNS ?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will reload the CoreDNS configuration from the current zone files
-              without regenerating them. This is a safe operation that won't affect
-              existing DNS records.
+              Cela rechargera la configuration CoreDNS à partir des fichiers de zone actuels
+              sans les régénérer. Opération sûre qui n&apos;affecte pas les enregistrements DNS existants.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={reloadMutation.isPending}>
-              Cancel
+              Annuler
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleReload}
               disabled={reloadMutation.isPending}
             >
-              {reloadMutation.isPending ? "Reloading..." : "Reload CoreDNS"}
+              {reloadMutation.isPending ? "Rechargement…" : "Recharger CoreDNS"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -196,24 +195,24 @@ export default function DNSMonitoringPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Regenerate CoreDNS Configuration?</AlertDialogTitle>
+            <AlertDialogTitle>Régénérer la configuration CoreDNS ?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will regenerate all CoreDNS zone files from the database and
-              reload the server. Use this if you suspect zone files are out of sync
-              with the database. This operation may take a few moments.
+              Cela régénérera tous les fichiers de zone CoreDNS à partir de la base de données et
+              rechargera le serveur. Utilisez cette option si les fichiers de zone semblent désynchronisés
+              avec la base. L&apos;opération peut prendre quelques instants.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={regenerateMutation.isPending}>
-              Cancel
+              Annuler
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRegenerate}
               disabled={regenerateMutation.isPending}
             >
               {regenerateMutation.isPending
-                ? "Regenerating..."
-                : "Regenerate Config"}
+                ? "Régénération…"
+                : "Régénérer la config"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

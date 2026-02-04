@@ -40,10 +40,10 @@ import { Loader2 } from "lucide-react";
 import type { UserCreate } from "../types";
 
 const createUserSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  full_name: z.string().min(2, "Full name must be at least 2 characters"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  role_id: z.string().min(1, "Role is required"),
+  email: z.string().email("Adresse e-mail invalide"),
+  full_name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
+  password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
+  role_id: z.string().min(1, "Le rôle est requis"),
   is_active: z.boolean().default(true),
 });
 
@@ -94,16 +94,16 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       };
       await createUser.mutateAsync(payload);
       toast({
-        title: "Success",
-        description: "User created successfully",
+        title: "Succès",
+        description: "Utilisateur créé avec succès",
       });
       form.reset();
       onOpenChange(false);
       onSuccess?.();
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error?.response?.data?.detail || error.message || "Failed to create user",
+        title: "Erreur",
+        description: error?.response?.data?.detail || error.message || "Échec de la création de l'utilisateur",
         variant: "destructive",
       });
     }
@@ -114,10 +114,10 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       <DialogContent className="sm:max-w-[525px] bg-white border-gray-200">
         <DialogHeader className="space-y-3 pb-4">
           <DialogTitle className="text-2xl font-semibold">
-            Add New User
+            Ajouter un utilisateur
           </DialogTitle>
           <DialogDescription className="text-base text-slate-600">
-            Create a new user account. The user will receive login credentials via email.
+            Créez un nouveau compte utilisateur. L'utilisateur recevra ses identifiants par e-mail.
           </DialogDescription>
         </DialogHeader>
 
@@ -130,11 +130,11 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium">
-                      Full Name
+                      Nom complet
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="John Doe"
+                        placeholder="Jean Dupont"
                         className="h-10"
                         {...field}
                       />
@@ -150,12 +150,12 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium">
-                      Email Address
+                      Adresse e-mail
                     </FormLabel>
                     <FormControl>
                       <Input
                         type="email"
-                        placeholder="user@example.com"
+                        placeholder="utilisateur@exemple.com"
                         className="h-10"
                         {...field}
                       />
@@ -171,12 +171,12 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium">
-                      Password
+                      Mot de passe
                     </FormLabel>
                     <FormControl>
                       <Input
                         type="password"
-                        placeholder="Minimum 8 characters"
+                        placeholder="Minimum 8 caractères"
                         className="h-10"
                         {...field}
                       />
@@ -191,14 +191,14 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                 name="role_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">Role</FormLabel>
+                    <FormLabel className="text-sm font-medium">Rôle</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger className="h-10">
-                          <SelectValue placeholder="Select a role" />
+                          <SelectValue placeholder="Sélectionner un rôle" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -223,7 +223,7 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                 disabled={createUser.isPending}
                 className="px-6"
               >
-                Cancel
+                Annuler
               </Button>
               <Button
                 type="submit"
@@ -233,7 +233,7 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                 {createUser.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Create User
+                Créer l'utilisateur
               </Button>
             </DialogFooter>
           </form>

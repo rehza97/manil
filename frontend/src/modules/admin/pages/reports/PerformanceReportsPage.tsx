@@ -71,16 +71,16 @@ export const PerformanceReportsPage: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <TrendingUp className="h-8 w-8" />
-            Performance Reports
+            Rapports de performance
           </h1>
           <p className="text-slate-600 mt-2">
-            System performance analytics, resource usage, and API metrics.
+            Analytique de performance système, utilisation des ressources et métriques API.
           </p>
         </div>
         <Alert variant="destructive">
           <AlertDescription>
-            Failed to load performance report data. Please try again later.
-            {error instanceof Error && ` Error: ${error.message}`}
+            Échec du chargement des données du rapport de performance. Veuillez réessayer plus tard.
+            {error instanceof Error && ` Erreur : ${error.message}`}
           </AlertDescription>
         </Alert>
       </div>
@@ -117,10 +117,10 @@ export const PerformanceReportsPage: React.FC = () => {
       <div>
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <TrendingUp className="h-8 w-8" />
-          Performance Reports
+          Rapports de performance
         </h1>
         <p className="text-slate-600 mt-2">
-          System performance analytics, resource usage, and API metrics.
+          Analytique de performance système, utilisation des ressources et métriques API.
         </p>
       </div>
 
@@ -130,7 +130,7 @@ export const PerformanceReportsPage: React.FC = () => {
         onFiltersChange={setFilters}
         onExport={handleExport}
         exportLoading={exportMutation.isPending}
-        searchPlaceholder="Search endpoints..."
+        searchPlaceholder="Rechercher des endpoints..."
       />
 
       {/* Statistics Cards */}
@@ -151,15 +151,15 @@ export const PerformanceReportsPage: React.FC = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Avg Response Time
+              Temps de réponse moyen
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-slate-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {reportData.average_response_time || 0}ms
+              {reportData.average_response_time || 0} ms
             </div>
-            <p className="text-xs text-slate-500 mt-1">API average</p>
+            <p className="text-xs text-slate-500 mt-1">Moyenne API</p>
           </CardContent>
         </Card>
 
@@ -181,15 +181,15 @@ export const PerformanceReportsPage: React.FC = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Resource Usage
+              Utilisation des ressources
             </CardTitle>
             <Server className="h-4 w-4 text-slate-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {reportData.resource_usage?.cpu_usage ?? "N/A"}
+              {reportData.resource_usage?.cpu_usage ?? "N/D"}
             </div>
-            <p className="text-xs text-slate-500 mt-1">CPU utilization</p>
+            <p className="text-xs text-slate-500 mt-1">Utilisation CPU</p>
           </CardContent>
         </Card>
       </div>
@@ -210,7 +210,7 @@ export const PerformanceReportsPage: React.FC = () => {
               <YAxis
                 yAxisId="left"
                 label={{
-                  value: "Time (ms)",
+                  value: "Temps (ms)",
                   angle: -90,
                   position: "insideLeft",
                 }}
@@ -219,7 +219,7 @@ export const PerformanceReportsPage: React.FC = () => {
                 yAxisId="right"
                 orientation="right"
                 label={{
-                  value: "Usage (%)",
+                  value: "Utilisation (%)",
                   angle: 90,
                   position: "insideRight",
                 }}
@@ -233,7 +233,7 @@ export const PerformanceReportsPage: React.FC = () => {
                 stackId="1"
                 stroke="#3b82f6"
                 fill="#3b82f6"
-                name="Response Time (ms)"
+                name="Temps de réponse (ms)"
               />
               <Area
                 yAxisId="right"
@@ -242,7 +242,7 @@ export const PerformanceReportsPage: React.FC = () => {
                 stackId="2"
                 stroke="#ef4444"
                 fill="#ef4444"
-                name="CPU Usage (%)"
+                name="Utilisation CPU (%)"
               />
               <Area
                 yAxisId="right"
@@ -251,7 +251,7 @@ export const PerformanceReportsPage: React.FC = () => {
                 stackId="3"
                 stroke="#10b981"
                 fill="#10b981"
-                name="Memory Usage (%)"
+                name="Utilisation mémoire (%)"
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -262,8 +262,8 @@ export const PerformanceReportsPage: React.FC = () => {
       {reportData.api_performance && reportData.api_performance.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>API Endpoint Performance</CardTitle>
-            <CardDescription>Performance metrics by endpoint</CardDescription>
+            <CardTitle>Performance des endpoints API</CardTitle>
+            <CardDescription>Métriques de performance par endpoint</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -281,12 +281,12 @@ export const PerformanceReportsPage: React.FC = () => {
                 <Bar
                   dataKey="average_response_time"
                   fill="#3b82f6"
-                  name="Avg Response Time (ms)"
+                  name="Temps de réponse moyen (ms)"
                 />
                 <Bar
                   dataKey="error_rate"
                   fill="#ef4444"
-                  name="Error Rate (%)"
+                  name="Taux d'erreur (%)"
                 />
               </BarChart>
             </ResponsiveContainer>
@@ -298,16 +298,16 @@ export const PerformanceReportsPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Resource Usage</CardTitle>
+            <CardTitle>Utilisation des ressources</CardTitle>
             <CardDescription>
-              Current system resource utilization
+              Utilisation actuelle des ressources système
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div>
                 <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium">CPU Usage</span>
+                  <span className="text-sm font-medium">Utilisation CPU</span>
                   <span className="text-sm text-slate-600">
                     {reportData.resource_usage?.cpu_usage ?? "N/A"}
                     {reportData.resource_usage?.cpu_usage !== null &&
@@ -326,7 +326,7 @@ export const PerformanceReportsPage: React.FC = () => {
                     />
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500">Not available</p>
+                  <p className="text-sm text-slate-500">Non disponible</p>
                 )}
               </div>
               <div>
@@ -350,7 +350,7 @@ export const PerformanceReportsPage: React.FC = () => {
                     />
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500">Not available</p>
+                  <p className="text-sm text-slate-500">Non disponible</p>
                 )}
               </div>
               <div>
@@ -374,12 +374,12 @@ export const PerformanceReportsPage: React.FC = () => {
                     />
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500">Not available</p>
+                  <p className="text-sm text-slate-500">Non disponible</p>
                 )}
               </div>
               <div>
                 <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium">Network Usage</span>
+                  <span className="text-sm font-medium">Utilisation réseau</span>
                   <span className="text-sm text-slate-600">
                     {reportData.resource_usage?.network_usage ?? "N/A"}
                     {reportData.resource_usage?.network_usage !== null &&
@@ -398,7 +398,7 @@ export const PerformanceReportsPage: React.FC = () => {
                     />
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500">Not available</p>
+                  <p className="text-sm text-slate-500">Non disponible</p>
                 )}
               </div>
             </div>
@@ -407,7 +407,7 @@ export const PerformanceReportsPage: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Database Performance</CardTitle>
+            <CardTitle>Performance base de données</CardTitle>
             <CardDescription>
               Database query and connection metrics
             </CardDescription>
@@ -416,20 +416,20 @@ export const PerformanceReportsPage: React.FC = () => {
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-slate-600 mb-1">
-                  Average Query Time
+                  Temps moyen des requêtes
                 </p>
                 <p className="text-2xl font-bold">
                   {reportData.database_performance?.query_time || 0}ms
                 </p>
               </div>
               <div>
-                <p className="text-sm text-slate-600 mb-1">Connection Pool</p>
+                <p className="text-sm text-slate-600 mb-1">Pool de connexions</p>
                 <p className="text-2xl font-bold">
-                  {reportData.database_performance?.connection_pool || 0} active
+                  {reportData.database_performance?.connection_pool || 0} actives
                 </p>
               </div>
               <div>
-                <p className="text-sm text-slate-600 mb-1">Slow Queries</p>
+                <p className="text-sm text-slate-600 mb-1">Requêtes lentes</p>
                 <p className="text-2xl font-bold text-red-600">
                   {reportData.database_performance?.slow_queries || 0}
                 </p>

@@ -58,13 +58,13 @@ export const UserActivityLogsPage: React.FC = () => {
       const res = await adminLogsApi.exportUserActivityLogs(id, format);
       await downloadMutation.mutateAsync(res.file_name);
       toast({
-        title: "Export successful",
-        description: `User activity logs exported (${format.toUpperCase()}).`,
+        title: "Export réussi",
+        description: `Journaux d'activité utilisateur exportés (${format.toUpperCase()}).`,
       });
     } catch (err) {
       toast({
-        title: "Export failed",
-        description: err instanceof Error ? err.message : "Failed to export user activity logs",
+        title: "Échec de l'export",
+        description: err instanceof Error ? err.message : "Échec de l'export des journaux d'activité utilisateur",
         variant: "destructive",
       });
     }
@@ -106,9 +106,9 @@ export const UserActivityLogsPage: React.FC = () => {
 
   const getStatusBadge = (success: boolean) => {
     return success ? (
-      <Badge className="bg-green-100 text-green-800">Success</Badge>
+      <Badge className="bg-green-100 text-green-800">Succès</Badge>
     ) : (
-      <Badge className="bg-red-100 text-red-800">Failed</Badge>
+      <Badge className="bg-red-100 text-red-800">Échec</Badge>
     );
   };
 
@@ -142,16 +142,16 @@ export const UserActivityLogsPage: React.FC = () => {
             onClick={() => navigate("/admin/logs")}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Logs
+            Retour aux journaux
           </Button>
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-2">
               <User className="h-8 w-8" />
-              User Activity Logs
+              Journaux d'activité utilisateur
             </h1>
             {user && (
               <p className="text-slate-600 mt-2">
-                Activity logs for {user.full_name || user.email}
+                Journaux d'activité pour {user.full_name || user.email}
               </p>
             )}
           </div>
@@ -164,51 +164,51 @@ export const UserActivityLogsPage: React.FC = () => {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">
-                Total Actions
+                Total des actions
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{totalActions}</div>
-              <p className="text-xs text-slate-500 mt-1">All logged actions</p>
+              <p className="text-xs text-slate-500 mt-1">Toutes les actions enregistrées</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Successful</CardTitle>
+              <CardTitle className="text-sm font-medium">Réussies</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
                 {successfulActions}
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Successful operations
+                Opérations réussies
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Failed</CardTitle>
+              <CardTitle className="text-sm font-medium">Échouées</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-600">
                 {failedActions}
               </div>
-              <p className="text-xs text-slate-500 mt-1">Failed operations</p>
+              <p className="text-xs text-slate-500 mt-1">Opérations échouées</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">
-                Action Types
+                Types d'action
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{uniqueActions}</div>
               <p className="text-xs text-slate-500 mt-1">
-                Different action types
+                Types d'action différents
               </p>
             </CardContent>
           </Card>
@@ -240,7 +240,7 @@ export const UserActivityLogsPage: React.FC = () => {
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="w-full" disabled={!id || downloadMutation.isPending}>
                   <Download className="h-4 w-4 mr-2" />
-                  {downloadMutation.isPending ? "Exporting..." : "Export Logs"}
+                  {downloadMutation.isPending ? "Export en cours…" : "Exporter les journaux"}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -264,7 +264,7 @@ export const UserActivityLogsPage: React.FC = () => {
           {filteredLogs.length === 0 ? (
             <div className="text-center py-12 text-slate-500">
               <Activity className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-              <p>No activity logs found for this user</p>
+              <p>Aucun journal d'activité trouvé pour cet utilisateur</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -326,14 +326,14 @@ export const UserActivityLogsPage: React.FC = () => {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                 >
-                  Previous
+                  Précédent
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setPage((p) => p + 1)}
                 >
-                  Next
+                  Suivant
                 </Button>
               </div>
             </div>

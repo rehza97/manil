@@ -1,0 +1,45 @@
+{% extends "reports/base_report.html" %}
+
+{% block summary %}
+  <div class="executive-summary">
+    <div class="kpi-card">
+      <div class="kpi-value">{{ details | length }}</div>
+      <div class="kpi-label">Customers</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ details | sum(attribute='order_count') if details else 0 }}</div>
+      <div class="kpi-label">Total Orders</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ details | sum(attribute='total_value') | format_currency if details else '0.00 DZD' }}</div>
+      <div class="kpi-label">Total Value</div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block charts %}
+  {{ super() }}
+{% endblock %}
+
+{% block data %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Customer ID</th>
+          <th>Order Count</th>
+          <th>Total Value (DZD)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in details or [] %}
+        <tr>
+          <td>{{ row.customer_id }}</td>
+          <td>{{ row.order_count }}</td>
+          <td>{{ row.total_value | format_currency }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

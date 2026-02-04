@@ -78,17 +78,17 @@ export const PermissionListPage: React.FC = () => {
   const filterConfig: FilterConfig[] = [
     {
       key: "resource",
-      label: "Resource",
+      label: "Ressource",
       type: "select",
       options: resources.map((r) => ({ label: r, value: r })),
-      placeholder: "Select resource",
+      placeholder: "Sélectionner une ressource",
     },
     {
       key: "action",
       label: "Action",
       type: "select",
       options: actions.map((a) => ({ label: a, value: a })),
-      placeholder: "Select action",
+      placeholder: "Sélectionner une action",
     },
   ];
 
@@ -140,14 +140,14 @@ export const PermissionListPage: React.FC = () => {
     try {
       await deletePermission.mutateAsync(selectedPermission.id);
       toast({
-        title: "Success",
-        description: "Permission deleted successfully",
+        title: "Succès",
+        description: "Permission supprimée avec succès",
       });
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: "Erreur",
         description:
-          error.response?.data?.detail || "Failed to delete permission",
+          error.response?.data?.detail || "Échec de la suppression de la permission",
         variant: "destructive",
       });
     } finally {
@@ -168,7 +168,7 @@ export const PermissionListPage: React.FC = () => {
   const columns: DataTableColumn<Permission>[] = [
     {
       key: "name",
-      label: "Permission Name",
+      label: "Nom de la permission",
       sortable: true,
       render: (_, permission) => (
         <div>
@@ -227,10 +227,10 @@ export const PermissionListPage: React.FC = () => {
       {/* Header */}
       <PageHeader
         title="Permissions"
-        description="Manage system permissions and access control"
+        description="Gérer les permissions système et le contrôle d'accès"
         breadcrumbs={[
           { label: "Admin", href: "/admin" },
-          { label: "Roles", href: "/admin/roles" },
+          { label: "Rôles", href: "/admin/roles" },
           { label: "Permissions" },
         ]}
         // actions={
@@ -251,11 +251,11 @@ export const PermissionListPage: React.FC = () => {
         <div className="flex items-start gap-3">
           <Info className="h-5 w-5 text-blue-600 mt-0.5" />
           <div className="text-sm text-blue-900">
-            <p className="font-semibold">Permission System</p>
+            <p className="font-semibold">Système de permissions</p>
             <p className="mt-1">
-              Permissions control what actions users can perform in the system.
-              They are assigned to roles, which are then assigned to users. System
-              permissions cannot be modified or deleted.
+              Les permissions définissent les actions que les utilisateurs peuvent effectuer dans le système.
+              Elles sont attribuées aux rôles, qui sont ensuite attribués aux utilisateurs. Les permissions
+              système ne peuvent pas être modifiées ou supprimées.
             </p>
           </div>
         </div>
@@ -284,7 +284,7 @@ export const PermissionListPage: React.FC = () => {
               <FileText className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Total Permissions</p>
+              <p className="text-sm text-gray-500">Total des permissions</p>
               <p className="text-2xl font-bold">{permissions?.length || 0}</p>
             </div>
           </div>
@@ -296,7 +296,7 @@ export const PermissionListPage: React.FC = () => {
               <Shield className="h-6 w-6 text-green-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Resource Categories</p>
+              <p className="text-sm text-gray-500">Catégories de ressources</p>
               <p className="text-2xl font-bold">
                 {Object.keys(groupedPermissions).length}
               </p>
@@ -310,7 +310,7 @@ export const PermissionListPage: React.FC = () => {
               <FileText className="h-6 w-6 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Filtered Results</p>
+              <p className="text-sm text-gray-500">Résultats filtrés</p>
               <p className="text-2xl font-bold">{filteredPermissions.length}</p>
             </div>
           </div>
@@ -335,7 +335,7 @@ export const PermissionListPage: React.FC = () => {
           data={filteredPermissions}
           // actions={tableActions}
           loading={isLoading}
-          emptyMessage="No permissions found"
+          emptyMessage="Aucune permission trouvée"
         />
 
         {isLoading && (
@@ -350,7 +350,7 @@ export const PermissionListPage: React.FC = () => {
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            Permissions by Resource
+            Permissions par ressource
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Object.entries(groupedPermissions)
@@ -383,11 +383,11 @@ export const PermissionListPage: React.FC = () => {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the permission "
-              {selectedPermission?.name}". This action cannot be undone and may
-              affect roles that currently have this permission.
+              La permission « {selectedPermission?.name} » sera définitivement supprimée.
+              Cette action est irréversible et peut
+              affecter les rôles qui ont actuellement cette permission.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -399,10 +399,10 @@ export const PermissionListPage: React.FC = () => {
               {deletePermission.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
+                  Suppression…
                 </>
               ) : (
-                "Delete Permission"
+                "Supprimer la permission"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

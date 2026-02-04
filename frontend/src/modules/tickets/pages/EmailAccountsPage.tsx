@@ -199,7 +199,7 @@ export const EmailAccountsPage: React.FC = () => {
             {useTls != null && (
               <>
                 <dt className="text-muted-foreground">TLS</dt>
-                <dd>{useTls ? "Yes" : "No"}</dd>
+                <dd>{useTls ? "Oui" : "Non"}</dd>
               </>
             )}
             {(fromVal != null && fromVal !== "") && (
@@ -287,7 +287,7 @@ export const EmailAccountsPage: React.FC = () => {
                           size="sm"
                           disabled={testMutation.isPending}
                           onClick={() => testMutation.mutate(a.id)}
-                          title="Test connection"
+                          title="Tester la connexion"
                         >
                           {testMutation.isPending ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -300,7 +300,7 @@ export const EmailAccountsPage: React.FC = () => {
                           size="sm"
                           disabled={syncMutation.isPending}
                           onClick={() => syncMutation.mutate(a.id)}
-                          title="Sync now"
+                          title="Synchroniser"
                         >
                           {syncMutation.isPending ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -321,7 +321,7 @@ export const EmailAccountsPage: React.FC = () => {
                           size="sm"
                           className="text-destructive hover:text-destructive"
                           onClick={() => setDeleteId(a.id)}
-                          title="Delete"
+                          title="Supprimer"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -339,7 +339,7 @@ export const EmailAccountsPage: React.FC = () => {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add email account</DialogTitle>
+            <DialogTitle>Ajouter un compte e-mail</DialogTitle>
             <DialogDescription>
               IMAP account used for email-to-ticket. Incoming emails will create tickets or replies.
             </DialogDescription>
@@ -364,7 +364,7 @@ export const EmailAccountsPage: React.FC = () => {
       <Dialog open={!!editAccount} onOpenChange={(o) => { if (!o) { setEditAccount(null); resetForm(); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit email account</DialogTitle>
+            <DialogTitle>Modifier le compte e-mail</DialogTitle>
             <DialogDescription>
               Update IMAP settings. Leave password blank to keep current.
             </DialogDescription>
@@ -387,7 +387,7 @@ export const EmailAccountsPage: React.FC = () => {
       <AlertDialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete email account?</AlertDialogTitle>
+            <AlertDialogTitle>Supprimer le compte e-mail ?</AlertDialogTitle>
             <AlertDialogDescription>
               This will remove the IMAP account. Email-to-ticket will no longer use it. This cannot be undone.
             </AlertDialogDescription>
@@ -398,7 +398,7 @@ export const EmailAccountsPage: React.FC = () => {
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
+              {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Supprimer"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -452,7 +452,7 @@ function EmailAccountForm({
         />
       </div>
       <div className="grid gap-2">
-        <Label>{isEdit ? "Password (leave blank to keep)" : "IMAP password"}</Label>
+        <Label>{isEdit ? "Mot de passe (laisser vide pour conserver)" : "Mot de passe IMAP"}</Label>
         <Input
           type="password"
           placeholder={isEdit ? "••••••••" : ""}
@@ -468,7 +468,7 @@ function EmailAccountForm({
         <input
           type="checkbox"
           id="use_tls"
-          title="Use TLS"
+          title="Utiliser TLS"
           checked={form.use_tls ?? true}
           onChange={(e) => setForm((f) => ({ ...f, use_tls: e.target.checked }))}
           className="rounded"

@@ -1,0 +1,45 @@
+{% extends "reports/base_report.html" %}
+
+{% block summary %}
+  <div class="executive-summary">
+    <div class="kpi-card">
+      <div class="kpi-value">{{ first_contact_rate | format_percentage }}</div>
+      <div class="kpi-label">First Contact Resolution</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{ total_resolved }}</div>
+      <div class="kpi-label">Resolved Tickets</div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block charts %}
+  {{ super() }}
+{% endblock %}
+
+{% block data %}
+  <div class="data-section">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Total Resolved</td>
+          <td>{{ total_resolved }}</td>
+        </tr>
+        <tr>
+          <td>With First Response</td>
+          <td>{{ with_first_response }}</td>
+        </tr>
+        <tr>
+          <td>First Contact Rate</td>
+          <td>{{ first_contact_rate | format_percentage }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

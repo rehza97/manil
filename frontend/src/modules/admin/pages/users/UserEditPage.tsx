@@ -95,11 +95,11 @@ export const UserEditPage: React.FC = () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.full_name) {
-      newErrors.full_name = "Full name is required";
+      newErrors.full_name = "Le nom complet est requis";
     }
 
     if (formData.role_id !== undefined && !formData.role_id) {
-      newErrors.role_id = "Role is required";
+      newErrors.role_id = "Le rôle est requis";
     }
 
     setErrors(newErrors);
@@ -116,14 +116,14 @@ export const UserEditPage: React.FC = () => {
     try {
       await updateUser.mutateAsync({ userId: id!, data: formData });
       toast({
-        title: "Success",
-        description: "User updated successfully",
+        title: "Succès",
+        description: "Utilisateur mis à jour avec succès",
       });
       navigate(`/admin/users/${id}`);
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.response?.data?.detail || "Failed to update user",
+        title: "Erreur",
+        description: error.response?.data?.detail || "Échec de la mise à jour de l'utilisateur",
         variant: "destructive",
       });
     }
@@ -133,14 +133,14 @@ export const UserEditPage: React.FC = () => {
     try {
       await deleteUser.mutateAsync(id!);
       toast({
-        title: "Success",
-        description: "User deleted successfully",
+        title: "Succès",
+        description: "Utilisateur supprimé avec succès",
       });
       navigate("/admin/users");
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.response?.data?.detail || "Failed to delete user",
+        title: "Erreur",
+        description: error.response?.data?.detail || "Échec de la suppression de l'utilisateur",
         variant: "destructive",
       });
     }
@@ -150,15 +150,15 @@ export const UserEditPage: React.FC = () => {
     try {
       await hardDeleteUser.mutateAsync(id!);
       toast({
-        title: "Success",
-        description: "User permanently removed",
+        title: "Succès",
+        description: "Utilisateur définitivement supprimé",
       });
       navigate("/admin/users");
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: "Erreur",
         description:
-          error.response?.data?.detail || "Failed to permanently delete user",
+          error.response?.data?.detail || "Échec de la suppression définitive de l'utilisateur",
         variant: "destructive",
       });
     }
@@ -169,20 +169,20 @@ export const UserEditPage: React.FC = () => {
       if (user?.is_active) {
         await deactivateUser.mutateAsync(id!);
         toast({
-          title: "Success",
-          description: "User deactivated successfully",
+          title: "Succès",
+          description: "Utilisateur désactivé avec succès",
         });
       } else {
         await activateUser.mutateAsync(id!);
         toast({
-          title: "Success",
-          description: "User activated successfully",
+          title: "Succès",
+          description: "Utilisateur activé avec succès",
         });
       }
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.response?.data?.detail || "Failed to update user status",
+        title: "Erreur",
+        description: error.response?.data?.detail || "Échec de la mise à jour du statut utilisateur",
         variant: "destructive",
       });
     }
@@ -192,13 +192,13 @@ export const UserEditPage: React.FC = () => {
     try {
       await unlockAccount.mutateAsync(id!);
       toast({
-        title: "Success",
-        description: "Account unlocked successfully",
+        title: "Succès",
+        description: "Compte déverrouillé avec succès",
       });
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.response?.data?.detail || "Failed to unlock account",
+        title: "Erreur",
+        description: error.response?.data?.detail || "Échec du déverrouillage du compte",
         variant: "destructive",
       });
     }
@@ -208,13 +208,13 @@ export const UserEditPage: React.FC = () => {
     try {
       await forcePasswordReset.mutateAsync(id!);
       toast({
-        title: "Success",
-        description: "Password reset email sent to user",
+        title: "Succès",
+        description: "E-mail de réinitialisation du mot de passe envoyé à l'utilisateur",
       });
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.response?.data?.detail || "Failed to send password reset",
+        title: "Erreur",
+        description: error.response?.data?.detail || "Échec de l'envoi de la réinitialisation du mot de passe",
         variant: "destructive",
       });
     }
@@ -231,7 +231,7 @@ export const UserEditPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        <span className="ml-2 text-gray-500">Loading user...</span>
+        <span className="ml-2 text-gray-500">Chargement de l'utilisateur…</span>
       </div>
     );
   }
@@ -240,13 +240,13 @@ export const UserEditPage: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <AlertCircle className="h-12 w-12 text-gray-400 mb-4" />
-        <p className="text-gray-500">User not found</p>
+        <p className="text-gray-500">Utilisateur introuvable</p>
         <Button
           variant="outline"
           onClick={() => navigate("/admin/users")}
           className="mt-4"
         >
-          Back to Users
+          Retour aux utilisateurs
         </Button>
       </div>
     );
@@ -258,13 +258,13 @@ export const UserEditPage: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
-        title="Edit User"
-        description={`Editing ${user.full_name}`}
+        title="Modifier l'utilisateur"
+        description={`Modification de ${user.full_name}`}
         breadcrumbs={[
           { label: "Admin", href: "/admin" },
-          { label: "Users", href: "/admin/users" },
+          { label: "Utilisateurs", href: "/admin/users" },
           { label: user.full_name, href: `/admin/users/${id}` },
-          { label: "Edit" },
+          { label: "Modifier" },
         ]}
         actions={
           <Button
@@ -272,7 +272,7 @@ export const UserEditPage: React.FC = () => {
             onClick={() => navigate(`/admin/users/${id}`)}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Details
+            Retour aux détails
           </Button>
         }
       />
@@ -284,9 +284,9 @@ export const UserEditPage: React.FC = () => {
             <div className="flex items-start gap-3">
               <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
               <div>
-                <h4 className="font-semibold text-red-900">Account Locked</h4>
+                <h4 className="font-semibold text-red-900">Compte verrouillé</h4>
                 <p className="text-sm text-red-700 mt-1">
-                  This account is locked due to {user.failed_login_attempts} failed login attempts.
+                  Ce compte est verrouillé en raison de {user.failed_login_attempts} tentatives de connexion échouées.
                 </p>
               </div>
             </div>
@@ -301,7 +301,7 @@ export const UserEditPage: React.FC = () => {
               ) : (
                 <>
                   <Unlock className="h-4 w-4 mr-2" />
-                  Unlock
+                  Déverrouiller
                 </>
               )}
             </Button>
@@ -317,11 +317,11 @@ export const UserEditPage: React.FC = () => {
               <div className="space-y-6">
                 {/* Basic Information */}
                 <div>
-                  <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
+                  <h3 className="text-lg font-semibold mb-4">Informations de base</h3>
                   <div className="space-y-4">
                     {/* Email (read-only) */}
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
+                      <Label htmlFor="email">E-mail</Label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
@@ -333,21 +333,21 @@ export const UserEditPage: React.FC = () => {
                         />
                       </div>
                       <p className="text-xs text-gray-500">
-                        Email address cannot be changed
+                        L'adresse e-mail ne peut pas être modifiée
                       </p>
                     </div>
 
                     {/* Full Name */}
                     <div className="space-y-2">
                       <Label htmlFor="full_name">
-                        Full Name <span className="text-red-500">*</span>
+                        Nom complet <span className="text-red-500">*</span>
                       </Label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
                           id="full_name"
                           type="text"
-                          placeholder="John Doe"
+                          placeholder="Jean Dupont"
                           value={formData.full_name}
                           onChange={(e) => handleChange("full_name", e.target.value)}
                           className={`pl-10 ${errors.full_name ? "border-red-500" : ""}`}
@@ -370,7 +370,7 @@ export const UserEditPage: React.FC = () => {
                           onValueChange={(value) => handleChange("role_id", value)}
                         >
                           <SelectTrigger className={`pl-10 ${errors.role_id ? "border-red-500" : ""}`}>
-                            <SelectValue placeholder="Select role" />
+                            <SelectValue placeholder="Sélectionner un rôle" />
                           </SelectTrigger>
                           <SelectContent>
                             {roles.map((role) => (
@@ -390,12 +390,12 @@ export const UserEditPage: React.FC = () => {
 
                 {/* Account Status */}
                 <div>
-                  <h3 className="text-lg font-semibold mb-4">Account Status</h3>
+                  <h3 className="text-lg font-semibold mb-4">Statut du compte</h3>
                   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div className="space-y-1">
-                      <Label htmlFor="is_active">Active Account</Label>
+                      <Label htmlFor="is_active">Compte actif</Label>
                       <p className="text-sm text-gray-500">
-                        Disable to prevent user from logging in
+                        Désactiver pour empêcher l'utilisateur de se connecter
                       </p>
                     </div>
                     <Switch
@@ -410,22 +410,22 @@ export const UserEditPage: React.FC = () => {
                           if (checked) {
                             await activateUser.mutateAsync(id!);
                             toast({
-                              title: "Success",
-                              description: "User activated successfully",
+                              title: "Succès",
+                              description: "Utilisateur activé avec succès",
                             });
                           } else {
                             await deactivateUser.mutateAsync(id!);
                             toast({
-                              title: "Success",
-                              description: "User deactivated successfully",
+                              title: "Succès",
+                              description: "Utilisateur désactivé avec succès",
                             });
                           }
                         } catch (error: any) {
                           // Revert the UI change on error
                           handleChange("is_active", !checked);
                           toast({
-                            title: "Error",
-                            description: error?.response?.data?.detail || "Failed to update user status",
+                            title: "Erreur",
+                            description: error?.response?.data?.detail || "Échec de la mise à jour du statut utilisateur",
                             variant: "destructive",
                           });
                         }
@@ -442,7 +442,7 @@ export const UserEditPage: React.FC = () => {
                     onClick={() => navigate(`/admin/users/${id}`)}
                     disabled={updateUser.isPending}
                   >
-                    Cancel
+                    Annuler
                   </Button>
                   <Button
                     type="submit"
@@ -451,12 +451,12 @@ export const UserEditPage: React.FC = () => {
                     {updateUser.isPending ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Saving...
+                        Enregistrement…
                       </>
                     ) : (
                       <>
                         <Save className="h-4 w-4 mr-2" />
-                        Save Changes
+                        Enregistrer les modifications
                       </>
                     )}
                   </Button>
@@ -470,7 +470,7 @@ export const UserEditPage: React.FC = () => {
         <div className="space-y-6">
           {/* Security Actions */}
           <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Security Actions</h3>
+            <h3 className="text-lg font-semibold mb-4">Actions de sécurité</h3>
             <div className="space-y-2">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -479,21 +479,21 @@ export const UserEditPage: React.FC = () => {
                     className="w-full justify-start"
                   >
                     <Key className="h-4 w-4 mr-2" />
-                    Force Password Reset
+                    Forcer la réinitialisation du mot de passe
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Force Password Reset</AlertDialogTitle>
+                    <AlertDialogTitle>Forcer la réinitialisation du mot de passe</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will send a password reset email to the user. They will be
-                      required to set a new password.
+                      Un e-mail de réinitialisation sera envoyé à l'utilisateur. Il devra
+                      définir un nouveau mot de passe.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
                     <AlertDialogAction onClick={handlePasswordReset}>
-                      Send Reset Email
+                      Envoyer l'e-mail de réinitialisation
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -511,7 +511,7 @@ export const UserEditPage: React.FC = () => {
                   ) : (
                     <Unlock className="h-4 w-4 mr-2" />
                   )}
-                  Unlock Account
+                  Déverrouiller le compte
                 </Button>
               )}
             </div>
@@ -519,7 +519,7 @@ export const UserEditPage: React.FC = () => {
 
           {/* Account Actions */}
           <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Account Actions</h3>
+            <h3 className="text-lg font-semibold mb-4">Actions sur le compte</h3>
             <div className="space-y-2">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -530,12 +530,12 @@ export const UserEditPage: React.FC = () => {
                     {user.is_active ? (
                       <>
                         <Lock className="h-4 w-4 mr-2" />
-                        Deactivate Account
+                        Désactiver le compte
                       </>
                     ) : (
                       <>
                         <Unlock className="h-4 w-4 mr-2" />
-                        Activate Account
+                        Activer le compte
                       </>
                     )}
                   </Button>
@@ -543,18 +543,18 @@ export const UserEditPage: React.FC = () => {
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>
-                      {user.is_active ? "Deactivate" : "Activate"} Account
+                      {user.is_active ? "Désactiver" : "Activer"} le compte
                     </AlertDialogTitle>
                     <AlertDialogDescription>
                       {user.is_active
-                        ? "This will prevent the user from logging in. They will not be able to access their account."
-                        : "This will allow the user to log in and access their account."}
+                        ? "L'utilisateur ne pourra plus se connecter ni accéder à son compte."
+                        : "L'utilisateur pourra se connecter et accéder à son compte."}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
                     <AlertDialogAction onClick={handleToggleActive}>
-                      {user.is_active ? "Deactivate" : "Activate"}
+                      {user.is_active ? "Désactiver" : "Activer"}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -565,9 +565,9 @@ export const UserEditPage: React.FC = () => {
           {/* Danger Zone */}
           <Card className="p-6 border-2 border-red-200 bg-red-50/30">
             <div className="mb-4">
-              <h3 className="text-lg font-bold text-red-700 mb-1">Danger Zone</h3>
+              <h3 className="text-lg font-bold text-red-700 mb-1">Zone de danger</h3>
               <p className="text-sm text-red-600/80">
-                Irreversible and destructive actions
+                Actions irréversibles et destructrices
               </p>
             </div>
             {!user.deleted_at && (
@@ -578,25 +578,25 @@ export const UserEditPage: React.FC = () => {
                     className="w-full justify-start font-medium"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Delete User
+                    Supprimer l'utilisateur
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Delete User</AlertDialogTitle>
+                    <AlertDialogTitle>Supprimer l'utilisateur</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will mark the user as deleted. They will no longer be able
-                      to log in. Their data will remain for audit purposes. You can
-                      permanently delete them later from the user list.
+                      L'utilisateur sera marqué comme supprimé et ne pourra plus se connecter.
+                      Ses données resteront pour l'audit. Vous pourrez le supprimer définitivement
+                      plus tard depuis la liste des utilisateurs.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleDelete}
                       className="bg-red-600 hover:bg-red-700"
                     >
-                      Delete User
+                      Supprimer l'utilisateur
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -610,24 +610,24 @@ export const UserEditPage: React.FC = () => {
                     className="w-full justify-start font-medium mt-4"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Permanently Delete User
+                    Supprimer définitivement l'utilisateur
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Permanently Delete User</AlertDialogTitle>
+                    <AlertDialogTitle>Supprimer définitivement l'utilisateur</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will permanently remove the user from the database. This
-                      action cannot be undone.
+                      L'utilisateur sera définitivement supprimé de la base de données.
+                      Cette action est irréversible.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleHardDelete}
                       className="bg-red-600 hover:bg-red-700"
                     >
-                      Permanently Delete
+                      Supprimer définitivement
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>

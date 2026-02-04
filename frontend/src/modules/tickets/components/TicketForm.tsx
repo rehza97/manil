@@ -154,8 +154,8 @@ export const TicketForm: React.FC<TicketFormProps> = ({ customerId, onSuccess })
       {
         onSuccess: () => {
           toast({
-            title: "Success",
-            description: "Ticket created successfully",
+            title: "Succès",
+            description: "Ticket créé avec succès",
           });
           localStorage.removeItem(DRAFT_STORAGE_KEY);
           form.reset();
@@ -283,7 +283,7 @@ export const TicketForm: React.FC<TicketFormProps> = ({ customerId, onSuccess })
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select priority" />
+                        <SelectValue placeholder="Choisir la priorité" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>

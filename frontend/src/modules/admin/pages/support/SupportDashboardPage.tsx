@@ -44,7 +44,7 @@ export const SupportDashboardPage: React.FC = () => {
         <Card>
           <CardContent className="pt-6">
             <p className="text-muted-foreground">
-              No support statistics available.
+              Aucune statistique de support disponible.
             </p>
           </CardContent>
         </Card>
@@ -54,7 +54,7 @@ export const SupportDashboardPage: React.FC = () => {
 
   const statsCards = [
     {
-      title: "Total Tickets",
+      title: "Total des tickets",
       value: stats.total_tickets,
       icon: Ticket,
       color: "text-blue-600",
@@ -62,7 +62,7 @@ export const SupportDashboardPage: React.FC = () => {
       link: "/admin/tickets",
     },
     {
-      title: "Open Tickets",
+      title: "Tickets ouverts",
       value: stats.open_tickets,
       icon: AlertCircle,
       color: "text-orange-600",
@@ -70,7 +70,7 @@ export const SupportDashboardPage: React.FC = () => {
       link: "/admin/tickets?status=open",
     },
     {
-      title: "Assigned Tickets",
+      title: "Tickets assignés",
       value: stats.assigned_tickets,
       icon: Users,
       color: "text-green-600",
@@ -78,7 +78,7 @@ export const SupportDashboardPage: React.FC = () => {
       link: "/admin/tickets?assigned=true",
     },
     {
-      title: "Unassigned Tickets",
+      title: "Tickets non assignés",
       value: stats.unassigned_tickets,
       icon: AlertCircle,
       color: "text-red-600",
@@ -89,29 +89,29 @@ export const SupportDashboardPage: React.FC = () => {
 
   const quickActions = [
     {
-      title: "Support Groups",
-      description: "Manage support team groups",
+      title: "Groupes de support",
+      description: "Gérer les groupes de l'équipe support",
       icon: Users,
       link: "/admin/support/groups",
       count: stats.total_groups,
     },
     {
-      title: "Ticket Categories",
-      description: "Organize tickets by category",
+      title: "Catégories de tickets",
+      description: "Organiser les tickets par catégorie",
       icon: FolderKanban,
       link: "/admin/support/categories",
       count: stats.total_categories,
     },
     {
-      title: "Automation Rules",
-      description: "Automate ticket workflows",
+      title: "Règles d'automatisation",
+      description: "Automatiser les flux de tickets",
       icon: Zap,
       link: "/admin/support/automation",
       count: stats.total_automation_rules,
       badge:
         stats.active_automation_rules > 0 ? (
           <Badge variant="secondary" className="ml-2">
-            {stats.active_automation_rules} active
+            {stats.active_automation_rules} actives
           </Badge>
         ) : null,
     },
@@ -120,9 +120,9 @@ export const SupportDashboardPage: React.FC = () => {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Support Management</h1>
+        <h1 className="text-3xl font-bold">Gestion du support</h1>
         <p className="text-muted-foreground mt-2">
-          Overview of support operations and team performance
+          Vue d&apos;ensemble des opérations support et de la performance de l&apos;équipe
         </p>
       </div>
 
@@ -159,9 +159,9 @@ export const SupportDashboardPage: React.FC = () => {
       {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
+          <CardTitle>Actions rapides</CardTitle>
           <CardDescription>
-            Access support management tools and configurations
+            Accéder aux outils et configurations de gestion du support
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -203,8 +203,8 @@ export const SupportDashboardPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle>Ticket Status Overview</CardTitle>
-            <CardDescription>Current ticket distribution</CardDescription>
+            <CardTitle>Vue d&apos;ensemble des statuts de tickets</CardTitle>
+            <CardDescription>Répartition actuelle des tickets</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -229,7 +229,7 @@ export const SupportDashboardPage: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Assigned</span>
+                <span className="text-sm font-medium">Assignés</span>
                 <div className="flex items-center space-x-2">
                   <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
                     <div
@@ -250,7 +250,7 @@ export const SupportDashboardPage: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Unassigned</span>
+                <span className="text-sm font-medium">Non assignés</span>
                 <div className="flex items-center space-x-2">
                   <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
                     <div
@@ -282,7 +282,7 @@ export const SupportDashboardPage: React.FC = () => {
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Total Rules</span>
+                <span className="text-sm font-medium">Total des règles</span>
                 <Badge variant="outline">{stats.total_automation_rules}</Badge>
               </div>
               <div className="flex items-center justify-between">
@@ -290,7 +290,7 @@ export const SupportDashboardPage: React.FC = () => {
                 <Badge variant="default">{stats.active_automation_rules}</Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Inactive Rules</span>
+                <span className="text-sm font-medium">Règles inactives</span>
                 <Badge variant="secondary">
                   {stats.total_automation_rules - stats.active_automation_rules}
                 </Badge>

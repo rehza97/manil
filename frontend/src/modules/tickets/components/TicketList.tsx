@@ -42,7 +42,7 @@ export const TicketList: React.FC<TicketListProps> = ({ onSelectTicket }) => {
   const { data, isLoading } = useTickets(page, 20);
 
   if (isLoading) {
-    return <div className="text-center py-8">Loading tickets...</div>;
+    return <div className="text-center py-8">Chargement des tickets…</div>;
   }
 
   const tickets = data?.data || [];
@@ -59,7 +59,7 @@ export const TicketList: React.FC<TicketListProps> = ({ onSelectTicket }) => {
               <TableHead>Priority</TableHead>
               <TableHead>Customer</TableHead>
               <TableHead>Assigned To</TableHead>
-              <TableHead>Created</TableHead>
+              <TableHead>Créé le</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -82,7 +82,7 @@ export const TicketList: React.FC<TicketListProps> = ({ onSelectTicket }) => {
                   </Badge>
                 </TableCell>
                 <TableCell>{ticket.customerId?.slice(0, 8) || "N/A"}</TableCell>
-                <TableCell>{ticket.assignedTo || "Unassigned"}</TableCell>
+                <TableCell>{ticket.assignedTo || "Non assigné"}</TableCell>
                 <TableCell>
                   {new Date(ticket.createdAt).toLocaleDateString()}
                 </TableCell>

@@ -416,7 +416,7 @@ export const TicketListEnhanced: React.FC<TicketListEnhancedProps> = ({
                   </TableCell>
                 )}
                 {visibleColumns.has("assignedTo") && (
-                  <TableCell>{ticket.assignedTo || "Unassigned"}</TableCell>
+                  <TableCell>{ticket.assignedTo || "Non assigné"}</TableCell>
                 )}
                 {visibleColumns.has("createdAt") && (
                   <TableCell>{formatDateSafe(ticket.createdAt)}</TableCell>

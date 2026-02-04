@@ -130,38 +130,38 @@ const AdminDashboardLayout: React.FC = () => {
 
   const navigation: (NavItem | NavSection)[] = [
     {
-      name: "Dashboard",
+      name: "Tableau de bord",
       href: "/admin",
       icon: LayoutDashboard,
       current: location.pathname === "/admin",
     },
     {
-      name: "System Overview",
+      name: "Aperçu système",
       href: "/admin/overview",
       icon: Activity,
       current: location.pathname.startsWith("/admin/overview"),
       sectionKey: "overview",
       children: [
         {
-          name: "Overview",
+          name: "Aperçu",
           href: "/admin/overview",
           icon: Activity,
           current: location.pathname === "/admin/overview",
         },
         {
-          name: "System Health",
+          name: "Santé du système",
           href: "/admin/overview/health",
           icon: Heart,
           current: location.pathname === "/admin/overview/health",
         },
         {
-          name: "Performance Metrics",
+          name: "Métriques de performance",
           href: "/admin/overview/performance",
           icon: Gauge,
           current: location.pathname === "/admin/overview/performance",
         },
         {
-          name: "System Alerts",
+          name: "Alertes système",
           href: "/admin/overview/alerts",
           icon: AlertTriangle,
           current: location.pathname === "/admin/overview/alerts",
@@ -169,20 +169,20 @@ const AdminDashboardLayout: React.FC = () => {
       ],
     },
     {
-      name: "User Management",
+      name: "Gestion des utilisateurs",
       href: "/admin/users",
       icon: Users,
       current: location.pathname.startsWith("/admin/users"),
       sectionKey: "users",
       children: [
         {
-          name: "All Users",
+          name: "Tous les utilisateurs",
           href: "/admin/users",
           icon: Users,
           current: location.pathname === "/admin/users",
         },
         {
-          name: "Create User",
+          name: "Créer un utilisateur",
           href: "/admin/users/new",
           icon: UserPlus,
           current: location.pathname === "/admin/users/new",
@@ -190,20 +190,20 @@ const AdminDashboardLayout: React.FC = () => {
       ],
     },
     {
-      name: "Customer Management",
+      name: "Gestion des clients",
       href: "/admin/customers",
       icon: Package,
       current: location.pathname.startsWith("/admin/customers"),
       sectionKey: "customers",
       children: [
         {
-          name: "All Customers",
+          name: "Tous les clients",
           href: "/admin/customers",
           icon: Package,
           current: location.pathname === "/admin/customers",
         },
         {
-          name: "Create Customer",
+          name: "Créer un client",
           href: "/admin/customers/create",
           icon: UserPlus,
           current: location.pathname === "/admin/customers/create",
@@ -211,26 +211,26 @@ const AdminDashboardLayout: React.FC = () => {
       ],
     },
     {
-      name: "Role & Permissions",
+      name: "Rôles et permissions",
       href: "/admin/roles",
       icon: Key,
       current: location.pathname.startsWith("/admin/roles"),
       sectionKey: "roles",
       children: [
         {
-          name: "All Roles",
+          name: "Tous les rôles",
           href: "/admin/roles",
           icon: Key,
           current: location.pathname === "/admin/roles",
         },
         {
-          name: "Create Role",
+          name: "Créer un rôle",
           href: "/admin/roles/new",
           icon: UserPlus,
           current: location.pathname === "/admin/roles/new",
         },
         {
-          name: "All Permissions",
+          name: "Toutes les permissions",
           href: "/admin/permissions",
           icon: Lock,
           current: location.pathname === "/admin/permissions",
@@ -238,26 +238,26 @@ const AdminDashboardLayout: React.FC = () => {
       ],
     },
     {
-      name: "Product Management",
+      name: "Gestion des produits",
       href: "/admin/products",
       icon: Package,
       current: location.pathname.startsWith("/admin/products"),
       sectionKey: "products",
       children: [
         {
-          name: "All Products",
+          name: "Tous les produits",
           href: "/admin/products",
           icon: Package,
           current: location.pathname === "/admin/products",
         },
         {
-          name: "Categories",
+          name: "Catégories",
           href: "/admin/products/categories",
           icon: FolderTree,
           current: location.pathname === "/admin/products/categories",
         },
         {
-          name: "Add Product",
+          name: "Ajouter un produit",
           href: "/admin/products/new",
           icon: UserPlus,
           current: location.pathname === "/admin/products/new",
@@ -265,32 +265,32 @@ const AdminDashboardLayout: React.FC = () => {
       ],
     },
     {
-      name: "Support Management",
+      name: "Gestion du support",
       href: "/admin/support",
       icon: Headphones,
       current: location.pathname.startsWith("/admin/support"),
       sectionKey: "support",
       children: [
         {
-          name: "Support Dashboard",
+          name: "Tableau de bord support",
           href: "/admin/support",
           icon: Headphones,
           current: location.pathname === "/admin/support",
         },
         {
-          name: "Support Groups",
+          name: "Groupes de support",
           href: "/admin/support/groups",
           icon: Users,
           current: location.pathname === "/admin/support/groups",
         },
         {
-          name: "Ticket Categories",
+          name: "Catégories de tickets",
           href: "/admin/support/categories",
           icon: FolderTree,
           current: location.pathname === "/admin/support/categories",
         },
         {
-          name: "Automation Rules",
+          name: "Règles d'automatisation",
           href: "/admin/support/automation",
           icon: Zap,
           current: location.pathname === "/admin/support/automation",
@@ -305,19 +305,19 @@ const AdminDashboardLayout: React.FC = () => {
       sectionKey: "tickets",
       children: [
         {
-          name: "All Tickets",
+          name: "Tous les tickets",
           href: "/admin/tickets",
           icon: Ticket,
           current: location.pathname === "/admin/tickets",
         },
         {
-          name: "Templates",
+          name: "Modèles",
           href: "/admin/tickets/templates",
           icon: FileText,
           current: location.pathname.startsWith("/admin/tickets/templates"),
         },
         {
-          name: "Email accounts",
+          name: "Comptes e-mail",
           href: "/admin/tickets/email-accounts",
           icon: Mail,
           current: location.pathname.startsWith("/admin/tickets/email-accounts"),
@@ -325,20 +325,20 @@ const AdminDashboardLayout: React.FC = () => {
       ],
     },
     {
-      name: "Orders",
+      name: "Commandes",
       href: "/admin/orders",
       icon: ShoppingCart,
       current: location.pathname.startsWith("/admin/orders"),
       sectionKey: "orders",
       children: [
         {
-          name: "All Orders",
+          name: "Toutes les commandes",
           href: "/admin/orders",
           icon: ShoppingCart,
           current: location.pathname === "/admin/orders",
         },
         {
-          name: "Create Order",
+          name: "Créer une commande",
           href: "/admin/orders/create",
           icon: UserPlus,
           current: location.pathname === "/admin/orders/create",
@@ -346,20 +346,20 @@ const AdminDashboardLayout: React.FC = () => {
       ],
     },
     {
-      name: "Quotes",
+      name: "Devis",
       href: "/admin/quotes",
       icon: FilePen,
       current: location.pathname.startsWith("/admin/quotes"),
       sectionKey: "quotes",
       children: [
         {
-          name: "All Quotes",
+          name: "Tous les devis",
           href: "/admin/quotes",
           icon: FilePen,
           current: location.pathname === "/admin/quotes",
         },
         {
-          name: "Create Quote",
+          name: "Créer un devis",
           href: "/admin/quotes/new",
           icon: UserPlus,
           current: location.pathname === "/admin/quotes/new",
@@ -368,20 +368,20 @@ const AdminDashboardLayout: React.FC = () => {
       ],
     },
     {
-      name: "Invoices",
+      name: "Factures",
       href: "/admin/invoices",
       icon: Receipt,
       current: location.pathname.startsWith("/admin/invoices"),
       sectionKey: "invoices",
       children: [
         {
-          name: "All Invoices",
+          name: "Toutes les factures",
           href: "/admin/invoices",
           icon: Receipt,
           current: location.pathname === "/admin/invoices",
         },
         {
-          name: "Create Invoice",
+          name: "Créer une facture",
           href: "/admin/invoices/create",
           icon: UserPlus,
           current: location.pathname === "/admin/invoices/create",
@@ -389,38 +389,38 @@ const AdminDashboardLayout: React.FC = () => {
       ],
     },
     {
-      name: "VPS Hosting",
+      name: "Hébergement VPS",
       href: "/admin/hosting/subscriptions",
       icon: Server,
       current: location.pathname.startsWith("/admin/hosting"),
       sectionKey: "hosting",
       children: [
         {
-          name: "VPS Plans",
+          name: "Plans VPS",
           href: "/admin/hosting/plans",
           icon: Package,
           current: location.pathname === "/admin/hosting/plans",
         },
         {
-          name: "Pending Requests",
+          name: "Demandes en attente",
           href: "/admin/hosting/requests",
           icon: ClipboardList,
           current: location.pathname === "/admin/hosting/requests",
         },
         {
-          name: "All Subscriptions",
+          name: "Tous les abonnements",
           href: "/admin/hosting/subscriptions",
           icon: Server,
           current: location.pathname === "/admin/hosting/subscriptions",
         },
         {
-          name: "Monitoring",
+          name: "Surveillance",
           href: "/admin/hosting/monitoring",
           icon: Activity,
           current: location.pathname === "/admin/hosting/monitoring",
         },
         {
-          name: "Custom Images",
+          name: "Images personnalisées",
           href: "/admin/hosting/custom-images",
           icon: Image,
           current: location.pathname === "/admin/hosting/custom-images",
@@ -428,20 +428,20 @@ const AdminDashboardLayout: React.FC = () => {
       ],
     },
     {
-      name: "DNS Management",
+      name: "Gestion DNS",
       href: "/admin/dns/zones",
       icon: Globe,
       current: location.pathname.startsWith("/admin/dns"),
       sectionKey: "dns",
       children: [
         {
-          name: "All DNS Zones",
+          name: "Toutes les zones DNS",
           href: "/admin/dns/zones",
           icon: Globe,
           current: location.pathname === "/admin/dns/zones",
         },
         {
-          name: "DNS Monitoring",
+          name: "Surveillance DNS",
           href: "/admin/dns/monitoring",
           icon: BarChart2,
           current: location.pathname === "/admin/dns/monitoring",
@@ -449,44 +449,44 @@ const AdminDashboardLayout: React.FC = () => {
       ],
     },
     {
-      name: "System Settings",
+      name: "Paramètres système",
       href: "/admin/settings",
       icon: Settings,
       current: location.pathname.startsWith("/admin/settings"),
       sectionKey: "settings",
       children: [
         {
-          name: "Settings",
+          name: "Paramètres",
           href: "/admin/settings",
           icon: Settings,
           current: location.pathname === "/admin/settings",
         },
         {
-          name: "General",
+          name: "Général",
           href: "/admin/settings/general",
           icon: Settings,
           current: location.pathname === "/admin/settings/general",
         },
         {
-          name: "Security",
+          name: "Sécurité",
           href: "/admin/settings/security",
           icon: ShieldCheck,
           current: location.pathname === "/admin/settings/security",
         },
         {
-          name: "Email Config",
+          name: "Config. e-mail",
           href: "/admin/settings/email",
           icon: Mail,
           current: location.pathname === "/admin/settings/email",
         },
         {
-          name: "SMS Config",
+          name: "Config. SMS",
           href: "/admin/settings/sms",
           icon: MessageSquare,
           current: location.pathname === "/admin/settings/sms",
         },
         {
-          name: "SMS Queue",
+          name: "File SMS",
           href: "/admin/settings/sms-queue",
           icon: Inbox,
           current: location.pathname === "/admin/settings/sms-queue",
@@ -498,13 +498,13 @@ const AdminDashboardLayout: React.FC = () => {
           current: location.pathname === "/admin/settings/notifications",
         },
         {
-          name: "Storage Config",
+          name: "Config. stockage",
           href: "/admin/settings/storage",
           icon: HardDrive,
           current: location.pathname === "/admin/settings/storage",
         },
         {
-          name: "Backup Settings",
+          name: "Paramètres de sauvegarde",
           href: "/admin/settings/backup",
           icon: Archive,
           current: location.pathname === "/admin/settings/backup",
@@ -512,32 +512,32 @@ const AdminDashboardLayout: React.FC = () => {
       ],
     },
     {
-      name: "Activity & Logs",
+      name: "Activité et journaux",
       href: "/admin/logs",
       icon: Database,
       current: location.pathname.startsWith("/admin/logs"),
       sectionKey: "logs",
       children: [
         {
-          name: "Activity Logs",
+          name: "Journaux d'activité",
           href: "/admin/logs",
           icon: Activity,
           current: location.pathname === "/admin/logs",
         },
         {
-          name: "Audit Logs",
+          name: "Journaux d'audit",
           href: "/admin/logs/audit",
           icon: FileCheck,
           current: location.pathname === "/admin/logs/audit",
         },
         {
-          name: "Security Logs",
+          name: "Journaux de sécurité",
           href: "/admin/logs/security",
           icon: ShieldCheck,
           current: location.pathname === "/admin/logs/security",
         },
         {
-          name: "System Logs",
+          name: "Journaux système",
           href: "/admin/logs/system",
           icon: Database,
           current: location.pathname === "/admin/logs/system",
@@ -545,38 +545,38 @@ const AdminDashboardLayout: React.FC = () => {
       ],
     },
     {
-      name: "Reports",
+      name: "Rapports",
       href: "/admin/reports",
       icon: BarChart3,
       current: location.pathname.startsWith("/admin/reports"),
       sectionKey: "reports",
       children: [
         {
-          name: "Reports Dashboard",
+          name: "Tableau de bord rapports",
           href: "/admin/reports",
           icon: BarChart3,
           current: location.pathname === "/admin/reports",
         },
         {
-          name: "User Reports",
+          name: "Rapports utilisateurs",
           href: "/admin/reports/users",
           icon: User,
           current: location.pathname === "/admin/reports/users",
         },
         {
-          name: "Activity Reports",
+          name: "Rapports d'activité",
           href: "/admin/reports/activity",
           icon: Activity,
           current: location.pathname === "/admin/reports/activity",
         },
         {
-          name: "Security Reports",
+          name: "Rapports de sécurité",
           href: "/admin/reports/security",
           icon: ShieldCheck,
           current: location.pathname === "/admin/reports/security",
         },
         {
-          name: "Performance Reports",
+          name: "Rapports de performance",
           href: "/admin/reports/performance",
           icon: TrendingUp,
           current: location.pathname === "/admin/reports/performance",
@@ -591,25 +591,25 @@ const AdminDashboardLayout: React.FC = () => {
       sectionKey: "maintenance",
       children: [
         {
-          name: "Maintenance Dashboard",
+          name: "Tableau de bord maintenance",
           href: "/admin/maintenance",
           icon: Wrench,
           current: location.pathname === "/admin/maintenance",
         },
         {
-          name: "Backup Management",
+          name: "Gestion des sauvegardes",
           href: "/admin/maintenance/backup",
           icon: Archive,
           current: location.pathname === "/admin/maintenance/backup",
         },
         {
-          name: "Cache Management",
+          name: "Gestion du cache",
           href: "/admin/maintenance/cache",
           icon: Database,
           current: location.pathname === "/admin/maintenance/cache",
         },
         {
-          name: "Data Cleanup",
+          name: "Nettoyage des données",
           href: "/admin/maintenance/cleanup",
           icon: Trash2,
           current: location.pathname === "/admin/maintenance/cleanup",
@@ -623,32 +623,32 @@ const AdminDashboardLayout: React.FC = () => {
       ],
     },
     {
-      name: "Profile & Security",
+      name: "Profil et sécurité",
       href: "/admin/profile",
       icon: User,
       current: location.pathname.startsWith("/admin/profile") || location.pathname.startsWith("/admin/security"),
       sectionKey: "profile",
       children: [
         {
-          name: "Profile",
+          name: "Profil",
           href: "/admin/profile",
           icon: User,
           current: location.pathname === "/admin/profile",
         },
         {
-          name: "Edit Profile",
+          name: "Modifier le profil",
           href: "/admin/profile/edit",
           icon: UserCog,
           current: location.pathname === "/admin/profile/edit",
         },
         {
-          name: "Security",
+          name: "Sécurité",
           href: "/admin/security",
           icon: Shield,
           current: location.pathname === "/admin/security",
         },
         {
-          name: "Login History",
+          name: "Historique de connexion",
           href: "/admin/security/login-history",
           icon: Clock,
           current: location.pathname === "/admin/security/login-history",
@@ -668,7 +668,7 @@ const AdminDashboardLayout: React.FC = () => {
   );
 
   return (
-    <RoleGuard allowedRole="admin" layoutName="Admin Portal">
+    <RoleGuard allowedRole="admin" layoutName="Portail admin">
       <div className="h-screen flex flex-col bg-slate-50">
       {/* Top Navigation */}
       <nav className="bg-white border-b border-slate-200">
@@ -681,7 +681,7 @@ const AdminDashboardLayout: React.FC = () => {
                   CloudManager
                 </span>
                 <Badge variant="destructive" className="ml-2">
-                  Admin Portal
+                  Portail admin
                 </Badge>
               </div>
             </div>
@@ -719,7 +719,7 @@ const AdminDashboardLayout: React.FC = () => {
                         {user?.email}
                       </p>
                       <Badge variant="destructive" className="w-fit">
-                        Administrator
+                        Administrateur
                       </Badge>
                     </div>
                   </DropdownMenuLabel>
@@ -727,13 +727,13 @@ const AdminDashboardLayout: React.FC = () => {
                   <DropdownMenuItem asChild className="bg-white hover:bg-gray-50">
                     <Link to="/admin/profile" className="text-gray-900">
                       <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
+                      <span>Profil</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="bg-white hover:bg-gray-50">
                     <Link to="/admin/settings" className="text-gray-900">
                       <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
+                      <span>Paramètres</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-gray-200" />
@@ -743,7 +743,7 @@ const AdminDashboardLayout: React.FC = () => {
                     disabled={logoutMutation.isPending}
                   >
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>{logoutMutation.isPending ? "Logging out..." : "Log out"}</span>
+                    <span>{logoutMutation.isPending ? "Déconnexion…" : "Déconnexion"}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

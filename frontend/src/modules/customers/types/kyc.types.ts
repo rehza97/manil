@@ -80,19 +80,19 @@ export interface CustomerKYCStatus {
 }
 
 export const KYC_DOCUMENT_TYPE_LABELS: Record<KYCDocumentType, string> = {
-  [KYCDocumentType.NATIONAL_ID]: "National ID",
-  [KYCDocumentType.PASSPORT]: "Passport",
-  [KYCDocumentType.DRIVER_LICENSE]: "Driver's License",
-  [KYCDocumentType.BUSINESS_REGISTRATION]: "Business Registration",
-  [KYCDocumentType.TAX_CERTIFICATE]: "Tax Certificate",
-  [KYCDocumentType.PROOF_OF_ADDRESS]: "Proof of Address",
-  [KYCDocumentType.OTHER]: "Other Document",
+  [KYCDocumentType.NATIONAL_ID]: "Carte d'identité",
+  [KYCDocumentType.PASSPORT]: "Passeport",
+  [KYCDocumentType.DRIVER_LICENSE]: "Permis de conduire",
+  [KYCDocumentType.BUSINESS_REGISTRATION]: "Immatriculation entreprise",
+  [KYCDocumentType.TAX_CERTIFICATE]: "Attestation fiscale",
+  [KYCDocumentType.PROOF_OF_ADDRESS]: "Justificatif de domicile",
+  [KYCDocumentType.OTHER]: "Autre document",
 };
 
 export const KYC_STATUS_LABELS: Record<KYCStatus, string> = {
-  [KYCStatus.PENDING]: "Pending Review",
-  [KYCStatus.UNDER_REVIEW]: "Under Review",
-  [KYCStatus.APPROVED]: "Approved",
-  [KYCStatus.REJECTED]: "Rejected",
-  [KYCStatus.EXPIRED]: "Expired",
+  [KYCStatus.PENDING]: "En attente de vérification",
+  [KYCStatus.UNDER_REVIEW]: "En cours d'examen",
+  [KYCStatus.APPROVED]: "Approuvé",
+  [KYCStatus.REJECTED]: "Rejeté",
+  [KYCStatus.EXPIRED]: "Expiré",
 };

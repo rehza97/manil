@@ -69,13 +69,13 @@ export const EmailConfigPage: React.FC = () => {
     try {
       const result = await settingsService.testEmailConfig();
       if (result.success) {
-        toast.success("Email configuration test successful!");
+        toast.success("Test de la configuration e-mail réussi !");
       } else {
-        toast.error(result.message || "Email test failed");
+        toast.error(result.message || "Échec du test e-mail");
       }
     } catch (error: any) {
       toast.error(
-        error?.response?.data?.message || "Failed to test email configuration"
+        error?.response?.data?.message || "Échec du test de la configuration e-mail"
       );
     } finally {
       setTesting(false);
@@ -108,9 +108,9 @@ export const EmailConfigPage: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Email Provider Settings</CardTitle>
+          <CardTitle>Paramètres du fournisseur e-mail</CardTitle>
           <CardDescription>
-            Configure your email service provider
+            Configurer votre fournisseur de messagerie
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -142,12 +142,12 @@ export const EmailConfigPage: React.FC = () => {
           {testing ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Testing...
+              Test en cours…
             </>
           ) : (
             <>
               <TestTube className="mr-2 h-4 w-4" />
-              Test Configuration
+              Tester la configuration
             </>
           )}
         </Button>
@@ -159,12 +159,12 @@ export const EmailConfigPage: React.FC = () => {
           {updateMutation.isPending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
+              Enregistrement…
             </>
           ) : (
             <>
               <Save className="mr-2 h-4 w-4" />
-              Save Changes
+              Enregistrer les modifications
             </>
           )}
         </Button>

@@ -64,6 +64,9 @@ class OrderService:
         """
         Calculate order totals.
 
+        Subtotal is gross (before item discounts). Tax is applied to (subtotal - discount).
+        Total = subtotal - discount + tax. Matches model docstring and invoice semantics.
+
         Returns: (subtotal, tax, discount, total)
         """
         subtotal = 0.0
@@ -72,11 +75,11 @@ class OrderService:
         for item in items:
             item_subtotal = item.unit_price * item.quantity
             item_discount = item_subtotal * (item.discount_percentage / 100)
-            subtotal += float(item_subtotal - item_discount)
+            subtotal += float(item_subtotal)
             total_discount += float(item_discount)
 
-        tax = subtotal * tax_rate
-        total = subtotal + tax
+        tax = (subtotal - total_discount) * tax_rate
+        total = subtotal - total_discount + tax
 
         return subtotal, tax, total_discount, total
 

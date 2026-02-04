@@ -169,7 +169,7 @@ export function KYCPanel({
             <Alert className="mt-4">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                <strong>Missing documents:</strong>{" "}
+                <strong>Documents manquants :</strong>{" "}
                 {kycStatus.missingDocuments.join(", ")}
               </AlertDescription>
             </Alert>
@@ -189,7 +189,7 @@ export function KYCPanel({
       {/* Documents Management */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="documents">Documents KYC</TabsTrigger>
           <TabsTrigger value="upload">
             <Upload className="mr-2 h-4 w-4" />
             Nouveau téléversement

@@ -2,7 +2,7 @@
 Customer Intelligence Report Service
 
 Four reports: lifetime value, segmentation, KYC compliance, churn analysis.
-Uses RevenueRepository as single source for by-customer revenue.
+Uses RevenueService as single source for by-customer revenue.
 """
 
 from datetime import datetime, timezone, timedelta
@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.customers.models import Customer
 from app.modules.orders.models import Order
 from app.modules.orders.models import OrderStatus
-from app.modules.revenue.repository import RevenueRepository
+from app.modules.revenue.service import RevenueService
 from .base_report_service import BaseReportService
 
 
@@ -23,7 +23,7 @@ class CustomerIntelligenceService(BaseReportService):
 
     def __init__(self, db: AsyncSession):
         self.db = db
-        self.revenue_repo = RevenueRepository(db)
+        self.revenue_service = RevenueService(db)
 
     async def get_lifetime_value_report(
         self,
@@ -33,7 +33,7 @@ class CustomerIntelligenceService(BaseReportService):
     ) -> Dict[str, Any]:
         """Total revenue per customer from single source (recognized revenue)."""
         end = end_date or datetime.now(timezone.utc)
-        customer_data = await self.revenue_repo.get_revenue_by_customer(
+        customer_data = await self.revenue_service.get_by_customer_for_range(
             start_date=None, end_date=end, limit=limit
         )
         details = [

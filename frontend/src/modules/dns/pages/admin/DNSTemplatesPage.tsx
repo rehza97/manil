@@ -71,14 +71,14 @@ export default function DNSTemplatesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">DNS Templates</h1>
+          <h1 className="text-3xl font-bold">Modèles DNS</h1>
           <p className="text-muted-foreground">
-            Manage DNS record templates for quick zone setup
+            Gérer les modèles d&apos;enregistrements DNS pour une configuration rapide des zones
           </p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Create Template
+          Créer un modèle
         </Button>
       </div>
 
@@ -99,13 +99,13 @@ export default function DNSTemplatesPage() {
             </div>
           ) : !templates || templates.length === 0 ? (
             <div className="rounded-lg border border-dashed p-12 text-center">
-              <h3 className="mb-2 text-lg font-semibold">No templates found</h3>
+              <h3 className="mb-2 text-lg font-semibold">Aucun modèle trouvé</h3>
               <p className="mb-4 text-sm text-muted-foreground">
-                Create your first DNS template to help users set up zones quickly
+                Créez votre premier modèle DNS pour aider les utilisateurs à configurer les zones rapidement
               </p>
               <Button onClick={() => setShowCreateDialog(true)}>
                 <Plus className="mr-2 h-4 w-4" />
-                Create Template
+                Créer un modèle
               </Button>
             </div>
           ) : (
@@ -152,11 +152,10 @@ export default function DNSTemplatesPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>{template.record_definitions?.length || 0} records</span>
+                      <span>{template.record_definitions?.length || 0} enregistrement{(template.record_definitions?.length ?? 0) !== 1 ? "s" : ""}</span>
                       <span>•</span>
                       <span>
-                        Used {template.usage_count || 0} time
-                        {template.usage_count !== 1 ? "s" : ""}
+                        Utilisé {template.usage_count || 0} fois
                       </span>
                     </div>
                   </CardContent>
@@ -171,11 +170,11 @@ export default function DNSTemplatesPage() {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Create DNS Template</DialogTitle>
+            <DialogTitle>Créer un modèle DNS</DialogTitle>
           </DialogHeader>
           <div className="rounded-lg border border-dashed p-8 text-center">
             <p className="text-sm text-muted-foreground">
-              Template creation form will be implemented in Phase 7
+              Le formulaire de création de modèle sera implémenté en phase 7
             </p>
           </div>
         </DialogContent>
@@ -199,11 +198,11 @@ export default function DNSTemplatesPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
+                      <TableHead>Nom</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead>Value</TableHead>
+                      <TableHead>Valeur</TableHead>
                       <TableHead>TTL</TableHead>
-                      <TableHead>Priority</TableHead>
+                      <TableHead>Priorité</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -219,7 +218,7 @@ export default function DNSTemplatesPage() {
                           {record.record_value}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {record.ttl || "Default"}
+                          {record.ttl || "Par défaut"}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {record.priority || "-"}
@@ -235,15 +234,13 @@ export default function DNSTemplatesPage() {
                   r.record_value.includes("{ZONE_NAME}")
               ) && (
                 <div className="rounded-lg bg-muted p-3 text-sm">
-                  <p className="font-medium">Template Variables:</p>
+                  <p className="font-medium">Variables du modèle :</p>
                   <ul className="mt-1 list-inside list-disc text-muted-foreground">
                     <li>
-                      <code className="font-mono">{"{VPS_IP}"}</code> - VPS IP
-                      address
+                      <code className="font-mono">{"{VPS_IP}"}</code> — Adresse IP du VPS
                     </li>
                     <li>
-                      <code className="font-mono">{"{ZONE_NAME}"}</code> - Zone
-                      domain name
+                      <code className="font-mono">{"{ZONE_NAME}"}</code> — Nom de domaine de la zone
                     </li>
                   </ul>
                 </div>
@@ -260,22 +257,22 @@ export default function DNSTemplatesPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Template?</AlertDialogTitle>
+            <AlertDialogTitle>Supprimer le modèle ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the template "
-              {deletingTemplate?.name}"? This action cannot be undone.
+              Êtes-vous sûr de vouloir supprimer le modèle «
+              {deletingTemplate?.name} » ? Cette action est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteMutation.isPending}>
-              Cancel
+              Annuler
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleteMutation.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete Template"}
+              {deleteMutation.isPending ? "Suppression…" : "Supprimer le modèle"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

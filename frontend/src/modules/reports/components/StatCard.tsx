@@ -97,7 +97,7 @@ export const StatCard: React.FC<StatCardProps> = ({
               <span className={`text-sm font-medium ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
                 {Math.abs(trend.value)}%
               </span>
-              <span className="text-sm text-gray-500 ml-1">vs last period</span>
+              <span className="text-sm text-gray-500 ml-1">vs période précédente</span>
             </div>
           )}
         </div>

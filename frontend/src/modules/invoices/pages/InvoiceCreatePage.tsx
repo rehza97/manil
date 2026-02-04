@@ -16,15 +16,15 @@ export const InvoiceCreatePage: React.FC = () => {
     createInvoice(data, {
       onSuccess: () => {
         toast({
-          title: "Success",
-          description: "Invoice created successfully",
+          title: "Succès",
+          description: "Facture créée avec succès",
         });
         navigate("/dashboard/invoices");
       },
       onError: (error: any) => {
         toast({
-          title: "Error",
-          description: error.message || "Failed to create invoice",
+          title: "Erreur",
+          description: error.message || "Échec de la création de la facture",
           variant: "destructive",
         });
       },
@@ -41,14 +41,14 @@ export const InvoiceCreatePage: React.FC = () => {
           onClick={() => navigate("/dashboard/invoices")}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Invoices
+          Retour aux factures
         </Button>
       </div>
 
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Create Invoice</h1>
+        <h1 className="text-3xl font-bold text-slate-900">Créer une facture</h1>
         <p className="text-slate-600 mt-1">
-          Create a new invoice for a customer
+          Créer une nouvelle facture pour un client
         </p>
       </div>
 

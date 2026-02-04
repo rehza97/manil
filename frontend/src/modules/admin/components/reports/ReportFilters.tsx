@@ -42,7 +42,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
   onFiltersChange,
   onExport,
   exportLoading = false,
-  searchPlaceholder = "Search...",
+  searchPlaceholder = "Rechercher...",
   additionalFilters,
 }) => {
   const handleDateRangeChange = (range: {
@@ -113,7 +113,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                   <Download className="h-4 w-4 text-slate-500" />
-                  Export Reports
+                  Exporter les rapports
                 </label>
                 <div className="flex flex-col gap-2">
                   <Button

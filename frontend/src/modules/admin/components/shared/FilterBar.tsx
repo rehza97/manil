@@ -36,7 +36,7 @@ interface FilterBarProps {
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({
-  searchPlaceholder = "Search...",
+  searchPlaceholder = "Rechercher…",
   searchValue = "",
   onSearchChange,
   filters = [],
@@ -96,7 +96,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <PopoverTrigger asChild>
             <Button variant="outline" className="relative">
               <Filter className="h-4 w-4 mr-2" />
-              Filters
+              Filtres
               {hasActiveFilters && (
                 <Badge
                   variant="destructive"
@@ -110,7 +110,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <PopoverContent className="w-80" align="end">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold">Filters</h4>
+                <h4 className="font-semibold">Filtres</h4>
                 {hasActiveFilters && (
                   <Button
                     variant="ghost"
@@ -120,7 +120,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                       setFiltersOpen(false);
                     }}
                   >
-                    Clear all
+                    Tout effacer
                   </Button>
                 )}
               </div>
@@ -137,7 +137,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                     >
                       <SelectTrigger>
                         <SelectValue
-                          placeholder={filter.placeholder || "Select..."}
+                          placeholder={filter.placeholder || "Choisir…"}
                         />
                       </SelectTrigger>
                       <SelectContent>
@@ -168,7 +168,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                   size="sm"
                   onClick={() => setFiltersOpen(false)}
                 >
-                  Close
+                  Fermer
                 </Button>
               </div>
             </div>
@@ -180,7 +180,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       {hasActiveFilters && onClearFilters && (
         <Button variant="ghost" size="sm" onClick={onClearFilters}>
           <X className="h-4 w-4 mr-1" />
-          Clear filters
+          Effacer les filtres
         </Button>
       )}
     </div>
