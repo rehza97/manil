@@ -433,10 +433,10 @@ class InvoiceWorkflowService:
         else:
             due_date = issue_date + timedelta(days=30)
 
-        # Create invoice from quote
+        # Create invoice from quote (quote item description can be None; InvoiceItemCreate requires a string)
         invoice_items = [
             InvoiceItemCreate(
-                description=item.description,
+                description=(item.description or item.item_name or "Item").strip() or "Item",
                 quantity=item.quantity,
                 unit_price=item.unit_price,
                 product_id=item.product_id,

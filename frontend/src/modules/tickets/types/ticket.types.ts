@@ -29,6 +29,8 @@ export interface CreateTicketDTO {
   description: string;
   priority: TicketPriority;
   customerId: string;
+  /** Optional files to upload after ticket is created (sent via two-step flow). */
+  attachments?: File[];
 }
 
 export interface UpdateTicketDTO extends Partial<CreateTicketDTO> {

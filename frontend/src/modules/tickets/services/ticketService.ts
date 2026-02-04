@@ -140,8 +140,17 @@ export const ticketService = {
   },
 
   async create(data: CreateTicketDTO): Promise<Ticket> {
-    const ticket = await ticketsApi.createTicket(data);
-    return transformTicket(ticket);
+    const { attachments = [], ...rest } = data as CreateTicketDTO & {
+      attachments?: File[];
+    };
+    const apiTicket = await ticketsApi.createTicket(rest);
+    const ticketId = apiTicket.id ?? (apiTicket as { id?: string }).id;
+    if (attachments.length > 0 && ticketId) {
+      for (const file of attachments) {
+        await ticketsApi.uploadAttachment(ticketId, file);
+      }
+    }
+    return transformTicket(apiTicket);
   },
 
   async update(id: string, data: UpdateTicketDTO): Promise<Ticket> {
