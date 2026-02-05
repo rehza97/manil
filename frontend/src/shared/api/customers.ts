@@ -532,7 +532,7 @@ export const customersApi = {
     customerId: string,
     documentId: string,
     data: {
-      status: "verified" | "rejected";
+      status: "approved" | "rejected";
       notes?: string;
       rejection_reason?: string;
     }

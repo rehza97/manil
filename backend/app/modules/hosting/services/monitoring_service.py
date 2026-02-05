@@ -48,6 +48,25 @@ class ContainerMonitoringService:
         # Track last notification time per subscription+alert_type to avoid spam
         self._last_alert_notification: Dict[str, datetime] = {}
         # Default metrics collection interval (5 minutes)
+
+    async def _get_customer_phone(self, user_email: str) -> Optional[str]:
+        """
+        Get customer phone from Customer table by user email.
+
+        Note: subscription.customer is a User object, not a Customer object.
+        This method fetches the actual Customer record to get the phone number.
+
+        Args:
+            user_email: User email address
+
+        Returns:
+            Customer phone number if found and not empty, None otherwise
+        """
+        from app.modules.customers.models import Customer
+        stmt = select(Customer).where(Customer.email == user_email)
+        result = await self.db.execute(stmt)
+        customer = result.scalar_one_or_none()
+        return customer.phone if customer and customer.phone and customer.phone.strip() else None
         self.collection_interval_seconds = 300
 
     async def _get_previous_metrics(self, container_id: str) -> Optional[ContainerMetrics]:
@@ -537,7 +556,8 @@ class ContainerMonitoringService:
             )
 
             # Send SMS notification if customer has phone and preferences allow
-            if subscription.customer and subscription.customer.phone and subscription.customer.phone.strip():
+            customer_phone = await self._get_customer_phone(customer_email)
+            if customer_phone:
                 try:
                     uid = await user_id_by_email(self.db, customer_email)
                     if uid:
@@ -548,7 +568,7 @@ class ContainerMonitoringService:
                             vps_name = subscription.subscription_number or f"VPS-{subscription.id[:8]}"
                             alert_message = f"{alert_type}: {alert.get('message', 'Alert detected')}"
                             await sms_service.send_vps_alert(
-                                to=subscription.customer.phone,
+                                to=customer_phone,
                                 vps_name=vps_name,
                                 alert_type=alert_type,
                                 message=alert_message

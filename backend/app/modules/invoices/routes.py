@@ -268,15 +268,22 @@ async def send_invoice(
     invoice_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_any_permission(
-        [Permission.INVOICES_CREATE, Permission.INVOICES_EDIT]))
+        [Permission.INVOICES_CREATE, Permission.INVOICES_EDIT, Permission.INVOICES_SEND]))
 ):
-    """Send invoice to customer.
+    """Send invoice to customer: mark as sent and send email with PDF.
 
     Security:
-    - Requires admin or corporate role (billing staff only)
+    - Staff with INVOICES_CREATE/EDIT or INVOICES_SEND can send any invoice.
+    - Clients with INVOICES_SEND can send only their own invoices.
     """
-    service = InvoiceWorkflowService(db)
-    return await service.send_invoice(invoice_id, sent_by_id=current_user.id)
+    invoice_service = InvoiceService(db)
+    invoice = await invoice_service.get_by_id(invoice_id)
+    if current_user.role_slug == "client":
+        customer_id = await get_customer_id_for_user(db, current_user, auto_create=False)
+        if not customer_id or str(invoice.customer_id) != str(customer_id):
+            raise ForbiddenException("You can only send your own invoices.")
+    workflow = InvoiceWorkflowService(db)
+    return await workflow.send_invoice(invoice_id, sent_by_id=current_user.id)
 
 
 @router.post("/{invoice_id}/payment", response_model=InvoiceResponse)

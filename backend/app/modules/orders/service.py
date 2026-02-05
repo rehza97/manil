@@ -210,11 +210,16 @@ class OrderService:
                 detail=f"Quote {conversion_data.quote_id} not found"
             )
 
-        # Verify quote is accepted/approved; allow CONVERTED so invoice+order can both be created
-        if quote.status not in (QuoteStatus.ACCEPTED, QuoteStatus.APPROVED, QuoteStatus.CONVERTED):
+        # Allow DRAFT (owner-only enforced in route), ACCEPTED, APPROVED, CONVERTED
+        if quote.status not in (
+            QuoteStatus.DRAFT,
+            QuoteStatus.ACCEPTED,
+            QuoteStatus.APPROVED,
+            QuoteStatus.CONVERTED,
+        ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Quote must be accepted or approved.",
+                detail="Quote must be draft, accepted or approved to convert.",
             )
 
         # Check if quote already converted to order

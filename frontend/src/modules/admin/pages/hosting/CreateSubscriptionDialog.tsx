@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -82,6 +83,9 @@ export const CreateSubscriptionDialog: React.FC<CreateSubscriptionDialogProps> =
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Créer un abonnement VPS</DialogTitle>
+          <DialogDescription>
+            Choisissez un client et un plan pour créer un abonnement en attente d&apos;approbation.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

@@ -33,17 +33,33 @@ class KYCDocumentUpdate(BaseModel):
 
 
 class KYCVerificationAction(BaseModel):
-    """Schema for verifying or rejecting KYC document."""
+    """Schema for verifying or rejecting KYC document.
+    Accepts both snake_case (rejection_reason) and camelCase (rejectionReason).
+    Accepts status 'approved' or 'verified' for approval.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
 
     status: KYCStatus = Field(
         ..., description="New status (approved/rejected)"
     )
     rejection_reason: Optional[str] = Field(
-        None, max_length=500, description="Required if status is rejected"
+        None,
+        max_length=500,
+        description="Required if status is rejected",
+        alias="rejectionReason",
     )
     notes: Optional[str] = Field(
         None, max_length=1000, description="Internal notes"
     )
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def normalize_status(cls, v) -> str:
+        """Accept 'verified' as synonym for 'approved'."""
+        if isinstance(v, str) and v in ("verified", "approved"):
+            return "approved"
+        return v
 
     @field_validator("rejection_reason")
     @classmethod

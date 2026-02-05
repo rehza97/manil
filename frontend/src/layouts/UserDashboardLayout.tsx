@@ -1,5 +1,5 @@
 import React from "react";
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
@@ -38,10 +38,12 @@ import {
   Clock,
   Loader2,
   HelpCircle,
+  FileSignature,
 } from "lucide-react";
 import { useAuth, RoleGuard, useLogout } from "@/modules/auth";
 import { customerService } from "@/modules/customers/services";
 import { useCustomerKYCStatus } from "@/modules/customers/hooks";
+import { KYCActivationRequiredDialog } from "@/modules/customers/components/KYCActivationRequiredDialog";
 import { NotificationDropdown } from "@/shared/components/NotificationDropdown";
 import {
   Collapsible,
@@ -63,6 +65,8 @@ const UserDashboardLayout: React.FC = () => {
   const { user } = useAuth();
   const logoutMutation = useLogout();
   const [openItems, setOpenItems] = React.useState<Set<string>>(new Set());
+  const [kycDialogOpen, setKycDialogOpen] = React.useState(false);
+  const navigate = useNavigate();
 
   // Fetch current user's customer profile
   const { data: customer } = useQuery({
@@ -74,7 +78,31 @@ const UserDashboardLayout: React.FC = () => {
   const customerId = customer?.id;
 
   // Fetch KYC status
-  const { data: kycStatus } = useCustomerKYCStatus(customerId || "");
+  const { data: kycStatus, isLoading: isLoadingKYC } =
+    useCustomerKYCStatus(customerId || "");
+
+  const isOnProfilePage = location.pathname.startsWith("/dashboard/profile");
+  const kycNotActivated = Boolean(
+    customerId &&
+      kycStatus &&
+      kycStatus.kycStatus !== "approved" &&
+      !kycStatus.summary?.canActivate
+  );
+  const showKYCDialog = Boolean(
+    customerId && !isLoadingKYC && kycNotActivated && !isOnProfilePage
+  );
+
+  React.useEffect(() => {
+    if (showKYCDialog) {
+      setKycDialogOpen(true);
+    }
+  }, [showKYCDialog]);
+
+  React.useEffect(() => {
+    if (isOnProfilePage) {
+      setKycDialogOpen(false);
+    }
+  }, [isOnProfilePage]);
 
   // Get account status badge
   const getAccountStatusBadge = () => {
@@ -174,6 +202,9 @@ const UserDashboardLayout: React.FC = () => {
     }
     if (location.pathname.startsWith("/dashboard/orders")) {
       newOpenItems.add("orders");
+    }
+    if (location.pathname.startsWith("/dashboard/quotes")) {
+      newOpenItems.add("quotes");
     }
     if (location.pathname.startsWith("/dashboard/settings")) {
       newOpenItems.add("settings");
@@ -278,6 +309,27 @@ const UserDashboardLayout: React.FC = () => {
           icon: FileText,
           current: location.pathname === "/dashboard/invoices" &&
                   !location.pathname.match(/\/\d+$/),
+        },
+      ],
+    },
+    {
+      id: "quotes",
+      name: "Devis",
+      icon: FileSignature,
+      current: location.pathname.startsWith("/dashboard/quotes"),
+      children: [
+        {
+          name: "Mes devis",
+          href: "/dashboard/quotes",
+          icon: FileSignature,
+          current: location.pathname === "/dashboard/quotes" &&
+                  !location.pathname.match(/\/[^/]+$/),
+        },
+        {
+          name: "Créer un devis",
+          href: "/dashboard/quotes/new",
+          icon: FileSignature,
+          current: location.pathname === "/dashboard/quotes/new",
         },
       ],
     },
@@ -549,6 +601,16 @@ const UserDashboardLayout: React.FC = () => {
           </main>
         </div>
       </div>
+      {customerId && (
+        <KYCActivationRequiredDialog
+          open={kycDialogOpen}
+          onOpenChange={setKycDialogOpen}
+          onGoToDocuments={() => {
+            navigate("/dashboard/profile#kyc-documents");
+            setKycDialogOpen(false);
+          }}
+        />
+      )}
     </div>
     </RoleGuard>
   );

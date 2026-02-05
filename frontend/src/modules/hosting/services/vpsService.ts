@@ -470,7 +470,7 @@ export const vpsService = {
    * Create subscription for a customer (admin only)
    */
   async createSubscriptionAdmin(data: { customer_id: string; plan_id: string; os_distro_id?: string }): Promise<VPSSubscription> {
-    const response = await apiClient.post("/hosting/admin/subscriptions/create", data);
+    const response = await apiClient.post("/hosting/admin/create-subscription", data);
     return response.data;
   },
 
@@ -528,7 +528,8 @@ export const vpsService = {
   },
 
   /**
-   * Terminate subscription permanently (admin action)
+   * Terminate subscription permanently (admin action).
+   * Uses 60s timeout so Docker stop/remove has time to complete.
    */
   async terminateSubscription(
     subscriptionId: string,
@@ -536,7 +537,7 @@ export const vpsService = {
   ): Promise<{ status: string }> {
     const response = await apiClient.delete(
       `/hosting/admin/subscriptions/${subscriptionId}`,
-      { params: { remove_volumes: removeVolumes } }
+      { params: { remove_volumes: removeVolumes }, timeout: 60000 }
     );
     return response.data;
   },

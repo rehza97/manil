@@ -19,14 +19,15 @@ export const useStartContainer = () => {
       queryClient.invalidateQueries({ queryKey: ["vps", "subscriptions", subscriptionId] });
       queryClient.invalidateQueries({ queryKey: ["vps", "stats", subscriptionId] });
       toast({
-        title: "Container Started",
-        description: "Your VPS container is now running.",
+        title: "Conteneur démarré",
+        description: "Le VPS est en cours d'exécution.",
+        variant: "success",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Start Failed",
-        description: error.response?.data?.detail || error.message || "Failed to start container",
+        title: "Échec du démarrage",
+        description: error.response?.data?.detail || error.message || "Impossible de démarrer le conteneur.",
         variant: "destructive",
       });
     },
@@ -73,14 +74,15 @@ export const useRebootContainer = () => {
       queryClient.invalidateQueries({ queryKey: ["vps", "subscriptions", subscriptionId] });
       queryClient.invalidateQueries({ queryKey: ["vps", "stats", subscriptionId] });
       toast({
-        title: "Container Rebooting",
-        description: "Your VPS container is rebooting...",
+        title: "Redémarrage en cours",
+        description: "Le VPS redémarre. Il sera de nouveau disponible dans quelques instants.",
+        variant: "success",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Reboot Failed",
-        description: error.response?.data?.detail || error.message || "Failed to reboot container",
+        title: "Échec du redémarrage",
+        description: error.response?.data?.detail || error.message || "Impossible de redémarrer le conteneur.",
         variant: "destructive",
       });
     },

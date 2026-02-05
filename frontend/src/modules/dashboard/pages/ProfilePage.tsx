@@ -234,8 +234,8 @@ const ProfilePage: React.FC = () => {
         </Card>
       )}
 
-      {/* KYC Documents Section */}
-      <Card>
+      {/* KYC Documents Section - id for deep link from KYC activation dialog */}
+      <Card id="kyc-documents">
         <CardHeader>
           <div className="flex items-center space-x-2">
             <FileCheck className="h-5 w-5 text-blue-600" />

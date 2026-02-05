@@ -171,6 +171,7 @@ def _notification_events_key(event: str) -> tuple[str, str] | None:
         "order": "notification.order_events",
         "invoice": "notification.invoice_events",
         "quote": "notification.quote_events",
+        "kyc": "notification.kyc_events",
     }
     setting_key = mapping.get(domain)
     return (setting_key, key) if setting_key else None
@@ -310,6 +311,7 @@ async def check_user_notification_preference(
         "order": "orderUpdates",
         "invoice": "invoiceUpdates",
         "quote": "orderUpdates",  # Quotes grouped with orders
+        "kyc": "accountUpdates",
         "marketing": "marketing",
     }
 

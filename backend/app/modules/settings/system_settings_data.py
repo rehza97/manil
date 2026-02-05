@@ -287,6 +287,53 @@ SYSTEM_SETTINGS: List[Dict[str, Any]] = [
         "is_public": False,
     },
     {
+        "key": "notification.kyc_events",
+        "value": {
+            "document_uploaded": True,
+            "document_approved": True,
+            "document_rejected": True,
+            "document_expired": True,
+            "type": "object"
+        },
+        "category": SettingCategory.NOTIFICATION,
+        "description": "KYC notification events to trigger",
+        "is_public": False,
+    },
+    {
+        "key": "notification.customer_events",
+        "value": {
+            "submitted_for_approval": True,
+            "approval_approved": True,
+            "approval_rejected": True,
+            "suspended": True,
+            "activated": True,
+            "reactivated": True,
+            "deactivated": True,
+            "status_changed": True,
+            "type": "object"
+        },
+        "category": SettingCategory.NOTIFICATION,
+        "description": "Customer account status notification events to trigger",
+        "is_public": False,
+    },
+    {
+        "key": "notification.vps_events",
+        "value": {
+            "requested": True,
+            "approved": True,
+            "provisioned": True,
+            "suspended": True,
+            "reactivated": True,
+            "cancelled": True,
+            "upgraded": True,
+            "downgraded": True,
+            "type": "object"
+        },
+        "category": SettingCategory.NOTIFICATION,
+        "description": "VPS subscription lifecycle notification events to trigger",
+        "is_public": False,
+    },
+    {
         "key": "notification.digest_enabled",
         "value": {"value": True, "type": "boolean"},
         "category": SettingCategory.NOTIFICATION,

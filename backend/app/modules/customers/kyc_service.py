@@ -1,7 +1,8 @@
 """KYC service containing ALL business logic for document verification."""
 
+import logging
 import os
-from typing import Optional
+from typing import Any, Optional
 from datetime import datetime, timezone
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,9 +23,15 @@ from app.modules.customers.kyc_schemas import (
     CustomerKYCStatus,
 )
 from app.infrastructure.storage.service import StorageService
+from app.infrastructure.email.service import EmailService
+from app.infrastructure.sms.service import SMSService
+from app.modules.notifications.service import create_notification, user_id_by_email
+from app.modules.settings.utils import notification_gate_allows
+from app.modules.settings.service import UserNotificationPreferencesService
 from app.config.settings import get_settings
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 class KYCService:
@@ -42,6 +49,7 @@ class KYCService:
 
     def __init__(self, db: AsyncSession):
         """Initialize service with database session."""
+        self.db = db
         self.repository = KYCRepository(db)
         self.customer_repository = CustomerRepository(db)
         self.storage = StorageService()
@@ -129,6 +137,12 @@ class KYCService:
                 created_by=uploaded_by,
             )
 
+            # Send upload notification to customer
+            try:
+                await self._send_kyc_upload_notification(document, customer)
+            except Exception as e:
+                logger.warning(f"Failed to send KYC upload notification: {e}")
+
             return document
 
         except Exception as e:
@@ -187,13 +201,271 @@ class KYCService:
                 f"Cannot verify document with status {document.status}"
             )
 
-        return await self.repository.verify(
+        document = await self.repository.verify(
             document=document,
             status=verification.status,
             verified_by=verified_by,
             rejection_reason=verification.rejection_reason,
             notes=verification.notes,
         )
+        try:
+            customer = await self.customer_repository.get_by_id(document.customer_id)
+            if customer and customer.email:
+                event = (
+                    "kyc.document_approved"
+                    if verification.status == KYCStatus.APPROVED
+                    else "kyc.document_rejected"
+                )
+                await self._send_kyc_verification_notification(
+                    document=document,
+                    customer=customer,
+                    event=event,
+                    rejection_reason=verification.rejection_reason,
+                )
+        except Exception as e:
+            logger.warning("Failed to send KYC verification notification: %s", e)
+        return document
+
+    async def _send_kyc_upload_notification(
+        self,
+        document: KYCDocument,
+        customer: Any,
+    ) -> None:
+        """Send email, SMS, and in-app notification when KYC document is uploaded."""
+        logger.info(f"[KYC UPLOAD NOTIFICATION] Starting notification for customer {customer.email}, document {document.id}")
+
+        uid = await user_id_by_email(self.db, customer.email)
+        logger.info(f"[KYC UPLOAD NOTIFICATION] User ID lookup: {uid}")
+
+        should_send_email = True
+        should_send_sms = False
+        if uid:
+            prefs_svc = UserNotificationPreferencesService(self.db)
+            prefs = await prefs_svc.get(uid)
+            should_send_email = bool(prefs.get("email", {}).get("accountUpdates", True))
+            should_send_sms = bool(prefs.get("sms", {}).get("accountUpdates", False))
+            logger.info(f"[KYC UPLOAD NOTIFICATION] User preferences - Email: {should_send_email}, SMS: {should_send_sms}")
+        else:
+            logger.warning(f"[KYC UPLOAD NOTIFICATION] No user ID found for email {customer.email}")
+
+        doc_type = getattr(document.document_type, "value", str(document.document_type))
+        event = "kyc.document_uploaded"
+
+        gate_allows_email = await notification_gate_allows(self.db, "email", event)
+        gate_allows_sms = await notification_gate_allows(self.db, "sms", event)
+        logger.info(f"[KYC UPLOAD NOTIFICATION] Notification gates - Email: {gate_allows_email}, SMS: {gate_allows_sms}")
+
+        subject = "KYC Document Received"
+        html_body = (
+            f"<p>Hello {customer.name or customer.email},</p>"
+            f"<p>We have successfully received your {doc_type} document.</p>"
+            f"<p>Our team will review it shortly and notify you of the outcome.</p>"
+        )
+        text_body = (
+            f"Hello {customer.name or customer.email},\n\n"
+            f"We have successfully received your {doc_type} document.\n"
+            f"Our team will review it shortly and notify you of the outcome."
+        )
+        notif_type = "kyc_document_uploaded"
+        notif_title = "KYC Document Received"
+        notif_body = f"Your {doc_type} document has been received and is under review."
+        sms_msg = f"Your {doc_type} document has been received. We will review it shortly."
+
+        if should_send_email and gate_allows_email:
+            logger.info(f"[KYC UPLOAD NOTIFICATION] Sending email to {customer.email}")
+            email_svc = EmailService()
+            await email_svc.send_email(
+                to=[customer.email],
+                subject=subject,
+                html_body=html_body,
+                text_body=text_body,
+                db=self.db,
+            )
+            logger.info(f"[KYC UPLOAD NOTIFICATION] Email sent successfully")
+        else:
+            logger.warning(f"[KYC UPLOAD NOTIFICATION] Email NOT sent - should_send_email: {should_send_email}, gate_allows: {gate_allows_email}")
+
+        if (
+            customer.phone
+            and customer.phone.strip()
+            and should_send_sms
+            and gate_allows_sms
+        ):
+            logger.info(f"[KYC UPLOAD NOTIFICATION] Sending SMS to {customer.phone}")
+            sms_svc = SMSService()
+            await sms_svc.send_sms(customer.phone, sms_msg, db=self.db)
+            logger.info(f"[KYC UPLOAD NOTIFICATION] SMS sent successfully")
+        else:
+            logger.warning(f"[KYC UPLOAD NOTIFICATION] SMS NOT sent - phone: {customer.phone}, should_send_sms: {should_send_sms}, gate_allows: {gate_allows_sms}")
+
+        if uid:
+            try:
+                logger.info(f"[KYC UPLOAD NOTIFICATION] Creating in-app notification for user {uid}")
+                await create_notification(
+                    self.db,
+                    uid,
+                    notif_type,
+                    notif_title,
+                    body=notif_body,
+                    link="/dashboard/kyc",
+                )
+                logger.info(f"[KYC UPLOAD NOTIFICATION] In-app notification created successfully")
+            except Exception as e:
+                logger.error(f"[KYC UPLOAD NOTIFICATION] Failed to create in-app notification: {e}", exc_info=True)
+        else:
+            logger.warning(f"[KYC UPLOAD NOTIFICATION] No in-app notification created - no user ID")
+
+    async def _send_kyc_expiration_notification(
+        self,
+        document: KYCDocument,
+        customer: Any,
+    ) -> None:
+        """Send email, SMS, and in-app notification when KYC document expires."""
+        uid = await user_id_by_email(self.db, customer.email)
+        should_send_email = True
+        should_send_sms = False
+        if uid:
+            prefs_svc = UserNotificationPreferencesService(self.db)
+            prefs = await prefs_svc.get(uid)
+            should_send_email = bool(prefs.get("email", {}).get("accountUpdates", True))
+            should_send_sms = bool(prefs.get("sms", {}).get("accountUpdates", False))
+
+        doc_type = getattr(document.document_type, "value", str(document.document_type))
+        event = "kyc.document_expired"
+
+        gate_allows_email = await notification_gate_allows(self.db, "email", event)
+        gate_allows_sms = await notification_gate_allows(self.db, "sms", event)
+
+        subject = "KYC Document Expired"
+        html_body = (
+            f"<p>Hello {customer.name or customer.email},</p>"
+            f"<p>Your {doc_type} document has expired.</p>"
+            f"<p>Please upload a new document to maintain your account verification status.</p>"
+        )
+        text_body = (
+            f"Hello {customer.name or customer.email},\n\n"
+            f"Your {doc_type} document has expired.\n"
+            f"Please upload a new document to maintain your account verification status."
+        )
+        notif_type = "kyc_document_expired"
+        notif_title = "KYC Document Expired"
+        notif_body = f"Your {doc_type} document has expired. Please upload a new one."
+        sms_msg = f"Your {doc_type} document has expired. Please upload a new document."
+
+        if should_send_email and gate_allows_email:
+            email_svc = EmailService()
+            await email_svc.send_email(
+                to=[customer.email],
+                subject=subject,
+                html_body=html_body,
+                text_body=text_body,
+                db=self.db,
+            )
+        if (
+            customer.phone
+            and customer.phone.strip()
+            and should_send_sms
+            and gate_allows_sms
+        ):
+            sms_svc = SMSService()
+            await sms_svc.send_sms(customer.phone, sms_msg, db=self.db)
+        if uid:
+            try:
+                await create_notification(
+                    self.db,
+                    uid,
+                    notif_type,
+                    notif_title,
+                    body=notif_body,
+                    link="/dashboard/kyc",
+                )
+            except Exception as e:
+                logger.warning("Failed to create in-app KYC expiration notification: %s", e)
+
+    async def _send_kyc_verification_notification(
+        self,
+        document: KYCDocument,
+        customer: Any,
+        event: str,
+        rejection_reason: Optional[str] = None,
+    ) -> None:
+        """Send email, SMS, and in-app notification for KYC document approved/rejected."""
+        uid = await user_id_by_email(self.db, customer.email)
+        should_send_email = True
+        should_send_sms = False
+        if uid:
+            prefs_svc = UserNotificationPreferencesService(self.db)
+            prefs = await prefs_svc.get(uid)
+            should_send_email = bool(prefs.get("email", {}).get("accountUpdates", True))
+            should_send_sms = bool(prefs.get("sms", {}).get("accountUpdates", False))
+
+        doc_type = getattr(document.document_type, "value", str(document.document_type))
+        is_approved = event == "kyc.document_approved"
+
+        gate_allows_email = await notification_gate_allows(self.db, "email", event)
+        gate_allows_sms = await notification_gate_allows(self.db, "sms", event)
+
+        if is_approved:
+            subject = "KYC Document Approved"
+            html_body = (
+                f"<p>Hello {customer.name or customer.email},</p>"
+                f"<p>Your KYC document ({doc_type}) has been verified and approved.</p>"
+            )
+            text_body = (
+                f"Hello {customer.name or customer.email},\n\n"
+                f"Your KYC document ({doc_type}) has been verified and approved."
+            )
+            notif_type = "kyc_document_approved"
+            notif_title = "KYC Document Approved"
+            notif_body = f"Your {doc_type} document has been approved."
+            sms_msg = f"Your KYC document ({doc_type}) has been approved."
+        else:
+            reason = (rejection_reason or "Please contact support.").strip()
+            subject = "KYC Document Rejected"
+            html_body = (
+                f"<p>Hello {customer.name or customer.email},</p>"
+                f"<p>Your KYC document ({doc_type}) could not be approved.</p>"
+                f"<p>Reason: {reason}</p><p>Please submit a new document or contact support.</p>"
+            )
+            text_body = (
+                f"Hello {customer.name or customer.email},\n\n"
+                f"Your KYC document ({doc_type}) was not approved. Reason: {reason}\n"
+                "Please submit a new document or contact support."
+            )
+            notif_type = "kyc_document_rejected"
+            notif_title = "KYC Document Rejected"
+            notif_body = f"Your {doc_type} document was rejected. Reason: {reason}"
+            sms_msg = f"KYC document rejected. Reason: {reason[:80]}"
+
+        if should_send_email and gate_allows_email:
+            email_svc = EmailService()
+            await email_svc.send_email(
+                to=[customer.email],
+                subject=subject,
+                html_body=html_body,
+                text_body=text_body,
+                db=self.db,
+            )
+        if (
+            customer.phone
+            and customer.phone.strip()
+            and should_send_sms
+            and gate_allows_sms
+        ):
+            sms_svc = SMSService()
+            await sms_svc.send_sms(customer.phone, sms_msg, db=self.db)
+        if uid:
+            try:
+                await create_notification(
+                    self.db,
+                    uid,
+                    notif_type,
+                    notif_title,
+                    body=notif_body,
+                    link="/dashboard/profile",
+                )
+            except Exception as e:
+                logger.warning("Failed to create in-app KYC notification: %s", e)
 
     async def delete_document(
         self,
@@ -278,6 +550,14 @@ class KYCService:
         for doc in expired_docs:
             await self.repository.mark_as_expired(doc)
             count += 1
+
+            # Send expiration notification to customer
+            try:
+                customer = await self.customer_repository.get_by_id(doc.customer_id)
+                if customer and customer.email:
+                    await self._send_kyc_expiration_notification(doc, customer)
+            except Exception as e:
+                logger.warning(f"Failed to send KYC expiration notification for document {doc.id}: {e}")
 
         return count
 

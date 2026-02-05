@@ -1,5 +1,5 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/shared/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { InvoiceForm } from "../components/InvoiceForm";
@@ -9,6 +9,13 @@ import type { CreateInvoiceDTO } from "../types/invoice.types";
 
 export const InvoiceCreatePage: React.FC = () => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    if (pathname.startsWith("/dashboard/invoices/create")) {
+      navigate("/dashboard/invoices", { replace: true });
+    }
+  }, [pathname, navigate]);
   const { toast } = useToast();
   const { mutate: createInvoice, isPending } = useCreateInvoice();
 

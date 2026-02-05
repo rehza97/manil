@@ -330,6 +330,87 @@ class CustomerWorkflowService:
         except Exception as e:
             logger.warning(f"Failed to create note for rejection: {e}")
 
+        # Send rejection notification to customer
+        try:
+            if customer.email:
+                uid = await user_id_by_email(self.db, customer.email)
+
+                # Check notification gates
+                gate_allows_email = await notification_gate_allows(
+                    self.db, "email", "customer.approval_rejected"
+                )
+                gate_allows_sms = await notification_gate_allows(
+                    self.db, "sms", "customer.approval_rejected"
+                )
+
+                # Check user preferences
+                should_send_email = True
+                should_send_sms = False
+                if uid:
+                    prefs_svc = UserNotificationPreferencesService(self.db)
+                    prefs = await prefs_svc.get(uid)
+                    should_send_email = bool(
+                        prefs.get("email", {}).get("accountUpdates", True)
+                    )
+                    should_send_sms = bool(
+                        prefs.get("sms", {}).get("accountUpdates", False)
+                    )
+
+                # Send email notification
+                if should_send_email and gate_allows_email:
+                    email_svc = EmailService()
+                    await email_svc.send_email(
+                        to=[customer.email],
+                        subject="Account Approval Decision",
+                        html_body=(
+                            f"<p>Hello {customer.name or customer.email},</p>"
+                            f"<p>We regret to inform you that your account application was not approved at this time.</p>"
+                            f"<p><strong>Reason:</strong> {reason}</p>"
+                            f"<p>If you have any questions or would like to discuss this decision, "
+                            f"please contact our support team.</p>"
+                        ),
+                        text_body=(
+                            f"Hello {customer.name or customer.email},\n\n"
+                            f"We regret to inform you that your account application was not approved at this time.\n\n"
+                            f"Reason: {reason}\n\n"
+                            f"If you have any questions or would like to discuss this decision, "
+                            f"please contact our support team."
+                        ),
+                        db=self.db,
+                    )
+
+                # Send SMS notification
+                if (
+                    customer.phone
+                    and customer.phone.strip()
+                    and should_send_sms
+                    and gate_allows_sms
+                ):
+                    sms_svc = SMSService()
+                    await sms_svc.send_sms(
+                        customer.phone,
+                        f"Your account application was not approved. Please contact support for details.",
+                        db=self.db,
+                    )
+
+                # Send in-app notification
+                if uid:
+                    try:
+                        await create_notification(
+                            self.db,
+                            uid,
+                            "customer_rejected",
+                            "Account Not Approved",
+                            body=f"Your account application was not approved. Reason: {reason}",
+                            link="/dashboard/profile",
+                        )
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to create in-app rejection notification: {e}"
+                        )
+        except Exception as e:
+            logger.warning(f"Failed to send customer rejection notification: {e}")
+
         logger.info(
             f"Customer {customer_id} rejected by {rejected_by}: {reason}")
         return customer

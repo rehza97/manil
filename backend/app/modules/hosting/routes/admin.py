@@ -350,6 +350,90 @@ async def list_all_subscriptions(
     )
 
 
+# ============================================================================
+# Subscription Creation (Admin) - unique path to avoid conflict with /subscriptions/{id}
+# ============================================================================
+
+class AdminCreateSubscriptionRequest(BaseModel):
+    """Schema for admin creating subscription for a customer."""
+    customer_id: str = Field(...,
+                             description="Customer ID to create subscription for")
+    plan_id: str = Field(..., description="VPS plan ID")
+    os_distro_id: Optional[str] = Field(
+        default="ubuntu-22.04", description="Selected OS distro ID")
+
+
+@router.post(
+    "/create-subscription",
+    response_model=VPSSubscriptionResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create Subscription (Admin)",
+    description="""
+    Create a new VPS subscription for any customer (admin only).
+
+    Creates a subscription in PENDING status that can be immediately approved.
+    This endpoint allows admins to create subscriptions on behalf of customers.
+
+    **Permissions Required:** `hosting:admin`
+
+    **Request Body:**
+    - customer_id: ID of the customer to create subscription for (required)
+    - plan_id: ID of the VPS plan (required)
+
+    **Response:** Created subscription with PENDING status.
+
+    **Note:** The subscription will need to be approved before provisioning begins.
+    """
+)
+async def create_subscription_admin(
+    request: AdminCreateSubscriptionRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.HOSTING_ADMIN))
+):
+    """
+    Create VPS subscription for a customer (admin action).
+
+    Args:
+        request: Request body with customer_id and plan_id
+        db: Database session
+        current_user: Authenticated user (requires hosting:admin permission)
+
+    Returns:
+        Created subscription with PENDING status
+
+    Raises:
+        404: If customer or plan not found
+        400: If plan is inactive
+        403: If user lacks hosting:admin permission
+    """
+    provisioning_service = VPSProvisioningService(db)
+    await provisioning_service.request_vps(
+        request.customer_id, request.plan_id, os_distro_id=request.os_distro_id
+    )
+    repo = VPSSubscriptionRepository(db)
+    subscriptions, _ = await repo.get_all(
+        skip=0,
+        limit=1,
+        customer_id=request.customer_id,
+        plan_id=request.plan_id
+    )
+    if not subscriptions:
+        raise NotFoundException("Subscription was not created")
+    return VPSSubscriptionResponse.model_validate(subscriptions[0])
+
+
+# Register same handler at legacy path so both paths work (avoids 404 when
+# /subscriptions/{id} would match "create" on some deployments).
+router.add_api_route(
+    "/subscriptions/create",
+    create_subscription_admin,
+    methods=["POST"],
+    response_model=VPSSubscriptionResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create Subscription (Admin) (legacy path)",
+)
+
+
 @router.get(
     "/subscriptions/{subscription_id}",
     response_model=VPSSubscriptionDetailResponse,
@@ -1439,80 +1523,3 @@ async def get_alerts(
             'severity') == severity.upper()]
 
     return [AlertSchema.model_validate(a) for a in all_alerts]
-
-
-# ============================================================================
-# Subscription Creation (Admin)
-# ============================================================================
-
-class AdminCreateSubscriptionRequest(BaseModel):
-    """Schema for admin creating subscription for a customer."""
-    customer_id: str = Field(...,
-                             description="Customer ID to create subscription for")
-    plan_id: str = Field(..., description="VPS plan ID")
-    os_distro_id: Optional[str] = Field(
-        default="ubuntu-22.04", description="Selected OS distro ID")
-
-
-@router.post(
-    "/subscriptions/create",
-    response_model=VPSSubscriptionResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Create Subscription (Admin)",
-    description="""
-    Create a new VPS subscription for any customer (admin only).
-    
-    Creates a subscription in PENDING status that can be immediately approved.
-    This endpoint allows admins to create subscriptions on behalf of customers.
-    
-    **Permissions Required:** `hosting:admin`
-    
-    **Request Body:**
-    - customer_id: ID of the customer to create subscription for (required)
-    - plan_id: ID of the VPS plan (required)
-    
-    **Response:** Created subscription with PENDING status.
-    
-    **Note:** The subscription will need to be approved before provisioning begins.
-    """
-)
-async def create_subscription_admin(
-    request: AdminCreateSubscriptionRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.HOSTING_ADMIN))
-):
-    """
-    Create VPS subscription for a customer (admin action).
-
-    Args:
-        request: Request body with customer_id and plan_id
-        db: Database session
-        current_user: Authenticated user (requires hosting:admin permission)
-
-    Returns:
-        Created subscription with PENDING status
-
-    Raises:
-        404: If customer or plan not found
-        400: If plan is inactive
-        403: If user lacks hosting:admin permission
-    """
-    provisioning_service = VPSProvisioningService(db)
-    quote = await provisioning_service.request_vps(request.customer_id, request.plan_id, os_distro_id=request.os_distro_id)
-
-    # Get the subscription that was created
-    repo = VPSSubscriptionRepository(db)
-    subscriptions, _ = await repo.get_all(
-        skip=0,
-        limit=1,
-        customer_id=request.customer_id,
-        plan_id=request.plan_id
-    )
-
-    if not subscriptions:
-        raise NotFoundException("Subscription was not created")
-
-    # Get the most recent subscription (should be the one we just created)
-    subscription = subscriptions[0]
-
-    return VPSSubscriptionResponse.model_validate(subscription)

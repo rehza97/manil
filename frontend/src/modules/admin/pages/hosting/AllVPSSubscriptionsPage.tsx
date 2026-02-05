@@ -81,6 +81,7 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
     "all"
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
 
   const {
     data: subscriptionsData,
@@ -117,9 +118,18 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
   };
   const handleTerminate = (subId: string, removeVolumes: boolean) => {
     setActioningId(subId);
+    const sub = subscriptions.find((s: { id: string; subscription_number?: string }) => s.id === subId);
+    const subNumber = sub?.subscription_number ?? subId;
     terminateMutation
       .mutateAsync({ subscriptionId: subId, removeVolumes })
-      .then(() => refetchSubscriptions())
+      .then(() => {
+        toast({
+          title: "VPS supprimé",
+          description: `${subNumber} a été supprimé. Le conteneur et les données ont été supprimés.`,
+          variant: "success",
+        });
+        refetchSubscriptions();
+      })
       .finally(() => setActioningId(null));
   };
 
@@ -166,7 +176,6 @@ export const AllVPSSubscriptionsPage: React.FC = () => {
     : subscriptions;
 
   // Export hooks
-  const { toast } = useToast();
   const exportMutation = useExportReport();
   const downloadMutation = useDownloadExport();
 

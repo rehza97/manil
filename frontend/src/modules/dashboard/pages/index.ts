@@ -10,3 +10,7 @@ export { ServiceDetailPage } from "./ServiceDetailPage";
 export { SettingsPage } from "./SettingsPage";
 export { NotificationSettingsPage } from "./NotificationSettingsPage";
 export { NotificationsPage } from "./NotificationsPage";
+export { ClientQuotesListPage } from "./ClientQuotesListPage";
+export { ClientQuoteDetailPage } from "./ClientQuoteDetailPage";
+export { ClientQuoteCreatePage } from "./ClientQuoteCreatePage";
+export { ClientQuoteEditPage } from "./ClientQuoteEditPage";

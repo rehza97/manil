@@ -33,6 +33,8 @@ export const InvoiceListPage: React.FC = () => {
     : pathname.startsWith("/corporate")
       ? "/corporate/invoices"
       : "/dashboard/invoices";
+  const canCreateInvoice =
+    pathname.startsWith("/admin") || pathname.startsWith("/corporate");
   const { toast } = useToast();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -127,10 +129,12 @@ export const InvoiceListPage: React.FC = () => {
           <h1 className="text-3xl font-bold text-slate-900">Factures</h1>
           <p className="text-slate-600 mt-1">Consulter et gérer vos factures</p>
         </div>
-        <Button onClick={() => navigate(`${basePath}/create`)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Créer une facture
-        </Button>
+        {canCreateInvoice && (
+          <Button onClick={() => navigate(`${basePath}/create`)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Créer une facture
+          </Button>
+        )}
       </div>
 
       {/* Search and Filters Bar */}

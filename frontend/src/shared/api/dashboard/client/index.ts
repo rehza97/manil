@@ -9,5 +9,6 @@ export * from "./profile";
 export * from "./services";
 export * from "./tickets";
 export * from "./orders";
+export * from "./quotes";
 export * from "./invoices";
 export * from "./settings";

@@ -7,6 +7,7 @@
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { format, formatDistanceToNow } from "date-fns";
+import { fr } from "date-fns/locale";
 import {
   CheckCircle2,
   Clock,

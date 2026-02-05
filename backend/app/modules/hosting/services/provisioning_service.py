@@ -34,6 +34,10 @@ from app.modules.quotes.service import QuoteService
 from app.modules.quotes.models import Quote, QuoteItem, QuoteStatus
 from app.modules.invoices.service import InvoiceService
 from app.infrastructure.email.service import EmailService
+from app.infrastructure.sms.service import SMSService
+from app.modules.notifications.service import create_notification, user_id_by_email
+from app.modules.settings.service import UserNotificationPreferencesService
+from app.modules.settings.utils import notification_gate_allows
 
 
 class VPSProvisioningService:
@@ -48,6 +52,295 @@ class VPSProvisioningService:
         self.docker_service = DockerManagementService(db)
         self.quote_service = QuoteService(db)
         self.email_service = EmailService()
+
+    async def _send_vps_notification(
+        self,
+        subscription: VPSSubscription,
+        event_type: str,
+        additional_context: Optional[dict] = None
+    ) -> None:
+        """
+        Send email, SMS, and in-app notification for VPS subscription events.
+
+        Args:
+            subscription: VPS subscription object
+            event_type: Event type (e.g., 'vps.created', 'vps.provisioned', etc.)
+            additional_context: Additional data like reason, old_plan, new_plan, etc.
+        """
+        # Get customer info
+        from app.modules.customers.repository import CustomerRepository
+        customer_repo = CustomerRepository(self.db)
+        customer = await customer_repo.get_by_id(subscription.customer_id)
+
+        if not customer or not customer.email:
+            logger.warning(f"[VPS NOTIFICATION] No customer email for subscription {subscription.id}")
+            return
+
+        logger.info(f"[VPS NOTIFICATION] Starting notification for customer {customer.email}, event={event_type}, subscription={subscription.id}")
+
+        # Get user ID
+        uid = await user_id_by_email(self.db, customer.email)
+        logger.info(f"[VPS NOTIFICATION] User ID lookup: {uid}")
+
+        # Check user preferences
+        should_send_email = True
+        should_send_sms = False
+        if uid:
+            prefs_svc = UserNotificationPreferencesService(self.db)
+            prefs = await prefs_svc.get(uid)
+            should_send_email = bool(prefs.get("email", {}).get("hostingUpdates", True))
+            should_send_sms = bool(prefs.get("sms", {}).get("hostingUpdates", False))
+            logger.info(f"[VPS NOTIFICATION] User preferences - Email: {should_send_email}, SMS: {should_send_sms}")
+        else:
+            logger.warning(f"[VPS NOTIFICATION] No user ID found for email {customer.email}")
+
+        # Check notification gates
+        gate_allows_email = await notification_gate_allows(self.db, "email", event_type)
+        gate_allows_sms = await notification_gate_allows(self.db, "sms", event_type)
+        logger.info(f"[VPS NOTIFICATION] Notification gates - Email: {gate_allows_email}, SMS: {gate_allows_sms}")
+
+        # Get plan name
+        plan_name = subscription.plan.name if subscription.plan else "VPS"
+
+        # Prepare notification content based on event
+        context = additional_context or {}
+
+        if event_type == "vps.requested":
+            subject = "VPS Request Received"
+            html_body = (
+                f"<p>Hello {customer.name or customer.email},</p>"
+                f"<p>We have received your request for a {plan_name} VPS subscription.</p>"
+                f"<p>Your request is being reviewed and will be approved shortly.</p>"
+                f"<p><strong>Subscription ID:</strong> {subscription.id}</p>"
+            )
+            text_body = (
+                f"Hello {customer.name or customer.email},\n\n"
+                f"We have received your request for a {plan_name} VPS subscription.\n"
+                f"Your request is being reviewed and will be approved shortly.\n\n"
+                f"Subscription ID: {subscription.id}"
+            )
+            notif_type = "vps_requested"
+            notif_title = "VPS Request Received"
+            notif_body = f"Your {plan_name} VPS request has been received and is pending approval."
+            sms_msg = f"Your {plan_name} VPS request has been received."
+
+        elif event_type == "vps.approved":
+            subject = "VPS Request Approved"
+            html_body = (
+                f"<p>Hello {customer.name or customer.email},</p>"
+                f"<p>Great news! Your {plan_name} VPS request has been approved.</p>"
+                f"<p>Your VPS is now being provisioned and will be ready shortly.</p>"
+                f"<p><strong>Subscription ID:</strong> {subscription.id}</p>"
+            )
+            text_body = (
+                f"Hello {customer.name or customer.email},\n\n"
+                f"Great news! Your {plan_name} VPS request has been approved.\n"
+                f"Your VPS is now being provisioned and will be ready shortly.\n\n"
+                f"Subscription ID: {subscription.id}"
+            )
+            notif_type = "vps_approved"
+            notif_title = "VPS Request Approved"
+            notif_body = f"Your {plan_name} VPS request has been approved and is being provisioned."
+            sms_msg = f"Your {plan_name} VPS request has been approved."
+
+        elif event_type == "vps.provisioned":
+            container_name = context.get("container_name", "your VPS")
+            subject = "VPS Ready to Use"
+            html_body = (
+                f"<p>Hello {customer.name or customer.email},</p>"
+                f"<p>Your {plan_name} VPS is now fully provisioned and ready to use!</p>"
+                f"<p><strong>Container:</strong> {container_name}</p>"
+                f"<p><strong>Subscription ID:</strong> {subscription.id}</p>"
+                f"<p>You can now access your VPS from your dashboard.</p>"
+            )
+            text_body = (
+                f"Hello {customer.name or customer.email},\n\n"
+                f"Your {plan_name} VPS is now fully provisioned and ready to use!\n\n"
+                f"Container: {container_name}\n"
+                f"Subscription ID: {subscription.id}\n\n"
+                f"You can now access your VPS from your dashboard."
+            )
+            notif_type = "vps_provisioned"
+            notif_title = "VPS Ready"
+            notif_body = f"Your {plan_name} VPS is ready to use!"
+            sms_msg = f"Your {plan_name} VPS is ready to use!"
+
+        elif event_type == "vps.suspended":
+            reason = context.get("reason", "Administrative action")
+            subject = "VPS Suspended"
+            html_body = (
+                f"<p>Hello {customer.name or customer.email},</p>"
+                f"<p>Your {plan_name} VPS subscription has been suspended.</p>"
+                f"<p><strong>Reason:</strong> {reason}</p>"
+                f"<p><strong>Subscription ID:</strong> {subscription.id}</p>"
+                f"<p>Please contact support if you have any questions.</p>"
+            )
+            text_body = (
+                f"Hello {customer.name or customer.email},\n\n"
+                f"Your {plan_name} VPS subscription has been suspended.\n\n"
+                f"Reason: {reason}\n"
+                f"Subscription ID: {subscription.id}\n\n"
+                f"Please contact support if you have any questions."
+            )
+            notif_type = "vps_suspended"
+            notif_title = "VPS Suspended"
+            notif_body = f"Your {plan_name} VPS has been suspended. Reason: {reason}"
+            sms_msg = f"Your {plan_name} VPS has been suspended. Contact support."
+
+        elif event_type == "vps.reactivated":
+            subject = "VPS Reactivated"
+            html_body = (
+                f"<p>Hello {customer.name or customer.email},</p>"
+                f"<p>Good news! Your {plan_name} VPS subscription has been reactivated.</p>"
+                f"<p><strong>Subscription ID:</strong> {subscription.id}</p>"
+                f"<p>Your VPS is now active and running.</p>"
+            )
+            text_body = (
+                f"Hello {customer.name or customer.email},\n\n"
+                f"Good news! Your {plan_name} VPS subscription has been reactivated.\n\n"
+                f"Subscription ID: {subscription.id}\n\n"
+                f"Your VPS is now active and running."
+            )
+            notif_type = "vps_reactivated"
+            notif_title = "VPS Reactivated"
+            notif_body = f"Your {plan_name} VPS has been reactivated."
+            sms_msg = f"Your {plan_name} VPS has been reactivated."
+
+        elif event_type == "vps.cancelled":
+            reason = context.get("reason", "User request")
+            subject = "VPS Subscription Cancelled"
+            html_body = (
+                f"<p>Hello {customer.name or customer.email},</p>"
+                f"<p>Your {plan_name} VPS subscription has been cancelled.</p>"
+                f"<p><strong>Reason:</strong> {reason}</p>"
+                f"<p><strong>Subscription ID:</strong> {subscription.id}</p>"
+                f"<p>Thank you for using our VPS hosting services.</p>"
+            )
+            text_body = (
+                f"Hello {customer.name or customer.email},\n\n"
+                f"Your {plan_name} VPS subscription has been cancelled.\n\n"
+                f"Reason: {reason}\n"
+                f"Subscription ID: {subscription.id}\n\n"
+                f"Thank you for using our VPS hosting services."
+            )
+            notif_type = "vps_cancelled"
+            notif_title = "VPS Cancelled"
+            notif_body = f"Your {plan_name} VPS subscription has been cancelled."
+            sms_msg = f"Your {plan_name} VPS subscription has been cancelled."
+
+        elif event_type == "vps.upgraded":
+            old_plan = context.get("old_plan", "previous plan")
+            new_plan = context.get("new_plan", plan_name)
+            subject = "VPS Plan Upgraded"
+            html_body = (
+                f"<p>Hello {customer.name or customer.email},</p>"
+                f"<p>Your VPS plan has been upgraded!</p>"
+                f"<p><strong>From:</strong> {old_plan}</p>"
+                f"<p><strong>To:</strong> {new_plan}</p>"
+                f"<p><strong>Subscription ID:</strong> {subscription.id}</p>"
+                f"<p>Your upgraded VPS resources are now available.</p>"
+            )
+            text_body = (
+                f"Hello {customer.name or customer.email},\n\n"
+                f"Your VPS plan has been upgraded!\n\n"
+                f"From: {old_plan}\n"
+                f"To: {new_plan}\n"
+                f"Subscription ID: {subscription.id}\n\n"
+                f"Your upgraded VPS resources are now available."
+            )
+            notif_type = "vps_upgraded"
+            notif_title = "VPS Plan Upgraded"
+            notif_body = f"Your VPS plan has been upgraded from {old_plan} to {new_plan}."
+            sms_msg = f"Your VPS plan has been upgraded to {new_plan}."
+
+        elif event_type == "vps.downgraded":
+            old_plan = context.get("old_plan", "previous plan")
+            new_plan = context.get("new_plan", plan_name)
+            subject = "VPS Plan Changed"
+            html_body = (
+                f"<p>Hello {customer.name or customer.email},</p>"
+                f"<p>Your VPS plan has been changed.</p>"
+                f"<p><strong>From:</strong> {old_plan}</p>"
+                f"<p><strong>To:</strong> {new_plan}</p>"
+                f"<p><strong>Subscription ID:</strong> {subscription.id}</p>"
+            )
+            text_body = (
+                f"Hello {customer.name or customer.email},\n\n"
+                f"Your VPS plan has been changed.\n\n"
+                f"From: {old_plan}\n"
+                f"To: {new_plan}\n"
+                f"Subscription ID: {subscription.id}"
+            )
+            notif_type = "vps_downgraded"
+            notif_title = "VPS Plan Changed"
+            notif_body = f"Your VPS plan has been changed from {old_plan} to {new_plan}."
+            sms_msg = f"Your VPS plan has been changed to {new_plan}."
+
+        else:
+            # Generic VPS status change
+            subject = "VPS Status Updated"
+            html_body = (
+                f"<p>Hello {customer.name or customer.email},</p>"
+                f"<p>Your {plan_name} VPS status has been updated.</p>"
+                f"<p><strong>Status:</strong> {subscription.status.value}</p>"
+                f"<p><strong>Subscription ID:</strong> {subscription.id}</p>"
+            )
+            text_body = (
+                f"Hello {customer.name or customer.email},\n\n"
+                f"Your {plan_name} VPS status has been updated.\n\n"
+                f"Status: {subscription.status.value}\n"
+                f"Subscription ID: {subscription.id}"
+            )
+            notif_type = "vps_status_changed"
+            notif_title = "VPS Status Updated"
+            notif_body = f"Your {plan_name} VPS status: {subscription.status.value}"
+            sms_msg = f"Your {plan_name} VPS status has been updated."
+
+        # Send email
+        if should_send_email and gate_allows_email:
+            logger.info(f"[VPS NOTIFICATION] Sending email to {customer.email}")
+            await self.email_service.send_email(
+                to=[customer.email],
+                subject=subject,
+                html_body=html_body,
+                text_body=text_body,
+                db=self.db,
+            )
+            logger.info(f"[VPS NOTIFICATION] Email sent successfully")
+        else:
+            logger.warning(f"[VPS NOTIFICATION] Email NOT sent - should_send: {should_send_email}, gate_allows: {gate_allows_email}")
+
+        # Send SMS
+        if (
+            customer.phone
+            and customer.phone.strip()
+            and should_send_sms
+            and gate_allows_sms
+        ):
+            logger.info(f"[VPS NOTIFICATION] Sending SMS to {customer.phone}")
+            sms_svc = SMSService()
+            await sms_svc.send_sms(customer.phone, sms_msg, db=self.db)
+            logger.info(f"[VPS NOTIFICATION] SMS sent successfully")
+        else:
+            logger.warning(f"[VPS NOTIFICATION] SMS NOT sent - phone: {customer.phone}, should_send: {should_send_sms}, gate_allows: {gate_allows_sms}")
+
+        # Send in-app notification
+        if uid:
+            try:
+                logger.info(f"[VPS NOTIFICATION] Creating in-app notification for user {uid}")
+                await create_notification(
+                    self.db,
+                    uid,
+                    notif_type,
+                    notif_title,
+                    body=notif_body,
+                    link="/dashboard/vps",
+                )
+                logger.info(f"[VPS NOTIFICATION] In-app notification created successfully")
+            except Exception as e:
+                logger.error(f"[VPS NOTIFICATION] Failed to create in-app notification: {e}", exc_info=True)
+        else:
+            logger.warning(f"[VPS NOTIFICATION] No in-app notification created - no user ID")
 
     async def request_vps(self, user_id: str, plan_id: str, os_distro_id: Optional[str] = None) -> Quote:
         """
@@ -174,66 +467,11 @@ class VPSProvisioningService:
         logger.info(
             f"VPS request created: {subscription.subscription_number} for user {user_id}")
 
-        # Send vps.subscription_requested notification
+        # Send VPS requested notification
         try:
-            from app.modules.settings.utils import notification_gate_allows
-            from app.modules.notifications.service import user_id_by_email, create_notification
-            from app.modules.settings.service import UserNotificationPreferencesService
-
-            if customer.email:
-                # Check notification gates
-                gate_allows_email = await notification_gate_allows(self.db, "email", "vps.subscription_requested")
-                gate_allows_sms = await notification_gate_allows(self.db, "sms", "vps.subscription_requested")
-
-                # Check user preferences
-                uid = await user_id_by_email(self.db, customer.email)
-                should_send_email = True
-                should_send_sms = False
-
-                if uid:
-                    prefs_svc = UserNotificationPreferencesService(self.db)
-                    prefs = await prefs_svc.get(uid)
-                    should_send_email = bool(
-                        prefs.get("email", {}).get("hostingUpdates", True))
-                    should_send_sms = bool(
-                        prefs.get("sms", {}).get("hostingUpdates", False))
-
-                # Send email notification
-                if should_send_email and gate_allows_email:
-                    await self.email_service.send_email(
-                        to=[customer.email],
-                        subject=f"VPS Subscription Request Received - {subscription.subscription_number}",
-                        html_body=f"<p>Hello {customer.name or customer.email},</p><p>Your VPS subscription request for <strong>{plan.name}</strong> has been received and is pending approval.</p><p>Subscription Number: <strong>{subscription.subscription_number}</strong></p><p>We will review your request and notify you once it's approved.</p>",
-                        text_body=f"Hello {customer.name or customer.email},\n\nYour VPS subscription request for {plan.name} has been received and is pending approval.\n\nSubscription Number: {subscription.subscription_number}\n\nWe will review your request and notify you once it's approved.",
-                        db=self.db
-                    )
-
-                # Send SMS notification
-                if customer.phone and customer.phone.strip() and should_send_sms and gate_allows_sms:
-                    sms_service = SMSService()
-                    await sms_service.send_sms(
-                        customer.phone,
-                        f"VPS subscription request {subscription.subscription_number} received. Pending approval.",
-                        db=self.db
-                    )
-
-                # Create in-app notification
-                if uid:
-                    try:
-                        await create_notification(
-                            self.db,
-                            uid,
-                            "vps_subscription_requested",
-                            "VPS Subscription Request Received",
-                            body=f"Your VPS subscription request for {plan.name} (Subscription: {subscription.subscription_number}) has been received and is pending approval.",
-                            link="/dashboard/vps/subscriptions"
-                        )
-                    except Exception as e:
-                        logger.warning(
-                            f"Failed to create in-app notification for VPS subscription request: {e}")
+            await self._send_vps_notification(subscription, "vps.requested")
         except Exception as e:
-            logger.warning(
-                f"Failed to send VPS subscription request notification: {e}")
+            logger.warning(f"Failed to send VPS requested notification: {e}")
 
         return quote
 
@@ -294,6 +532,12 @@ class VPSProvisioningService:
 
         logger.info(
             f"VPS request approved: {subscription.subscription_number} by {approved_by_id}")
+
+        # Send VPS approved notification
+        try:
+            await self._send_vps_notification(subscription, "vps.approved")
+        except Exception as e:
+            logger.warning(f"Failed to send VPS approved notification: {e}")
 
         # Trigger async Celery task for image download (then provisioning)
         from app.modules.hosting.tasks import download_vps_image_async
@@ -375,57 +619,15 @@ class VPSProvisioningService:
             logger.info(
                 f"VPS provisioned successfully: {subscription.subscription_number}")
 
-            # Send vps.activated notification
+            # Send VPS provisioned/ready notification
             try:
-                if subscription.customer and subscription.customer.email:
-                    gate_allows_email = await notification_gate_allows(self.db, "email", "vps.activated")
-                    gate_allows_sms = await notification_gate_allows(self.db, "sms", "vps.activated")
-
-                    uid = await user_id_by_email(self.db, subscription.customer.email)
-                    should_send_email = True
-                    should_send_sms = False
-
-                    if uid:
-                        prefs_svc = UserNotificationPreferencesService(self.db)
-                        prefs = await prefs_svc.get(uid)
-                        should_send_email = bool(
-                            prefs.get("email", {}).get("hostingUpdates", True))
-                        should_send_sms = bool(
-                            prefs.get("sms", {}).get("hostingUpdates", False))
-
-                    if should_send_email and gate_allows_email:
-                        await self.email_service.send_email(
-                            to=[subscription.customer.email],
-                            subject=f"VPS Activated - {subscription.subscription_number}",
-                            html_body=f"<p>Hello,</p><p>Your VPS subscription <strong>{subscription.subscription_number}</strong> has been activated and is now active.</p><p>You can now access your VPS and start using it.</p>",
-                            text_body=f"Hello,\n\nYour VPS subscription {subscription.subscription_number} has been activated and is now active.\n\nYou can now access your VPS and start using it.",
-                            db=self.db
-                        )
-
-                    if subscription.customer.phone and subscription.customer.phone.strip() and should_send_sms and gate_allows_sms:
-                        sms_service = SMSService()
-                        await sms_service.send_sms(
-                            subscription.customer.phone,
-                            f"VPS {subscription.subscription_number} has been activated and is now active.",
-                            db=self.db
-                        )
-
-                    if uid:
-                        try:
-                            await create_notification(
-                                self.db,
-                                uid,
-                                "vps_activated",
-                                "VPS Activated",
-                                body=f"Your VPS subscription {subscription.subscription_number} has been activated.",
-                                link="/dashboard/vps/subscriptions"
-                            )
-                        except Exception as e:
-                            logger.warning(
-                                f"Failed to create in-app notification for VPS activation: {e}")
+                await self._send_vps_notification(
+                    subscription,
+                    "vps.provisioned",
+                    {"container_name": container_instance.container_name}
+                )
             except Exception as e:
-                logger.warning(
-                    f"Failed to send VPS activation notification: {e}")
+                logger.warning(f"Failed to send VPS provisioned notification: {e}")
 
             return container_instance
 
@@ -527,6 +729,16 @@ class VPSProvisioningService:
         logger.info(
             f"Subscription upgraded: {subscription.subscription_number} from {old_plan.name} to {new_plan.name}")
 
+        # Send VPS upgraded notification
+        try:
+            await self._send_vps_notification(
+                subscription,
+                "vps.upgraded",
+                {"old_plan": old_plan.name, "new_plan": new_plan.name}
+            )
+        except Exception as e:
+            logger.warning(f"Failed to send VPS upgraded notification: {e}")
+
         return subscription
 
     async def suspend_subscription(self, subscription_id: str, reason: str) -> VPSSubscription:
@@ -572,6 +784,12 @@ class VPSProvisioningService:
 
         logger.info(
             f"Subscription suspended: {subscription.subscription_number} - {reason}")
+
+        # Send VPS suspended notification
+        try:
+            await self._send_vps_notification(subscription, "vps.suspended", {"reason": reason})
+        except Exception as e:
+            logger.warning(f"Failed to send VPS suspended notification: {e}")
 
         return subscription
 
@@ -621,6 +839,12 @@ class VPSProvisioningService:
         logger.info(
             f"Subscription reactivated: {subscription.subscription_number}")
 
+        # Send VPS reactivated notification
+        try:
+            await self._send_vps_notification(subscription, "vps.reactivated")
+        except Exception as e:
+            logger.warning(f"Failed to send VPS reactivated notification: {e}")
+
         return subscription
 
     async def cancel_subscription(self, subscription_id: str, immediate: bool, reason: str) -> VPSSubscription:
@@ -664,57 +888,11 @@ class VPSProvisioningService:
         logger.info(
             f"Subscription cancelled: {subscription.subscription_number} - {reason}")
 
-        # Send vps.cancelled notification
+        # Send VPS cancelled notification
         try:
-            if subscription.customer and subscription.customer.email:
-                gate_allows_email = await notification_gate_allows(self.db, "email", "vps.cancelled")
-                gate_allows_sms = await notification_gate_allows(self.db, "sms", "vps.cancelled")
-
-                uid = await user_id_by_email(self.db, subscription.customer.email)
-                should_send_email = True
-                should_send_sms = False
-
-                if uid:
-                    prefs_svc = UserNotificationPreferencesService(self.db)
-                    prefs = await prefs_svc.get(uid)
-                    should_send_email = bool(
-                        prefs.get("email", {}).get("hostingUpdates", True))
-                    should_send_sms = bool(
-                        prefs.get("sms", {}).get("hostingUpdates", False))
-
-                if should_send_email and gate_allows_email:
-                    await self.email_service.send_email(
-                        to=[subscription.customer.email],
-                        subject=f"VPS Subscription Cancelled - {subscription.subscription_number}",
-                        html_body=f"<p>Hello,</p><p>Your VPS subscription <strong>{subscription.subscription_number}</strong> has been cancelled.</p><p><strong>Reason:</strong> {reason}</p><p>If you have any questions, please contact our support team.</p>",
-                        text_body=f"Hello,\n\nYour VPS subscription {subscription.subscription_number} has been cancelled.\n\nReason: {reason}\n\nIf you have any questions, please contact our support team.",
-                        db=self.db
-                    )
-
-                if subscription.customer.phone and subscription.customer.phone.strip() and should_send_sms and gate_allows_sms:
-                    sms_service = SMSService()
-                    await sms_service.send_sms(
-                        subscription.customer.phone,
-                        f"VPS subscription {subscription.subscription_number} has been cancelled. Reason: {reason[:100]}",
-                        db=self.db
-                    )
-
-                if uid:
-                    try:
-                        await create_notification(
-                            self.db,
-                            uid,
-                            "vps_cancelled",
-                            "VPS Subscription Cancelled",
-                            body=f"Your VPS subscription {subscription.subscription_number} has been cancelled. Reason: {reason}",
-                            link="/dashboard/vps/subscriptions"
-                        )
-                    except Exception as e:
-                        logger.warning(
-                            f"Failed to create in-app notification for VPS cancellation: {e}")
+            await self._send_vps_notification(subscription, "vps.cancelled", {"reason": reason})
         except Exception as e:
-            logger.warning(
-                f"Failed to send VPS cancellation notification: {e}")
+            logger.warning(f"Failed to send VPS cancelled notification: {e}")
 
         return subscription
 

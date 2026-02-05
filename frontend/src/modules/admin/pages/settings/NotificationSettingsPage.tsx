@@ -74,6 +74,11 @@ export const NotificationSettingsPage: React.FC = () => {
     overdue: true,
   });
 
+  const [kycEvents, setKycEvents] = useState<Record<string, boolean>>({
+    document_approved: true,
+    document_rejected: true,
+  });
+
   // Quiet hours
   const [quietHours, setQuietHours] = useState<QuietHours>({
     enabled: false,
@@ -116,6 +121,11 @@ export const NotificationSettingsPage: React.FC = () => {
               setInvoiceEvents((prev) => ({ ...prev, ...value }));
             }
             break;
+          case "notification.kyc_events":
+            if (typeof value === "object") {
+              setKycEvents((prev) => ({ ...prev, ...value }));
+            }
+            break;
           case "notification.quiet_hours":
             if (typeof value === "object") {
               setQuietHours((prev) => ({ ...prev, ...value }));
@@ -142,6 +152,7 @@ export const NotificationSettingsPage: React.FC = () => {
       { key: "notification.ticket_events", value: { value: ticketEvents, type: "object" } },
       { key: "notification.order_events", value: { value: orderEvents, type: "object" } },
       { key: "notification.invoice_events", value: { value: invoiceEvents, type: "object" } },
+      { key: "notification.kyc_events", value: { value: kycEvents, type: "object" } },
       { key: "notification.quiet_hours", value: { value: quietHours, type: "object" } },
       { key: "notification.digest_enabled", value: { value: digestEnabled, type: "boolean" } },
       { key: "notification.digest_time", value: { value: digestTime, type: "string" } },
@@ -323,6 +334,16 @@ export const NotificationSettingsPage: React.FC = () => {
               sent: "Envoyée au client",
               payment_received: "Paiement reçu",
               overdue: "Alerte impayé",
+            }}
+          />
+          <Separator />
+          <EventToggleGroup
+            title="Événements KYC"
+            events={kycEvents}
+            setEvents={setKycEvents}
+            labels={{
+              document_approved: "Document approuvé",
+              document_rejected: "Document rejeté",
             }}
           />
         </CardContent>

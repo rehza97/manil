@@ -115,14 +115,15 @@ export const useSuspendSubscription = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vps", "admin", "subscriptions"] });
       toast({
-        title: "Subscription Suspended",
-        description: "The subscription has been suspended.",
+        title: "Abonnement suspendu",
+        description: "L'abonnement a bien été suspendu.",
+        variant: "success",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Suspension Failed",
-        description: error.response?.data?.detail || error.message || "Failed to suspend subscription",
+        title: "Échec de la suspension",
+        description: error.response?.data?.detail || error.message || "Impossible de suspendre l'abonnement.",
         variant: "destructive",
       });
     },
@@ -141,14 +142,15 @@ export const useReactivateSubscription = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vps", "admin", "subscriptions"] });
       toast({
-        title: "Subscription Reactivated",
-        description: "The subscription has been reactivated.",
+        title: "Abonnement réactivé",
+        description: "L'abonnement a bien été réactivé. Le conteneur va redémarrer.",
+        variant: "success",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Reactivation Failed",
-        description: error.response?.data?.detail || error.message || "Failed to reactivate subscription",
+        title: "Échec de la réactivation",
+        description: error.response?.data?.detail || error.message || "Impossible de réactiver l'abonnement.",
         variant: "destructive",
       });
     },
@@ -172,16 +174,11 @@ export const useTerminateSubscription = () => {
     }) => vpsService.terminateSubscription(subscriptionId, removeVolumes),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vps", "admin", "subscriptions"] });
-      toast({
-        title: "Subscription Terminated",
-        description: "Container and all data deleted.",
-        variant: "destructive",
-      });
     },
     onError: (error: any) => {
       toast({
-        title: "Termination Failed",
-        description: error.response?.data?.detail || error.message || "Failed to terminate subscription",
+        title: "Échec de la suppression",
+        description: error.response?.data?.detail || error.message || "Impossible de supprimer l'abonnement.",
         variant: "destructive",
       });
     },

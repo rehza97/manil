@@ -51,8 +51,8 @@ export const quotesApi = {
     return response.data;
   },
 
-  acceptQuote: async (quoteId: string) => {
-    const response = await apiClient.post(`/quotes/${quoteId}/accept`);
+  acceptQuote: async (quoteId: string, notes?: string) => {
+    const response = await apiClient.post(`/quotes/${quoteId}/accept`, { notes: notes ?? null });
     return response.data;
   },
 

@@ -18,6 +18,11 @@ from app.modules.customers.models import Customer
 from app.modules.customers.validation import validate_status_transition, check_kyc_requirements
 from app.modules.audit.service import AuditService
 from app.modules.audit.models import AuditAction
+from app.infrastructure.email.service import EmailService
+from app.infrastructure.sms.service import SMSService
+from app.modules.notifications.service import create_notification, user_id_by_email
+from app.modules.settings.service import UserNotificationPreferencesService
+from app.modules.settings.utils import notification_gate_allows
 
 logger = logging.getLogger(__name__)
 
@@ -213,9 +218,201 @@ class CustomerService:
         except Exception as e:
             logger.warning(f"Failed to log status change to audit: {e}")
 
+        # Send status change notification to customer
+        try:
+            await self._send_status_change_notification(
+                customer=result,
+                old_status=old_status,
+                new_status=new_status,
+                reason=reason
+            )
+        except Exception as e:
+            logger.warning(f"Failed to send status change notification: {e}")
+
         logger.info(
             f"Customer {customer_id} status changed from {old_status.value} to {new_status.value} by {updated_by}")
         return result
+
+    async def _send_status_change_notification(
+        self,
+        customer: Customer,
+        old_status: CustomerStatus,
+        new_status: CustomerStatus,
+        reason: str,
+    ) -> None:
+        """Send email, SMS, and in-app notification when customer status changes."""
+        if not customer.email:
+            logger.warning(f"[STATUS CHANGE NOTIFICATION] No email for customer {customer.id}")
+            return
+
+        logger.info(f"[STATUS CHANGE NOTIFICATION] Starting notification for customer {customer.email}, {old_status.value} → {new_status.value}")
+
+        # Get user ID
+        uid = await user_id_by_email(self.db, customer.email)
+        logger.info(f"[STATUS CHANGE NOTIFICATION] User ID lookup: {uid}")
+
+        # Determine event type
+        event_map = {
+            CustomerStatus.SUSPENDED: "customer.suspended",
+            CustomerStatus.ACTIVE: "customer.reactivated" if old_status == CustomerStatus.SUSPENDED else "customer.activated",
+            CustomerStatus.INACTIVE: "customer.deactivated",
+        }
+        event = event_map.get(new_status, "customer.status_changed")
+
+        # Check user preferences
+        should_send_email = True
+        should_send_sms = False
+        if uid:
+            prefs_svc = UserNotificationPreferencesService(self.db)
+            prefs = await prefs_svc.get(uid)
+            should_send_email = bool(prefs.get("email", {}).get("accountUpdates", True))
+            should_send_sms = bool(prefs.get("sms", {}).get("accountUpdates", False))
+            logger.info(f"[STATUS CHANGE NOTIFICATION] User preferences - Email: {should_send_email}, SMS: {should_send_sms}")
+        else:
+            logger.warning(f"[STATUS CHANGE NOTIFICATION] No user ID found for email {customer.email}")
+
+        # Check notification gates
+        gate_allows_email = await notification_gate_allows(self.db, "email", event)
+        gate_allows_sms = await notification_gate_allows(self.db, "sms", event)
+        logger.info(f"[STATUS CHANGE NOTIFICATION] Notification gates - Email: {gate_allows_email}, SMS: {gate_allows_sms}")
+
+        # Prepare notification content based on status
+        if new_status == CustomerStatus.SUSPENDED:
+            subject = "Account Suspended"
+            html_body = (
+                f"<p>Hello {customer.name or customer.email},</p>"
+                f"<p>Your account has been suspended.</p>"
+                f"<p><strong>Reason:</strong> {reason}</p>"
+                f"<p>If you have any questions, please contact our support team.</p>"
+            )
+            text_body = (
+                f"Hello {customer.name or customer.email},\n\n"
+                f"Your account has been suspended.\n\n"
+                f"Reason: {reason}\n\n"
+                f"If you have any questions, please contact our support team."
+            )
+            notif_type = "customer_suspended"
+            notif_title = "Account Suspended"
+            notif_body = f"Your account has been suspended. Reason: {reason}"
+            sms_msg = f"Your account has been suspended. Please contact support."
+
+        elif new_status == CustomerStatus.ACTIVE:
+            if old_status == CustomerStatus.SUSPENDED:
+                subject = "Account Reactivated"
+                html_body = (
+                    f"<p>Hello {customer.name or customer.email},</p>"
+                    f"<p>Good news! Your account has been reactivated.</p>"
+                    f"<p>You can now access all services.</p>"
+                )
+                text_body = (
+                    f"Hello {customer.name or customer.email},\n\n"
+                    f"Good news! Your account has been reactivated.\n"
+                    f"You can now access all services."
+                )
+                notif_type = "customer_reactivated"
+                notif_title = "Account Reactivated"
+                notif_body = "Your account has been reactivated. You can now access all services."
+                sms_msg = "Your account has been reactivated."
+            else:
+                subject = "Account Activated"
+                html_body = (
+                    f"<p>Hello {customer.name or customer.email},</p>"
+                    f"<p>Your account has been activated.</p>"
+                    f"<p>You can now access all services.</p>"
+                )
+                text_body = (
+                    f"Hello {customer.name or customer.email},\n\n"
+                    f"Your account has been activated.\n"
+                    f"You can now access all services."
+                )
+                notif_type = "customer_activated"
+                notif_title = "Account Activated"
+                notif_body = "Your account has been activated. Welcome!"
+                sms_msg = "Your account has been activated."
+
+        elif new_status == CustomerStatus.INACTIVE:
+            subject = "Account Deactivated"
+            html_body = (
+                f"<p>Hello {customer.name or customer.email},</p>"
+                f"<p>Your account has been deactivated.</p>"
+                f"<p><strong>Reason:</strong> {reason}</p>"
+                f"<p>If you believe this is an error, please contact our support team.</p>"
+            )
+            text_body = (
+                f"Hello {customer.name or customer.email},\n\n"
+                f"Your account has been deactivated.\n\n"
+                f"Reason: {reason}\n\n"
+                f"If you believe this is an error, please contact our support team."
+            )
+            notif_type = "customer_deactivated"
+            notif_title = "Account Deactivated"
+            notif_body = f"Your account has been deactivated. Reason: {reason}"
+            sms_msg = "Your account has been deactivated. Please contact support."
+
+        else:
+            # Generic status change
+            subject = "Account Status Changed"
+            html_body = (
+                f"<p>Hello {customer.name or customer.email},</p>"
+                f"<p>Your account status has been updated to: {new_status.value}</p>"
+                f"<p><strong>Reason:</strong> {reason}</p>"
+            )
+            text_body = (
+                f"Hello {customer.name or customer.email},\n\n"
+                f"Your account status has been updated to: {new_status.value}\n\n"
+                f"Reason: {reason}"
+            )
+            notif_type = "customer_status_changed"
+            notif_title = "Account Status Changed"
+            notif_body = f"Your account status: {new_status.value}"
+            sms_msg = f"Your account status has been updated to: {new_status.value}"
+
+        # Send email
+        if should_send_email and gate_allows_email:
+            logger.info(f"[STATUS CHANGE NOTIFICATION] Sending email to {customer.email}")
+            email_svc = EmailService()
+            await email_svc.send_email(
+                to=[customer.email],
+                subject=subject,
+                html_body=html_body,
+                text_body=text_body,
+                db=self.db,
+            )
+            logger.info(f"[STATUS CHANGE NOTIFICATION] Email sent successfully")
+        else:
+            logger.warning(f"[STATUS CHANGE NOTIFICATION] Email NOT sent - should_send: {should_send_email}, gate_allows: {gate_allows_email}")
+
+        # Send SMS
+        if (
+            customer.phone
+            and customer.phone.strip()
+            and should_send_sms
+            and gate_allows_sms
+        ):
+            logger.info(f"[STATUS CHANGE NOTIFICATION] Sending SMS to {customer.phone}")
+            sms_svc = SMSService()
+            await sms_svc.send_sms(customer.phone, sms_msg, db=self.db)
+            logger.info(f"[STATUS CHANGE NOTIFICATION] SMS sent successfully")
+        else:
+            logger.warning(f"[STATUS CHANGE NOTIFICATION] SMS NOT sent - phone: {customer.phone}, should_send: {should_send_sms}, gate_allows: {gate_allows_sms}")
+
+        # Send in-app notification
+        if uid:
+            try:
+                logger.info(f"[STATUS CHANGE NOTIFICATION] Creating in-app notification for user {uid}")
+                await create_notification(
+                    self.db,
+                    uid,
+                    notif_type,
+                    notif_title,
+                    body=notif_body,
+                    link="/dashboard/profile",
+                )
+                logger.info(f"[STATUS CHANGE NOTIFICATION] In-app notification created successfully")
+            except Exception as e:
+                logger.error(f"[STATUS CHANGE NOTIFICATION] Failed to create in-app notification: {e}", exc_info=True)
+        else:
+            logger.warning(f"[STATUS CHANGE NOTIFICATION] No in-app notification created - no user ID")
 
     async def activate(self, customer_id: str, updated_by: str, reason: str = "Customer activated") -> Customer:
         """Activate customer account with validation."""

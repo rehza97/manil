@@ -50,6 +50,7 @@ from app.modules.hosting.models import (
     ContainerMetrics
 )
 from app.infrastructure.email.service import EmailService
+from app.infrastructure.sms.service import SMSService
 
 settings = get_settings()
 
@@ -101,6 +102,9 @@ def _cleanup_provisioning_artifacts(customer_id: str, plan_slug: str, subscripti
 
     Strategy (as requested): remove any existing container/network/volume so retries can
     recreate cleanly and avoid Docker 409 name conflicts.
+
+    CRITICAL: Also cleans up database records to prevent IntegrityError on retry
+    (duplicate IP address, SSH port, or HTTP port constraints).
     """
     if not docker:
         return
@@ -110,6 +114,20 @@ def _cleanup_provisioning_artifacts(customer_id: str, plan_slug: str, subscripti
     container_name = ids["container_name"]
     network_name = ids["network_name"]
     volume_path = ids["volume_path"]
+
+    # CRITICAL: Clean up database record FIRST to prevent duplicate IP/port errors on retry
+    try:
+        with SyncSessionLocal() as db:
+            stmt = select(ContainerInstance).where(
+                ContainerInstance.subscription_id == subscription_id
+            )
+            existing_instance = db.execute(stmt).scalar_one_or_none()
+            if existing_instance:
+                db.delete(existing_instance)
+                db.commit()
+                logger.info(f"Cleaned up database record for subscription {subscription_id} (freed IP: {existing_instance.ip_address})")
+    except Exception as e:
+        logger.warning(f"Could not cleanup database record for subscription {subscription_id}: {e}")
 
     try:
         docker_host = os.getenv("DOCKER_HOST", "unix:///var/run/docker.sock")
@@ -919,9 +937,15 @@ def provision_vps_async(self, subscription_id: str) -> Dict[str, Any]:
             customer_id = subscription.customer_id
 
             # Get customer email and phone for notifications
+            # Note: subscription.customer is a User object, not a Customer object
+            # We need to fetch the actual Customer record from customers table
             if subscription.customer:
                 customer_email = subscription.customer.email
-                customer_phone = subscription.customer.phone if subscription.customer.phone and subscription.customer.phone.strip() else None
+                # Fetch actual Customer record to get phone number
+                from app.modules.customers.models import Customer
+                customer_stmt = select(Customer).where(Customer.email == customer_email)
+                customer_result = db.execute(customer_stmt).scalar_one_or_none()
+                customer_phone = customer_result.phone if customer_result and customer_result.phone and customer_result.phone.strip() else None
 
             # Send vps.provisioning_started notification
             try:
@@ -981,7 +1005,13 @@ def provision_vps_async(self, subscription_id: str) -> Dict[str, Any]:
                                     logger.warning(
                                         f"Failed to create in-app notification for provisioning started: {e}")
 
-                asyncio.run(send_provisioning_started_notification())
+                # Properly handle event loop in Celery task context
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(send_provisioning_started_notification())
+                finally:
+                    loop.close()
             except Exception as e:
                 logger.warning(
                     f"Failed to send provisioning started notification: {e}")
@@ -1116,7 +1146,13 @@ def provision_vps_async(self, subscription_id: str) -> Dict[str, Any]:
                                     logger.warning(
                                         f"Failed to create in-app notification for provisioning completed: {e}")
 
-                asyncio.run(send_provisioning_completed_notification())
+                # Properly handle event loop in Celery task context
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(send_provisioning_completed_notification())
+                finally:
+                    loop.close()
             except Exception as e:
                 logger.warning(
                     f"Failed to send provisioning completed notification: {e}")
@@ -1169,12 +1205,18 @@ def provision_vps_async(self, subscription_id: str) -> Dict[str, Any]:
                     error_message=str(exc),
                     timestamp=datetime.utcnow().isoformat()
                 )
-                asyncio.run(email_service.send_email(
-                    to=[admin_email],
-                    subject=template["subject"],
-                    html_body=template["html"],
-                    text_body=template.get("text")
-                ))
+                # Properly handle event loop in Celery task context
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(email_service.send_email(
+                        to=[admin_email],
+                        subject=template["subject"],
+                        html_body=template["html"],
+                        text_body=template.get("text")
+                    ))
+                finally:
+                    loop.close()
             except Exception as email_error:
                 logger.error(
                     f"[Task {task_id}] Failed to send admin notification email: {email_error}")
@@ -1197,7 +1239,12 @@ def provision_vps_async(self, subscription_id: str) -> Dict[str, Any]:
 
                         if failed_subscription and failed_subscription.customer and failed_subscription.customer.email:
                             customer_email = failed_subscription.customer.email
-                            customer_phone = failed_subscription.customer.phone if failed_subscription.customer.phone and failed_subscription.customer.phone.strip() else None
+                            # Fetch actual Customer record to get phone number
+                            from app.modules.customers.models import Customer
+                            with SyncSessionLocal() as sync_db_customer:
+                                customer_stmt = select(Customer).where(Customer.email == customer_email)
+                                customer_result = sync_db_customer.execute(customer_stmt).scalar_one_or_none()
+                                customer_phone = customer_result.phone if customer_result and customer_result.phone and customer_result.phone.strip() else None
 
                             gate_allows_email = await notification_gate_allows(async_db, "email", "vps.provisioning_failed")
                             gate_allows_sms = await notification_gate_allows(async_db, "sms", "vps.provisioning_failed")
@@ -1247,7 +1294,13 @@ def provision_vps_async(self, subscription_id: str) -> Dict[str, Any]:
                                     logger.warning(
                                         f"Failed to create in-app notification for provisioning failure: {e}")
 
-                asyncio.run(send_customer_provisioning_failed_notification())
+                # Properly handle event loop in Celery task context
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(send_customer_provisioning_failed_notification())
+                finally:
+                    loop.close()
             except Exception as e:
                 logger.warning(
                     f"Failed to send customer provisioning failure notification: {e}")
@@ -1879,19 +1932,25 @@ def build_docker_image_task(self, image_id: str) -> Dict[str, Any]:
             try:
                 admin_email = settings.ADMIN_EMAIL
                 email_service = EmailService()
-                asyncio.run(email_service.send_email(
-                    to=[admin_email],
-                    subject=f"Docker Image Build Failed: {image_id}",
-                    html_body=f"""
-                        <h2>Custom Docker Image Build Failed</h2>
-                        <p>The Docker image build task failed after {self.max_retries} retries.</p>
-                        <p><strong>Image ID:</strong> {image_id}</p>
-                        <p><strong>Task ID:</strong> {task_id}</p>
-                        <p><strong>Error:</strong> {str(exc)}</p>
-                        <p><strong>Timestamp:</strong> {datetime.utcnow().isoformat()}</p>
-                        <p>Please check the logs and investigate the issue.</p>
-                    """
-                ))
+                # Properly handle event loop in Celery task context
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(email_service.send_email(
+                        to=[admin_email],
+                        subject=f"Docker Image Build Failed: {image_id}",
+                        html_body=f"""
+                            <h2>Custom Docker Image Build Failed</h2>
+                            <p>The Docker image build task failed after {self.max_retries} retries.</p>
+                            <p><strong>Image ID:</strong> {image_id}</p>
+                            <p><strong>Task ID:</strong> {task_id}</p>
+                            <p><strong>Error:</strong> {str(exc)}</p>
+                            <p><strong>Timestamp:</strong> {datetime.utcnow().isoformat()}</p>
+                            <p>Please check the logs and investigate the issue.</p>
+                        """
+                    ))
+                finally:
+                    loop.close()
             except Exception as email_error:
                 logger.error(
                     f"[Task {task_id}] Failed to send admin notification email: {email_error}")

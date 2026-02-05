@@ -641,6 +641,13 @@ class DockerManagementService:
 
             return True
         except Exception as e:
+            err_str = str(e).lower()
+            if "404" in err_str or "no such container" in err_str or "not found" in err_str:
+                logger.info(
+                    "Container %s already removed or not found; treating as success",
+                    container_id[:12],
+                )
+                return True
             logger.error(f"Failed to delete container {container_id}: {e}")
             return False
 

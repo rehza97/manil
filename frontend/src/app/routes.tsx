@@ -47,6 +47,10 @@ import {
   SettingsPage,
   NotificationSettingsPage,
   NotificationsPage,
+  ClientQuotesListPage,
+  ClientQuoteDetailPage,
+  ClientQuoteCreatePage,
+  ClientQuoteEditPage,
 } from "@/modules/dashboard";
 import {
   UserManagementPage,
@@ -453,6 +457,23 @@ export const routes = [
       {
         path: "orders/:orderId",
         element: <OrderDetailPage />,
+      },
+      // Quotes (Mes devis)
+      {
+        path: "quotes",
+        element: <ClientQuotesListPage />,
+      },
+      {
+        path: "quotes/new",
+        element: <ClientQuoteCreatePage />,
+      },
+      {
+        path: "quotes/:id/edit",
+        element: <ClientQuoteEditPage />,
+      },
+      {
+        path: "quotes/:id",
+        element: <ClientQuoteDetailPage />,
       },
       // Invoices
       {
@@ -1255,6 +1276,10 @@ export const routePermissions = {
   "/dashboard/orders/:orderId/edit": ["client"],
   "/dashboard/orders/:orderId/status": ["client"],
   "/dashboard/invoices": ["client"],
+  "/dashboard/quotes": ["client"],
+  "/dashboard/quotes/new": ["client"],
+  "/dashboard/quotes/:id/edit": ["client"],
+  "/dashboard/quotes/:id": ["client"],
   "/dashboard/vps/plans": ["client"],
   "/dashboard/vps/subscriptions": ["client"],
   "/dashboard/vps/subscriptions/:id": ["client"],
@@ -1404,6 +1429,10 @@ export const moduleRoutes = {
   invoices: [
     "/dashboard/invoices",
     "/dashboard/invoices/:id",
+    "/dashboard/quotes",
+    "/dashboard/quotes/new",
+    "/dashboard/quotes/:id/edit",
+    "/dashboard/quotes/:id",
     "/corporate/quotes",
     "/corporate/quotes/new",
     "/corporate/quotes/:id",

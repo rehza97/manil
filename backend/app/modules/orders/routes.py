@@ -38,6 +38,7 @@ from app.modules.orders.schemas import (
 from app.modules.orders.service import OrderService
 from app.modules.orders.service_workflow import OrderWorkflowService
 from app.modules.customers.models import Customer
+from app.modules.quotes.models import Quote, QuoteStatus
 from app.infrastructure.email.service import EmailService
 from app.config.database import AsyncSessionLocal
 from app.modules.notifications.service import create_notification, user_id_by_email
@@ -45,6 +46,15 @@ from app.modules.settings.service import UserNotificationPreferencesService
 from app.infrastructure.sms.service import SMSService
 
 logger = logging.getLogger(__name__)
+
+# Statuses in which a client is allowed to edit or cancel their order
+CLIENT_EDITABLE_ORDER_STATUSES = frozenset({
+    OrderStatus.REQUEST,
+    OrderStatus.PENDING_COMMERCIAL,
+    OrderStatus.PENDING_TECHNICAL,
+    OrderStatus.COMMERCIAL_REJECTED,
+    OrderStatus.TECHNICAL_REJECTED,
+})
 
 
 async def _send_order_status_email(to: str, order_id: str, status: str) -> None:
@@ -249,11 +259,11 @@ def convert_quote_to_order(
     db: Session = Depends(get_sync_db),
     current_user: User = Depends(require_permission(Permission.ORDERS_CREATE)),
 ):
-    """Convert an accepted quote to an order.
+    """Convert a quote (draft or accepted) to an order.
 
     Security:
     - Requires ORDERS_CREATE permission
-    - Quote must be in ACCEPTED status
+    - Quote must be DRAFT (client: own quote only), ACCEPTED, or APPROVED
     - Quote must not have been converted to an order already
 
     Request body:
@@ -267,6 +277,15 @@ def convert_quote_to_order(
     - Returns created order with calculated totals
     """
     try:
+        # For DRAFT quotes, only the quote owner (client) may convert
+        quote = db.query(Quote).filter(
+            Quote.id == conversion_data.quote_id,
+            Quote.deleted_at.is_(None),
+        ).first()
+        if quote and quote.status == QuoteStatus.DRAFT and getattr(current_user, "role_slug", None) == "client":
+            customer = db.query(Customer).filter(Customer.email == current_user.email).first()
+            if not customer or str(quote.customer_id) != str(customer.id):
+                raise HTTPException(status_code=403, detail="You can only convert your own draft quotes.")
         order = OrderService.convert_quote_to_order(
             db,
             conversion_data,
@@ -424,7 +443,7 @@ def update_order(
     **Security:**
     - Requires authentication (valid JWT token)
     - Requires ORDERS_EDIT permission
-    - Clients can only update their own orders
+    - Clients can only update their own orders and only when status is waiting (REQUEST, PENDING_*, *_REJECTED)
     - Corporate/Admin can update all orders
 
     **Note:** Does not change order status - use /orders/{order_id}/status for that.
@@ -433,13 +452,17 @@ def update_order(
         # Get order first to check ownership
         order = OrderService.get_order(db, order_id)
 
-        # Security: Clients can only update their own orders
+        # Security: Clients can only update their own orders and only when in waiting status
         if current_user.role_slug == "client":
             client_customer = _resolve_client_customer(db, current_user)
             if not client_customer:
                 raise ForbiddenException("Customer profile not found for your account")
             if str(order.customer_id) != str(client_customer.id):
                 raise ForbiddenException("You can only update your own orders")
+            if order.status not in CLIENT_EDITABLE_ORDER_STATUSES:
+                raise ForbiddenException(
+                    "You can only edit an order while it is still in a waiting status"
+                )
 
         order = OrderService.update_order(
             db, order_id, order_data, str(current_user.id))
@@ -544,7 +567,7 @@ def delete_order(
     **Security:**
     - Requires authentication (valid JWT token)
     - Requires ORDERS_DELETE permission
-    - Clients can only delete their own orders
+    - Clients can only delete their own orders and only when status is waiting (REQUEST, PENDING_*, *_REJECTED)
     - Corporate/Admin can delete all orders
 
     **Note:** This soft deletes the order and marks it as CANCELLED.
@@ -553,13 +576,17 @@ def delete_order(
         # Get order first to check ownership
         order = OrderService.get_order(db, order_id)
 
-        # Security: Clients can only delete their own orders
+        # Security: Clients can only delete their own orders and only when in waiting status
         if current_user.role_slug == "client":
             client_customer = _resolve_client_customer(db, current_user)
             if not client_customer:
                 raise ForbiddenException("Customer profile not found for your account")
             if str(order.customer_id) != str(client_customer.id):
                 raise ForbiddenException("You can only delete your own orders")
+            if order.status not in CLIENT_EDITABLE_ORDER_STATUSES:
+                raise ForbiddenException(
+                    "You can only cancel an order while it is still in a waiting status"
+                )
 
         OrderService.delete_order(db, order_id, str(current_user.id))
 

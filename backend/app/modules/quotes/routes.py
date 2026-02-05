@@ -69,10 +69,10 @@ async def get_quotes(
 
     # SECURITY: Role-based filtering
     if current_user.role_slug == "client":
-        # Clients can only see their own quotes
-        if not hasattr(current_user, 'customer_id'):
-            raise ForbiddenException("Client account not properly configured")
-        customer_id = str(current_user.customer_id)
+        client_customer = await _resolve_client_customer(db, current_user)
+        if not client_customer:
+            raise ForbiddenException("Customer profile not found for your account")
+        customer_id = str(client_customer.id)
     # Admin and corporate can see all quotes (no filtering override)
 
     quotes, total = await service.get_all(
@@ -112,9 +112,10 @@ async def get_quote(
 
     # SECURITY: Check ownership for client role
     if current_user.role_slug == "client":
-        if not hasattr(current_user, 'customer_id'):
-            raise ForbiddenException("Client account not properly configured")
-        if str(quote.customer_id) != str(current_user.customer_id):
+        client_customer = await _resolve_client_customer(db, current_user)
+        if not client_customer:
+            raise ForbiddenException("Customer profile not found for your account")
+        if str(quote.customer_id) != str(client_customer.id):
             raise ForbiddenException("You can only view your own quotes")
 
     return quote
@@ -130,11 +131,21 @@ async def create_quote(
     """Create a new quote.
 
     Security:
-    - Requires admin or corporate role (sales staff only)
+    - Requires QUOTES_CREATE or QUOTES_EDIT permission
+    - Clients can only create quotes for their own customer (customer_id forced to their profile)
     - Prices will be validated against product catalog
     """
     service = QuoteService(db)
-    return await service.create(quote_data, created_by_id=current_user.id)
+    payload = quote_data
+    if current_user.role_slug == "client":
+        client_customer = await _resolve_client_customer(db, current_user)
+        if not client_customer:
+            raise ForbiddenException("Customer profile not found for your account")
+        # Force client to create quote only for themselves
+        payload = QuoteCreate(
+            **{**quote_data.model_dump(), "customer_id": str(client_customer.id)}
+        )
+    return await service.create(payload, created_by_id=current_user.id)
 
 
 @router.put("/{quote_id}", response_model=QuoteResponse)
@@ -148,13 +159,24 @@ async def update_quote(
     """Update a quote.
 
     Security:
-    - Requires admin or corporate role (sales staff only)
+    - Requires QUOTES_CREATE or QUOTES_EDIT permission
+    - Clients can only update their own quotes and only when status is DRAFT
     - Cannot update accepted quotes
     """
     service = QuoteService(db)
     quote = await service.get_by_id(quote_id)
 
-    # SECURITY: Cannot update accepted quotes
+    if current_user.role_slug == "client":
+        client_customer = await _resolve_client_customer(db, current_user)
+        if not client_customer:
+            raise ForbiddenException("Customer profile not found for your account")
+        if str(quote.customer_id) != str(client_customer.id):
+            raise ForbiddenException("You can only edit your own quotes")
+        if quote.status != QuoteStatus.DRAFT:
+            raise ForbiddenException(
+                "You can only edit a devis while it is in draft status"
+            )
+
     if quote.status == QuoteStatus.ACCEPTED:
         from fastapi import HTTPException
         raise HTTPException(
@@ -232,11 +254,15 @@ async def send_quote(
     current_user: User = Depends(require_any_permission(
         [Permission.QUOTES_CREATE, Permission.QUOTES_EDIT]))
 ):
-    """Send quote to customer.
-
-    Security:
-    - Requires admin or corporate role
-    """
+    """Send quote to customer (draft -> sent). Clients can send only their own quotes."""
+    if current_user.role_slug == "client":
+        client_customer = await _resolve_client_customer(db, current_user)
+        if not client_customer:
+            raise ForbiddenException("Customer profile not found for your account")
+        quote_svc = QuoteService(db)
+        quote = await quote_svc.get_by_id(quote_id)
+        if not quote or str(quote.customer_id) != str(client_customer.id):
+            raise ForbiddenException("You can only send your own quotes.")
     service = QuoteWorkflowService(db)
     return await service.send_quote(quote_id, send_data, sent_by_id=current_user.id)
 
@@ -248,23 +274,10 @@ async def accept_quote(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_permission(Permission.QUOTES_VIEW))
 ):
-    """Customer accepts a quote.
-
-    Security:
-    - Requires QUOTES_VIEW permission
-    - Clients can only accept their own quotes
-    - Admin/corporate can accept on behalf of customer
-    """
-    service = QuoteWorkflowService(db)
-    quote = await QuoteService(db).get_by_id(quote_id)
-
-    # SECURITY: Check ownership for client role
+    """Staff accepts a quote on behalf of the customer. Clients cannot accept quotes."""
     if current_user.role_slug == "client":
-        if not hasattr(current_user, 'customer_id'):
-            raise ForbiddenException("Client account not properly configured")
-        if str(quote.customer_id) != str(current_user.customer_id):
-            raise ForbiddenException("You can only accept your own quotes")
-
+        raise ForbiddenException("Clients cannot accept quotes. Only staff can perform this action.")
+    service = QuoteWorkflowService(db)
     return await service.accept_quote(quote_id, accepted_by_id=current_user.id)
 
 
@@ -274,23 +287,10 @@ async def decline_quote(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_permission(Permission.QUOTES_VIEW))
 ):
-    """Customer declines a quote.
-
-    Security:
-    - Requires QUOTES_VIEW permission
-    - Clients can only decline their own quotes
-    - Admin/corporate can decline on behalf of customer
-    """
-    service = QuoteWorkflowService(db)
-    quote = await QuoteService(db).get_by_id(quote_id)
-
-    # SECURITY: Check ownership for client role
+    """Staff declines a quote on behalf of the customer. Clients cannot decline quotes."""
     if current_user.role_slug == "client":
-        if not hasattr(current_user, 'customer_id'):
-            raise ForbiddenException("Client account not properly configured")
-        if str(quote.customer_id) != str(current_user.customer_id):
-            raise ForbiddenException("You can only decline your own quotes")
-
+        raise ForbiddenException("Clients cannot decline quotes. Only staff can perform this action.")
+    service = QuoteWorkflowService(db)
     return await service.decline_quote(quote_id, declined_by_id=current_user.id)
 
 
@@ -334,9 +334,10 @@ async def get_quote_versions(
 
     # SECURITY: Check ownership for client role
     if current_user.role_slug == "client":
-        if not hasattr(current_user, 'customer_id'):
-            raise ForbiddenException("Client account not properly configured")
-        if str(quote.customer_id) != str(current_user.customer_id):
+        client_customer = await _resolve_client_customer(db, current_user)
+        if not client_customer:
+            raise ForbiddenException("Customer profile not found for your account")
+        if str(quote.customer_id) != str(client_customer.id):
             raise ForbiddenException(
                 "You can only view your own quote versions")
 
@@ -364,9 +365,10 @@ async def get_quote_timeline(
 
     # SECURITY: Check ownership for client role
     if current_user.role_slug == "client":
-        if not hasattr(current_user, 'customer_id'):
-            raise ForbiddenException("Client account not properly configured")
-        if str(quote.customer_id) != str(current_user.customer_id):
+        client_customer = await _resolve_client_customer(db, current_user)
+        if not client_customer:
+            raise ForbiddenException("Customer profile not found for your account")
+        if str(quote.customer_id) != str(client_customer.id):
             raise ForbiddenException(
                 "You can only view your own quote timeline")
 

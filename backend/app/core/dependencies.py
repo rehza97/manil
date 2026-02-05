@@ -2,6 +2,7 @@
 FastAPI dependency injection utilities.
 Includes authentication and authorization dependencies.
 """
+import logging
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -13,6 +14,7 @@ from app.core.security import decode_token
 from app.core.exceptions import UnauthorizedException, ForbiddenException
 from app.core.permissions import Permission, has_permission, has_any_permission
 
+logger = logging.getLogger(__name__)
 security = HTTPBearer()
 
 
@@ -138,17 +140,41 @@ def require_permission(permission: Permission):
     ):
         from app.modules.settings.utils import get_role_permission_slugs_by_id_cached, get_role_permission_slugs_cached
 
+        user_info = f"user_id={current_user.id}, email={current_user.email}, role={current_user.role_slug}, role_id={current_user.role_id}"
+        permission_source = None
+
+        # Try to get permissions from DB by role_id
         slugs = await get_role_permission_slugs_by_id_cached(db, str(current_user.role_id))
+        if slugs is not None:
+            logger.info(f"[PERMISSION CHECK] Using DB permissions (by role_id) | {user_info} | permission={permission.value} | found {len(slugs)} permissions in DB")
+            permission_source = "DB (by role_id)"
+
+        # If not found, try by role_slug
         if slugs is None:
             slugs = await get_role_permission_slugs_cached(db, current_user.role_slug)
+            if slugs is not None:
+                logger.info(f"[PERMISSION CHECK] Using DB permissions (by role_slug) | {user_info} | permission={permission.value} | found {len(slugs)} permissions in DB")
+                permission_source = "DB (by role_slug)"
+
+        # Empty list means no permissions in DB
         if slugs is not None and len(slugs) == 0:
+            logger.warning(f"[PERMISSION CHECK] DB returned empty permissions list | {user_info} | falling back to hardcoded")
             slugs = None
+
+        # Check permission
         if slugs is not None:
             allowed = permission.value in slugs
+            logger.info(f"[PERMISSION CHECK] DB check | {user_info} | permission={permission.value} | source={permission_source} | result={'GRANTED' if allowed else 'DENIED'}")
         else:
+            # Fallback to hardcoded permissions
             allowed = has_permission(current_user.role_slug, permission)
+            permission_source = "HARDCODED (ROLE_PERMISSIONS)"
+            logger.info(f"[PERMISSION CHECK] Hardcoded fallback | {user_info} | permission={permission.value} | source={permission_source} | result={'GRANTED' if allowed else 'DENIED'}")
+
         if not allowed:
+            logger.warning(f"[PERMISSION DENIED] {user_info} | permission={permission.value} | source={permission_source}")
             raise ForbiddenException("Insufficient permissions")
+
         return current_user
 
     return permission_checker
@@ -167,17 +193,43 @@ def require_any_permission(permissions: list[Permission]):
     ):
         from app.modules.settings.utils import get_role_permission_slugs_by_id_cached, get_role_permission_slugs_cached
 
+        user_info = f"user_id={current_user.id}, email={current_user.email}, role={current_user.role_slug}, role_id={current_user.role_id}"
+        permission_list = [p.value for p in permissions]
+        permission_source = None
+
+        # Try to get permissions from DB by role_id
         slugs = await get_role_permission_slugs_by_id_cached(db, str(current_user.role_id))
+        if slugs is not None:
+            logger.info(f"[PERMISSION CHECK ANY] Using DB permissions (by role_id) | {user_info} | permissions={permission_list} | found {len(slugs)} permissions in DB")
+            permission_source = "DB (by role_id)"
+
+        # If not found, try by role_slug
         if slugs is None:
             slugs = await get_role_permission_slugs_cached(db, current_user.role_slug)
+            if slugs is not None:
+                logger.info(f"[PERMISSION CHECK ANY] Using DB permissions (by role_slug) | {user_info} | permissions={permission_list} | found {len(slugs)} permissions in DB")
+                permission_source = "DB (by role_slug)"
+
+        # Empty list means no permissions in DB
         if slugs is not None and len(slugs) == 0:
+            logger.warning(f"[PERMISSION CHECK ANY] DB returned empty permissions list | {user_info} | falling back to hardcoded")
             slugs = None
+
+        # Check permissions
         if slugs is not None:
             allowed = any(p.value in slugs for p in permissions)
+            matched_perms = [p.value for p in permissions if p.value in slugs]
+            logger.info(f"[PERMISSION CHECK ANY] DB check | {user_info} | permissions={permission_list} | matched={matched_perms} | source={permission_source} | result={'GRANTED' if allowed else 'DENIED'}")
         else:
+            # Fallback to hardcoded permissions
             allowed = has_any_permission(current_user.role_slug, permissions)
+            permission_source = "HARDCODED (ROLE_PERMISSIONS)"
+            logger.info(f"[PERMISSION CHECK ANY] Hardcoded fallback | {user_info} | permissions={permission_list} | source={permission_source} | result={'GRANTED' if allowed else 'DENIED'}")
+
         if not allowed:
+            logger.warning(f"[PERMISSION DENIED ANY] {user_info} | permissions={permission_list} | source={permission_source}")
             raise ForbiddenException("Insufficient permissions")
+
         return current_user
 
     return permission_checker

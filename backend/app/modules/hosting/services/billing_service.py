@@ -42,6 +42,25 @@ class SubscriptionBillingService:
         self.invoice_service = InvoiceService(db)
         self.email_service = EmailService()
 
+    async def _get_customer_phone(self, user_email: str) -> Optional[str]:
+        """
+        Get customer phone from Customer table by user email.
+
+        Note: subscription.customer is a User object, not a Customer object.
+        This method fetches the actual Customer record to get the phone number.
+
+        Args:
+            user_email: User email address
+
+        Returns:
+            Customer phone number if found and not empty, None otherwise
+        """
+        from app.modules.customers.models import Customer
+        stmt = select(Customer).where(Customer.email == user_email)
+        result = await self.db.execute(stmt)
+        customer = result.scalar_one_or_none()
+        return customer.phone if customer and customer.phone and customer.phone.strip() else None
+
     async def _get_or_create_customer(self, user_id: str) -> str:
         """
         Get or create customer record for a user.
@@ -171,7 +190,8 @@ class SubscriptionBillingService:
                     )
                 
                 # Send SMS notification if customer has phone, gate allows, and preferences allow
-                if subscription.customer and subscription.customer.phone and subscription.customer.phone.strip() and gate_allows_sms:
+                customer_phone = await self._get_customer_phone(customer_email)
+                if customer_phone and gate_allows_sms:
                     try:
                         uid = await user_id_by_email(self.db, customer_email)
                         if uid:
@@ -180,7 +200,7 @@ class SubscriptionBillingService:
                             if prefs.get("sms", {}).get("billingUpdates", False):
                                 sms_service = SMSService()
                                 await sms_service.send_billing_notification(
-                                    to=subscription.customer.phone,
+                                    to=customer_phone,
                                     message=f"Initial invoice {invoice.invoice_number} for {subscription.subscription_number}: {total:.2f} DZD. Due: {invoice.due_date.strftime('%d/%m/%Y')}",
                                     db=self.db
                                 )
@@ -293,7 +313,8 @@ class SubscriptionBillingService:
                     )
                 
                 # Send SMS notification if customer has phone, gate allows, and preferences allow
-                if subscription.customer and subscription.customer.phone and subscription.customer.phone.strip() and gate_allows_sms:
+                customer_phone = await self._get_customer_phone(customer_email)
+                if customer_phone and gate_allows_sms:
                     try:
                         uid = await user_id_by_email(self.db, customer_email)
                         if uid:
@@ -302,7 +323,7 @@ class SubscriptionBillingService:
                             if prefs.get("sms", {}).get("billingUpdates", False):
                                 sms_service = SMSService()
                                 await sms_service.send_billing_notification(
-                                    to=subscription.customer.phone,
+                                    to=customer_phone,
                                     message=f"Recurring invoice {invoice.invoice_number} for {subscription.subscription_number}: {total:.2f} DZD. Due: {invoice.due_date.strftime('%d/%m/%Y')}",
                                     db=self.db
                                 )
@@ -496,7 +517,8 @@ class SubscriptionBillingService:
                 )
                 
                 # Send SMS notification if customer has phone and preferences allow
-                if subscription.customer and subscription.customer.phone and subscription.customer.phone.strip():
+                customer_phone = await self._get_customer_phone(customer_email)
+                if customer_phone:
                     try:
                         uid = await user_id_by_email(self.db, customer_email)
                         if uid:
@@ -505,7 +527,7 @@ class SubscriptionBillingService:
                             if prefs.get("sms", {}).get("billingUpdates", False):
                                 sms_service = SMSService()
                                 await sms_service.send_payment_confirmation(
-                                    to=subscription.customer.phone,
+                                    to=customer_phone,
                                     invoice_number=invoice.invoice_number,
                                     amount=float(invoice.total_amount)
                                 )
@@ -571,7 +593,8 @@ class SubscriptionBillingService:
                                     )
                                 
                                 # Send SMS notification if customer has phone and preferences allow
-                                if subscription.customer and subscription.customer.phone and subscription.customer.phone.strip():
+                                customer_phone = await self._get_customer_phone(customer_email)
+                                if customer_phone:
                                     try:
                                         uid = await user_id_by_email(self.db, customer_email)
                                         if uid:
@@ -580,7 +603,7 @@ class SubscriptionBillingService:
                                             if prefs.get("sms", {}).get("billingUpdates", False):
                                                 sms_service = SMSService()
                                                 await sms_service.send_billing_notification(
-                                                    to=subscription.customer.phone,
+                                                    to=customer_phone,
                                                     message=f"URGENT: Invoice {latest_invoice.invoice_number} for {subscription.subscription_number} is {days_overdue} days overdue. Amount: {latest_invoice.total_amount:.2f} DZD"
                                                 )
                                     except Exception as e:

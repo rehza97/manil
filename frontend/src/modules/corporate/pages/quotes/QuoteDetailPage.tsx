@@ -1,12 +1,12 @@
 import React from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { quotesApi } from "@/shared/api";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
-import { ArrowLeft, CheckCircle, FileText, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, FileText, Download, Loader2, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/shared/components/ui/use-toast";
 
@@ -33,6 +33,7 @@ export const QuoteDetailPage: React.FC = () => {
   const location = useLocation();
   const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/corporate";
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: quote, isLoading, error } = useQuery({
     queryKey: ["corporate-quote", id],
@@ -44,6 +45,26 @@ export const QuoteDetailPage: React.FC = () => {
     queryKey: ["corporate-quote-timeline", id],
     queryFn: () => quotesApi.getQuoteTimeline(id!),
     enabled: !!id,
+  });
+
+  const acceptMutation = useMutation({
+    mutationFn: () => quotesApi.acceptQuote(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["corporate-quote", id] });
+      queryClient.invalidateQueries({ queryKey: ["corporate-quote-timeline", id] });
+      toast({ title: "Devis accepté", description: "Le devis a été marqué comme accepté." });
+    },
+    onError: (e: Error) => toast({ variant: "destructive", title: "Erreur", description: e.message }),
+  });
+
+  const declineMutation = useMutation({
+    mutationFn: () => quotesApi.declineQuote(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["corporate-quote", id] });
+      queryClient.invalidateQueries({ queryKey: ["corporate-quote-timeline", id] });
+      toast({ title: "Devis refusé", description: "Le devis a été marqué comme refusé." });
+    },
+    onError: (e: Error) => toast({ variant: "destructive", title: "Erreur", description: e.message }),
   });
 
   const handleDownloadPdf = async () => {
@@ -67,6 +88,7 @@ export const QuoteDetailPage: React.FC = () => {
   const status = q?.status ?? "";
   const canApprove = status === "pending_approval" || status === "pending approval";
   const canConvert = status === "accepted" || status === "approved";
+  const canAcceptDecline = status === "sent";
 
   if (!id) {
     return (
@@ -95,8 +117,20 @@ export const QuoteDetailPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" onClick={() => navigate(`${basePath}/quotes`)}><ArrowLeft className="mr-2 h-4 w-4" />Retour aux devis</Button>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={handleDownloadPdf}><Download className="mr-2 h-4 w-4" />Télécharger le PDF</Button>
+          {canAcceptDecline && (
+            <>
+              <Button size="sm" disabled={acceptMutation.isPending} onClick={() => acceptMutation.mutate()}>
+                {acceptMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                Accepter
+              </Button>
+              <Button variant="destructive" size="sm" disabled={declineMutation.isPending} onClick={() => declineMutation.mutate()}>
+                {declineMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
+                Refuser
+              </Button>
+            </>
+          )}
           {canApprove && <Button size="sm" onClick={() => navigate(`${basePath}/quotes/${id}/approve`)}><CheckCircle className="mr-2 h-4 w-4" />Approuver</Button>}
           {canConvert && (
             <Button size="sm" onClick={() => navigate(`${basePath}/quotes/${id}/convert`)}>

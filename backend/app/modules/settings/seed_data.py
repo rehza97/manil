@@ -262,9 +262,9 @@ SYSTEM_ROLES = [
             "kyc:view", "kyc:upload", "kyc:download",
             "tickets:view", "tickets:create", "tickets:reply", "tickets:watchers",
             "products:view",
-            "orders:view", "orders:create",
-            "invoices:view", "invoices:export",
-            "quotes:view", "quotes:accept", "quotes:reject",
+            "orders:view", "orders:create", "orders:edit", "orders:delete",
+            "invoices:view", "invoices:export", "invoices:send",
+            "quotes:view", "quotes:create", "quotes:accept", "quotes:reject",
             # Hosting (own resources only; ownership checks enforced by routes)
             "hosting:view", "hosting:request", "hosting:upgrade", "hosting:manage",
             "hosting:backup", "hosting:restore", "hosting:snapshots",
@@ -580,6 +580,63 @@ SYSTEM_SETTINGS = [
         },
         "category": "notification",
         "description": "Enable/disable notifications for invoice events",
+        "is_public": False,
+    },
+
+    # Notification settings - Event toggles for KYC
+    {
+        "key": "notification.kyc_events",
+        "value": {
+            "value": {
+                "document_uploaded": True,
+                "document_approved": True,
+                "document_rejected": True,
+                "document_expired": True
+            },
+            "type": "object"
+        },
+        "category": "notification",
+        "description": "Enable/disable notifications for KYC events",
+        "is_public": False,
+    },
+    # Notification settings - Event toggles for Customer Account Status
+    {
+        "key": "notification.customer_events",
+        "value": {
+            "value": {
+                "submitted_for_approval": True,
+                "approval_approved": True,
+                "approval_rejected": True,
+                "suspended": True,
+                "activated": True,
+                "reactivated": True,
+                "deactivated": True,
+                "status_changed": True
+            },
+            "type": "object"
+        },
+        "category": "notification",
+        "description": "Enable/disable notifications for customer account status events",
+        "is_public": False,
+    },
+    # Notification settings - Event toggles for VPS/Hosting
+    {
+        "key": "notification.vps_events",
+        "value": {
+            "value": {
+                "requested": True,
+                "approved": True,
+                "provisioned": True,
+                "suspended": True,
+                "reactivated": True,
+                "cancelled": True,
+                "upgraded": True,
+                "downgraded": True
+            },
+            "type": "object"
+        },
+        "category": "notification",
+        "description": "Enable/disable notifications for VPS subscription lifecycle events",
         "is_public": False,
     },
 

@@ -122,14 +122,15 @@ export const useCancelSubscription = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vps", "subscriptions"] });
       toast({
-        title: "Subscription Cancelled",
-        description: "Your VPS subscription has been cancelled.",
+        title: "Abonnement résilié",
+        description: "Votre abonnement VPS a bien été résilié.",
+        variant: "success",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Cancellation Failed",
-        description: error.response?.data?.detail || error.message || "Failed to cancel subscription",
+        title: "Échec de la résiliation",
+        description: error.response?.data?.detail || error.message || "Impossible de résilier l'abonnement.",
         variant: "destructive",
       });
     },

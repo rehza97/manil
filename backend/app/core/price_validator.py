@@ -6,6 +6,7 @@ the product catalog server-side.
 """
 from decimal import Decimal
 from typing import List, Optional
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ValidationException
@@ -70,13 +71,15 @@ class PriceValidator:
                 )
                 continue
 
-            # Fetch product from catalog
+            # Fetch product from catalog (regular_price, sale_price; use sale_price if set)
             result = await self.db.execute(
-                """
-                SELECT id, name, price, is_active
-                FROM products
-                WHERE id = :product_id
-                """,
+                text(
+                    """
+                    SELECT id, name, regular_price, sale_price, is_active
+                    FROM products
+                    WHERE id = :product_id
+                    """
+                ),
                 {"product_id": product_id}
             )
             product = result.first()
@@ -91,8 +94,10 @@ class PriceValidator:
                     f"Item #{idx + 1}: Product '{product.name}' is no longer active"
                 )
 
-            # Validate price matches catalog
-            catalog_price = Decimal(str(product.price))
+            # Catalog price: sale_price if set, else regular_price
+            catalog_price = Decimal(
+                str(product.sale_price if product.sale_price is not None else product.regular_price)
+            )
             provided_price = Decimal(str(item.get('unit_price', 0)))
 
             # Allow small floating point differences (0.01)
@@ -148,13 +153,15 @@ class PriceValidator:
                 validated_items.append(item)
                 continue
 
-            # Fetch product from catalog
+            # Fetch product from catalog (regular_price, sale_price; use sale_price if set)
             result = await self.db.execute(
-                """
-                SELECT id, name, price, is_active
-                FROM products
-                WHERE id = :product_id
-                """,
+                text(
+                    """
+                    SELECT id, name, regular_price, sale_price, is_active
+                    FROM products
+                    WHERE id = :product_id
+                    """
+                ),
                 {"product_id": product_id}
             )
             product = result.first()
@@ -164,7 +171,9 @@ class PriceValidator:
                     f"Item #{idx + 1}: Product with ID '{product_id}' not found"
                 )
 
-            catalog_price = Decimal(str(product.price))
+            catalog_price = Decimal(
+                str(product.sale_price if product.sale_price is not None else product.regular_price)
+            )
             provided_price = Decimal(str(item.get('unit_price', 0)))
             price_difference = abs(catalog_price - provided_price)
 
