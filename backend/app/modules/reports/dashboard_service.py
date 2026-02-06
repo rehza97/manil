@@ -5,7 +5,7 @@ Provides aggregated metrics for Admin, Corporate, and Customer dashboards.
 """
 
 from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from sqlalchemy import select, func, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -70,6 +70,39 @@ class DashboardService:
         )
 
         # Get trends
+        trends = await self._get_trends(period)
+
+        return DashboardResponse(
+            metrics=metrics,
+            recent_activity=recent_activity,
+            trends=trends,
+        )
+
+    async def get_support_dashboard(
+        self, user_id: str, period: str = "month"
+    ) -> DashboardResponse:
+        """
+        Get support dashboard with ticket-centric metrics for support agents.
+
+        Args:
+            user_id: Support user ID (UUID string, matches users.id)
+            period: Time period for trends
+        """
+        metrics = await self._get_overall_metrics()
+        # Add count of open tickets assigned to this user
+        assigned_query = select(func.count(Ticket.id)).where(
+            and_(
+                Ticket.deleted_at.is_(None),
+                Ticket.assigned_to == user_id,
+                Ticket.status.in_(
+                    ["open", "in_progress", "waiting_for_response"]
+                ),
+            )
+        )
+        assigned_count = await self.db.scalar(assigned_query) or 0
+        metrics.tickets_assigned_to_me = assigned_count
+
+        recent_activity = await self._get_recent_activity(limit=10, user_id=user_id)
         trends = await self._get_trends(period)
 
         return DashboardResponse(
@@ -296,9 +329,9 @@ class DashboardService:
         )
 
     async def _get_recent_activity(
-        self, limit: int = 10, user_id: Optional[int] = None
+        self, limit: int = 10, user_id: Optional[Union[int, str]] = None
     ) -> List[RecentActivity]:
-        """Get recent activity across all modules"""
+        """Get recent activity across all modules (optionally filtered by assigned user)."""
         activities = []
 
         # Recent tickets
@@ -306,8 +339,8 @@ class DashboardService:
             Ticket.deleted_at.is_(None)
         ).order_by(Ticket.created_at.desc()).limit(limit)
 
-        if user_id:
-            ticket_query = ticket_query.where(Ticket.assigned_to == user_id)
+        if user_id is not None:
+            ticket_query = ticket_query.where(Ticket.assigned_to == str(user_id))
 
         result = await self.db.execute(ticket_query)
         tickets = result.scalars().all()

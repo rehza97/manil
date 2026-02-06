@@ -12,16 +12,29 @@ import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/shared/store";
 import { Loader2 } from "lucide-react";
 
+type AllowedRole = "admin" | "corporate" | "client" | "support_agent" | "support_supervisor";
+
 interface RoleGuardProps {
   children: ReactNode;
-  allowedRole: "admin" | "corporate" | "client" | "support_agent" | "support_supervisor";
+  /** Single allowed role (exact match) */
+  allowedRole?: AllowedRole;
+  /** Multiple allowed roles (user may have any of these) */
+  allowedRoles?: AllowedRole[];
   layoutName?: string;
 }
+
+const ROLE_DASHBOARDS: Record<string, string> = {
+  admin: "/admin",
+  corporate: "/corporate",
+  client: "/dashboard",
+  support_agent: "/corporate",
+  support_supervisor: "/corporate",
+};
 
 /**
  * RoleGuard - Strict role verification component
  *
- * Verifies the user has EXACTLY the required role.
+ * Verifies the user has one of the required roles.
  * If not, redirects them to their appropriate dashboard.
  *
  * This provides defense-in-depth security alongside ProtectedRoute.
@@ -29,18 +42,19 @@ interface RoleGuardProps {
 export const RoleGuard = ({
   children,
   allowedRole,
+  allowedRoles,
   layoutName = "this area"
 }: RoleGuardProps) => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
 
+  const roles = allowedRoles ?? (allowedRole ? [allowedRole] : []);
+
   useEffect(() => {
-    // Wait for auth state to load
     if (isAuthenticated === undefined) {
       return;
     }
 
-    // Not authenticated - redirect to login
     if (!isAuthenticated || !user) {
       navigate("/login", { replace: true });
       return;
@@ -51,20 +65,13 @@ export const RoleGuard = ({
         ? user.role
         : (user.role as { slug?: string })?.slug ?? "";
 
-    // Wrong role - redirect to their dashboard
-    if (roleSlug !== allowedRole) {
-      const roleDashboards: Record<string, string> = {
-        admin: "/admin",
-        corporate: "/corporate",
-        client: "/dashboard",
-        support_agent: "/dashboard",
-        support_supervisor: "/dashboard",
-      };
+    const allowed = roles.length === 0 || roles.includes(roleSlug as AllowedRole);
 
-      const userDashboard = roleDashboards[roleSlug];
+    if (!allowed) {
+      const userDashboard = ROLE_DASHBOARDS[roleSlug] ?? "/dashboard";
 
       console.warn(
-        `Role mismatch detected: User with role "${roleSlug}" attempted to access ${layoutName} (requires "${allowedRole}")`
+        `Role mismatch detected: User with role "${roleSlug}" attempted to access ${layoutName} (requires one of: ${roles.join(", ")})`
       );
 
       navigate(userDashboard, {
@@ -74,9 +81,8 @@ export const RoleGuard = ({
         }
       });
     }
-  }, [isAuthenticated, user, allowedRole, navigate, layoutName]);
+  }, [isAuthenticated, user, roles, navigate, layoutName]);
 
-  // Show loading state while checking
   if (isAuthenticated === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -88,12 +94,20 @@ export const RoleGuard = ({
     );
   }
 
-  // Not authenticated or wrong role - show nothing (redirect in useEffect)
-  if (!isAuthenticated || !user || user.role !== allowedRole) {
+  if (!isAuthenticated || !user) {
     return null;
   }
 
-  // Correct role - render children
+  const roleSlug =
+    typeof user.role === "string"
+      ? user.role
+      : (user.role as { slug?: string })?.slug ?? "";
+  const allowed = roles.length === 0 || roles.includes(roleSlug as AllowedRole);
+
+  if (!allowed) {
+    return null;
+  }
+
   return <>{children}</>;
 };
 

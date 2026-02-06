@@ -28,6 +28,7 @@ import {
   ProtectedRoute,
   RoleBasedRedirect,
   GuestOnlyRoute,
+  useAuth,
 } from "@/modules/auth";
 import {
   UserDashboardLayout,
@@ -37,6 +38,7 @@ import {
 import {
   UserDashboardPage,
   CorporateDashboardPage,
+  SupportDashboardPage,
   AdminDashboardPage,
   ProfilePage,
   ProfileEditPage,
@@ -95,7 +97,7 @@ import {
   CustomerEditPage,
 } from "@/modules/admin/pages/customers";
 import {
-  SupportDashboardPage,
+  SupportDashboardPage as AdminSupportDashboardPage,
   SupportGroupsPage,
   TicketCategoriesPage,
   AutomationRulesPage,
@@ -249,6 +251,21 @@ const ModulePlaceholder = ({ module }: { module: string }) => {
     </div>
   );
 };
+
+/**
+ * Renders Support Dashboard for support_agent/support_supervisor, Corporate Dashboard otherwise.
+ * Used as /corporate index so support roles see their own landing page.
+ */
+function CorporateOrSupportDashboard() {
+  const { user } = useAuth();
+  const roleSlug =
+    typeof user?.role === "string"
+      ? user.role
+      : (user?.role as { slug?: string })?.slug ?? "";
+  const isSupport =
+    roleSlug === "support_agent" || roleSlug === "support_supervisor";
+  return isSupport ? <SupportDashboardPage /> : <CorporateDashboardPage />;
+}
 
 /**
  * Route configuration for the entire application
@@ -542,18 +559,18 @@ export const routes = [
     ],
   },
 
-  // Corporate Dashboard Routes (/corporate)
+  // Corporate Dashboard Routes (/corporate) — corporate, admin, support_agent, support_supervisor
   {
     path: "/corporate",
     element: (
-      <ProtectedRoute requiredRole={["corporate", "admin"]}>
+      <ProtectedRoute requiredRole={["corporate", "admin", "support_agent", "support_supervisor"]}>
         <CorporateDashboardLayout />
       </ProtectedRoute>
     ),
     children: [
       {
         index: true,
-        element: <CorporateDashboardPage />,
+        element: <CorporateOrSupportDashboard />,
       },
       // Profile & Security
       {
@@ -1075,7 +1092,7 @@ export const routes = [
       // Support Management
       {
         path: "support",
-        element: <SupportDashboardPage />,
+        element: <AdminSupportDashboardPage />,
       },
       {
         path: "support/groups",
@@ -1288,28 +1305,28 @@ export const routePermissions = {
   "/dashboard/vps/custom-images/:imageId": ["client"],
   "/dashboard/settings": ["client"],
 
-  // Corporate routes
-  "/corporate": ["corporate", "admin"],
-  "/corporate/customers": ["corporate", "admin"],
-  "/corporate/tickets": ["corporate", "admin"],
-  "/corporate/products": ["corporate", "admin"],
-  "/corporate/orders": ["corporate", "admin"],
-  "/corporate/orders/create": ["corporate", "admin"],
-  "/corporate/orders/:orderId": ["corporate", "admin"],
-  "/corporate/orders/:orderId/edit": ["corporate", "admin"],
-  "/corporate/orders/:orderId/status": ["corporate", "admin"],
-  "/corporate/quotes": ["corporate", "admin"],
-  "/corporate/invoices": ["corporate", "admin"],
-  "/corporate/reports": ["corporate", "admin"],
-  "/corporate/hosting/requests": ["corporate", "admin"],
-  "/corporate/hosting/subscriptions": ["corporate", "admin"],
-  "/corporate/hosting/monitoring": ["corporate", "admin"],
-  "/corporate/settings": ["corporate", "admin"],
-  "/corporate/settings/general": ["corporate", "admin"],
-  "/corporate/settings/roles": ["corporate", "admin"],
-  "/corporate/settings/users": ["corporate", "admin"],
-  "/corporate/settings/system": ["corporate", "admin"],
-  "/corporate/settings/permissions": ["corporate", "admin"],
+  // Corporate routes (including support_agent, support_supervisor)
+  "/corporate": ["corporate", "admin", "support_agent", "support_supervisor"],
+  "/corporate/customers": ["corporate", "admin", "support_agent", "support_supervisor"],
+  "/corporate/tickets": ["corporate", "admin", "support_agent", "support_supervisor"],
+  "/corporate/products": ["corporate", "admin", "support_agent", "support_supervisor"],
+  "/corporate/orders": ["corporate", "admin", "support_agent", "support_supervisor"],
+  "/corporate/orders/create": ["corporate", "admin", "support_agent", "support_supervisor"],
+  "/corporate/orders/:orderId": ["corporate", "admin", "support_agent", "support_supervisor"],
+  "/corporate/orders/:orderId/edit": ["corporate", "admin", "support_agent", "support_supervisor"],
+  "/corporate/orders/:orderId/status": ["corporate", "admin", "support_agent", "support_supervisor"],
+  "/corporate/quotes": ["corporate", "admin", "support_agent", "support_supervisor"],
+  "/corporate/invoices": ["corporate", "admin", "support_agent", "support_supervisor"],
+  "/corporate/reports": ["corporate", "admin", "support_agent", "support_supervisor"],
+  "/corporate/hosting/requests": ["corporate", "admin", "support_agent", "support_supervisor"],
+  "/corporate/hosting/subscriptions": ["corporate", "admin", "support_agent", "support_supervisor"],
+  "/corporate/hosting/monitoring": ["corporate", "admin", "support_agent", "support_supervisor"],
+  "/corporate/settings": ["corporate", "admin", "support_agent", "support_supervisor"],
+  "/corporate/settings/general": ["corporate", "admin", "support_agent", "support_supervisor"],
+  "/corporate/settings/roles": ["corporate", "admin", "support_agent", "support_supervisor"],
+  "/corporate/settings/users": ["corporate", "admin", "support_agent", "support_supervisor"],
+  "/corporate/settings/system": ["corporate", "admin", "support_agent", "support_supervisor"],
+  "/corporate/settings/permissions": ["corporate", "admin", "support_agent", "support_supervisor"],
 
   // Admin routes
   "/admin": ["admin"],

@@ -23,6 +23,35 @@ export const useUsers = (
 };
 
 /**
+ * Get users for the "link to existing user" dropdown when creating a customer.
+ * Uses endpoint that requires CUSTOMERS_CREATE (corporate and admin).
+ */
+export const useUsersForCustomerLink = (
+  page: number = 1,
+  pageSize: number = 100
+) => {
+  return useQuery({
+    queryKey: ["users", "for-customer-link", page, pageSize],
+    queryFn: () => userService.getUsersForCustomerLink(page, pageSize),
+  });
+};
+
+/**
+ * Get users for ticket assignee and watchers (requires TICKETS_VIEW; corporate and admin).
+ */
+export const useUsersForTicketAssignment = (
+  page: number = 1,
+  pageSize: number = 100,
+  options?: { enabled?: boolean }
+) => {
+  return useQuery({
+    queryKey: ["users", "for-ticket-assignment", page, pageSize],
+    queryFn: () => userService.getUsersForTicketAssignment(page, pageSize),
+    enabled: options?.enabled !== false,
+  });
+};
+
+/**
  * Get user by ID hook
  */
 export const useUser = (userId: string) => {

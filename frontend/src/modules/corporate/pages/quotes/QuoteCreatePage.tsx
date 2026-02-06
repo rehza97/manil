@@ -7,8 +7,7 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { quotesApi } from "@/shared/api";
-import { customersApi } from "@/shared/api";
+import { quotesApi, customersApi, productsApi } from "@/shared/api";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -22,6 +21,7 @@ import {
 } from "@/shared/components/ui/select";
 import { ArrowLeft, Loader2, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/shared/components/ui/use-toast";
+import { formatCurrency } from "@/shared/utils/formatters";
 
 interface QuoteItem {
   item_name: string;
@@ -59,12 +59,31 @@ export const QuoteCreatePage: React.FC = () => {
   const [taxRate, setTaxRate] = useState("19");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<QuoteItem[]>([{ ...defaultItem }]);
+  const [productSearch, setProductSearch] = useState("");
 
   const { data: customersData } = useQuery({
     queryKey: ["corporate-customers-list"],
     queryFn: () => customersApi.getCustomers({ skip: 0, limit: 200 }),
   });
-  const customers = (customersData?.items ?? []) as any[];
+  // Backend returns list in `data`; support both for compatibility
+  const customers = (customersData?.data ?? customersData?.items ?? []) as Array<{ id: string; name?: string; full_name?: string; email?: string }>;
+
+  const { data: productsData } = useQuery({
+    queryKey: ["corporate-products-list", productSearch],
+    queryFn: () =>
+      productsApi.getProducts({
+        page: 1,
+        page_size: 100,
+        search: productSearch || undefined,
+      }),
+  });
+  const products = (productsData?.data ?? []) as Array<{
+    id: string;
+    name: string;
+    sku?: string;
+    regular_price?: number;
+    sale_price?: number;
+  }>;
 
   const createMutation = useMutation({
     mutationFn: async (payload: any) => quotesApi.createQuote(payload),
@@ -180,7 +199,7 @@ export const QuoteCreatePage: React.FC = () => {
               <SelectContent>
                 {customers.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
-                    {c.name ?? c.email ?? c.id}
+                    {c.name ?? c.full_name ?? c.email ?? c.id}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -254,12 +273,51 @@ export const QuoteCreatePage: React.FC = () => {
               >
                 <div className="col-span-4 space-y-2">
                   <Label>Nom de l&apos;article</Label>
+                  <Select
+                    value={
+                      products.find((p) => p.name === it.item_name)?.id ?? ""
+                    }
+                    onValueChange={(value) => {
+                      if (!value) return;
+                      const product = products.find((p) => p.id === value);
+                      if (product) {
+                        const price =
+                          product.sale_price ?? product.regular_price ?? 0;
+                        updateItem(idx, "item_name", product.name);
+                        updateItem(idx, "unit_price", price);
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choisir un produit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <div className="p-2">
+                        <Input
+                          placeholder="Rechercher un produit…"
+                          value={productSearch}
+                          onChange={(e) =>
+                            setProductSearch(e.target.value)
+                          }
+                          className="mb-2"
+                        />
+                      </div>
+                      {products.map((product) => (
+                        <SelectItem key={product.id} value={product.id}>
+                          {product.name}
+                          {product.sku ? ` (${product.sku})` : ""} –{" "}
+                          {formatCurrency(product.sale_price ?? product.regular_price ?? 0)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Input
                     value={it.item_name}
                     onChange={(e) =>
                       updateItem(idx, "item_name", e.target.value)
                     }
-                    placeholder="Nom"
+                    placeholder="Ou saisir un nom manuellement"
+                    className="mt-1"
                   />
                 </div>
                 <div className="col-span-2 space-y-2">

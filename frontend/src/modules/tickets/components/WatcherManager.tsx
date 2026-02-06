@@ -25,7 +25,8 @@ import {
 } from '@/shared/components/ui/select';
 import { Checkbox } from '@/shared/components/ui/checkbox';
 import { Label } from '@/shared/components/ui/label';
-import { useWatchers, useUsers } from '../hooks/useWatchers';
+import { useWatchers } from '../hooks/useWatchers';
+import { useUsersForTicketAssignment } from '@/modules/admin/hooks/useUsers';
 import { useAuth } from '@/modules/auth';
 
 interface WatcherManagerProps {
@@ -47,7 +48,8 @@ export const WatcherManager: React.FC<WatcherManagerProps> = ({
     addWatcher,
     removeWatcher,
   } = useWatchers(ticketId, { enabled: !isClient && !!ticketId });
-  const { data: users = [], isLoading: usersLoading } = useUsers(undefined, { enabled: !isClient });
+  const { data: usersData, isLoading: usersLoading } = useUsersForTicketAssignment(1, 100, { enabled: !isClient });
+  const users = usersData?.data ?? [];
 
   const [isOpen, setIsOpen] = React.useState(false);
   const [selectedUserId, setSelectedUserId] = React.useState('');

@@ -78,6 +78,65 @@ export const userService = {
   },
 
   /**
+   * Get users for the "link to existing user" dropdown when creating a customer.
+   * Uses GET /users/for-customer-link (requires CUSTOMERS_CREATE; works for corporate and admin).
+   */
+  async getUsersForCustomerLink(
+    page: number = 1,
+    pageSize: number = 100
+  ): Promise<UserListResponse> {
+    interface BackendUserListResponse {
+      users: User[];
+      total: number;
+      page: number;
+      limit: number;
+      total_pages: number;
+    }
+    const response = await apiClient.get<BackendUserListResponse>(
+      "/users/for-customer-link",
+      { params: { page, limit: pageSize } }
+    );
+    return {
+      data: response.data.users,
+      total: response.data.total,
+      page: response.data.page,
+      page_size: response.data.limit,
+    };
+  },
+
+  /**
+   * Get users for ticket assignee and watchers (requires TICKETS_VIEW; works for corporate and admin).
+   */
+  async getUsersForTicketAssignment(
+    page: number = 1,
+    pageSize: number = 100,
+    search?: string
+  ): Promise<UserListResponse> {
+    interface BackendUserListResponse {
+      users: User[];
+      total: number;
+      page: number;
+      limit: number;
+      total_pages: number;
+    }
+    const params: { page: number; limit: number; search?: string } = {
+      page,
+      limit: pageSize,
+    };
+    if (search) params.search = search;
+    const response = await apiClient.get<BackendUserListResponse>(
+      "/users/for-ticket-assignment",
+      { params }
+    );
+    return {
+      data: response.data.users,
+      total: response.data.total,
+      page: response.data.page,
+      page_size: response.data.limit,
+    };
+  },
+
+  /**
    * Get user by ID
    */
   async getUser(userId: string): Promise<User> {

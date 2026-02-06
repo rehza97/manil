@@ -88,14 +88,14 @@ const CorporateDashboardLayout: React.FC = () => {
       href: "/corporate/customers",
       icon: Users,
       current: location.pathname.startsWith("/corporate/customers"),
-      permission: "customer:read",
+      permission: "customers:view",
     },
     {
       name: "Support Tickets",
       href: "/corporate/tickets",
       icon: Ticket,
       current: location.pathname.startsWith("/corporate/tickets"),
-      permission: "ticket:read",
+      permission: "tickets:view",
       sectionKey: "tickets",
       children: [
         {
@@ -103,21 +103,21 @@ const CorporateDashboardLayout: React.FC = () => {
           href: "/corporate/tickets",
           icon: Ticket,
           current: location.pathname === "/corporate/tickets",
-          permission: "ticket:read",
+          permission: "tickets:view",
         },
         {
           name: "Categories",
           href: "/corporate/tickets/categories",
           icon: FolderTree,
           current: location.pathname === "/corporate/tickets/categories",
-          permission: "ticket:read",
+          permission: "tickets:view",
         },
         {
           name: "Templates",
           href: "/corporate/tickets/templates",
           icon: FileText,
           current: location.pathname.startsWith("/corporate/tickets/templates"),
-          permission: "ticket:read",
+          permission: "tickets:view",
         },
       ],
     },
@@ -126,21 +126,21 @@ const CorporateDashboardLayout: React.FC = () => {
       href: "/corporate/orders",
       icon: ShoppingCart,
       current: location.pathname.startsWith("/corporate/orders"),
-      permission: "order:read",
+      permission: "orders:view",
       children: [
         {
           name: "All Orders",
           href: "/corporate/orders",
           icon: ShoppingCart,
           current: location.pathname === "/corporate/orders",
-          permission: "order:read",
+          permission: "orders:view",
         },
         {
           name: "Create Order",
           href: "/corporate/orders/create",
           icon: UserPlus,
           current: location.pathname === "/corporate/orders/create",
-          permission: "order:create",
+          permission: "orders:create",
         },
       ],
     },
@@ -149,7 +149,7 @@ const CorporateDashboardLayout: React.FC = () => {
       href: "/corporate/products",
       icon: Package,
       current: location.pathname.startsWith("/corporate/products"),
-      permission: "product:read",
+      permission: "products:view",
       sectionKey: "products",
       children: [
         {
@@ -157,21 +157,21 @@ const CorporateDashboardLayout: React.FC = () => {
           href: "/corporate/products",
           icon: Package,
           current: location.pathname === "/corporate/products",
-          permission: "product:read",
+          permission: "products:view",
         },
         {
           name: "Create Product",
           href: "/corporate/products/new",
           icon: UserPlus,
           current: location.pathname === "/corporate/products/new",
-          permission: "product:create",
+          permission: "products:create",
         },
         {
           name: "Categories",
           href: "/corporate/products/categories",
           icon: FolderTree,
           current: location.pathname === "/corporate/products/categories",
-          permission: "product:read",
+          permission: "products:view",
         },
       ],
     },
@@ -180,14 +180,14 @@ const CorporateDashboardLayout: React.FC = () => {
       href: "/corporate/quotes",
       icon: FilePen,
       current: location.pathname.startsWith("/corporate/quotes"),
-      permission: "quotes:read",
+      permission: "quotes:view",
       children: [
         {
           name: "All Quotes",
           href: "/corporate/quotes",
           icon: FilePen,
           current: location.pathname === "/corporate/quotes",
-          permission: "quotes:read",
+          permission: "quotes:view",
         },
         {
           name: "Create Quote",
@@ -203,7 +203,7 @@ const CorporateDashboardLayout: React.FC = () => {
       href: "/corporate/invoices",
       icon: Receipt,
       current: location.pathname.startsWith("/corporate/invoices"),
-      permission: "invoice:read",
+      permission: "invoices:view",
       sectionKey: "invoices",
       children: [
         {
@@ -211,14 +211,14 @@ const CorporateDashboardLayout: React.FC = () => {
           href: "/corporate/invoices",
           icon: Receipt,
           current: location.pathname === "/corporate/invoices",
-          permission: "invoice:read",
+          permission: "invoices:view",
         },
         {
           name: "Create Invoice",
           href: "/corporate/invoices/new",
           icon: UserPlus,
           current: location.pathname === "/corporate/invoices/new",
-          permission: "invoice:create",
+          permission: "invoices:create",
         },
       ],
     },
@@ -227,42 +227,42 @@ const CorporateDashboardLayout: React.FC = () => {
       href: "/corporate/reports",
       icon: BarChart3,
       current: location.pathname.startsWith("/corporate/reports"),
-      permission: "report:read",
+      permission: "reports:view",
       children: [
         {
           name: "Reports Dashboard",
           href: "/corporate/reports",
           icon: BarChart3,
           current: location.pathname === "/corporate/reports",
-          permission: "report:read",
+          permission: "reports:view",
         },
         {
           name: "Customer Reports",
           href: "/corporate/reports/customers",
           icon: Users,
           current: location.pathname === "/corporate/reports/customers",
-          permission: "report:read",
+          permission: "reports:view",
         },
         {
           name: "Ticket Reports",
           href: "/corporate/reports/tickets",
           icon: Ticket,
           current: location.pathname === "/corporate/reports/tickets",
-          permission: "report:read",
+          permission: "reports:view",
         },
         {
           name: "Order Reports",
           href: "/corporate/reports/orders",
           icon: ShoppingCart,
           current: location.pathname === "/corporate/reports/orders",
-          permission: "report:read",
+          permission: "reports:view",
         },
         {
           name: "Revenue Reports",
           href: "/corporate/reports/revenue",
           icon: DollarSign,
           current: location.pathname === "/corporate/reports/revenue",
-          permission: "report:read",
+          permission: "reports:view",
         },
       ],
     },
@@ -307,21 +307,21 @@ const CorporateDashboardLayout: React.FC = () => {
       name: "DNS Management",
       icon: Globe,
       current: location.pathname.startsWith("/corporate/dns"),
-      permission: "dns:read",
+      permission: "dns:view",
       children: [
         {
           name: "Customer DNS Zones",
           href: "/corporate/dns/zones",
           icon: Globe,
           current: location.pathname === "/corporate/dns/zones",
-          permission: "dns:read",
+          permission: "dns:view",
         },
         {
           name: "DNS Overview",
           href: "/corporate/dns/overview",
           icon: TrendingUp,
           current: location.pathname === "/corporate/dns/overview",
-          permission: "dns:read",
+          permission: "dns:view",
         },
       ],
     },
@@ -330,7 +330,7 @@ const CorporateDashboardLayout: React.FC = () => {
       href: "/corporate/settings",
       icon: Settings,
       current: location.pathname.startsWith("/corporate/settings"),
-      permission: "settings:read",
+      permission: "settings:view",
       sectionKey: "settings",
       children: [
         {
@@ -338,21 +338,21 @@ const CorporateDashboardLayout: React.FC = () => {
           href: "/corporate/settings/general",
           icon: Settings,
           current: location.pathname === "/corporate/settings/general",
-          permission: "settings:read",
+          permission: "settings:view",
         },
         {
           name: "Notifications",
           href: "/corporate/settings/notifications",
           icon: Bell,
           current: location.pathname === "/corporate/settings/notifications",
-          permission: "settings:read",
+          permission: "settings:view",
         },
         {
           name: "Email Templates",
           href: "/corporate/settings/templates",
           icon: FileText,
           current: location.pathname === "/corporate/settings/templates",
-          permission: "settings:read",
+          permission: "settings:view",
         },
       ],
     },
@@ -362,8 +362,14 @@ const CorporateDashboardLayout: React.FC = () => {
     (item) => !item.permission || hasPermission(item.permission)
   );
 
+  const isSupport =
+    user?.role === "support_agent" || user?.role === "support_supervisor";
+
   return (
-    <RoleGuard allowedRole="corporate" layoutName="Corporate Portal">
+    <RoleGuard
+      allowedRoles={["corporate", "admin", "support_agent", "support_supervisor"]}
+      layoutName="Corporate Portal"
+    >
       <div className="min-h-screen bg-slate-50">
       {/* Top Navigation */}
       <nav className="bg-white border-b border-slate-200">
@@ -376,7 +382,7 @@ const CorporateDashboardLayout: React.FC = () => {
                   CloudManager
                 </span>
                 <Badge variant="secondary" className="ml-2">
-                  Corporate Portal
+                  {isSupport ? "Support" : "Corporate Portal"}
                 </Badge>
               </div>
             </div>
@@ -408,7 +414,7 @@ const CorporateDashboardLayout: React.FC = () => {
                         {user?.email}
                       </p>
                       <Badge variant="outline" className="w-fit">
-                        Corporate
+                        {isSupport ? "Support" : "Corporate"}
                       </Badge>
                     </div>
                   </DropdownMenuLabel>

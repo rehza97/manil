@@ -99,8 +99,11 @@ export const ticketsApi = {
   },
 
   updateStatus: async (ticketId: string, status: string) => {
+    // Ensure we send the string value, not the enum object
+    // Convert enum to string if needed
+    const statusValue = typeof status === 'string' ? status : String(status);
     const response = await apiClient.put(`/tickets/${ticketId}/status`, {
-      status,
+      status: statusValue,
     });
     return response.data;
   },

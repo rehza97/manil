@@ -21,7 +21,7 @@ import { useToast } from "@/shared/components/ui/use-toast";
 import { format } from "date-fns";
 import { FileText, Download } from "lucide-react";
 import { ticketService } from "../services";
-import { useUsers } from "@/modules/admin/hooks";
+import { useUsersForTicketAssignment } from "@/modules/admin/hooks/useUsers";
 import { useAuth } from "@/modules/auth";
 
 interface TicketDetailProps {
@@ -67,8 +67,8 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
   const [selectedAssignee, setSelectedAssignee] = useState<string>("");
 
   // Fetch staff users for assignment (corporate and admin roles) - only for non-clients
-  const { data: usersData } = useUsers(1, 100, { enabled: !isClient });
-  
+  const { data: usersData } = useUsersForTicketAssignment(1, 100, { enabled: !isClient });
+
   const staffUsers = useMemo(() => {
     if (isClient) return [];
     const users = usersData?.data || [];
@@ -400,7 +400,12 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
                     <SelectItem value="closed">Fermé</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button onClick={handleStatusChange}>Mettre à jour</Button>
+                <Button
+                  onClick={handleStatusChange}
+                  disabled={updateTicketStatus.isPending}
+                >
+                  Mettre à jour
+                </Button>
               </div>
             </div>
           )}

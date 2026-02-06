@@ -7,7 +7,7 @@ import {
   useCustomer,
 } from "../hooks/useCustomers";
 import { CustomerType, type CreateCustomerDTO } from "../types";
-import { useUsers } from "@/modules/admin/hooks/useUsers";
+import { useUsersForCustomerLink } from "@/modules/admin/hooks/useUsers";
 import { Button } from "@/shared/components/ui/button";
 import {
   Form,
@@ -86,9 +86,9 @@ export function CustomerForm({
   const createCustomer = useCreateCustomer();
   const updateCustomer = useUpdateCustomer();
 
-  // Fetch users for selection (only when creating, not editing)
+  // Fetch users for "link to existing user" dropdown (only when creating; uses CUSTOMERS_CREATE so corporate can load)
   const [selectedUserId, setSelectedUserId] = useState<string>("");
-  const { data: usersData } = useUsers(1, 100); // Fetch up to 100 users
+  const { data: usersData } = useUsersForCustomerLink(1, 100);
   const users = usersData?.data || [];
 
   const form = useForm<CustomerFormValues>({

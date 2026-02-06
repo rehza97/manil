@@ -167,7 +167,11 @@ export const customersApi = {
     search?: string;
   }): Promise<{ items: Customer[]; total: number }> => {
     const response = await apiClient.get("/customers", { params });
-    return response.data;
+    const raw = response.data as { data?: Customer[]; total?: number };
+    return {
+      items: raw.data ?? [],
+      total: raw.total ?? 0,
+    };
   },
 
   /**

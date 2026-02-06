@@ -27,6 +27,8 @@ class DashboardMetrics(BaseModel):
     total_products: int = 0
     active_products: int = 0
     total_revenue: float = 0.0
+    # Support dashboard: open tickets assigned to current user
+    tickets_assigned_to_me: Optional[int] = None
 
     class Config:
         from_attributes = True

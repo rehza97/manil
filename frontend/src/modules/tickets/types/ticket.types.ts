@@ -2,6 +2,9 @@ import type { AuditFields, PaginatedResponse } from "@/shared/types";
 
 export enum TicketStatus {
   OPEN = "open",
+  ANSWERED = "answered",
+  WAITING_FOR_RESPONSE = "waiting_for_response",
+  ON_HOLD = "on_hold",
   IN_PROGRESS = "in_progress",
   RESOLVED = "resolved",
   CLOSED = "closed",

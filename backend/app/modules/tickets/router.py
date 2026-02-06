@@ -269,6 +269,14 @@ async def update_ticket_status(
     current_user: User = Depends(require_permission(Permission.TICKETS_CLOSE)),
 ):
     """Update ticket status with state validation."""
+    logger.info(
+        f"[TICKET STATUS REQUEST] ticket_id={ticket_id} | "
+        f"new_status={status_update.status} | "
+        f"user_id={current_user.id} | "
+        f"user_email={current_user.email} | "
+        f"user_role={current_user.role_slug} | "
+        f"reason={status_update.reason}"
+    )
     service = TicketService(db)
     ticket = await service.change_status(
         ticket_id, status_update.status, status_update.reason, current_user.id

@@ -66,6 +66,40 @@ async def list_users(
     )
 
 
+@router.get("/for-customer-link", response_model=UserListResponse)
+async def list_users_for_customer_link(
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(100, ge=1, le=100, description="Items per page"),
+    search: Optional[str] = Query(
+        None, description="Search in name and email"),
+    current_user=Depends(require_permission(Permission.CUSTOMERS_CREATE)),
+    db: Annotated[AsyncSession, Depends(get_db)] = None,
+):
+    """
+    List users for the 'link to existing user' dropdown when creating a customer.
+    Requires CUSTOMERS_CREATE (corporate and admin).
+    """
+    service = UserManagementService(db)
+    return await service.list_users(page=page, limit=limit, search=search)
+
+
+@router.get("/for-ticket-assignment", response_model=UserListResponse)
+async def list_users_for_ticket_assignment(
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(100, ge=1, le=100, description="Items per page"),
+    search: Optional[str] = Query(
+        None, description="Search in name and email"),
+    current_user=Depends(require_permission(Permission.TICKETS_VIEW)),
+    db: Annotated[AsyncSession, Depends(get_db)] = None,
+):
+    """
+    List users for ticket assignee and watchers (corporate and admin).
+    Requires TICKETS_VIEW.
+    """
+    service = UserManagementService(db)
+    return await service.list_users(page=page, limit=limit, search=search)
+
+
 @router.get("/{user_id}", response_model=UserDetailResponse)
 async def get_user(
     user_id: str,

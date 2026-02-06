@@ -21,7 +21,7 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ticketService } from "@/modules/tickets/services";
 import { useTicket } from "@/modules/tickets/hooks";
-import { useUsers } from "@/modules/admin/hooks/useUsers";
+import { useUsersForTicketAssignment } from "@/modules/admin/hooks/useUsers";
 import { toast } from "sonner";
 
 export const TicketTransferPage: React.FC = () => {
@@ -29,7 +29,7 @@ export const TicketTransferPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: ticket, isLoading: ticketLoading } = useTicket(id || "");
-  const { data: usersData } = useUsers(1, 100); // Fetch up to 100 users
+  const { data: usersData } = useUsersForTicketAssignment(1, 100);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [transferReason, setTransferReason] = useState<string>("");
 
@@ -124,6 +124,7 @@ export const TicketTransferPage: React.FC = () => {
               value={selectedUserId}
               onChange={(e) => setSelectedUserId(e.target.value)}
               className="w-full mt-2 px-3 py-2 border rounded-md"
+              aria-label="Select an agent to transfer the ticket to"
             >
               <option value="">Select an agent...</option>
               {transferableUsers.map((user: any) => (

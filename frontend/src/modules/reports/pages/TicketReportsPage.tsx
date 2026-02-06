@@ -70,7 +70,7 @@ export const TicketReportsPage: React.FC = () => {
         <StatCard
           title="Total Tickets"
           value={totalTickets}
-          icon={<TicketIcon className="h-6 w-6" />}
+          icon={<Ticket className="h-6 w-6" />}
           color="blue"
           loading={statusLoading}
         />

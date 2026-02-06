@@ -30,6 +30,8 @@ import { useCorporateDashboard } from "../hooks/useDashboard";
 import { RevenueCard } from "@/modules/revenue/components";
 import { useQuery } from "@tanstack/react-query";
 import { revenueService } from "@/modules/revenue/services/revenueService";
+import { useCustomers } from "@/modules/customers/hooks";
+import type { CorporateRecentCustomer } from "@/shared/api/dashboard";
 
 const CorporateDashboardPage: React.FC = () => {
   const { user } = useAuth();
@@ -41,6 +43,19 @@ const CorporateDashboardPage: React.FC = () => {
     queryFn: () => revenueService.getOverview("month"),
   });
 
+  // Fetch recent customers for the card (dashboard API does not return them)
+  const { data: customersData } = useCustomers(1, 5);
+  const recentCustomersFromApi = (customersData?.data ?? []).map(
+    (c): CorporateRecentCustomer => ({
+      id: c.id,
+      name: c.name || c.email || "—",
+      email: c.email,
+      status: String(c.status ?? "—"),
+      kycStatus: c.approvalStatus ?? "—",
+      lastActivity: c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : "—",
+    })
+  );
+
   const stats = data?.stats ?? {
     totalCustomers: 0,
     activeTickets: 0,
@@ -48,7 +63,7 @@ const CorporateDashboardPage: React.FC = () => {
     monthlyRevenue: 0,
     kycPending: 0,
   };
-  const recentCustomers = data?.recentCustomers ?? [];
+  const recentCustomers = recentCustomersFromApi.length > 0 ? recentCustomersFromApi : (data?.recentCustomers ?? []);
   const recentTickets = data?.recentTickets ?? [];
   const recentOrders = data?.recentOrders ?? [];
 
@@ -156,7 +171,7 @@ const CorporateDashboardPage: React.FC = () => {
                 </CardDescription>
               </div>
               <Button asChild size="sm">
-                <Link to="/dashboard/customers">
+                <Link to="/corporate/customers">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Customer
                 </Link>
@@ -198,7 +213,7 @@ const CorporateDashboardPage: React.FC = () => {
                     </p>
                   </div>
                   <Button variant="ghost" size="sm" asChild>
-                    <Link to={`/dashboard/customers/${customer.id}`}>
+                    <Link to={`/corporate/customers/${customer.id}`}>
                       <Eye className="h-4 w-4" />
                     </Link>
                   </Button>
@@ -219,7 +234,7 @@ const CorporateDashboardPage: React.FC = () => {
                 </CardDescription>
               </div>
               <Button asChild size="sm" variant="outline">
-                <Link to="/dashboard/tickets">View All</Link>
+                <Link to="/corporate/tickets">View All</Link>
               </Button>
             </div>
           </CardHeader>
@@ -257,7 +272,7 @@ const CorporateDashboardPage: React.FC = () => {
                     </p>
                   </div>
                   <Button variant="ghost" size="sm" asChild>
-                    <Link to={`/dashboard/tickets/${ticket.id}`}>
+                    <Link to={`/corporate/tickets/${ticket.id}`}>
                       <Eye className="h-4 w-4" />
                     </Link>
                   </Button>
@@ -278,7 +293,7 @@ const CorporateDashboardPage: React.FC = () => {
                 </CardDescription>
               </div>
               <Button asChild size="sm" variant="outline">
-                <Link to="/dashboard/orders">View All</Link>
+                <Link to="/corporate/orders">View All</Link>
               </Button>
             </div>
           </CardHeader>
@@ -302,7 +317,7 @@ const CorporateDashboardPage: React.FC = () => {
                     </p>
                   </div>
                   <Button variant="ghost" size="sm" asChild>
-                    <Link to={`/dashboard/orders/${order.id}`}>
+                    <Link to={`/corporate/orders/${order.id}`}>
                       <Eye className="h-4 w-4" />
                     </Link>
                   </Button>
@@ -322,7 +337,7 @@ const CorporateDashboardPage: React.FC = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Button asChild variant="outline" className="h-auto p-4">
-              <Link to="/dashboard/customers/new">
+              <Link to="/corporate/customers/new">
                 <Users className="h-5 w-5 mr-2" />
                 <div className="text-left">
                   <div className="font-medium">Add Customer</div>
@@ -334,7 +349,7 @@ const CorporateDashboardPage: React.FC = () => {
             </Button>
 
             <Button asChild variant="outline" className="h-auto p-4">
-              <Link to="/dashboard/customers?kyc=pending">
+              <Link to="/corporate/customers?kyc=pending">
                 <Building2 className="h-5 w-5 mr-2" />
                 <div className="text-left">
                   <div className="font-medium">Review KYC</div>
@@ -346,7 +361,7 @@ const CorporateDashboardPage: React.FC = () => {
             </Button>
 
             <Button asChild variant="outline" className="h-auto p-4">
-              <Link to="/dashboard/tickets">
+              <Link to="/corporate/tickets">
                 <Ticket className="h-5 w-5 mr-2" />
                 <div className="text-left">
                   <div className="font-medium">Manage Tickets</div>
@@ -358,7 +373,7 @@ const CorporateDashboardPage: React.FC = () => {
             </Button>
 
             <Button asChild variant="outline" className="h-auto p-4">
-              <Link to="/dashboard/reports">
+              <Link to="/corporate/reports">
                 <TrendingUp className="h-5 w-5 mr-2" />
                 <div className="text-left">
                   <div className="font-medium">View Reports</div>

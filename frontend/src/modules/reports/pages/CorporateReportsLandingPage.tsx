@@ -30,9 +30,9 @@ const links = [
     icon: Package,
   },
   {
-    to: "/corporate/reports/orders",
+    to: "/corporate/reports/revenue",
     title: "Revenue Reports",
-    description: "Revenue and order value metrics (see Order Reports)",
+    description: "Revenue and order value metrics",
     icon: TrendingUp,
   },
 ];

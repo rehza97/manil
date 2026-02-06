@@ -29,6 +29,16 @@ export const useCorporateDashboard = (period: string = "month") => {
   });
 };
 
+/**
+ * Get support dashboard data (Support Agent / Support Supervisor)
+ */
+export const useSupportDashboard = (period: string = "month") => {
+  return useQuery({
+    queryKey: ["dashboard", "support", period],
+    queryFn: () => dashboardService.getSupportDashboard(period),
+  });
+};
+
 
 
 

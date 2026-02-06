@@ -10,7 +10,11 @@ from typing import List, Tuple, Optional
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.price_validator import validate_invoice_prices, PriceValidationError
+from app.core.price_validator import (
+    validate_invoice_prices,
+    PriceValidationError,
+    PriceValidator,
+)
 from app.core.logging import logger
 from app.modules.invoices.models import Invoice, InvoiceItem, InvoiceTimeline, InvoiceStatus, PaymentMethod
 from app.modules.invoices.repository import InvoiceRepository
@@ -75,13 +79,13 @@ class InvoiceService:
         - Prevents client-side price manipulation
         - Validates discount and tax rates
         """
-        # SECURITY: Validate prices against product catalog
+        # SECURITY: Validate prices against product catalog (skip discount until we cap it)
         try:
             items_dict = [item.model_dump() for item in invoice_data.items]
             validated_items = await validate_invoice_prices(
                 self.db,
                 items_dict,
-                discount_amount=invoice_data.discount_amount,
+                discount_amount=None,
                 tax_rate=invoice_data.tax_rate,
                 allow_custom_items=allow_custom_items,
             )
@@ -99,14 +103,40 @@ class InvoiceService:
             invoice_data.items[idx].unit_price = Decimal(
                 str(validated_item['unit_price']))
 
+        # Subtotal from validated items; cap discount to subtotal and max percentage
+        subtotal = sum(
+            Decimal(str(item["unit_price"])) * Decimal(str(item["quantity"]))
+            for item in validated_items
+        )
+        max_discount_pct = Decimal("50.00")
+        requested_discount = (
+            Decimal(str(invoice_data.discount_amount))
+            if invoice_data.discount_amount is not None
+            else Decimal("0")
+        )
+        capped_discount = min(
+            requested_discount,
+            subtotal,
+            subtotal * max_discount_pct / 100,
+        )
+        if capped_discount < requested_discount:
+            logger.warning(
+                "Discount capped from %s to %s (subtotal %s, max percentage %s%%)",
+                requested_discount,
+                capped_discount,
+                subtotal,
+                max_discount_pct,
+            )
+        PriceValidator.validate_discount(subtotal, capped_discount)
+
         # Generate invoice number
         invoice_number = await self._generate_invoice_number()
 
-        # Calculate totals (using validated prices)
+        # Calculate totals (using validated prices and capped discount)
         subtotal, tax_amount, total = self._calculate_totals(
             invoice_data.items,
             invoice_data.tax_rate,
-            invoice_data.discount_amount
+            capped_discount,
         )
 
         # Create invoice
@@ -121,7 +151,7 @@ class InvoiceService:
             subtotal_amount=subtotal,
             tax_rate=invoice_data.tax_rate,
             tax_amount=tax_amount,
-            discount_amount=invoice_data.discount_amount,
+            discount_amount=capped_discount,
             total_amount=total,
             paid_amount=Decimal("0.00"),
             issue_date=invoice_data.issue_date,

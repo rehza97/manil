@@ -109,7 +109,7 @@ export const RolePermissionsPage: React.FC = () => {
 
   const toggleAllInCategory = (category: string) => {
     const categoryPermissions =
-      permissions?.filter((p) => p.resource === category).map((p) => p.id) || [];
+      permissions?.filter((p) => p.category === category).map((p) => p.id) || [];
 
     const allSelected = categoryPermissions.every((id) =>
       selectedPermissions.includes(id)
@@ -129,12 +129,12 @@ export const RolePermissionsPage: React.FC = () => {
     }
   };
 
-  // Group permissions by resource
+  // Group permissions by category
   const groupedPermissions = permissions?.reduce((acc, permission) => {
-    if (!acc[permission.resource]) {
-      acc[permission.resource] = [];
+    if (!acc[permission.category]) {
+      acc[permission.category] = [];
     }
-    acc[permission.resource].push(permission);
+    acc[permission.category].push(permission);
     return acc;
   }, {} as Record<string, Permission[]>);
 
@@ -274,7 +274,7 @@ export const RolePermissionsPage: React.FC = () => {
               ) : (
                 <div className="space-y-4">
                   {Object.entries(groupedPermissions || {}).map(
-                    ([resource, perms]) => {
+                    ([category, perms]) => {
                       const categoryPermissions = perms.map((p) => p.id);
                       const allSelected = categoryPermissions.every((id) =>
                         selectedPermissions.includes(id)
@@ -284,13 +284,13 @@ export const RolePermissionsPage: React.FC = () => {
                       );
 
                       return (
-                        <div key={resource} className="border rounded-lg p-4">
+                        <div key={category} className="border rounded-lg p-4">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
                               <Checkbox
                                 checked={allSelected}
                                 onCheckedChange={() =>
-                                  toggleAllInCategory(resource)
+                                  toggleAllInCategory(category)
                                 }
                                 className={
                                   someSelected && !allSelected
@@ -298,8 +298,8 @@ export const RolePermissionsPage: React.FC = () => {
                                     : ""
                                 }
                               />
-                              <h4 className="font-semibold capitalize">
-                                {resource}
+                              <h4 className="font-semibold">
+                                {category}
                               </h4>
                               <Badge variant="outline" className="text-xs">
                                 {perms.length} permissions

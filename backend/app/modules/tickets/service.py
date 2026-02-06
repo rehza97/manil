@@ -3,7 +3,7 @@ from typing import Optional
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundException, ForbiddenException
+from app.core.exceptions import NotFoundException, ForbiddenException, BadRequestException
 from app.core.logging import logger
 from app.modules.tickets.repository import TicketRepository
 from app.modules.tickets.models import Ticket, TicketReply
@@ -270,6 +270,12 @@ class TicketService:
         ticket = await self.get_ticket(ticket_id)
         old_status = ticket.status
 
+        logger.info(
+            f"[TICKET STATUS] Attempting to change ticket {ticket_id} "
+            f"from '{old_status}' to '{new_status}' | "
+            f"updated_by={updated_by} | reason={reason}"
+        )
+
         # Validate status transition
         valid_transitions = {
             "open": ["answered", "in_progress", "on_hold", "closed"],
@@ -281,16 +287,29 @@ class TicketService:
             "closed": ["open"],
         }
 
-        if new_status not in valid_transitions.get(ticket.status, []):
-            raise ForbiddenException(
-                f"Cannot transition from {ticket.status} to {new_status}"
+        valid_next_statuses = valid_transitions.get(ticket.status, [])
+
+        if new_status not in valid_next_statuses:
+            logger.warning(
+                f"[TICKET STATUS] Invalid transition rejected: {ticket_id} | "
+                f"from '{old_status}' to '{new_status}' | "
+                f"valid_transitions={', '.join(valid_next_statuses) if valid_next_statuses else 'none'} | "
+                f"updated_by={updated_by}"
+            )
+            raise BadRequestException(
+                f"Cannot transition from '{ticket.status}' to '{new_status}'. "
+                f"Valid transitions from '{ticket.status}' are: {', '.join(valid_next_statuses) if valid_next_statuses else 'none'}"
             )
 
         updated = await self.repository.update_status(ticket_id, new_status, updated_by)
         if not updated:
             raise NotFoundException(f"Ticket {ticket_id} not found")
 
-        logger.info(f"Ticket {ticket_id} status changed to {new_status}")
+        logger.info(
+            f"[TICKET STATUS] ✅ Successfully changed ticket {ticket_id} | "
+            f"from '{old_status}' to '{new_status}' | "
+            f"updated_by={updated_by}"
+        )
 
         try:
             customer_repo = CustomerRepository(self.db)

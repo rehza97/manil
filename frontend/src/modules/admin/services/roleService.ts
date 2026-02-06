@@ -10,7 +10,9 @@ export interface Permission {
   id: string;
   name: string;
   slug: string;
-  category?: string;
+  category: string;
+  resource: string;
+  action: string;
   description?: string | null;
   is_system?: boolean;
   is_active?: boolean;

@@ -2,9 +2,9 @@
  * Report Service
  *
  * API service for all reporting and analytics endpoints.
+ * Uses apiClient for consistent auth and token refresh.
  */
 
-import axios from 'axios';
 import { apiClient } from '@/shared/api/client';
 import type {
   DashboardResponse,
@@ -29,8 +29,6 @@ import type {
   ExportResponse,
 } from '../types/report.types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-
 // ============================================================================
 // Dashboard API
 // ============================================================================
@@ -38,25 +36,22 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 export const reportService = {
   // Dashboard endpoints
   async getAdminDashboard(period: string = 'month'): Promise<DashboardResponse> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/reports/dashboard/admin`, {
+    const response = await apiClient.get('/reports/dashboard/admin', {
       params: { period },
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     });
     return response.data;
   },
 
   async getCorporateDashboard(period: string = 'month'): Promise<DashboardResponse> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/reports/dashboard/corporate`, {
+    const response = await apiClient.get('/reports/dashboard/corporate', {
       params: { period },
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     });
     return response.data;
   },
 
   async getCustomerDashboard(period: string = 'month'): Promise<DashboardResponse> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/reports/dashboard/customer`, {
+    const response = await apiClient.get('/reports/dashboard/customer', {
       params: { period },
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     });
     return response.data;
   },
@@ -69,9 +64,8 @@ export const reportService = {
     startDate?: string,
     endDate?: string
   ): Promise<TicketStatusReport[]> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/reports/tickets/by-status`, {
+    const response = await apiClient.get('/reports/tickets/by-status', {
       params: { start_date: startDate, end_date: endDate },
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     });
     return response.data;
   },
@@ -80,9 +74,8 @@ export const reportService = {
     startDate?: string,
     endDate?: string
   ): Promise<TicketPriorityReport[]> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/reports/tickets/by-priority`, {
+    const response = await apiClient.get('/reports/tickets/by-priority', {
       params: { start_date: startDate, end_date: endDate },
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     });
     return response.data;
   },
@@ -91,9 +84,8 @@ export const reportService = {
     startDate?: string,
     endDate?: string
   ): Promise<TicketCategoryReport[]> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/reports/tickets/by-category`, {
+    const response = await apiClient.get('/reports/tickets/by-category', {
       params: { start_date: startDate, end_date: endDate },
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     });
     return response.data;
   },
@@ -102,9 +94,8 @@ export const reportService = {
     startDate?: string,
     endDate?: string
   ): Promise<AgentPerformance[]> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/reports/tickets/by-agent`, {
+    const response = await apiClient.get('/reports/tickets/by-agent', {
       params: { start_date: startDate, end_date: endDate },
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     });
     return response.data;
   },
@@ -113,9 +104,8 @@ export const reportService = {
     startDate?: string,
     endDate?: string
   ): Promise<TeamPerformance[]> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/reports/tickets/by-team`, {
+    const response = await apiClient.get('/reports/tickets/by-team', {
       params: { start_date: startDate, end_date: endDate },
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     });
     return response.data;
   },
@@ -124,9 +114,8 @@ export const reportService = {
     startDate?: string,
     endDate?: string
   ): Promise<ResponseTimeMetrics> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/reports/tickets/response-time`, {
+    const response = await apiClient.get('/reports/tickets/response-time', {
       params: { start_date: startDate, end_date: endDate },
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     });
     return response.data;
   },
@@ -135,17 +124,15 @@ export const reportService = {
     startDate?: string,
     endDate?: string
   ): Promise<ResolutionTimeMetrics> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/reports/tickets/resolution-time`, {
+    const response = await apiClient.get('/reports/tickets/resolution-time', {
       params: { start_date: startDate, end_date: endDate },
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     });
     return response.data;
   },
 
   async getOpenVsClosedReport(period: string = 'month'): Promise<OpenVsClosedReport[]> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/reports/tickets/open-vs-closed`, {
+    const response = await apiClient.get('/reports/tickets/open-vs-closed', {
       params: { period },
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     });
     return response.data;
   },
@@ -158,9 +145,8 @@ export const reportService = {
     startDate?: string,
     endDate?: string
   ): Promise<CustomerStatusReport[]> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/reports/customers/by-status`, {
+    const response = await apiClient.get('/reports/customers/by-status', {
       params: { start_date: startDate, end_date: endDate },
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     });
     return response.data;
   },
@@ -169,17 +155,15 @@ export const reportService = {
     startDate?: string,
     endDate?: string
   ): Promise<CustomerTypeReport[]> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/reports/customers/by-type`, {
+    const response = await apiClient.get('/reports/customers/by-type', {
       params: { start_date: startDate, end_date: endDate },
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     });
     return response.data;
   },
 
   async getCustomerGrowth(period: string = 'month'): Promise<CustomerGrowthReport[]> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/reports/customers/growth`, {
+    const response = await apiClient.get('/reports/customers/growth', {
       params: { period },
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     });
     return response.data;
   },
@@ -188,9 +172,8 @@ export const reportService = {
     startDate?: string,
     endDate?: string
   ): Promise<KYCStatusReport[]> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/reports/customers/kyc-status`, {
+    const response = await apiClient.get('/reports/customers/kyc-status', {
       params: { start_date: startDate, end_date: endDate },
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     });
     return response.data;
   },
@@ -203,9 +186,8 @@ export const reportService = {
     startDate?: string,
     endDate?: string
   ): Promise<OrderStatusReport[]> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/reports/orders/by-status`, {
+    const response = await apiClient.get('/reports/orders/by-status', {
       params: { start_date: startDate, end_date: endDate },
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     });
     return response.data;
   },
@@ -214,17 +196,15 @@ export const reportService = {
     startDate?: string,
     endDate?: string
   ): Promise<OrderValueMetrics> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/reports/orders/value-metrics`, {
+    const response = await apiClient.get('/reports/orders/value-metrics', {
       params: { start_date: startDate, end_date: endDate },
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     });
     return response.data;
   },
 
   async getMonthlyOrders(months: number = 12): Promise<MonthlyOrderReport[]> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/reports/orders/monthly`, {
+    const response = await apiClient.get('/reports/orders/monthly', {
       params: { months },
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     });
     return response.data;
   },
@@ -234,9 +214,8 @@ export const reportService = {
     endDate?: string,
     limit: number = 10
   ): Promise<ProductPerformance[]> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/reports/orders/product-performance`, {
+    const response = await apiClient.get('/reports/orders/product-performance', {
       params: { start_date: startDate, end_date: endDate, limit },
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     });
     return response.data;
   },
@@ -246,9 +225,8 @@ export const reportService = {
     endDate?: string,
     limit: number = 10
   ): Promise<CustomerOrderReport[]> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/reports/orders/by-customer`, {
+    const response = await apiClient.get('/reports/orders/by-customer', {
       params: { start_date: startDate, end_date: endDate, limit },
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     });
     return response.data;
   },
@@ -286,12 +264,9 @@ export const reportService = {
       [key: string]: any;
     }
   ): Promise<any> {
-    const response = await axios.get(
-      `${API_BASE_URL}/api/v1/reports/advanced/${category}/${reportId}`,
-      {
-        params: { ...params, format: 'json' },
-        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
-      }
+    const response = await apiClient.get(
+      `/reports/advanced/${category}/${reportId}`,
+      { params: { ...params, format: 'json' } }
     );
     return response.data;
   },
@@ -310,13 +285,9 @@ export const reportService = {
       [key: string]: any;
     }
   ): Promise<void> {
-    const response = await axios.get(
-      `${API_BASE_URL}/api/v1/reports/advanced/${category}/${reportId}`,
-      {
-        params,
-        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
-        responseType: 'blob',
-      }
+    const response = await apiClient.get(
+      `/reports/advanced/${category}/${reportId}`,
+      { params, responseType: 'blob' }
     );
 
     // Trigger download

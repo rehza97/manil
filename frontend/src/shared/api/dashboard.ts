@@ -42,6 +42,63 @@ export interface DashboardResponse {
   recentOrders: RecentOrder[];
 }
 
+// Corporate dashboard types (page at /corporate)
+export interface CorporateDashboardStats {
+  totalCustomers: number;
+  activeTickets: number;
+  pendingOrders: number;
+  monthlyRevenue: number;
+  kycPending: number;
+}
+
+export interface CorporateRecentCustomer {
+  id: string;
+  name: string;
+  email: string;
+  status: string;
+  kycStatus: string;
+  lastActivity: string;
+}
+
+export interface CorporateRecentTicket {
+  id: string;
+  subject: string;
+  status: string;
+  priority: string;
+  customer: string;
+  assignedTo: string;
+}
+
+export interface CorporateRecentOrder {
+  id: string;
+  service: string;
+  status: string;
+  customer: string;
+  amount: number;
+}
+
+export interface CorporateDashboardResponse {
+  stats: CorporateDashboardStats;
+  recentCustomers: CorporateRecentCustomer[];
+  recentTickets: CorporateRecentTicket[];
+  recentOrders: CorporateRecentOrder[];
+}
+
+// Support dashboard types (page at /corporate for support_agent / support_supervisor)
+export interface SupportDashboardStats {
+  openTickets: number;
+  ticketsAssignedToMe: number;
+  pendingOrders: number;
+  totalTickets: number;
+  resolvedTickets: number;
+}
+
+export interface SupportDashboardResponse {
+  stats: SupportDashboardStats;
+  recentTickets: CorporateRecentTicket[];
+  recentOrders: CorporateRecentOrder[];
+}
+
 // Backend response types
 interface BackendDashboardMetrics {
   total_customers: number;
@@ -56,6 +113,7 @@ interface BackendDashboardMetrics {
   total_products: number;
   active_products: number;
   total_revenue: number;
+  tickets_assigned_to_me?: number;
 }
 
 interface BackendRecentActivity {
@@ -136,6 +194,107 @@ function transformDashboardResponse(
   };
 }
 
+function transformCorporateDashboardResponse(
+  backendData: BackendDashboardResponse
+): CorporateDashboardResponse {
+  const m = backendData.metrics;
+  const stats: CorporateDashboardStats = {
+    totalCustomers: m.total_customers ?? 0,
+    activeTickets: m.open_tickets ?? 0,
+    pendingOrders: m.pending_orders ?? 0,
+    monthlyRevenue: m.total_revenue ?? 0,
+    kycPending: m.pending_customers ?? 0,
+  };
+
+  const recentTickets: CorporateRecentTicket[] = backendData.recent_activity
+    .filter((a) => a.type === "ticket")
+    .slice(0, 5)
+    .map((a) => ({
+      id: a.id,
+      subject: a.title,
+      status: a.status ?? "open",
+      priority: a.priority ?? "medium",
+      customer: "",
+      assignedTo: "",
+    }));
+
+  const recentOrders: CorporateRecentOrder[] = backendData.recent_activity
+    .filter((a) => a.type === "order")
+    .slice(0, 5)
+    .map((a) => {
+      let amount = 0;
+      if (a.amount !== undefined && a.amount !== null) amount = a.amount;
+      else if (a.description) {
+        const match = a.description.match(/(\d+\.?\d*)/);
+        amount = match ? parseFloat(match[1]) : 0;
+      }
+      return {
+        id: a.id,
+        service: (a.title ?? "").replace("Order ", ""),
+        status: a.status ?? "pending",
+        customer: "",
+        amount,
+      };
+    });
+
+  return {
+    stats,
+    recentCustomers: [],
+    recentTickets,
+    recentOrders,
+  };
+}
+
+function transformSupportDashboardResponse(
+  backendData: BackendDashboardResponse
+): SupportDashboardResponse {
+  const m = backendData.metrics;
+  const stats: SupportDashboardStats = {
+    openTickets: m.open_tickets ?? 0,
+    ticketsAssignedToMe: m.tickets_assigned_to_me ?? 0,
+    pendingOrders: m.pending_orders ?? 0,
+    totalTickets: m.total_tickets ?? 0,
+    resolvedTickets: m.resolved_tickets ?? 0,
+  };
+
+  const recentTickets: CorporateRecentTicket[] = backendData.recent_activity
+    .filter((a) => a.type === "ticket")
+    .slice(0, 5)
+    .map((a) => ({
+      id: a.id,
+      subject: a.title,
+      status: a.status ?? "open",
+      priority: a.priority ?? "medium",
+      customer: "",
+      assignedTo: "",
+    }));
+
+  const recentOrders: CorporateRecentOrder[] = backendData.recent_activity
+    .filter((a) => a.type === "order")
+    .slice(0, 5)
+    .map((a) => {
+      let amount = 0;
+      if (a.amount !== undefined && a.amount !== null) amount = a.amount;
+      else if (a.description) {
+        const match = a.description.match(/(\d+\.?\d*)/);
+        amount = match ? parseFloat(match[1]) : 0;
+      }
+      return {
+        id: a.id,
+        service: (a.title ?? "").replace("Order ", ""),
+        status: a.status ?? "pending",
+        customer: "",
+        amount,
+      };
+    });
+
+  return {
+    stats,
+    recentTickets,
+    recentOrders,
+  };
+}
+
 // ============================================================================
 // API Client Functions
 // ============================================================================
@@ -156,6 +315,38 @@ export const dashboardApi = {
       }
     );
     return transformDashboardResponse(response.data);
+  },
+
+  /**
+   * Get corporate dashboard data
+   * GET /api/v1/reports/dashboard/corporate
+   */
+  getCorporateDashboard: async (
+    period: string = "month"
+  ): Promise<CorporateDashboardResponse> => {
+    const response: AxiosResponse<BackendDashboardResponse> = await apiClient.get(
+      "/reports/dashboard/corporate",
+      {
+        params: { period },
+      }
+    );
+    return transformCorporateDashboardResponse(response.data);
+  },
+
+  /**
+   * Get support dashboard data (Support Agent / Support Supervisor)
+   * GET /api/v1/reports/dashboard/support
+   */
+  getSupportDashboard: async (
+    period: string = "month"
+  ): Promise<SupportDashboardResponse> => {
+    const response: AxiosResponse<BackendDashboardResponse> = await apiClient.get(
+      "/reports/dashboard/support",
+      {
+        params: { period },
+      }
+    );
+    return transformSupportDashboardResponse(response.data);
   },
 };
 

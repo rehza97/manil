@@ -14,7 +14,11 @@ export const RoleBasedRedirect: React.FC = () => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      switch (user.role) {
+      const roleSlug =
+        typeof user.role === "string"
+          ? user.role
+          : (user.role as { slug?: string })?.slug ?? "";
+      switch (roleSlug) {
         case "admin":
           navigate("/admin", { replace: true });
           break;
@@ -23,6 +27,10 @@ export const RoleBasedRedirect: React.FC = () => {
           break;
         case "client":
           navigate("/dashboard", { replace: true });
+          break;
+        case "support_agent":
+        case "support_supervisor":
+          navigate("/corporate", { replace: true });
           break;
         default:
           navigate("/dashboard", { replace: true });

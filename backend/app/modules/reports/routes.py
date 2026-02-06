@@ -86,6 +86,21 @@ async def get_corporate_dashboard(
     return await service.get_corporate_dashboard(current_user.id, period)
 
 
+@router.get("/dashboard/support", response_model=DashboardResponse)
+async def get_support_dashboard(
+    period: str = Query("month", description="Time period for trends"),
+    current_user: User = Depends(require_permission(Permission.TICKETS_VIEW)),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get support dashboard with ticket-centric metrics for support agents.
+
+    Requires: TICKETS_VIEW permission (Support Agent and Support Supervisor).
+    """
+    service = DashboardService(db)
+    return await service.get_support_dashboard(str(current_user.id), period)
+
+
 @router.get("/dashboard/customer", response_model=DashboardResponse)
 async def get_customer_dashboard(
     period: str = Query("month", description="Time period for trends"),

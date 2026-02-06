@@ -50,6 +50,7 @@ class OrderItemCreate(OrderItemBase):
 class OrderItemResponse(OrderItemBase):
     """Response schema for order item."""
 
+    unit_price: float = Field(..., ge=0, description="Unit price")
     id: str
     order_id: str
     discount_amount: float

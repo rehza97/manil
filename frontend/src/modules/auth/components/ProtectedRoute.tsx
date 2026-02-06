@@ -48,8 +48,8 @@ export const ProtectedRoute = ({
       admin: "/admin",
       corporate: "/corporate",
       client: "/dashboard",
-      support_agent: "/dashboard",
-      support_supervisor: "/dashboard",
+      support_agent: "/corporate",
+      support_supervisor: "/corporate",
     };
     const userDashboard = roleDashboards[user.role] ?? "/unauthorized";
 

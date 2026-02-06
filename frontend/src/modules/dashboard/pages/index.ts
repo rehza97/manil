@@ -1,5 +1,6 @@
 export { default as UserDashboardPage } from "./UserDashboardPage";
 export { default as CorporateDashboardPage } from "./CorporateDashboardPage";
+export { default as SupportDashboardPage } from "./SupportDashboardPage";
 export { default as AdminDashboardPage } from "./AdminDashboardPage";
 export { default as ProfilePage } from "./ProfilePage";
 export { default as ProfileEditPage } from "./ProfileEditPage";
